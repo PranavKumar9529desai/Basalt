@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+    "basalt_core",
+    "basalt_fs",
+    "basalt_wasm",
+]

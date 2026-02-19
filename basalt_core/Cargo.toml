@@ -1,0 +1,9 @@
+[package]
+name = "basalt_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pulldown-cmark = "0.13.0"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.18"
