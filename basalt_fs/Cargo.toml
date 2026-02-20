@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.101"
 basalt_core = { path = "../basalt_core" }
+ignore = "0.4.23"
+# rayon = "1.10.0"

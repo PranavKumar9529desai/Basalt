@@ -1,115 +1,42 @@
 Document {
     frontmatter: Some(
         Mapping {
-            "type": String("note"),
-            "topic": Null,
-            "status": String("inbox"),
-            "created": String("2026-02-18"),
-            "updated": String("2026-02-18"),
-            "tags": Sequence [],
-            "aliases": Sequence [],
+            "title": String("The Great Basalt Architecture"),
+            "author": String("Pranav"),
+            "tags": Sequence [
+                String("architecture"),
+                String("rust"),
+                String("performance"),
+            ],
         },
     ),
     ast: [
-        Blockquote(
+        Heading(
+            1,
             [
-                Paragraph(
-                    [
-                        Text(
-                            "Current Problems and their solution",
-                        ),
-                    ],
+                Text(
+                    "The Vision of Basalt",
                 ),
             ],
         ),
-        List(
+        Paragraph(
             [
-                ListItem(
-                    [
-                        Text(
-                            "The llm has limited context window they can not process the large codebase and the architectural nuances for the codebase",
-                        ),
-                    ],
+                Text(
+                    "Basalt is designed to be a high-performance, strictly typed note-taking engine. By isolating the brain in ",
                 ),
-                ListItem(
-                    [
-                        Text(
-                            "even with the maintaining the ",
-                        ),
-                        Text(
-                            "docs",
-                        ),
-                        Text(
-                            " folder has it own downsides ; can llm can not the process the pdf the images and other sort of format and also have the limited context for it",
-                        ),
-                    ],
+                Code(
+                    "basalt_core",
                 ),
-                ListItem(
-                    [
-                        Text(
-                            "more context can make the llm hallucinate",
-                        ),
-                    ],
+                Text(
+                    ", we ensure that the entire system is deterministic and easy to test.",
                 ),
             ],
         ),
-        Rule,
         Heading(
             2,
-            "Standard solution would the using RAG for better the context and rich context",
-        ),
-        List(
-            [
-                ListItem(
-                    [
-                        Text(
-                            "The notebook-llm is considered as the king of the RAG it considered one of the best tools for complex data --> RAG pipeleline",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "their few options to for many option for having the local indexing like the using ",
-                        ),
-                        Text(
-                            "continue.dev , mcp-local-index",
-                        ),
-                        Text(
-                            " and other tools as well",
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        Rule,
-        Heading(
-            2,
-            "Tools for Local Indexing",
-        ),
-        Heading(
-            3,
-            "1. mcp-codebase-index (The \"Structure Mapper\")",
-        ),
-        Paragraph(
             [
                 Text(
-                    "Philosophy:",
-                ),
-                Text(
-                    " ",
-                ),
-                Text(
-                    "\"Don't read the code; read the map.\"",
-                ),
-                Text(
-                    "This tool is the closest equivalent to the ",
-                ),
-                Text(
-                    "Aider Repo Map",
-                ),
-                Text(
-                    " mentioned earlier. Instead of using Vector Databases or Embeddings, it parses your code into a lightweight dependency graph.",
+                    "Core Principles",
                 ),
             ],
         ),
@@ -118,90 +45,27 @@ Document {
                 ListItem(
                     [
                         Text(
-                            "How it works:",
-                        ),
-                        Text(
-                            " It uses AST (Abstract Syntax Tree) parsing (via Python's ",
+                            "Pure Functions: The engine does not know about the file system. It takes ",
                         ),
                         Code(
-                            "ast",
+                            "&str",
                         ),
                         Text(
-                            " module or Regex for JS/TS) to extract function names, classes, and import relationships. It creates an in-memory graph of \"what calls what.\"",
+                            " and returns an AST.",
                         ),
                     ],
                 ),
                 ListItem(
                     [
                         Text(
-                            "Coding Accuracy:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "High for Architecture.",
-                        ),
-                        Text(
-                            " It is perfect for questions like ",
-                        ),
-                        Text(
-                            "\"Where is ",
-                        ),
-                        Code(
-                            "getUser",
-                        ),
-                        Text(
-                            " called?\"",
-                        ),
-                        Text(
-                            " or ",
-                        ),
-                        Text(
-                            "\"What is the dependency chain for ",
-                        ),
-                        Code(
-                            "AuthService",
-                        ),
-                        Text(
-                            "?\"",
-                        ),
-                        Text(
-                            ". It is less effective for finding \"logic\" (e.g., ",
-                        ),
-                        Text(
-                            "\"Find the code that calculates tax\"",
-                        ),
-                        Text(
-                            ") because it doesn't semantic-search the ",
-                        ),
-                        Text(
-                            "inside",
-                        ),
-                        Text(
-                            " of functions.",
+                            "Universal Targets: It compiles to both Native (Tauri) and WebAssembly (Vite/Web).",
                         ),
                     ],
                 ),
                 ListItem(
                     [
                         Text(
-                            "Token Saving:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Extreme (Best).",
-                        ),
-                        Text(
-                            " It sends only compressed signatures and relationships, reducing token usage by ",
-                        ),
-                        Text(
-                            "~",
-                        ),
-                        Text(
-                            "90% compared to raw file dumps.",
+                            "Graph Native: Links and backlinks are first-class citizens.",
                         ),
                     ],
                 ),
@@ -209,458 +73,120 @@ Document {
         ),
         Heading(
             3,
-            "2. mcp-local-rag by shinpr (The \"Privacy-First Librarian\")",
+            [
+                Text(
+                    "Links and References",
+                ),
+            ],
         ),
         Paragraph(
             [
                 Text(
-                    "Philosophy:",
+                    "This document outlines the vision, but you can read more about the technical details in ",
+                ),
+                WikiLink(
+                    "Architecture_Notes",
                 ),
                 Text(
-                    " ",
+                    " or the ",
                 ),
-                Text(
-                    "\"Keep it secret, keep it safe.\"",
-                ),
-                Text(
-                    "This is a privacy-centric implementation of standard RAG. It is designed to index not just code, but also documentation (PDFs, Markdown, Specs) without data leaving your machine.",
-                ),
-            ],
-        ),
-        List(
-            [
-                ListItem(
-                    [
-                        Text(
-                            "How it works:",
-                        ),
-                        Text(
-                            " It uses ",
-                        ),
-                        Text(
-                            "LanceDB",
-                        ),
-                        Text(
-                            " (a serverless vector DB) to store embeddings locally. It chunks files based on text length and retrieves them based on semantic similarity.",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "Coding Accuracy:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Moderate.",
-                        ),
-                        Text(
-                            " Standard text chunking can sometimes split a function in half, causing the LLM to lose context. It excels at retrieving ",
-                        ),
-                        Text(
-                            "documentation",
-                        ),
-                        Text(
-                            " about your code rather than the code structure itself.",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "Token Saving:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Standard.",
-                        ),
-                        Text(
-                            " It retrieves full chunks of text. It saves tokens by not sending the whole file, but it is not as compressed as the graph approach.",
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        Heading(
-            3,
-            "3. mcp-rag-server by Daniel-Barta (The \"Lightweight Generalist\")",
-        ),
-        Paragraph(
-            [
-                Text(
-                    "Philosophy:",
-                ),
-                Text(
-                    " ",
-                ),
-                Text(
-                    "\"Zero-setup RAG for everyone.\"",
-                ),
-                Text(
-                    "This is a \"plug-and-play\" RAG server designed to be the easiest to set up. It uses local HuggingFace transformers to generate embeddings on the fly.",
-                ),
-            ],
-        ),
-        List(
-            [
-                ListItem(
-                    [
-                        Text(
-                            "How it works:",
-                        ),
-                        Text(
-                            " It scans your repo, chunks the text, and builds a temporary local vector index. It exposes tools like ",
-                        ),
-                        Code(
-                            "rag_query",
-                        ),
-                        Text(
-                            " and ",
-                        ),
-                        Code(
-                            "read_file",
-                        ),
-                        Text(
-                            " to the LLM. It often uses a Hybrid search (BM25 keyword + Vector) to improve accuracy.",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "Coding Accuracy:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Good.",
-                        ),
-                        Text(
-                            " The addition of keyword search helps it find exact function names that pure vector search might miss.",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "Token Saving:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Standard.",
-                        ),
-                        Text(
-                            " Similar to ",
-                        ),
-                        Code(
-                            "mcp-local-rag",
-                        ),
-                        Text(
-                            ", it retrieves text chunks.",
-                        ),
-                    ],
-                ),
-            ],
-        ),
-        Heading(
-            3,
-            "4. CocoIndex Code MCP (The \"Smart Chunker\")",
-        ),
-        Paragraph(
-            [
-                Text(
-                    "Philosophy:",
-                ),
-                Text(
-                    " ",
-                ),
-                Text(
-                    "\"Understand the syntax before you chunk.\"",
-                ),
-                Text(
-                    "CocoIndex is the most sophisticated (and complex) tool here. It tries to fix the \"broken function\" problem of standard RAG by using ",
-                ),
-                Text(
-                    "Tree-sitter",
+                WikiLink(
+                    "Vite_Frontend_Setup",
                 ),
                 Text(
                     ".",
                 ),
             ],
         ),
+        Paragraph(
+            [
+                Text(
+                    "We want to make sure things like ",
+                ),
+                Tag(
+                    "performance",
+                ),
+                Text(
+                    " and ",
+                ),
+                Tag(
+                    "rust-lang",
+                ),
+                Text(
+                    " are always prioritized.",
+                ),
+            ],
+        ),
+        Heading(
+            3,
+            [
+                Text(
+                    "Code Example",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Here is a small snippet of how the logic looks:",
+                ),
+            ],
+        ),
+        CodeBlock(
+            "rust",
+            "fn process(input: &str) -> AST {\n    parse(input)\n}\n",
+        ),
+        Blockquote(
+            [
+                Paragraph(
+                    [
+                        Text(
+                            "\"Speed is a feature.\" - Someone smart",
+                        ),
+                    ],
+                ),
+            ],
+        ),
         List(
             [
                 ListItem(
                     [
                         Text(
-                            "How it works:",
-                        ),
-                        Text(
-                            " instead of cutting text every 500 words, it uses Tree-sitter to understand your programming language. It cuts chunks specifically at function or class boundaries. It uses a hybrid of Vector Search + Metadata filtering.",
+                            "Item 1: Parse",
                         ),
                     ],
                 ),
                 ListItem(
                     [
                         Text(
-                            "Coding Accuracy:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "Very High.",
-                        ),
-                        Text(
-                            " Because it respects code syntax, the chunks it retrieves are almost always complete functions, making it much easier for the LLM to understand the logic.",
+                            "Item 2: Build Graph",
                         ),
                     ],
                 ),
                 ListItem(
                     [
                         Text(
-                            "Token Saving:",
-                        ),
-                        Text(
-                            " ",
-                        ),
-                        Text(
-                            "High Efficiency.",
-                        ),
-                        Text(
-                            " While it sends full code chunks, every token is \"high value\" because the chunks are syntactically valid. You waste fewer tokens on irrelevant code comments or half-broken functions.",
+                            "Item 3: Render",
                         ),
                     ],
                 ),
             ],
         ),
         Rule,
-        Heading(
-            3,
-            "Final Comparison Table",
-        ),
-        Text(
-            "Feature",
-        ),
-        Text(
-            "mcp-codebase-index",
-        ),
-        Text(
-            "mcp-local-rag (shinpr)",
-        ),
-        Text(
-            "mcp-rag-server (Daniel)",
-        ),
-        Text(
-            "CocoIndex MCP",
-        ),
-        Text(
-            "Core Tech",
-        ),
-        Text(
-            "AST / Graph",
-        ),
-        Text(
-            " (No Vectors)",
-        ),
-        Text(
-            "LanceDB",
-        ),
-        Text(
-            " (Vector RAG)",
-        ),
-        Text(
-            "HuggingFace",
-        ),
-        Text(
-            " (Local RAG)",
-        ),
-        Text(
-            "Tree-sitter",
-        ),
-        Text(
-            " (Semantic RAG)",
-        ),
-        Text(
-            "Token Usage",
-        ),
-        Text(
-            "🟢 ",
-        ),
-        Text(
-            "Ultra-Low",
-        ),
-        Text(
-            " (Signatures only)",
-        ),
-        Text(
-            "🟡 ",
-        ),
-        Text(
-            "Medium",
-        ),
-        Text(
-            " (Text chunks)",
-        ),
-        Text(
-            "🟡 ",
-        ),
-        Text(
-            "Medium",
-        ),
-        Text(
-            " (Text chunks)",
-        ),
-        Text(
-            "🟢 ",
-        ),
-        Text(
-            "Efficient",
-        ),
-        Text(
-            " (Valid Code Blocks)",
-        ),
-        Text(
-            "Coding Accuracy",
-        ),
-        Text(
-            "🟡 ",
-        ),
-        Text(
-            "Contextual",
-        ),
-        Text(
-            " (Great for relationships, bad for logic search)",
-        ),
-        Text(
-            "🟡 ",
-        ),
-        Text(
-            "Average",
-        ),
-        Text(
-            " (Can split code awkwardly)",
-        ),
-        Text(
-            "🟢 ",
-        ),
-        Text(
-            "Good",
-        ),
-        Text(
-            " (Hybrid search helps)",
-        ),
-        Text(
-            "🟣 ",
-        ),
-        Text(
-            "Excellent",
-        ),
-        Text(
-            " (Respects syntax boundaries)",
-        ),
-        Text(
-            "Indexing Speed",
-        ),
-        Text(
-            "⚡ ",
-        ),
-        Text(
-            "Instant",
-        ),
-        Text(
-            " (In-memory)",
-        ),
-        Text(
-            "🐢 ",
-        ),
-        Text(
-            "Slow",
-        ),
-        Text(
-            " (Embedding generation)",
-        ),
-        Text(
-            "🐇 ",
-        ),
-        Text(
-            "Fast",
-        ),
-        Text(
-            " (Lightweight models)",
-        ),
-        Text(
-            "🐢 ",
-        ),
-        Text(
-            "Slower",
-        ),
-        Text(
-            " (Deep parsing)",
-        ),
-        Text(
-            "Best For...",
-        ),
-        Text(
-            "Refactoring & Architecture.",
-        ),
-        Text(
-            " \"How does this app work?\"",
-        ),
-        Text(
-            "Docs & Privacy.",
-        ),
-        Text(
-            " \"What does the PDF spec say?\"",
-        ),
-        Text(
-            "General Queries.",
-        ),
-        Text(
-            " \"Find code about login.\"",
-        ),
-        Text(
-            "Complex Coding.",
-        ),
-        Text(
-            " \"Fix the bug in the auth logic.\"",
-        ),
-        Heading(
-            2,
-            "manually need to start the CoCoIndex",
-        ),
-        CodeBlock(
-            "",
-            " COCOINDEX_DATABASE_URL=\"postgresql://postgres:cocoindex@loca\nlhost:5432/postgres\" uvx cocoindex-code-mcp-server --paths /home/pranav/Projects/portfolio --port 3033\n",
-        ),
-        List(
+        Paragraph(
             [
-                ListItem(
-                    [
-                        Text(
-                            "using mcp remote instead of the uvx apporach as this seem to be better and only working apporah",
-                        ),
-                    ],
-                ),
-                ListItem(
-                    [
-                        Text(
-                            "might need manually start indexing command manually for each project.",
-                        ),
-                    ],
+                Text(
+                    "End of document.",
                 ),
             ],
         ),
     ],
     tags: [
-        "FFF3A3A6",
+        "performance",
+        "rust-lang",
     ],
-    links: [],
+    links: [
+        "Architecture_Notes",
+        "Vite_Frontend_Setup",
+    ],
 }
