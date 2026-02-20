@@ -2,3 +2,4 @@ target/
 node_modules/
 .env
 *.log
+.cococinde_code_mcp_server.log

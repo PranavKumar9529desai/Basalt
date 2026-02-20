@@ -1,3 +1,12 @@
+pub mod types;
+pub mod graph;
+pub mod parser;
+
+pub use types::{MarkdownNode, Document};
+pub use graph::NoteGraph;
+pub use parser::parse_markdown;
+
+// Existing function retained for testing/compatibility for now
 use pulldown_cmark::{Parser, Options, html};
 use serde::{Serialize, Deserialize};
 
