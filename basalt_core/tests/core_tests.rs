@@ -1,4 +1,4 @@
-use basalt_core::{parse_markdown, MarkdownNode, NoteGraph};
+use basalt_core::{parse_markdown, MarkdownNode, NoteGraph, StringArena};
 
 #[test]
 fn test_frontmatter_parsing() {
@@ -33,43 +33,52 @@ fn test_wikilinks_and_tags() {
 
 #[test]
 fn test_note_graph() {
+    let mut arena = StringArena::new();
     let mut graph = NoteGraph::new();
     
     let doc1 = parse_markdown("Link to [[Note2]] and [[Note3]]");
     let doc2 = parse_markdown("Link to [[Note1]] and #some-tag");
     
-    graph.add_document("Note1", &doc1);
-    graph.add_document("Note2", &doc2);
+    graph.add_document("Note1", &doc1, &mut arena);
+    graph.add_document("Note2", &doc2, &mut arena);
     
-    let n1_forward = graph.get_forward_links("Note1").unwrap();
-    assert!(n1_forward.contains("Note2"));
-    assert!(n1_forward.contains("Note3"));
+    let note1_id = arena.get_id("Note1").unwrap();
+    let note2_id = arena.get_id("Note2").unwrap();
+    let note3_id = arena.get_id("Note3").unwrap();
+
+    let n1_forward = graph.get_forward_links(note1_id).unwrap();
+    assert!(n1_forward.contains(&note2_id));
+    assert!(n1_forward.contains(&note3_id));
     
-    let n1_back = graph.get_back_links("Note1").unwrap();
-    assert!(n1_back.contains("Note2")); // From Note2's link to Note1
+    let n1_back = graph.get_back_links(note1_id).unwrap();
+    assert!(n1_back.contains(&note2_id)); // From Note2's link to Note1
     
-    let n2_forward = graph.get_forward_links("Note2").unwrap();
-    assert!(n2_forward.contains("Note1"));
+    let n2_forward = graph.get_forward_links(note2_id).unwrap();
+    assert!(n2_forward.contains(&note1_id));
     
-    let n2_back = graph.get_back_links("Note2").unwrap();
-    assert!(n2_back.contains("Note1")); // From Note1's link to Note2
+    let n2_back = graph.get_back_links(note2_id).unwrap();
+    assert!(n2_back.contains(&note1_id)); // From Note1's link to Note2
 }
 
 #[test]
 fn test_remove_document() {
+    let mut arena = StringArena::new();
     let mut graph = NoteGraph::new();
     
     let doc1 = parse_markdown("Link to [[Note2]]");
     let doc2 = parse_markdown("Hello");
     
-    graph.add_document("Note1", &doc1);
-    graph.add_document("Note2", &doc2);
+    graph.add_document("Note1", &doc1, &mut arena);
+    graph.add_document("Note2", &doc2, &mut arena);
     
-    assert!(graph.get_back_links("Note2").unwrap().contains("Note1"));
+    let note1_id = arena.get_id("Note1").unwrap();
+    let note2_id = arena.get_id("Note2").unwrap();
+
+    assert!(graph.get_back_links(note2_id).unwrap().contains(&note1_id));
     
     // Now remove Note1
-    graph.remove_document("Note1");
+    graph.remove_document("Note1", &mut arena);
     
-    assert!(graph.get_forward_links("Note1").is_none());
-    assert!(!graph.get_back_links("Note2").unwrap().contains("Note1"));
+    assert!(graph.get_forward_links(note1_id).is_none());
+    assert!(!graph.get_back_links(note2_id).unwrap().contains(&note1_id));
 }

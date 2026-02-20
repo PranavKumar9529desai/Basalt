@@ -1,3 +1,4 @@
+pub mod arena;
 pub mod types;
 pub mod graph;
 pub mod inline;
@@ -5,6 +6,7 @@ pub mod parser;
 
 pub use types::{MarkdownNode, Document};
 pub use graph::NoteGraph;
+pub use arena::StringArena;
 pub use parser::parse_markdown;
 
 // Existing function retained for testing/compatibility for now
