@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum MarkdownNode {
-    Heading(u8, String),
+    Heading(u8, Vec<MarkdownNode>),
     Text(String),
     Paragraph(Vec<MarkdownNode>),
     List(Vec<MarkdownNode>),

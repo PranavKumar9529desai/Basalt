@@ -11,7 +11,13 @@ fn test_frontmatter_parsing() {
     
     // Check AST starts with Heading
     match &doc.ast[0] {
-        MarkdownNode::Heading(1, text) => assert_eq!(text, "Heading"),
+        MarkdownNode::Heading(1, children) => {
+            if let MarkdownNode::Text(text) = &children[0] {
+                assert_eq!(text, "Heading");
+            } else {
+                panic!("Expected Text node");
+            }
+        },
         _ => panic!("Expected Heading 1"),
     }
 }

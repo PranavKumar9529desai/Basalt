@@ -1,8 +1,8 @@
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use regex::Regex;
 use serde_yaml;
 
 use crate::types::{Document, MarkdownNode};
+use crate::inline::parse_inline_text;
 
 pub fn parse_markdown(input: &str) -> Document {
     let mut doc = Document::new();
@@ -40,27 +40,13 @@ pub fn parse_markdown(input: &str) -> Document {
 
     let parser = Parser::new_ext(markdown_content, options);
     
-    // Regex for [[WikiLinks]] and #tags
-    let link_re = Regex::new(r"\[\[([^\]]+)\]\]").unwrap();
-    let tag_re = Regex::new(r"#([a-zA-Z0-9_\-]+)").unwrap();
-    
-    // Process text for tags
-    for cap in tag_re.captures_iter(&markdown_content) {
-        doc.tags.push(cap[1].to_string());
-    }
-    
-    // Process text for links
-    for cap in link_re.captures_iter(&markdown_content) {
-        doc.links.push(cap[1].to_string());
-    }
-
     let mut stack: Vec<MarkdownNode> = Vec::new();
 
     for event in parser {
         match event {
             Event::Start(tag) => match tag {
                 Tag::Paragraph => stack.push(MarkdownNode::Paragraph(Vec::new())),
-                Tag::Heading { level, .. } => stack.push(MarkdownNode::Heading(level as u8, String::new())),
+                Tag::Heading { level, .. } => stack.push(MarkdownNode::Heading(level as u8, Vec::new())),
                 Tag::List(_) => stack.push(MarkdownNode::List(Vec::new())),
                 Tag::Item => stack.push(MarkdownNode::ListItem(Vec::new())),
                 Tag::BlockQuote(_) => stack.push(MarkdownNode::Blockquote(Vec::new())),
@@ -101,16 +87,13 @@ pub fn parse_markdown(input: &str) -> Document {
 
                  if let Some(parent) = stack.last_mut() {
                      match parent {
-                         MarkdownNode::Heading(_, ref mut s) => s.push_str(&current_text),
-                         MarkdownNode::CodeBlock(_, ref mut code) => code.push_str(&current_text),
+                         MarkdownNode::Heading(_, ref mut children) |
                          MarkdownNode::Paragraph(ref mut children) |
                          MarkdownNode::ListItem(ref mut children) |
                          MarkdownNode::Blockquote(ref mut children) => {
-                             // This is a naive way to handle links/tags inline.
-                             // A true parser would split the text node.
-                             // For now we just push the raw text node.
                              children.push(MarkdownNode::Text(current_text));
                          }
+                         MarkdownNode::CodeBlock(_, ref mut code) => code.push_str(&current_text),
                          _ => {} 
                      }
                  } else {
@@ -120,6 +103,7 @@ pub fn parse_markdown(input: &str) -> Document {
             Event::Code(text) => {
                 if let Some(parent) = stack.last_mut() {
                     match parent {
+                        MarkdownNode::Heading(_, ref mut children) |
                         MarkdownNode::Paragraph(ref mut children) |
                         MarkdownNode::ListItem(ref mut children) |
                         MarkdownNode::Blockquote(ref mut children) => {
@@ -138,5 +122,66 @@ pub fn parse_markdown(input: &str) -> Document {
         }
     }
 
+    // Pass 2: Process inline elements (WikiLinks, Tags) within block nodes.
+    // We only process MarkdownNode::Text elements, and we consolidate them first.
+    let mut final_ast = Vec::new();
+    for mut root_node in doc.ast {
+         process_node(&mut root_node, &mut doc.tags, &mut doc.links);
+         final_ast.push(root_node);
+    }
+    doc.ast = final_ast;
+
     doc
+}
+
+fn process_node(node: &mut MarkdownNode, tags: &mut Vec<String>, links: &mut Vec<String>) {
+    match node {
+        MarkdownNode::Paragraph(children) |
+        MarkdownNode::Heading(_, children) |
+        MarkdownNode::ListItem(children) |
+        MarkdownNode::Blockquote(children) => {
+            *children = process_children(std::mem::take(children), tags, links);
+        }
+        MarkdownNode::List(children) => {
+            for child in children {
+                process_node(child, tags, links);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn process_children(children: Vec<MarkdownNode>, tags: &mut Vec<String>, links: &mut Vec<String>) -> Vec<MarkdownNode> {
+    // Phase 1: Consolidate adjacent Text nodes (because pulldown-cmark fragments things like `[` and `]`)
+    let mut consolidated: Vec<MarkdownNode> = Vec::new();
+    for child in children {
+        if let MarkdownNode::Text(t_new) = &child {
+            if let Some(MarkdownNode::Text(t_old)) = consolidated.last_mut() {
+                t_old.push_str(t_new);
+                continue;
+            }
+        }
+        consolidated.push(child);
+    }
+    
+    // Phase 2: Run robust inline parser over the consolidated Text nodes
+    let mut final_children = Vec::new();
+    for mut child in consolidated {
+        if let MarkdownNode::Text(txt) = child {
+            let inline_nodes = crate::inline::parse_inline_text(&txt);
+            for inline_node in &inline_nodes {
+                 match inline_node {
+                     MarkdownNode::Tag(t) => tags.push(t.clone()),
+                     MarkdownNode::WikiLink(l) => links.push(l.clone()),
+                     _ => {}
+                 }
+            }
+            final_children.extend(inline_nodes);
+        } else {
+            // Recurse into nested structures (like Lists inside Blockquotes) just in case
+            process_node(&mut child, tags, links);
+            final_children.push(child);
+        }
+    }
+    final_children
 }
