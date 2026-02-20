@@ -1,6 +1,7 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::path::Path;
 use ignore::WalkBuilder;
-use basalt_core::parse_markdown;
 use crate::Vault;
 
 pub fn index_directory(path: &Path) -> Vault {
@@ -15,9 +16,8 @@ pub fn index_directory(path: &Path) -> Vault {
                 let entry_path = entry.path();
                 if entry_path.extension().and_then(|ext| ext.to_str()) == Some("md") {
                     if let Ok(text) = std::fs::read_to_string(entry_path) {
-                        let doc = parse_markdown(&text);
                         if let Some(path_str) = entry_path.to_str() {
-                            vault.graph.add_document(path_str, &doc, &mut vault.arena);
+                            vault.add_document(path_str, &text);
                         }
                     }
                 }
