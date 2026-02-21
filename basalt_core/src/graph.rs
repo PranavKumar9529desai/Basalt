@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use crate::types::Document;
+use crate::metadata::FileMetadata;
 use crate::arena::{NodeId, StringArena};
 
 #[derive(Debug, Default)]
@@ -13,7 +13,7 @@ impl NoteGraph {
         Default::default()
     }
 
-    pub fn add_document(&mut self, id: &str, document: &Document, arena: &mut StringArena) {
+    pub fn add_document(&mut self, id: &str, metadata: &FileMetadata, arena: &mut StringArena) {
         let doc_id = arena.get_or_insert(id);
         
         // Remove old forward links for this document
@@ -26,7 +26,7 @@ impl NoteGraph {
         }
         
         let mut new_links = HashSet::new();
-        for link in &document.links {
+        for link in &metadata.links {
             let link_id = arena.get_or_insert(link);
             new_links.insert(link_id);
             

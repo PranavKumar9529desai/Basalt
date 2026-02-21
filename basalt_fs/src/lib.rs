@@ -10,7 +10,7 @@ pub trait FileSystem {
     fn list(&self, path: &str) -> Result<Vec<String>>;
 }
 
-use basalt_core::parse_markdown;
+use basalt_core::extract_metadata;
 
 #[derive(Debug, Default)]
 pub struct Vault {
@@ -27,8 +27,8 @@ impl Vault {
     }
 
     pub fn add_document(&mut self, path: &str, content: &str) {
-        let doc = parse_markdown(content);
-        self.graph.add_document(path, &doc, &mut self.arena);
+        let meta = extract_metadata(content);
+        self.graph.add_document(path, &meta, &mut self.arena);
     }
 }
 

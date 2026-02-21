@@ -3,11 +3,15 @@ pub mod types;
 pub mod graph;
 pub mod inline;
 pub mod parser;
+pub mod utf16_mapper;
+pub mod metadata;
 
 pub use types::{MarkdownNode, Document};
+pub use utf16_mapper::TextDocument;
 pub use graph::NoteGraph;
 pub use arena::StringArena;
 pub use parser::parse_markdown;
+pub use metadata::{FileMetadata, extract_metadata};
 
 // Existing function retained for testing/compatibility for now
 use pulldown_cmark::{Parser, Options, html};

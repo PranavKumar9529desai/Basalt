@@ -1,4 +1,4 @@
-use basalt_core::{parse_markdown, MarkdownNode, NoteGraph, StringArena};
+use basalt_core::{parse_markdown, extract_metadata, MarkdownNode, NoteGraph, StringArena};
 
 #[test]
 fn test_frontmatter_parsing() {
@@ -36,8 +36,8 @@ fn test_note_graph() {
     let mut arena = StringArena::new();
     let mut graph = NoteGraph::new();
     
-    let doc1 = parse_markdown("Link to [[Note2]] and [[Note3]]");
-    let doc2 = parse_markdown("Link to [[Note1]] and #some-tag");
+    let doc1 = extract_metadata("Link to [[Note2]] and [[Note3]]");
+    let doc2 = extract_metadata("Link to [[Note1]] and #some-tag");
     
     graph.add_document("Note1", &doc1, &mut arena);
     graph.add_document("Note2", &doc2, &mut arena);
@@ -65,8 +65,8 @@ fn test_remove_document() {
     let mut arena = StringArena::new();
     let mut graph = NoteGraph::new();
     
-    let doc1 = parse_markdown("Link to [[Note2]]");
-    let doc2 = parse_markdown("Hello");
+    let doc1 = extract_metadata("Link to [[Note2]]");
+    let doc2 = extract_metadata("Hello");
     
     graph.add_document("Note1", &doc1, &mut arena);
     graph.add_document("Note2", &doc2, &mut arena);

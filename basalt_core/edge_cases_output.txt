@@ -1,0 +1,208 @@
+=== UTF-16 to UTF-8 Mapping Report ===
+
+Mapping visualizer (Showing Char | UTF-8 Byte Offset | UTF-16 Code Unit Offset):
+--------------------------------------------------------------------------
+'#' | Byte: 0 | UTF-16: 0
+' ' | Byte: 1 | UTF-16: 1
+'A' | Byte: 2 | UTF-16: 2
+' ' | Byte: 3 | UTF-16: 3
+'t' | Byte: 4 | UTF-16: 4
+'e' | Byte: 5 | UTF-16: 5
+'s' | Byte: 6 | UTF-16: 6
+'t' | Byte: 7 | UTF-16: 7
+' ' | Byte: 8 | UTF-16: 8
+'f' | Byte: 9 | UTF-16: 9
+'o' | Byte: 10 | UTF-16: 10
+'r' | Byte: 11 | UTF-16: 11
+' ' | Byte: 12 | UTF-16: 12
+'U' | Byte: 13 | UTF-16: 13
+'T' | Byte: 14 | UTF-16: 14
+'F' | Byte: 15 | UTF-16: 15
+'1' | Byte: 16 | UTF-16: 16
+'6' | Byte: 17 | UTF-16: 17
+' ' | Byte: 18 | UTF-16: 18
+'a' | Byte: 19 | UTF-16: 19
+'n' | Byte: 20 | UTF-16: 20
+'d' | Byte: 21 | UTF-16: 21
+' ' | Byte: 22 | UTF-16: 22
+'U' | Byte: 23 | UTF-16: 23
+'T' | Byte: 24 | UTF-16: 24
+'F' | Byte: 25 | UTF-16: 25
+'8' | Byte: 26 | UTF-16: 26
+' ' | Byte: 27 | UTF-16: 27
+'e' | Byte: 28 | UTF-16: 28
+'d' | Byte: 29 | UTF-16: 29
+'g' | Byte: 30 | UTF-16: 30
+'e' | Byte: 31 | UTF-16: 31
+' ' | Byte: 32 | UTF-16: 32
+'c' | Byte: 33 | UTF-16: 33
+'a' | Byte: 34 | UTF-16: 34
+'s' | Byte: 35 | UTF-16: 35
+'e' | Byte: 36 | UTF-16: 36
+'s' | Byte: 37 | UTF-16: 37
+'\n' | Byte: 38 | UTF-16: 38
+'H' | Byte: 39 | UTF-16: 39
+'e' | Byte: 40 | UTF-16: 40
+'l' | Byte: 41 | UTF-16: 41
+'l' | Byte: 42 | UTF-16: 42
+'o' | Byte: 43 | UTF-16: 43
+' ' | Byte: 44 | UTF-16: 44
+'W' | Byte: 45 | UTF-16: 45
+'o' | Byte: 46 | UTF-16: 46
+'r' | Byte: 47 | UTF-16: 47
+'l' | Byte: 48 | UTF-16: 48
+'d' | Byte: 49 | UTF-16: 49
+'!' | Byte: 50 | UTF-16: 50
+' ' | Byte: 51 | UTF-16: 51
+'👋' | Byte: 52 | UTF-16: 52
+'\n' | Byte: 56 | UTF-16: 54
+'\n' | Byte: 57 | UTF-16: 55
+'#' | Byte: 58 | UTF-16: 56
+'#' | Byte: 59 | UTF-16: 57
+' ' | Byte: 60 | UTF-16: 58
+'M' | Byte: 61 | UTF-16: 59
+'u' | Byte: 62 | UTF-16: 60
+'l' | Byte: 63 | UTF-16: 61
+'t' | Byte: 64 | UTF-16: 62
+'i' | Byte: 65 | UTF-16: 63
+'-' | Byte: 66 | UTF-16: 64
+'b' | Byte: 67 | UTF-16: 65
+'y' | Byte: 68 | UTF-16: 66
+'t' | Byte: 69 | UTF-16: 67
+'e' | Byte: 70 | UTF-16: 68
+' ' | Byte: 71 | UTF-16: 69
+'c' | Byte: 72 | UTF-16: 70
+'h' | Byte: 73 | UTF-16: 71
+'a' | Byte: 74 | UTF-16: 72
+'r' | Byte: 75 | UTF-16: 73
+'a' | Byte: 76 | UTF-16: 74
+'c' | Byte: 77 | UTF-16: 75
+'t' | Byte: 78 | UTF-16: 76
+'e' | Byte: 79 | UTF-16: 77
+'r' | Byte: 80 | UTF-16: 78
+'s' | Byte: 81 | UTF-16: 79
+'\n' | Byte: 82 | UTF-16: 80
+'J' | Byte: 83 | UTF-16: 81
+'a' | Byte: 84 | UTF-16: 82
+'p' | Byte: 85 | UTF-16: 83
+'a' | Byte: 86 | UTF-16: 84
+'n' | Byte: 87 | UTF-16: 85
+'e' | Byte: 88 | UTF-16: 86
+'s' | Byte: 89 | UTF-16: 87
+'e' | Byte: 90 | UTF-16: 88
+':' | Byte: 91 | UTF-16: 89
+' ' | Byte: 92 | UTF-16: 90
+'こ' | Byte: 93 | UTF-16: 91
+'ん' | Byte: 96 | UTF-16: 92
+'に' | Byte: 99 | UTF-16: 93
+'ち' | Byte: 102 | UTF-16: 94
+'は' | Byte: 105 | UTF-16: 95
+'、' | Byte: 108 | UTF-16: 96
+'世' | Byte: 111 | UTF-16: 97
+'界' | Byte: 114 | UTF-16: 98
+'\n' | Byte: 117 | UTF-16: 99
+'A' | Byte: 118 | UTF-16: 100
+'r' | Byte: 119 | UTF-16: 101
+... (truncated for brevity)
+
+=== Edge Case Verifications ===
+Rocket Emoji 🚀 found at Byte Offset: 253
+Mapped to CodeMirror UTF-16 Offset: 199
+Mapped back to Rust Byte Offset: 253
+✅ Mapping cycle verified successfully.
+
+=== AST Parsing ===
+Parsing completed in 100.712µs
+
+
+=== Full AST ===
+Document {
+    frontmatter: None,
+    ast: [
+        Heading(
+            1,
+            [
+                Text(
+                    "A test for UTF16 and UTF8 edge cases",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Hello World! 👋",
+                ),
+            ],
+        ),
+        Heading(
+            2,
+            [
+                Text(
+                    "Multi-byte characters",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Japanese: こんにちは、世界Arabic: مرحبا بالعالمDevanagari: नमस\u{94d}त\u{947} द\u{941}निया",
+                ),
+            ],
+        ),
+        Heading(
+            2,
+            [
+                Text(
+                    "Emojis with varying code units",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Standard emoji: 🚀Flags (uses 2 codepoints): 🇮🇳 🇺🇸",
+                ),
+            ],
+        ),
+        Heading(
+            2,
+            [
+                Text(
+                    "Interleaved Unicode Code Blocks",
+                ),
+            ],
+        ),
+        CodeBlock(
+            "javascript",
+            "const rocket = \"🚀\";\nconst index = rocket.indexOf(\"🚀\"); // We need to check correct CodeMirror UTF16 indices here!\n",
+        ),
+        List(
+            [
+                ListItem(
+                    [
+                        Text(
+                            "Task with an emoji 😅",
+                        ),
+                    ],
+                ),
+                ListItem(
+                    [
+                        WikiLink {
+                            target: "A WikiLink with an emoji 📝",
+                            alias: None,
+                            hash: None,
+                        },
+                    ],
+                ),
+            ],
+        ),
+        CodeBlock(
+            "rust",
+            "fn test() {\n    let s = \"A text with 𝄞 (G clef)\";\n}\n",
+        ),
+    ],
+    tags: [],
+    links: [
+        "A WikiLink with an emoji 📝",
+    ],
+}
