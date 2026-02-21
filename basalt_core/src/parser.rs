@@ -172,7 +172,8 @@ fn process_children(children: Vec<MarkdownNode>, tags: &mut Vec<String>, links: 
             for inline_node in &inline_nodes {
                  match inline_node {
                      MarkdownNode::Tag(t) => tags.push(t.clone()),
-                     MarkdownNode::WikiLink(l) => links.push(l.clone()),
+                     MarkdownNode::WikiLink { target, .. } => links.push(target.clone()),
+                     MarkdownNode::Embed { target, .. } => links.push(target.clone()),
                      _ => {}
                  }
             }

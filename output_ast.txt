@@ -1,0 +1,196 @@
+Document {
+    frontmatter: Some(
+        Mapping {
+            "title": String("The Great Basalt Architecture"),
+            "author": String("Pranav"),
+            "tags": Sequence [
+                String("architecture"),
+                String("rust"),
+                String("performance"),
+            ],
+        },
+    ),
+    ast: [
+        Heading(
+            1,
+            [
+                Text(
+                    "The Vision of Basalt",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Basalt is designed to be a high-performance, strictly typed note-taking engine. By isolating the brain in ",
+                ),
+                Code(
+                    "basalt_core",
+                ),
+                Text(
+                    ", we ensure that the entire system is deterministic and easy to test.",
+                ),
+            ],
+        ),
+        Heading(
+            2,
+            [
+                Text(
+                    "Core Principles",
+                ),
+            ],
+        ),
+        List(
+            [
+                ListItem(
+                    [
+                        Text(
+                            "Pure Functions: The engine does not know about the file system. It takes ",
+                        ),
+                        Code(
+                            "&str",
+                        ),
+                        Text(
+                            " and returns an AST.",
+                        ),
+                    ],
+                ),
+                ListItem(
+                    [
+                        Text(
+                            "Universal Targets: It compiles to both Native (Tauri) and WebAssembly (Vite/Web).",
+                        ),
+                    ],
+                ),
+                ListItem(
+                    [
+                        Text(
+                            "Graph Native: Links and backlinks are first-class citizens.",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        Heading(
+            3,
+            [
+                Text(
+                    "Links and References",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "This document outlines the vision, but you can read more about the technical details in ",
+                ),
+                WikiLink {
+                    target: "Architecture_Notes",
+                    alias: None,
+                    hash: None,
+                },
+                Text(
+                    " or the ",
+                ),
+                WikiLink {
+                    target: "Vite_Frontend_Setup",
+                    alias: None,
+                    hash: None,
+                },
+                Text(
+                    ".",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "We want to make sure things like ",
+                ),
+                Tag(
+                    "performance",
+                ),
+                Text(
+                    " and ",
+                ),
+                Tag(
+                    "rust-lang",
+                ),
+                Text(
+                    " are always prioritized.",
+                ),
+            ],
+        ),
+        Heading(
+            3,
+            [
+                Text(
+                    "Code Example",
+                ),
+            ],
+        ),
+        Paragraph(
+            [
+                Text(
+                    "Here is a small snippet of how the logic looks:",
+                ),
+            ],
+        ),
+        CodeBlock(
+            "rust",
+            "fn process(input: &str) -> AST {\n    parse(input)\n}\n",
+        ),
+        Blockquote(
+            [
+                Paragraph(
+                    [
+                        Text(
+                            "\"Speed is a feature.\" - Someone smart",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        List(
+            [
+                ListItem(
+                    [
+                        Text(
+                            "Item 1: Parse",
+                        ),
+                    ],
+                ),
+                ListItem(
+                    [
+                        Text(
+                            "Item 2: Build Graph",
+                        ),
+                    ],
+                ),
+                ListItem(
+                    [
+                        Text(
+                            "Item 3: Render",
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        Rule,
+        Paragraph(
+            [
+                Text(
+                    "End of document.",
+                ),
+            ],
+        ),
+    ],
+    tags: [
+        "performance",
+        "rust-lang",
+    ],
+    links: [
+        "Architecture_Notes",
+        "Vite_Frontend_Setup",
+    ],
+}

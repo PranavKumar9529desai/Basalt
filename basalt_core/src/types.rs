@@ -7,7 +7,16 @@ pub enum MarkdownNode {
     Paragraph(Vec<MarkdownNode>),
     List(Vec<MarkdownNode>),
     ListItem(Vec<MarkdownNode>),
-    WikiLink(String),
+    WikiLink {
+        target: String,
+        alias: Option<String>,
+        hash: Option<String>, // covers '#' header links or '^' block refs
+    },
+    Embed {
+        target: String,
+        alias: Option<String>,
+        hash: Option<String>,
+    },
     Tag(String),
     Code(String),
     CodeBlock(String, String), // language, code
