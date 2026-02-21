@@ -35,4 +35,12 @@ impl StringArena {
     pub fn get_string(&self, id: NodeId) -> Option<&String> {
         self.id_to_string.get(id as usize)
     }
+
+    pub fn len(&self) -> usize {
+        self.id_to_string.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.id_to_string.is_empty()
+    }
 }

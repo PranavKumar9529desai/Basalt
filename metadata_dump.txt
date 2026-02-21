@@ -1,0 +1,51 @@
+=== VaultMetadata Index Report ===
+Time taken: 116.006466ms
+Total indexed items/strings in Arena: 1166
+Total Forward Links: 124
+Total Back Links: 124
+
+--- Forward Links (First 20 items) ---
+1. [533] /home/pranav/Documents/obsidian/Daily Journal/2025/10-October/2025-10-29-Wednesday.sync-conflict-20251029-173242-N3BDLLG.md links to:
+2. [767] /home/pranav/Documents/obsidian/Fleeing/Excalidraw/gymdominator notes.md links to:
+3. [835] /home/pranav/Documents/obsidian/Fleeing/Notes/fiancial markets/1 Long term vs short term Investment strategies.md links to:
+4. [876] /home/pranav/Documents/obsidian/Fleeing/Projects/Gymdominator/Gymdominator client Side/Attendance/Attendance using qrcode.md links to:
+5. [894] /home/pranav/Documents/obsidian/Fleeing/Projects/New Ideas/ChatGpt paste.md links to:
+6. [1107] /home/pranav/Documents/obsidian/Permant/Placements/Object Oriented Programming/02 Method Types.md links to:
+   -> [1108] Tldraw 2025-10-30 1.31PM.tldr
+7. [887] /home/pranav/Documents/obsidian/Fleeing/Projects/Gymdominator/Gymdominator client Side/Today Workout page Ideas.md links to:
+8. [759] /home/pranav/Documents/obsidian/Fleeing/Excalidraw/Drawing 2024-11-05 21.48.18.excalidraw.md links to:
+9. [123] /home/pranav/Documents/obsidian/Calandar/2025-04-01 Attach to single domain.md links to:
+10. [170] /home/pranav/Documents/obsidian/Calandar/2024-11-13 Add Trainer component and backend  api.md links to:
+11. [961] /home/pranav/Documents/obsidian/Fleeing/Study Notes/Code/Web Devlopment/Next JS/Next Auth.md links to:
+   -> [962] Next Router
+12. [515] /home/pranav/Documents/obsidian/Daily Journal/2025/10-October/2025-10-08-Wednesday.md links to:
+13. [841] /home/pranav/Documents/obsidian/Fleeing/Projects/Chatbot/meet.md links to:
+14. [187] /home/pranav/Documents/obsidian/Calandar/2024-11-07 Write Notes about the Next Auth and the Roles based values.md links to:
+15. [828] /home/pranav/Documents/obsidian/Fleeing/Notes/fiancial markets/9 Important Organizations.md links to:
+16. [605] /home/pranav/Documents/obsidian/Daily Journal/2026/01-January/2026-01-18-Sunday.md links to:
+17. [781] /home/pranav/Documents/obsidian/Fleeing/Habit trackers/5 Days streak/Gym.md links to:
+18. [516] /home/pranav/Documents/obsidian/Daily Journal/2025/10-October/2025-10-07-Tuesday.md links to:
+19. [726] /home/pranav/Documents/obsidian/Fleeing/DSA/Building a binary Tree from Inorder and Preorder Traversal.md links to:
+20. [303] /home/pranav/Documents/obsidian/Calandar/2024-10-22 Connect the all the pages to the dashboard.md links to:
+
+--- String Arena Sample ---
+0: /home/pranav/Documents/obsidian/Calandar/2025-05-03 Complete the settings page.md
+1: /home/pranav/Documents/obsidian/Calandar/2025-04-08 AuthToken component fixations.md
+2: /home/pranav/Documents/obsidian/Calandar/(Every ) Write down the goals and process how you are planning to do it..md
+3: /home/pranav/Documents/obsidian/Calandar/2024-12-25 Pack the Bag don't forgot anything.md
+4: /home/pranav/Documents/obsidian/Calandar/2025-03-16 Fix the selectgym.md
+5: /home/pranav/Documents/obsidian/Calandar/2024-12-16 1) Create nice form and the to have the userHealthprofile.md
+6: /home/pranav/Documents/obsidian/Calandar/2025-01-24 File the compliant both online as well as the phone call.md
+7: /home/pranav/Documents/obsidian/Calandar/2024-10-26.md
+8: /home/pranav/Documents/obsidian/Calandar/2024-12-07 Run and add the Login page for the ominplex website.md
+9: /home/pranav/Documents/obsidian/Calandar/2024-10-26 Finish the home page and componets ui.md
+10: /home/pranav/Documents/obsidian/Calandar/2025-01-19 Add Navbar to both the website with logout about trainer about gym.md
+11: /home/pranav/Documents/obsidian/Calandar/2025-01-18 Learning the PWA and react optimization.md
+12: /home/pranav/Documents/obsidian/Calandar/2025-02-13 Better structure for the backend.md
+13: /home/pranav/Documents/obsidian/Calandar/2025-02-19 Remove the frmer motion shit from the components for mobile devices.md
+14: /home/pranav/Documents/obsidian/Calandar/2024-10-24.md
+15: /home/pranav/Documents/obsidian/Calandar/2024-12-14 Fixed the view Trainers and AssignTrainers.md
+16: /home/pranav/Documents/obsidian/Calandar/2025-01-07 Gym Dominator.md
+17: /home/pranav/Documents/obsidian/Calandar/2025-03-11 Personalized workouts.md
+18: /home/pranav/Documents/obsidian/Calandar/2024-10-27.md
+19: /home/pranav/Documents/obsidian/Calandar/2025-09-06 Submit the Report for Summar Training.md
