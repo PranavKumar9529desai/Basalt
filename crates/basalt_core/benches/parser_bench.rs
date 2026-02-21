@@ -1,5 +1,5 @@
+use basalt_core::parse_markdown;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use basalt_core::parser::parse_markdown;
 
 fn bench_parser(c: &mut Criterion) {
     let markdown_content = r#"---
@@ -32,7 +32,9 @@ fn main() {
 This ensures our drop-in replacement hasn't degraded performance.
 "#;
 
-    c.bench_function("parse_markdown_with_frontmatter", |b| b.iter(|| parse_markdown(black_box(markdown_content))));
+    c.bench_function("parse_markdown_with_frontmatter", |b| {
+        b.iter(|| parse_markdown(black_box(markdown_content)))
+    });
 }
 
 criterion_group!(benches, bench_parser);
