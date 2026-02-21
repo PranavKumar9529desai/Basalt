@@ -3,3 +3,4 @@ node_modules/
 .env
 *.log
 .cococinde_code_mcp_server.log
+apps/tauri/.tmp/.f896fdffefef933b-00000000.hm
