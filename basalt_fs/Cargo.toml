@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.101"
 basalt_core = { path = "../basalt_core" }
+notify = "8.2.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ignore = "0.4.23"

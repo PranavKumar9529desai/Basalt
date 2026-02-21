@@ -3,6 +3,7 @@ use basalt_core::arena::StringArena;
 use basalt_core::graph::NoteGraph;
 
 pub mod indexer;
+pub mod watcher;
 
 pub trait FileSystem {
     fn read(&self, path: &str) -> Result<Vec<u8>>;
@@ -29,6 +30,10 @@ impl Vault {
     pub fn add_document(&mut self, path: &str, content: &str) {
         let meta = extract_metadata(content);
         self.graph.add_document(path, &meta, &mut self.arena);
+    }
+
+    pub fn remove_document(&mut self, path: &str) {
+        self.graph.remove_document(path, &mut self.arena);
     }
 }
 
