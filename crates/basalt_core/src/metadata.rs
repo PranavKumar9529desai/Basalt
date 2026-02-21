@@ -73,7 +73,7 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                 }
                 if i < bytes.len() {
                     let end_byte = i + 2;
-                    let link_content = std::str::from_utf8(&bytes[start..i]).unwrap_or("");
+                    let link_content = input.get(start..i).unwrap_or("");
                     let target = link_content.split('|').next().unwrap_or("").split('#').next().unwrap_or("").trim();
                     if !target.is_empty() {
                          meta.links.push(target.to_string());
@@ -95,7 +95,7 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         i += 1;
                     }
                     if i > start {
-                        let block_id = std::str::from_utf8(&bytes[start..i]).unwrap_or("");
+                        let block_id = input.get(start..i).unwrap_or("");
                         let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
                         let u16_end = text_doc.byte_offset_to_utf16(i).unwrap_or(i);
                         meta.block_ids.push((block_id.to_string(), Span { start: u16_start, end: u16_end }));
@@ -122,7 +122,7 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         while temp_i < bytes.len() && bytes[temp_i] != b'\n' {
                             temp_i += 1;
                         }
-                        let text_content = std::str::from_utf8(&bytes[text_start..temp_i]).unwrap_or("").trim().to_string();
+                        let text_content = input.get(text_start..temp_i).unwrap_or("").trim().to_string();
                         
                         let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
                         let u16_end = text_doc.byte_offset_to_utf16(temp_i).unwrap_or(temp_i); // end index
@@ -144,12 +144,14 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         i += 1;
                     }
                     if i > start {
-                        let tag = std::str::from_utf8(&bytes[start..i]).unwrap_or("");
-                        meta.tags.push(tag.to_string());
-                        
-                        let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
-                        let u16_end = text_doc.byte_offset_to_utf16(i).unwrap_or(i);
-                        meta.tag_locations.push((tag.to_string(), Span { start: u16_start, end: u16_end }));
+                        let tag = input.get(start..i).unwrap_or("");
+                        if !tag.is_empty() {
+                            meta.tags.push(tag.to_string());
+                            
+                            let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
+                            let u16_end = text_doc.byte_offset_to_utf16(i).unwrap_or(i);
+                            meta.tag_locations.push((tag.to_string(), Span { start: u16_start, end: u16_end }));
+                        }
                         continue;
                     }
                 }

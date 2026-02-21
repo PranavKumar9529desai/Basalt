@@ -29,7 +29,7 @@ impl Vault {
 
     pub fn add_document(&mut self, path: &str, content: &str) {
         let meta = extract_metadata(content);
-        self.graph.add_document(path, &meta, &mut self.arena);
+        self.graph.add_document(path, meta, &mut self.arena);
     }
 
     pub fn remove_document(&mut self, path: &str) {

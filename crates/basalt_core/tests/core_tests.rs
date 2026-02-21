@@ -39,8 +39,8 @@ fn test_note_graph() {
     let doc1 = extract_metadata("Link to [[Note2]] and [[Note3]]");
     let doc2 = extract_metadata("Link to [[Note1]] and #some-tag");
     
-    graph.add_document("Note1", &doc1, &mut arena);
-    graph.add_document("Note2", &doc2, &mut arena);
+    graph.add_document("Note1", doc1, &mut arena);
+    graph.add_document("Note2", doc2, &mut arena);
     
     let note1_id = arena.get_id("Note1").unwrap();
     let note2_id = arena.get_id("Note2").unwrap();
@@ -68,8 +68,8 @@ fn test_remove_document() {
     let doc1 = extract_metadata("Link to [[Note2]]");
     let doc2 = extract_metadata("Hello");
     
-    graph.add_document("Note1", &doc1, &mut arena);
-    graph.add_document("Note2", &doc2, &mut arena);
+    graph.add_document("Note1", doc1, &mut arena);
+    graph.add_document("Note2", doc2, &mut arena);
     
     let note1_id = arena.get_id("Note1").unwrap();
     let note2_id = arena.get_id("Note2").unwrap();

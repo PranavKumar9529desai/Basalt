@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "basalt_core",
-    "basalt_fs",
-    "basalt_wasm",
+    "crates/basalt_core",
+    "crates/basalt_fs",
+    "crates/basalt_wasm",
 ]

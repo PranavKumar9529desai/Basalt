@@ -1,5 +1,6 @@
 use crate::types::MarkdownNode;
-
+// this is for the Single file obsidian edge case extraction
+// like the embed link and tags
 pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
     let mut nodes = Vec::new();
 
@@ -12,13 +13,22 @@ pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
         let mut token = None;
 
         if let Some(e) = embed_idx {
-            if e < min_idx { min_idx = e; token = Some("embed"); }
+            if e < min_idx {
+                min_idx = e;
+                token = Some("embed");
+            }
         }
         if let Some(l) = link_idx {
-            if l < min_idx { min_idx = l; token = Some("link"); }
+            if l < min_idx {
+                min_idx = l;
+                token = Some("link");
+            }
         }
         if let Some(t) = tag_idx {
-            if t < min_idx { min_idx = t; token = Some("tag"); }
+            if t < min_idx {
+                min_idx = t;
+                token = Some("tag");
+            }
         }
 
         match token {
@@ -31,7 +41,7 @@ pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
             }
         }
     }
-    
+
     // Consolidate adjacent Text nodes
     let mut consolidated = Vec::new();
     for node in nodes {
@@ -43,33 +53,45 @@ pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
         }
         consolidated.push(node);
     }
-    
+
     consolidated
 }
 
 fn handle_link<'a>(input: &'a str, l: usize, nodes: &mut Vec<MarkdownNode>) -> &'a str {
     if let Some(end) = input[l + 2..].find("]]") {
-        if l > 0 { nodes.push(MarkdownNode::Text(input[..l].to_string())); }
+        if l > 0 {
+            nodes.push(MarkdownNode::Text(input[..l].to_string()));
+        }
         let content = &input[l + 2..l + 2 + end];
         let (target, alias, hash) = parse_obsidian_link(content);
-        nodes.push(MarkdownNode::WikiLink { target, alias, hash });
+        nodes.push(MarkdownNode::WikiLink {
+            target,
+            alias,
+            hash,
+        });
         &input[l + 4 + end..]
     } else {
-        nodes.push(MarkdownNode::Text(input[..l+2].to_string()));
-        &input[l+2..]
+        nodes.push(MarkdownNode::Text(input[..l + 2].to_string()));
+        &input[l + 2..]
     }
 }
 
 fn handle_embed<'a>(input: &'a str, e: usize, nodes: &mut Vec<MarkdownNode>) -> &'a str {
     if let Some(end) = input[e + 3..].find("]]") {
-        if e > 0 { nodes.push(MarkdownNode::Text(input[..e].to_string())); }
+        if e > 0 {
+            nodes.push(MarkdownNode::Text(input[..e].to_string()));
+        }
         let content = &input[e + 3..e + 3 + end];
         let (target, alias, hash) = parse_obsidian_link(content);
-        nodes.push(MarkdownNode::Embed { target, alias, hash });
+        nodes.push(MarkdownNode::Embed {
+            target,
+            alias,
+            hash,
+        });
         &input[e + 5 + end..]
     } else {
-        nodes.push(MarkdownNode::Text(input[..e+3].to_string()));
-        &input[e+3..]
+        nodes.push(MarkdownNode::Text(input[..e + 3].to_string()));
+        &input[e + 3..]
     }
 }
 
@@ -82,7 +104,7 @@ fn parse_obsidian_link(content: &str) -> (String, Option<String>, Option<String>
         alias = Some(target[pipe_idx + 1..].to_string());
         target = &target[..pipe_idx];
     }
-    
+
     if let Some(hash_idx) = target.find('#') {
         hash = Some(target[hash_idx + 1..].to_string());
         target = &target[..hash_idx];
@@ -101,7 +123,7 @@ fn handle_tag<'a>(input: &'a str, t: usize, nodes: &mut Vec<MarkdownNode>) -> &'
             break;
         }
     }
-    
+
     // Optionally check if tag is preceded by whitespace or start of string
     let valid_prefix = if t == 0 {
         true
@@ -111,8 +133,12 @@ fn handle_tag<'a>(input: &'a str, t: usize, nodes: &mut Vec<MarkdownNode>) -> &'
     };
 
     if tag_len > 0 && valid_prefix {
-        if t > 0 { nodes.push(MarkdownNode::Text(input[..t].to_string())); }
-        nodes.push(MarkdownNode::Tag(input[tag_start..tag_start + tag_len].to_string()));
+        if t > 0 {
+            nodes.push(MarkdownNode::Text(input[..t].to_string()));
+        }
+        nodes.push(MarkdownNode::Tag(
+            input[tag_start..tag_start + tag_len].to_string(),
+        ));
         &input[tag_start + tag_len..]
     } else {
         // Just treat # as text
@@ -130,11 +156,14 @@ mod tests {
         let input = "[[My Page]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::WikiLink {
-            target: "My Page".to_string(),
-            alias: None,
-            hash: None,
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::WikiLink {
+                target: "My Page".to_string(),
+                alias: None,
+                hash: None,
+            }
+        );
     }
 
     #[test]
@@ -142,11 +171,14 @@ mod tests {
         let input = "[[My Page|Alias Text]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::WikiLink {
-            target: "My Page".to_string(),
-            alias: Some("Alias Text".to_string()),
-            hash: None,
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::WikiLink {
+                target: "My Page".to_string(),
+                alias: Some("Alias Text".to_string()),
+                hash: None,
+            }
+        );
     }
 
     #[test]
@@ -154,11 +186,14 @@ mod tests {
         let input = "[[My Page#Section Header]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::WikiLink {
-            target: "My Page".to_string(),
-            alias: None,
-            hash: Some("Section Header".to_string()),
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::WikiLink {
+                target: "My Page".to_string(),
+                alias: None,
+                hash: Some("Section Header".to_string()),
+            }
+        );
     }
 
     #[test]
@@ -166,11 +201,14 @@ mod tests {
         let input = "[[My Page#Section Header|Alias Text]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::WikiLink {
-            target: "My Page".to_string(),
-            alias: Some("Alias Text".to_string()),
-            hash: Some("Section Header".to_string()),
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::WikiLink {
+                target: "My Page".to_string(),
+                alias: Some("Alias Text".to_string()),
+                hash: Some("Section Header".to_string()),
+            }
+        );
     }
 
     #[test]
@@ -178,11 +216,14 @@ mod tests {
         let input = "![[Image.png]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::Embed {
-            target: "Image.png".to_string(),
-            alias: None,
-            hash: None,
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::Embed {
+                target: "Image.png".to_string(),
+                alias: None,
+                hash: None,
+            }
+        );
     }
 
     #[test]
@@ -190,10 +231,15 @@ mod tests {
         let input = "![[Image.png|100x100]]";
         let nodes = parse_inline_text(input);
         assert_eq!(nodes.len(), 1);
-        assert_eq!(nodes[0], MarkdownNode::Embed {
-            target: "Image.png".to_string(),
-            alias: Some("100x100".to_string()),
-            hash: None,
-        });
+        assert_eq!(
+            nodes[0],
+            MarkdownNode::Embed {
+                target: "Image.png".to_string(),
+                alias: Some("100x100".to_string()),
+                hash: None,
+            }
+        );
     }
 }
+
+// why we need this ? Despite being already have indexed metadata for
