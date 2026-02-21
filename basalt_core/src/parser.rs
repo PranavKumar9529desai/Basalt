@@ -1,5 +1,5 @@
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
-use serde_yaml;
+use serde_yaml_ng;
 
 use crate::types::{Document, MarkdownNode};
 use crate::inline::parse_inline_text;
@@ -13,7 +13,7 @@ pub fn parse_markdown(input: &str) -> Document {
         let end_idx = input[4..].find("\n---").map(|i| i + 4);
         if let Some(idx) = end_idx {
             let frontmatter_str = &input[4..idx];
-            if let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(frontmatter_str) {
+            if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
                 doc.frontmatter = Some(yaml);
             }
             let after_frontmatter = idx + 4;

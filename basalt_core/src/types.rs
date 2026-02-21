@@ -18,7 +18,7 @@ pub enum MarkdownNode {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Document {
-    pub frontmatter: Option<serde_yaml::Value>,
+    pub frontmatter: Option<serde_yaml_ng::Value>,
     pub ast: Vec<MarkdownNode>,
     pub tags: Vec<String>,
     pub links: Vec<String>,

@@ -47,7 +47,7 @@ mod tests {
         fs::write(sub_dir.join("c.md"), "No links here").unwrap();
         
         let vault = index_directory(&temp_dir);
-        
+        // arean hold the mapping of the id to the path
         let id_a = vault.arena.get_id(temp_dir.join("a.md").to_str().unwrap());
         let id_b = vault.arena.get_id(temp_dir.join("b.md").to_str().unwrap());
         let id_c = vault.arena.get_id(sub_dir.join("c.md").to_str().unwrap());
