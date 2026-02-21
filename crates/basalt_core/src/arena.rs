@@ -24,7 +24,7 @@ impl StringArena {
         let new_id = self.id_to_string.len() as NodeId;
         self.id_to_string.push(s.to_string());
         self.string_to_id.insert(s.to_string(), new_id);
-        
+
         new_id
     }
 
@@ -42,5 +42,10 @@ impl StringArena {
 
     pub fn is_empty(&self) -> bool {
         self.id_to_string.is_empty()
+    }
+
+    /// Returns all interned strings in insertion order.
+    pub fn all_strings(&self) -> impl Iterator<Item = &String> {
+        self.id_to_string.iter()
     }
 }

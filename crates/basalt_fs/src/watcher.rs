@@ -3,8 +3,8 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
 use crate::Vault;
 
@@ -35,7 +35,7 @@ impl VaultWatcher {
         let thread_handle = thread::spawn(move || {
             // Very simple debouncing: keep track of files modified to process them
             let mut pending_files = HashSet::new();
-            
+
             loop {
                 // Wait for the first event, blocking
                 match rx.recv_timeout(Duration::from_millis(100)) {
@@ -75,7 +75,7 @@ impl VaultWatcher {
                 }
             }
             EventKind::Remove(_) => {
-                // Note: Removing documents from the Vault is harder right now, 
+                // Note: Removing documents from the Vault is harder right now,
                 // but we should eventually handle it to clear broken links!
                 for path in event.paths {
                     if path.extension().and_then(|e| e.to_str()) == Some("md") {
@@ -94,7 +94,7 @@ impl VaultWatcher {
         };
 
         for path in files {
-            // Get string representation relative to base_path, or just use full path 
+            // Get string representation relative to base_path, or just use full path
             // depending on how we store paths in Arena
             let path_str = path.to_string_lossy().to_string();
 

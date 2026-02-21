@@ -40,7 +40,7 @@ fn main() {
             "\\r".to_string()
         } else {
             ch.to_string()
-};
+        };
 
         report.push_str(&format!(
             "'{display_char}' | Byte: {byte_offset} | UTF-16: {utf16_offset}\n"

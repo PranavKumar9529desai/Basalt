@@ -14,7 +14,7 @@ impl TextDocument {
     /// Converts a CodeMirror UTF-16 offset into a Rust UTF-8 byte offset.
     pub fn utf16_to_byte_offset(&self, utf16_offset: usize) -> Option<usize> {
         // Find the character index corresponding to the UTF-16 offset
-        // If the offset is out of bounds, ropey methods typically panic, 
+        // If the offset is out of bounds, ropey methods typically panic,
         // but we can check limits or just let it panic if we expect CodeMirror to be accurate.
         // For safety, we should ideally check bounds.
         let max_utf16 = self.rope.len_utf16_cu();
@@ -36,7 +36,7 @@ impl TextDocument {
         let char_idx = self.rope.byte_to_char(byte_offset);
         Some(self.rope.char_to_utf16_cu(char_idx))
     }
-    
+
     // Helper to get the actual rope if needed
     pub fn as_rope(&self) -> &Rope {
         &self.rope
@@ -55,7 +55,7 @@ mod tests {
         // UTF-16 offset 8 should point exactly after the emoji.
         let byte_offset = doc.utf16_to_byte_offset(8).unwrap();
         assert_eq!(byte_offset, 10); // 6 bytes for "Hello " + 4 bytes for 🚀 = 10
-        
+
         // Reverse
         let utf16_offset = doc.byte_offset_to_utf16(10).unwrap();
         assert_eq!(utf16_offset, 8);
@@ -66,7 +66,7 @@ mod tests {
         let doc = TextDocument::new("Hello World");
         let byte_offset = doc.utf16_to_byte_offset(6).unwrap();
         assert_eq!(byte_offset, 6);
-        
+
         let utf16_offset = doc.byte_offset_to_utf16(6).unwrap();
         assert_eq!(utf16_offset, 6);
     }

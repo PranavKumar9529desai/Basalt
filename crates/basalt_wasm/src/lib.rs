@@ -1,9 +1,8 @@
+use basalt_core::{extract_metadata, process_markdown};
 use wasm_bindgen::prelude::*;
-use basalt_core::{process_markdown, extract_metadata};
 
 #[wasm_bindgen]
-pub struct Basalt {
-}
+pub struct Basalt {}
 
 #[wasm_bindgen]
 impl Basalt {

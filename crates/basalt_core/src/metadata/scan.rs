@@ -54,10 +54,17 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         .trim();
                     if !target.is_empty() {
                         meta.links.push(target.to_string());
-                        let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
+                        let u16_start = text_doc
+                            .byte_offset_to_utf16(start_byte)
+                            .unwrap_or(start_byte);
                         let u16_end = text_doc.byte_offset_to_utf16(end_byte).unwrap_or(end_byte);
-                        meta.link_locations
-                            .push((target.to_string(), Span { start: u16_start, end: u16_end }));
+                        meta.link_locations.push((
+                            target.to_string(),
+                            Span {
+                                start: u16_start,
+                                end: u16_end,
+                            },
+                        ));
                     }
                     i = end_byte; // continue parsing exactly here since we matched it.
                 }
@@ -69,15 +76,23 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                 i += 1;
                 let start = i;
                 if is_valid_start {
-                    while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'-') {
+                    while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'-')
+                    {
                         i += 1;
                     }
                     if i > start {
                         let block_id = input.get(start..i).unwrap_or("");
-                        let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
+                        let u16_start = text_doc
+                            .byte_offset_to_utf16(start_byte)
+                            .unwrap_or(start_byte);
                         let u16_end = text_doc.byte_offset_to_utf16(i).unwrap_or(i);
-                        meta.block_ids
-                            .push((block_id.to_string(), Span { start: u16_start, end: u16_end }));
+                        meta.block_ids.push((
+                            block_id.to_string(),
+                            Span {
+                                start: u16_start,
+                                end: u16_end,
+                            },
+                        ));
                         continue;
                     }
                 }
@@ -101,13 +116,25 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         while temp_i < bytes.len() && bytes[temp_i] != b'\n' {
                             temp_i += 1;
                         }
-                        let text_content = input.get(text_start..temp_i).unwrap_or("").trim().to_string();
+                        let text_content = input
+                            .get(text_start..temp_i)
+                            .unwrap_or("")
+                            .trim()
+                            .to_string();
 
-                        let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
+                        let u16_start = text_doc
+                            .byte_offset_to_utf16(start_byte)
+                            .unwrap_or(start_byte);
                         let u16_end = text_doc.byte_offset_to_utf16(temp_i).unwrap_or(temp_i); // end index
 
-                        meta.headings
-                            .push((level as u8, text_content, Span { start: u16_start, end: u16_end }));
+                        meta.headings.push((
+                            level as u8,
+                            text_content,
+                            Span {
+                                start: u16_start,
+                                end: u16_end,
+                            },
+                        ));
                         i = temp_i;
                         continue;
                     }
@@ -122,7 +149,9 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                 if valid_tag_start {
                     while i < bytes.len()
                         && (bytes[i].is_ascii_alphanumeric()
-                            || bytes[i] == b'_' || bytes[i] == b'-' || bytes[i] > 127)
+                            || bytes[i] == b'_'
+                            || bytes[i] == b'-'
+                            || bytes[i] > 127)
                     {
                         i += 1;
                     }
@@ -131,10 +160,17 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         if !tag.is_empty() {
                             meta.tags.push(tag.to_string());
 
-                            let u16_start = text_doc.byte_offset_to_utf16(start_byte).unwrap_or(start_byte);
+                            let u16_start = text_doc
+                                .byte_offset_to_utf16(start_byte)
+                                .unwrap_or(start_byte);
                             let u16_end = text_doc.byte_offset_to_utf16(i).unwrap_or(i);
-                            meta.tag_locations
-                                .push((tag.to_string(), Span { start: u16_start, end: u16_end }));
+                            meta.tag_locations.push((
+                                tag.to_string(),
+                                Span {
+                                    start: u16_start,
+                                    end: u16_end,
+                                },
+                            ));
                         }
                         continue;
                     }
