@@ -1,0 +1,21 @@
+{
+    "$schema": "https://ui.shadcn.com/schema.json",
+    "style": "nova",
+    "rsc": false,
+    "tsx": true,
+    "tailwind": {
+        "config": "tailwind.config.ts",
+        "css": "src/index.css",
+        "baseColor": "neutral",
+        "cssVariables": true,
+        "prefix": ""
+    },
+    "aliases": {
+        "components": "@workspace/ui/components",
+        "utils": "@workspace/ui/lib/utils",
+        "ui": "@workspace/ui/components/ui",
+        "lib": "@workspace/ui/lib",
+        "hooks": "@workspace/ui/hooks"
+    },
+    "iconLibrary": "tabler"
+}
