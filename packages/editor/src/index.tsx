@@ -6,7 +6,6 @@ import { EditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { Components } from "react-markdown";
 
 export interface EditorProps {
   initialContent?: string;
@@ -64,13 +63,13 @@ export const Editor: React.FC<EditorProps> = ({
     },
   });
 
-  const markdownComponents: Components = {
-    h1: ({ children, ...props }) => (
+  const markdownComponents: any = {
+    h1: ({ children, ...props }: any) => (
       <h1 className="text-3xl font-bold mt-6 mb-4 text-slate-50" {...props}>
         {children}
       </h1>
     ),
-    h2: ({ children, ...props }) => (
+    h2: ({ children, ...props }: any) => (
       <h2
         className="text-2xl font-semibold mt-5 mb-3 text-slate-100"
         {...props}
@@ -78,27 +77,27 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </h2>
     ),
-    h3: ({ children, ...props }) => (
+    h3: ({ children, ...props }: any) => (
       <h3 className="text-xl font-semibold mt-4 mb-2 text-slate-200" {...props}>
         {children}
       </h3>
     ),
-    p: ({ children, ...props }) => (
+    p: ({ children, ...props }: any) => (
       <p className="text-slate-200 leading-7 mb-3" {...props}>
         {children}
       </p>
     ),
-    strong: ({ children, ...props }) => (
+    strong: ({ children, ...props }: any) => (
       <strong className="font-semibold text-slate-50" {...props}>
         {children}
       </strong>
     ),
-    em: ({ children, ...props }) => (
+    em: ({ children, ...props }: any) => (
       <em className="italic text-slate-200" {...props}>
         {children}
       </em>
     ),
-    code: ({ children, ...props }) => (
+    code: ({ children, ...props }: any) => (
       <code
         className="bg-zinc-800 px-1.5 py-0.5 rounded text-amber-200 text-sm"
         {...props}
@@ -106,7 +105,7 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </code>
     ),
-    pre: ({ children, ...props }) => (
+    pre: ({ children, ...props }: any) => (
       <pre
         className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 overflow-x-auto text-slate-100 text-sm mb-4"
         {...props}
@@ -114,7 +113,7 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </pre>
     ),
-    blockquote: ({ children, ...props }) => (
+    blockquote: ({ children, ...props }: any) => (
       <blockquote
         className="border-l-4 border-blue-500 pl-4 italic text-slate-300 mb-4"
         {...props}
@@ -122,7 +121,7 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </blockquote>
     ),
-    ul: ({ children, ...props }) => (
+    ul: ({ children, ...props }: any) => (
       <ul
         className="list-disc list-inside space-y-2 text-slate-200 mb-4"
         {...props}
@@ -130,7 +129,7 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </ul>
     ),
-    ol: ({ children, ...props }) => (
+    ol: ({ children, ...props }: any) => (
       <ol
         className="list-decimal list-inside space-y-2 text-slate-200 mb-4"
         {...props}
@@ -138,43 +137,43 @@ export const Editor: React.FC<EditorProps> = ({
         {children}
       </ol>
     ),
-    li: ({ children, ...props }) => (
+    li: ({ children, ...props }: any) => (
       <li className="leading-7" {...props}>
         {children}
       </li>
     ),
-    a: ({ children, ...props }) => (
+    a: ({ children, ...props }: any) => (
       <a className="text-blue-400 hover:text-blue-300 underline" {...props}>
         {children}
       </a>
     ),
-    hr: (props) => <hr className="border-zinc-800 my-6" {...props} />,
-    table: ({ children, ...props }) => (
+    hr: (props: any) => <hr className="border-zinc-800 my-6" {...props} />,
+    table: ({ children, ...props }: any) => (
       <table className="w-full text-left border-collapse mb-4" {...props}>
         {children}
       </table>
     ),
-    thead: ({ children, ...props }) => (
+    thead: ({ children, ...props }: any) => (
       <thead className="bg-zinc-900 text-slate-100" {...props}>
         {children}
       </thead>
     ),
-    tbody: ({ children, ...props }) => (
+    tbody: ({ children, ...props }: any) => (
       <tbody className="divide-y divide-zinc-800" {...props}>
         {children}
       </tbody>
     ),
-    tr: ({ children, ...props }) => (
+    tr: ({ children, ...props }: any) => (
       <tr className="border-b border-zinc-800" {...props}>
         {children}
       </tr>
     ),
-    th: ({ children, ...props }) => (
+    th: ({ children, ...props }: any) => (
       <th className="py-2 px-3 font-semibold border border-zinc-800" {...props}>
         {children}
       </th>
     ),
-    td: ({ children, ...props }) => (
+    td: ({ children, ...props }: any) => (
       <td
         className="py-2 px-3 text-slate-200 border border-zinc-800"
         {...props}
