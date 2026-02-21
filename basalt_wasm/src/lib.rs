@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use basalt_core::process_markdown;
+use basalt_core::{process_markdown, extract_metadata};
 
 #[wasm_bindgen]
 pub struct Basalt {
@@ -15,5 +15,10 @@ impl Basalt {
     pub fn render_markdown(&self, input: &str) -> String {
         let processed = process_markdown(input);
         processed.html
+    }
+
+    pub fn extract_metadata(&self, input: &str) -> Result<JsValue, JsValue> {
+        let meta = extract_metadata(input);
+        serde_wasm_bindgen::to_value(&meta).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }

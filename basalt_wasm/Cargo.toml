@@ -8,5 +8,5 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 basalt_core = { path = "../basalt_core" }
-basalt_fs = { path = "../basalt_fs" }
 wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
