@@ -138,6 +138,29 @@ fn autocomplete_links(
     Ok(out)
 }
 
+#[tauri::command]
+fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<String>, String> {
+    let guard = state
+        .vault
+        .read()
+        .map_err(|_| "vault state is poisoned".to_string())?;
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "vault not indexed yet".to_string())?;
+
+    let mut tags = std::collections::HashSet::new();
+    for meta in vault.graph.metadata_cache.values() {
+        for tag in &meta.tags {
+            if tag.starts_with(&prefix) {
+                tags.insert(tag.clone());
+            }
+        }
+    }
+    let mut out: Vec<String> = tags.into_iter().collect();
+    out.sort();
+    Ok(out)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -148,7 +171,8 @@ pub fn run() {
             open_file,
             save_file,
             get_backlinks,
-            autocomplete_links
+            autocomplete_links,
+            autocomplete_tags
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

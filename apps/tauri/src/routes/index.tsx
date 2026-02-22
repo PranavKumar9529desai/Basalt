@@ -125,6 +125,24 @@ function RouteComponent() {
     );
   }, []);
 
+  const onFetchLinks = useCallback(async (query: string) => {
+    try {
+      return await invoke<LinkSuggestion[]>("autocomplete_links", { prefix: query });
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  }, []);
+
+  const onFetchTags = useCallback(async (query: string) => {
+    try {
+      return await invoke<string[]>("autocomplete_tags", { prefix: query });
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  }, []);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -180,11 +198,10 @@ function RouteComponent() {
               <button
                 key={note.path}
                 onClick={() => loadNote(note)}
-                className={`w-full text-left px-3 py-2 rounded-md border ${
-                  selected?.path === note.path
+                className={`w-full text-left px-3 py-2 rounded-md border ${selected?.path === note.path
                     ? "bg-blue-600/20 border-blue-500 text-blue-100"
                     : "bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700"
-                }`}
+                  }`}
               >
                 <div className="text-sm font-semibold">{note.name}</div>
                 <div className="text-xs text-slate-400 truncate">
@@ -220,6 +237,8 @@ function RouteComponent() {
               value={content}
               onChange={setContent}
               initialContent=""
+              onFetchLinks={onFetchLinks}
+              onFetchTags={onFetchTags}
             />
           </div>
         </div>

@@ -13,6 +13,7 @@ import { CUSTOM_THEME } from "./theme";
 import { backticksKeymap } from "./plugins/backticks";
 import { taskListPlugin, TASK_CHECKBOX_THEME } from "./plugins/task-list";
 import { livePreviewPlugin, LIVE_PREVIEW_THEME, codeBlockStateField } from "./plugins/live-preview";
+import { createSuggestionsPlugin, SUGGESTIONS_THEME, FetchLinksFn, FetchTagsFn } from "./plugins/suggestions";
 
 // ----------------------------------------------------------------------------
 // BASALT EDITOR ARCHITECTURE NOTE
@@ -36,6 +37,8 @@ export interface EditorProps {
   value?: string;
   onChange?: (value: string) => void;
   className?: string;
+  onFetchLinks?: FetchLinksFn;
+  onFetchTags?: FetchTagsFn;
 }
 
 const BASIC_SETUP = {
@@ -48,6 +51,8 @@ export const Editor: React.FC<EditorProps> = ({
   value,
   onChange,
   className = "",
+  onFetchLinks,
+  onFetchTags,
 }) => {
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(initialContent);
@@ -77,9 +82,11 @@ export const Editor: React.FC<EditorProps> = ({
       codeBlockStateField,
       closeBrackets(),
       keymap.of(backticksKeymap),
+      SUGGESTIONS_THEME,
+      createSuggestionsPlugin(onFetchLinks, onFetchTags),
       EditorView.lineWrapping,
     ],
-    [],
+    [onFetchLinks, onFetchTags],
   );
 
   return (
