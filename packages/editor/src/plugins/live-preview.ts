@@ -346,8 +346,22 @@ export function buildLivePreviewDecorations(view: EditorView) {
                     : false;
 
                 if (!onActiveLine && HIDE_MARKS.has(name)) {
+                    let hideFrom = node.from;
+                    let hideTo = node.to;
+
+                    if (name === "HeaderMark" || name === "QuoteMark") {
+                        while (hideTo < view.state.doc.length) {
+                            const nextChar = view.state.doc.sliceString(hideTo, hideTo + 1);
+                            if (nextChar === " ") {
+                                hideTo += 1;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+
                     widgets.push(
-                        Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
+                        Decoration.mark({ class: "cm-live-hide" }).range(hideFrom, hideTo)
                     );
                 }
 
