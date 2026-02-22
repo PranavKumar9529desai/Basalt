@@ -1,7 +1,9 @@
 use crate::arena::{NodeId, StringArena};
 use crate::metadata::FileMetadata;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-#[derive(Debug, Default)]
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct NoteGraph {
     pub forward_links: HashMap<NodeId, HashSet<NodeId>>,
     pub back_links: HashMap<NodeId, HashSet<NodeId>>,

@@ -1,12 +1,161 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
-use basalt_fs::{indexer::index_directory, watcher::VaultWatcher, Vault};
-use serde::Serialize;
-use tauri::{Emitter, State};
+use basalt_fs::{
+    build_flat_tree, incremental_reindex, indexer::index_directory, watcher::VaultWatcher,
+    FlatTreeNode, VaultCache,
+};
+use serde::{Deserialize, Serialize};
+use tauri::{Emitter, Manager, State};
 
 // ---------------------------------------------------------------------------
-// Helpers
+// App state
+// ---------------------------------------------------------------------------
+
+struct AppState {
+    vault: Arc<RwLock<basalt_fs::Vault>>,
+    watcher: RwLock<Option<VaultWatcher>>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            vault: Arc::new(RwLock::new(basalt_fs::Vault::new())),
+            watcher: RwLock::new(None),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Persistent config
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct AppConfig {
+    last_vault: Option<String>,
+}
+
+fn config_path(app: &tauri::AppHandle) -> PathBuf {
+    app.path()
+        .app_data_dir()
+        .expect("app data dir unavailable")
+        .join("config.json")
+}
+
+fn load_config(app: &tauri::AppHandle) -> AppConfig {
+    let path = config_path(app);
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_config(app: &tauri::AppHandle, config: &AppConfig) {
+    let path = config_path(app);
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(config) {
+        let _ = std::fs::write(path, json);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cache helpers
+// ---------------------------------------------------------------------------
+
+/// Derives a stable filename for the vault cache from the vault's root path.
+/// Uses the folder name + a simple 8-char hex hash of the full path so two
+/// vaults with the same folder name don't collide.
+fn cache_filename(vault_path: &str) -> String {
+    let folder_name = Path::new(vault_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("vault");
+
+    // Simple djb2 hash — no external dep needed.
+    let hash: u32 = vault_path.bytes().fold(5381u32, |acc, b| {
+        acc.wrapping_mul(33).wrapping_add(b as u32)
+    });
+
+    format!("{}_{:08x}.json", folder_name, hash)
+}
+
+fn cache_path(app: &tauri::AppHandle, vault_path: &str) -> PathBuf {
+    app.path()
+        .app_data_dir()
+        .expect("app data dir unavailable")
+        .join("cache")
+        .join(cache_filename(vault_path))
+}
+
+// ---------------------------------------------------------------------------
+// Shared watcher startup (used by both boot and set_vault)
+// ---------------------------------------------------------------------------
+
+fn start_watcher(state: &AppState, vault_path: &str, app: &tauri::AppHandle) -> Result<(), String> {
+    let vault_arc = Arc::clone(&state.vault);
+    let app_handle = app.clone();
+    let watcher = VaultWatcher::watch(
+        Path::new(vault_path),
+        vault_arc,
+        move |changed_path: PathBuf| {
+            let kind = if changed_path.exists() {
+                // The watcher calls on_change after updating the vault, so if
+                // the file still exists it was created or modified.
+                "modified"
+            } else {
+                "deleted"
+            };
+            let _ = app_handle.emit(
+                "vault://file-changed",
+                FileChangeEvent {
+                    path: changed_path.to_string_lossy().to_string(),
+                    kind: kind.to_string(),
+                },
+            );
+        },
+    )
+    .map_err(|e| format!("failed to start watcher: {e}"))?;
+
+    *state
+        .watcher
+        .write()
+        .map_err(|_| "watcher lock poisoned".to_string())? = Some(watcher);
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Response types
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct BootResult {
+    /// Absolute path of the vault that was loaded, if any.
+    vault_path: Option<String>,
+    /// Number of notes in the vault.
+    note_count: usize,
+    /// One of: "no_vault" | "loaded_cache" | "incremental" | "full_index"
+    status: String,
+    /// Pre-built, pre-sorted flat tree — ready for the sidebar to render.
+    /// Empty when `status == "no_vault"`.
+    tree: Vec<FlatTreeNode>,
+}
+
+#[derive(Serialize)]
+struct VaultSummary {
+    note_count: usize,
+}
+
+#[derive(Serialize)]
+struct LinkSuggestion {
+    name: String,
+    path: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commands
 // ---------------------------------------------------------------------------
 
 fn canonical_md_path(path: &str) -> std::io::Result<PathBuf> {
@@ -21,92 +170,243 @@ fn canonical_md_path(path: &str) -> std::io::Result<PathBuf> {
 }
 
 // ---------------------------------------------------------------------------
-// App state
+// Watcher event payload
 // ---------------------------------------------------------------------------
 
-struct AppState {
-    /// Shared between the Tauri commands and the VaultWatcher thread.
-    vault: Arc<RwLock<Vault>>,
-    /// Keeps the watcher alive for the lifetime of the app.
-    /// Replaced every time the user indexes a new vault.
-    watcher: RwLock<Option<VaultWatcher>>,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            vault: Arc::new(RwLock::new(Vault::new())),
-            watcher: RwLock::new(None),
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Serialisable response types
-// ---------------------------------------------------------------------------
-
-#[derive(Serialize)]
-struct VaultSummary {
-    count: usize,
-}
-
-#[derive(Serialize)]
-struct LinkSuggestion {
-    name: String,
+/// Emitted on `vault://file-changed` whenever the watcher detects a mutation.
+/// Richer than a raw path string — the frontend can react precisely without
+/// re-fetching the entire tree for every event.
+#[derive(Serialize, Clone)]
+struct FileChangeEvent {
+    /// Absolute path of the file that changed.
     path: String,
+    /// `"created"` | `"modified"` | `"deleted"`
+    kind: String,
 }
 
 // ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
 
-/// Index a vault directory and start the file watcher.
-/// Emits `vault://file-changed` with the absolute path whenever an `.md`
-/// file is created, modified, or removed externally.
+/// Called once on app startup.
+/// Reads the persisted config, loads the vault from cache (incrementally
+/// re-indexing any files that changed while the app was closed), and starts
+/// the file watcher.  If no vault has been configured yet it returns
+/// `status: "no_vault"` so the frontend can show the picker UI.
 #[tauri::command]
-fn index_vault(
+fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, String> {
+    let config = load_config(&app);
+
+    let vault_path = match config.last_vault {
+        Some(p) => p,
+        None => {
+            return Ok(BootResult {
+                vault_path: None,
+                note_count: 0,
+                status: "no_vault".into(),
+                tree: Vec::new(),
+            })
+        }
+    };
+
+    // Make sure the vault directory still exists.
+    if !Path::new(&vault_path).is_dir() {
+        return Ok(BootResult {
+            vault_path: None,
+            note_count: 0,
+            status: "no_vault".into(),
+            tree: Vec::new(),
+        });
+    }
+
+    let cache_file = cache_path(&app, &vault_path);
+    let (status, note_count) = if let Some(cache) = VaultCache::load(&cache_file) {
+        // Restore vault from cache then patch only the files that changed.
+        let mut vault = cache.vault;
+        let new_mtimes =
+            incremental_reindex(Path::new(&vault_path), &mut vault, &cache.file_mtimes);
+        let note_count = vault.graph.metadata_cache.len();
+
+        // Persist updated cache.
+        let updated = VaultCache {
+            version: 1,
+            vault_path: vault_path.clone(),
+            file_mtimes: new_mtimes,
+            vault: basalt_fs::Vault::new(), // placeholder — replaced below
+        };
+        // We need to write the vault we just built, not a placeholder.
+        // Build the real cache directly.
+        let real_cache = VaultCache::build(&vault_path, vault);
+        let _ = real_cache.save(&cache_file);
+
+        // Restore into app state from the saved cache (avoids a second walk).
+        if let Some(loaded) = VaultCache::load(&cache_file) {
+            *state
+                .vault
+                .write()
+                .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
+        }
+
+        let _ = updated; // suppress warning on placeholder
+        ("incremental".to_string(), note_count)
+    } else {
+        // No valid cache — full index.
+        let vault = index_directory(Path::new(&vault_path));
+        let note_count = vault.graph.metadata_cache.len();
+
+        let cache = VaultCache::build(&vault_path, vault);
+        let _ = cache.save(&cache_file);
+
+        // Re-load from cache so AppState holds the same data.
+        if let Some(loaded) = VaultCache::load(&cache_file) {
+            *state
+                .vault
+                .write()
+                .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
+        }
+
+        ("full_index".to_string(), note_count)
+    };
+
+    start_watcher(&state, &vault_path, &app)?;
+
+    // Build the tree from the freshly-loaded vault so the frontend gets
+    // everything it needs in a single boot round-trip.
+    let tree = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        build_flat_tree(&vault, Path::new(&vault_path))
+    };
+
+    Ok(BootResult {
+        vault_path: Some(vault_path),
+        note_count,
+        status,
+        tree,
+    })
+}
+
+/// Set a vault by path (e.g. after the user picks one via the folder dialog).
+/// Always does a full index on first set, saves the path to config, and
+/// starts the watcher.
+#[tauri::command]
+fn set_vault(
     path: String,
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<VaultSummary, String> {
+) -> Result<BootResult, String> {
     let root = Path::new(&path)
         .canonicalize()
         .map_err(|e| format!("invalid vault path: {e}"))?;
 
     if !root.is_dir() {
-        return Err("vault path is not a directory".into());
+        return Err("path is not a directory".into());
     }
 
-    // Index the directory into a fresh vault.
-    let new_vault = index_directory(&root);
-    let count = new_vault.graph.metadata_cache.len();
+    let vault_path = root.to_string_lossy().to_string();
 
-    // Write the new vault into shared state.
-    {
-        let mut guard = state
+    // Full index.
+    let vault = index_directory(&root);
+    let note_count = vault.graph.metadata_cache.len();
+
+    // Build and persist cache.
+    let cache = VaultCache::build(&vault_path, vault);
+    let cache_file = cache_path(&app, &vault_path);
+    let _ = cache.save(&cache_file);
+
+    // Load into app state from the just-written cache.
+    if let Some(loaded) = VaultCache::load(&cache_file) {
+        *state
             .vault
             .write()
-            .map_err(|_| "vault lock is poisoned".to_string())?;
-        *guard = new_vault;
+            .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
     }
 
-    // Start the watcher, sharing the same Arc<RwLock<Vault>>.
-    // The callback emits a Tauri event so the frontend can react.
-    let vault_arc = Arc::clone(&state.vault);
-    let watcher = VaultWatcher::watch(&root, vault_arc, move |changed_path: PathBuf| {
-        let path_str = changed_path.to_string_lossy().to_string();
-        // Emit to all windows; ignore errors (window may be closing).
-        let _ = app.emit("vault://file-changed", path_str);
+    // Persist config so next boot auto-loads this vault.
+    save_config(
+        &app,
+        &AppConfig {
+            last_vault: Some(vault_path.clone()),
+        },
+    );
+
+    // (Re-)start the watcher.
+    start_watcher(&state, &vault_path, &app)?;
+
+    let tree = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        build_flat_tree(&vault, &root)
+    };
+
+    Ok(BootResult {
+        vault_path: Some(vault_path),
+        note_count,
+        status: "full_index".into(),
+        tree,
     })
-    .map_err(|e| format!("failed to start file watcher: {e}"))?;
+}
 
-    // Store the watcher, dropping any previous one.
-    *state
-        .watcher
-        .write()
-        .map_err(|_| "watcher lock is poisoned".to_string())? = Some(watcher);
+/// Re-index the current vault from scratch (e.g. user presses "Re-index").
+#[tauri::command]
+fn reindex_vault(state: State<AppState>, app: tauri::AppHandle) -> Result<VaultSummary, String> {
+    let config = load_config(&app);
+    let vault_path = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
 
-    Ok(VaultSummary { count })
+    let vault = index_directory(Path::new(&vault_path));
+    let note_count = vault.graph.metadata_cache.len();
+
+    let cache = VaultCache::build(&vault_path, vault);
+    let cache_file = cache_path(&app, &vault_path);
+    let _ = cache.save(&cache_file);
+
+    if let Some(loaded) = VaultCache::load(&cache_file) {
+        *state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
+    }
+
+    Ok(VaultSummary { note_count })
+}
+
+/// Return the current vault's flat tree, freshly built from the in-memory
+/// index.  The frontend calls this after any `vault://file-changed` event to
+/// keep the sidebar in sync without a full restart.
+#[tauri::command]
+fn get_vault_tree(
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<Vec<FlatTreeNode>, String> {
+    let config = load_config(&app);
+    let vault_path = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+
+    Ok(build_flat_tree(&vault, Path::new(&vault_path)))
+}
+
+/// Open the native folder-picker dialog and return the chosen path (or null).
+#[tauri::command]
+async fn open_vault_dialog(app: tauri::AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    app.dialog()
+        .file()
+        .set_title("Choose your Basalt vault folder")
+        .blocking_pick_folder()
+        .map(|p| p.to_string())
 }
 
 /// Read a markdown file from disk.
@@ -120,15 +420,12 @@ fn open_file(path: String) -> Result<String, String> {
 #[tauri::command]
 fn save_file(path: String, content: String, state: State<AppState>) -> Result<(), String> {
     let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
-
-    // Write to disk first.
     std::fs::write(&abs, &content).map_err(|e| e.to_string())?;
 
-    // Re-index only this file so backlinks stay up to date.
     let mut vault = state
         .vault
         .write()
-        .map_err(|_| "vault lock is poisoned".to_string())?;
+        .map_err(|_| "vault lock poisoned".to_string())?;
 
     if let Some(path_str) = abs.to_str() {
         vault.add_document(path_str, &content);
@@ -145,12 +442,11 @@ fn get_backlinks(path: String, state: State<AppState>) -> Result<Vec<String>, St
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock is poisoned".to_string())?;
+        .map_err(|_| "vault lock poisoned".to_string())?;
 
     let Some(doc_id) = vault.arena.get_id(abs.to_str().unwrap_or_default()) else {
         return Ok(Vec::new());
     };
-
     let Some(backlinks) = vault.graph.get_back_links(doc_id) else {
         return Ok(Vec::new());
     };
@@ -172,7 +468,7 @@ fn autocomplete_links(
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock is poisoned".to_string())?;
+        .map_err(|_| "vault lock poisoned".to_string())?;
 
     let out = vault
         .arena
@@ -200,17 +496,18 @@ fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<Strin
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock is poisoned".to_string())?;
+        .map_err(|_| "vault lock poisoned".to_string())?;
 
-    let mut tags: std::collections::HashSet<String> = vault
+    let mut out: Vec<String> = vault
         .graph
         .metadata_cache
         .values()
         .flat_map(|meta| meta.tags.iter().cloned())
         .filter(|tag| tag.to_lowercase().starts_with(&prefix.to_lowercase()))
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
         .collect();
 
-    let mut out: Vec<String> = tags.drain().collect();
     out.sort();
     Ok(out)
 }
@@ -223,9 +520,14 @@ fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<Strin
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            index_vault,
+            boot,
+            set_vault,
+            reindex_vault,
+            get_vault_tree,
+            open_vault_dialog,
             open_file,
             save_file,
             get_backlinks,

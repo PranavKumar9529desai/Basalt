@@ -10,10 +10,12 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@workspace/editor": "workspace:*",
     "@tanstack/react-router": "^1.161.4",
+    "@tanstack/react-virtual": "^3.13.18",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
+    "@workspace/editor": "workspace:*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

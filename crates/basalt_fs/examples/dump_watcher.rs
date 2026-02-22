@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -29,8 +29,10 @@ fn main() {
 
     // 2. Start watcher
     println!("3. Starting watcher...");
-    let _watcher =
-        VaultWatcher::watch(&test_dir, Arc::clone(&vault_arc)).expect("Failed to start watcher");
+    let _watcher = VaultWatcher::watch(&test_dir, Arc::clone(&vault_arc), |changed_path| {
+        println!("[on_change] {:?}", changed_path);
+    })
+    .expect("Failed to start watcher");
 
     // Give watcher time to boot up
     std::thread::sleep(Duration::from_millis(100));
