@@ -12,7 +12,7 @@ import { closeBrackets } from "@codemirror/autocomplete";
 import { CUSTOM_THEME } from "./theme";
 import { backticksKeymap } from "./plugins/backticks";
 import { taskListPlugin, TASK_CHECKBOX_THEME } from "./plugins/task-list";
-import { livePreviewPlugin, LIVE_PREVIEW_THEME, codeBlockStateField } from "./plugins/live-preview";
+import { livePreviewPlugin, LIVE_PREVIEW_THEME } from "./plugins/live-preview";
 import { createSuggestionsPlugin, SUGGESTIONS_THEME, FetchLinksFn, FetchTagsFn } from "./plugins/suggestions";
 import { wikiLinkExtension, clickableLinksPlugin } from "./plugins/links";
 
@@ -86,7 +86,6 @@ export const Editor: React.FC<EditorProps> = ({
       taskListPlugin,
       LIVE_PREVIEW_THEME,
       livePreviewPlugin,
-      codeBlockStateField,
       closeBrackets(),
       keymap.of(backticksKeymap),
       SUGGESTIONS_THEME,
