@@ -157,7 +157,15 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                     }
                     if i > start {
                         let tag = input.get(start..i).unwrap_or("");
-                        if !tag.is_empty() {
+                        
+                        // Obsidian tags cannot consist entirely of numbers
+                        let is_all_numbers = tag.chars().all(|c| c.is_ascii_digit());
+                        
+                        // Extremely common edgecase for zero-AST parsers: CSS hex colors
+                        let is_hex_color = (tag.len() == 3 || tag.len() == 4 || tag.len() == 6 || tag.len() == 8) 
+                            && tag.chars().all(|c| c.is_ascii_hexdigit());
+
+                        if !tag.is_empty() && !is_all_numbers && !is_hex_color {
                             meta.tags.push(tag.to_string());
 
                             let u16_start = text_doc

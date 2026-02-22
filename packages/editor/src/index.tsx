@@ -14,6 +14,7 @@ import { backticksKeymap } from "./plugins/backticks";
 import { taskListPlugin, TASK_CHECKBOX_THEME } from "./plugins/task-list";
 import { livePreviewPlugin, LIVE_PREVIEW_THEME, codeBlockStateField } from "./plugins/live-preview";
 import { createSuggestionsPlugin, SUGGESTIONS_THEME, FetchLinksFn, FetchTagsFn } from "./plugins/suggestions";
+import { wikiLinkExtension, clickableLinksPlugin } from "./plugins/links";
 
 // ----------------------------------------------------------------------------
 // BASALT EDITOR ARCHITECTURE NOTE
@@ -39,6 +40,7 @@ export interface EditorProps {
   className?: string;
   onFetchLinks?: FetchLinksFn;
   onFetchTags?: FetchTagsFn;
+  onOpenLink?: (link: string) => void;
 }
 
 const BASIC_SETUP = {
@@ -53,6 +55,7 @@ export const Editor: React.FC<EditorProps> = ({
   className = "",
   onFetchLinks,
   onFetchTags,
+  onOpenLink,
 }) => {
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState(initialContent);
@@ -72,7 +75,11 @@ export const Editor: React.FC<EditorProps> = ({
 
   const editorExtensions = useMemo(
     () => [
-      markdown({ base: markdownLanguage, codeLanguages: languages }),
+      markdown({
+        base: markdownLanguage,
+        codeLanguages: languages,
+        extensions: [wikiLinkExtension],
+      }),
       oneDark,
       CUSTOM_THEME,
       TASK_CHECKBOX_THEME,
@@ -84,9 +91,10 @@ export const Editor: React.FC<EditorProps> = ({
       keymap.of(backticksKeymap),
       SUGGESTIONS_THEME,
       createSuggestionsPlugin(onFetchLinks, onFetchTags),
+      clickableLinksPlugin(onOpenLink),
       EditorView.lineWrapping,
     ],
-    [onFetchLinks, onFetchTags],
+    [onFetchLinks, onFetchTags, onOpenLink],
   );
 
   return (

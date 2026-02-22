@@ -22,13 +22,14 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
+        position: "relative",
     },
     ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
         backgroundColor: "#2d2d35 !important",
         color: "#ffffff !important",
     },
     ".cm-completionIcon": {
-        display: "none", // Hide the default Type icon
+        display: "none !important", // Hide the default Type icon (which displays as a missing glyph box)
     },
     ".cm-completionLabel": {
         fontSize: "14px",
@@ -86,7 +87,6 @@ export function createSuggestionsPlugin(onFetchLinks?: FetchLinksFn, onFetchTags
                             label: res,
                             type: "keyword",
                             apply: `${res} `,
-                            detail: "Tag"
                         } as Completion))
                     };
                 }

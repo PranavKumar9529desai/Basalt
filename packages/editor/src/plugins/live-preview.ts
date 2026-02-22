@@ -110,6 +110,16 @@ export const LIVE_PREVIEW_THEME = EditorView.baseTheme({
         borderRadius: "4px",
         padding: "0.1rem 0.3rem",
     },
+    ".cm-live-wikilink": {
+        color: "#a78bfa",
+        cursor: "pointer",
+        textDecoration: "underline",
+        textDecorationColor: "transparent",
+        transition: "text-decoration-color 0.2s ease",
+    },
+    ".cm-live-wikilink:hover": {
+        textDecorationColor: "#a78bfa",
+    },
     ".cm-live-hide": {
         display: "none",
     },
@@ -202,6 +212,7 @@ export const HIDE_MARKS = new Set([
     "EmphasisMark",
     "CodeMark",
     "ListMark",
+    "WikiLinkMark",
 ]);
 
 export const codeBlockStateField = StateField.define<DecorationSet>({
@@ -383,6 +394,12 @@ export function buildLivePreviewDecorations(view: EditorView) {
                 if (name === "InlineCode") {
                     widgets.push(
                         Decoration.mark({ class: "cm-live-inline-code" }).range(node.from, node.to)
+                    );
+                }
+
+                if (name === "WikiLink") {
+                    widgets.push(
+                        Decoration.mark({ class: "cm-live-wikilink" }).range(node.from, node.to)
                     );
                 }
             },

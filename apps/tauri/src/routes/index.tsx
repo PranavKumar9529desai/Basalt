@@ -143,6 +143,16 @@ function RouteComponent() {
     }
   }, []);
 
+  const handleOpenLink = useCallback((linkName: string) => {
+    // Attempt to navigate to the link by name (perfect match or with .md extension)
+    const target = notes.find(n => n.name === linkName || n.name === `${linkName}.md`);
+    if (target) {
+      loadNote(target);
+    } else {
+      setStatus(`Could not find linked note: ${linkName}`);
+    }
+  }, [notes, loadNote]);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -199,8 +209,8 @@ function RouteComponent() {
                 key={note.path}
                 onClick={() => loadNote(note)}
                 className={`w-full text-left px-3 py-2 rounded-md border ${selected?.path === note.path
-                    ? "bg-blue-600/20 border-blue-500 text-blue-100"
-                    : "bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700"
+                  ? "bg-blue-600/20 border-blue-500 text-blue-100"
+                  : "bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700"
                   }`}
               >
                 <div className="text-sm font-semibold">{note.name}</div>
@@ -239,6 +249,7 @@ function RouteComponent() {
               initialContent=""
               onFetchLinks={onFetchLinks}
               onFetchTags={onFetchTags}
+              onOpenLink={handleOpenLink}
             />
           </div>
         </div>
