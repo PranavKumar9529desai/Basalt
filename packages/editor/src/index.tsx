@@ -13,6 +13,23 @@ import {
 } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 
+// ----------------------------------------------------------------------------
+// BASALT EDITOR ARCHITECTURE NOTE
+// 
+// This package (@workspace/editor) handles the core CodeMirror logic.
+// It acts strictly as a markdown parser and semantic tagger (like Obsidian's Live Preview).
+// 
+// - It injects dynamic CSS classes (e.g., .cm-live-heading-1) onto markdown elements.
+// - It conditionally hides markdown syntax markers (like # or **) when a line is NOT focused.
+// - Currently, CSS styles are injected via CodeMirror Extensions (EditorView.baseTheme).
+//
+// TODO (Future refactoring):
+// For standard separation of concerns and easier theming (the specific Obsidian pattern), 
+// all visual styles (font sizes, colors, margins) should eventually be moved out of
+// this TypeScript file and into the app's global CSS or Tailwind layer (apps/tauri).
+// This file should solely manage DOM structure and class name toggling.
+// ----------------------------------------------------------------------------
+
 export interface EditorProps {
   initialContent?: string;
   value?: string;
@@ -61,53 +78,54 @@ const TASK_CHECKBOX_THEME = EditorView.baseTheme({
 
 const LIVE_PREVIEW_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-heading-1": {
-    fontSize: "2.2rem",
+    fontSize: "2.5em",
     fontWeight: "700",
     lineHeight: "1.2",
-    paddingTop: "0.35rem",
-    paddingBottom: "0.25rem",
+    paddingTop: "1.5rem",
+    paddingBottom: "0.5rem",
   },
   ".cm-line.cm-live-heading-2": {
-    fontSize: "1.75rem",
+    fontSize: "2.0em",
     fontWeight: "650",
-    lineHeight: "1.25",
-    paddingTop: "0.3rem",
-    paddingBottom: "0.2rem",
+    lineHeight: "1.2",
+    paddingTop: "1.2rem",
+    paddingBottom: "0.4rem",
   },
   ".cm-line.cm-live-heading-3": {
-    fontSize: "1.4rem",
+    fontSize: "1.6em",
     fontWeight: "600",
     lineHeight: "1.3",
-    paddingTop: "0.25rem",
-    paddingBottom: "0.15rem",
+    paddingTop: "1.0rem",
+    paddingBottom: "0.3rem",
   },
   ".cm-line.cm-live-heading-4": {
-    fontSize: "1.2rem",
-    fontWeight: "575",
+    fontSize: "1.4em",
+    fontWeight: "600",
     lineHeight: "1.35",
-    paddingTop: "0.2rem",
-    paddingBottom: "0.1rem",
+    paddingTop: "0.8rem",
+    paddingBottom: "0.2rem",
   },
   ".cm-line.cm-live-heading-5": {
-    fontSize: "1.05rem",
-    fontWeight: "550",
+    fontSize: "1.2em",
+    fontWeight: "600",
     lineHeight: "1.4",
-    paddingTop: "0.15rem",
-    paddingBottom: "0.08rem",
+    paddingTop: "0.6rem",
+    paddingBottom: "0.1rem",
   },
   ".cm-line.cm-live-heading-6": {
-    fontSize: "1rem",
-    fontWeight: "525",
+    fontSize: "1.1em",
+    fontWeight: "600",
     lineHeight: "1.45",
-    paddingTop: "0.12rem",
-    paddingBottom: "0.06rem",
+    paddingTop: "0.4rem",
+    paddingBottom: "0.1rem",
   },
   ".cm-line.cm-live-heading-7": {
-    fontSize: "0.95rem",
-    fontWeight: "500",
+    fontSize: "1.0em",
+    fontWeight: "600",
     lineHeight: "1.5",
-    paddingTop: "0.1rem",
-    paddingBottom: "0.05rem",
+    paddingTop: "0.2rem",
+    paddingBottom: "0.1rem",
+    color: "#cbd5e1",
   },
   ".cm-line.cm-live-blockquote": {
     borderLeft: "3px solid #334155",
@@ -235,7 +253,7 @@ const HEADING_CLASS: Record<string, string> = {
   SetextHeading2: "cm-live-heading-2",
 };
 
-const HEADING_7_RE = /^\s{0,3}#{7}\s+/;
+const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
 
 const HIDE_MARKS = new Set([
   "HeaderMark",
@@ -271,13 +289,13 @@ const livePreviewPlugin = ViewPlugin.fromClass(
 );
 
 function buildLivePreviewDecorations(view: EditorView) {
-  const builder = new RangeSetBuilder<Decoration>();
+  const widgets: any[] = [];
   const activeLine = view.hasFocus
     ? view.state.doc.lineAt(view.state.selection.main.head)
     : null;
 
   const addLineClass = (pos: number, className: string) => {
-    builder.add(pos, pos, Decoration.line({ class: className }));
+    widgets.push(Decoration.line({ class: className }).range(pos, pos));
   };
 
   for (const range of view.visibleRanges) {
@@ -310,23 +328,19 @@ function buildLivePreviewDecorations(view: EditorView) {
           : false;
 
         if (!onActiveLine && HIDE_MARKS.has(name)) {
-          builder.add(
-            node.from,
-            node.to,
-            Decoration.mark({ class: "cm-live-hide" }),
+          widgets.push(
+            Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
           );
         }
 
         if (name === "CodeInfo" && !onActiveLine) {
           const lang = view.state.doc.sliceString(node.from, node.to).trim();
           if (lang) {
-            builder.add(
-              node.from,
-              node.to,
-              Decoration.replace({ widget: new CodeLangWidget(lang) }),
+            widgets.push(
+              Decoration.replace({ widget: new CodeLangWidget(lang) }).range(node.from, node.to)
             );
           } else {
-            builder.add(node.from, node.to, Decoration.replace({}));
+            widgets.push(Decoration.replace({}).range(node.from, node.to));
           }
         }
 
@@ -367,10 +381,8 @@ function buildLivePreviewDecorations(view: EditorView) {
         }
 
         if (name === "InlineCode") {
-          builder.add(
-            node.from,
-            node.to,
-            Decoration.mark({ class: "cm-live-inline-code" }),
+          widgets.push(
+            Decoration.mark({ class: "cm-live-inline-code" }).range(node.from, node.to)
           );
         }
       },
@@ -392,18 +404,16 @@ function buildLivePreviewDecorations(view: EditorView) {
       addLineClass(line.from, "cm-live-heading-7");
 
       if (!activeLine || lineNumber !== activeLine.number) {
-        const markerStart = line.from + match[1].length;
-        const markerEnd = markerStart + 7;
-        builder.add(
-          markerStart,
-          markerEnd,
-          Decoration.mark({ class: "cm-live-hide" }),
+        const markerStart = line.from;
+        const markerEnd = markerStart + match[1].length;
+        widgets.push(
+          Decoration.mark({ class: "cm-live-hide" }).range(markerStart, markerEnd)
         );
       }
     }
   }
 
-  return builder.finish();
+  return Decoration.set(widgets, true);
 }
 
 function buildTaskDecorations(view: EditorView) {
