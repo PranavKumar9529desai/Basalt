@@ -38,6 +38,11 @@ export interface EditorProps {
   className?: string;
 }
 
+const BASIC_SETUP = {
+  lineNumbers: false,
+  foldGutter: false,
+};
+
 export const Editor: React.FC<EditorProps> = ({
   initialContent = "",
   value,
@@ -83,6 +88,7 @@ export const Editor: React.FC<EditorProps> = ({
         <CodeMirror
           value={content}
           height="100%"
+          basicSetup={BASIC_SETUP}
           extensions={editorExtensions}
           onChange={handleChange}
           className="h-full"
