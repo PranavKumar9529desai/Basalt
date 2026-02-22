@@ -10,8 +10,11 @@ import {
   EditorView,
   ViewPlugin,
   WidgetType,
+  keymap,
 } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { closeBrackets } from "@codemirror/autocomplete";
+import { KeyBinding } from "@codemirror/view";
 
 // ----------------------------------------------------------------------------
 // BASALT EDITOR ARCHITECTURE NOTE
@@ -306,7 +309,7 @@ function buildLivePreviewDecorations(view: EditorView) {
     const resolvedTree = tree ?? syntaxTree(view.state);
     const isInCodeBlock = (pos: number) => {
       for (
-        let cursor = resolvedTree.resolve(pos, 1);
+        let cursor: any = resolvedTree.resolve(pos, 1);
         cursor;
         cursor = cursor.parent
       ) {
@@ -328,9 +331,18 @@ function buildLivePreviewDecorations(view: EditorView) {
           : false;
 
         if (!onActiveLine && HIDE_MARKS.has(name)) {
-          widgets.push(
-            Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
-          );
+          // Exception: Do not hide CodeMark if it belongs to a FencedCode block (triple backticks)
+          // Otherwise, the entire FencedCode block collapses visually.
+          let shouldHide = true;
+          if (name === "CodeMark" && node.node.parent?.type.name === "FencedCode") {
+            shouldHide = false;
+          }
+
+          if (shouldHide) {
+            widgets.push(
+              Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
+            );
+          }
         }
 
         if (name === "CodeInfo" && !onActiveLine) {
@@ -416,6 +428,41 @@ function buildLivePreviewDecorations(view: EditorView) {
   return Decoration.set(widgets, true);
 }
 
+const customKeymap: KeyBinding[] = [
+  {
+    key: "`",
+    run: (view) => {
+      const { state } = view;
+      const selection = state.selection.main;
+
+      // If there's selected text, let default behavior handle it
+      if (!selection.empty) return false;
+
+      const pos = selection.head;
+      const line = state.doc.lineAt(pos);
+
+      // Check if we are typing the third backtick on the line
+      // i.e., the characters immediately preceding the cursor are "``"
+      const prefix = line.text.slice(0, pos - line.from);
+
+      if (prefix.endsWith("``")) {
+        // We type the 3rd backtick, creating a markdown code block.
+        // Obsidian behavior: Insert "\n\n```" and place cursor on the empty middle line
+        view.dispatch({
+          changes: {
+            from: pos,
+            insert: "`\n\n```"
+          },
+          selection: { anchor: pos + 2 } // Move cursor after the first \n, leaving the middle line blank
+        });
+        return true;
+      }
+
+      return false;
+    }
+  }
+];
+
 function buildTaskDecorations(view: EditorView) {
   const builder = new RangeSetBuilder<Decoration>();
 
@@ -472,6 +519,8 @@ export const Editor: React.FC<EditorProps> = ({
       taskListPlugin,
       LIVE_PREVIEW_THEME,
       livePreviewPlugin,
+      closeBrackets(),
+      keymap.of(customKeymap),
       EditorView.lineWrapping,
     ],
     [],

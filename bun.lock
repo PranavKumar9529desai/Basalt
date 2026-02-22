@@ -39,6 +39,7 @@
       "name": "@workspace/editor",
       "version": "0.1.0",
       "dependencies": {
+        "@codemirror/autocomplete": "^6.20.0",
         "@codemirror/commands": "^6.8.0",
         "@codemirror/lang-markdown": "^6.3.2",
         "@codemirror/language": "^6.10.8",
@@ -47,15 +48,19 @@
         "@codemirror/theme-one-dark": "^6.1.2",
         "@codemirror/view": "^6.36.2",
         "@uiw/react-codemirror": "^4.23.8",
-        "react": "^19.1.0",
-        "react-dom": "^19.1.0",
         "react-markdown": "^9.0.3",
         "remark-gfm": "^4.0.0",
       },
       "devDependencies": {
-        "@types/react": "^19.0.8",
-        "@types/react-dom": "^19.0.3",
-        "typescript": "^5.7.3",
+        "@types/react": "^19.1.8",
+        "@types/react-dom": "^19.1.6",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
       },
     },
     "packages/ui": {
