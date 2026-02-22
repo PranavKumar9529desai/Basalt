@@ -1,5 +1,6 @@
 import { Decoration, DecorationSet, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
+import { StateField, EditorState } from "@codemirror/state";
 
 export const LIVE_PREVIEW_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-heading-1": {
@@ -60,6 +61,49 @@ export const LIVE_PREVIEW_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-code": {
         backgroundColor: "#0a0f1a",
     },
+    ".cm-code-header": {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        margin: "0",
+        padding: "6px 12px",
+        backgroundColor: "#0f172a",
+        borderTopLeftRadius: "6px",
+        borderTopRightRadius: "6px",
+        borderBottom: "1px solid #1e293b",
+        userSelect: "none",
+    },
+    ".cm-code-lang-tag": {
+        fontSize: "0.7rem",
+        letterSpacing: "0.05em",
+        color: "#94a3b8",
+        fontWeight: "600",
+        textTransform: "uppercase",
+    },
+    ".cm-code-copy-btn": {
+        background: "transparent",
+        border: "none",
+        color: "#64748b",
+        cursor: "pointer",
+        padding: "4px 8px",
+        borderRadius: "4px",
+        fontSize: "0.75em",
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        transition: "all 0.2s",
+    },
+    ".cm-code-copy-btn:hover": {
+        backgroundColor: "#1e293b",
+        color: "#cbd5e1",
+    },
+    ".cm-code-footer": {
+        display: "block",
+        backgroundColor: "#0a0f1a",
+        height: "8px",
+        borderBottomLeftRadius: "6px",
+        borderBottomRightRadius: "6px",
+    },
     ".cm-live-inline-code": {
         fontFamily:
             "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
@@ -67,39 +111,74 @@ export const LIVE_PREVIEW_THEME = EditorView.baseTheme({
         borderRadius: "4px",
         padding: "0.1rem 0.3rem",
     },
-    ".cm-code-lang": {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.25rem",
-        fontSize: "0.65rem",
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        color: "#94a3b8",
-        backgroundColor: "#0f172a",
-        border: "1px solid #1f2937",
-        borderRadius: "999px",
-        padding: "0.1rem 0.45rem",
-        marginRight: "0.35rem",
-    },
     ".cm-live-hide": {
         display: "none",
     },
 });
 
-export class CodeLangWidget extends WidgetType {
-    constructor(private readonly lang: string) {
+export class CodeHeaderWidget extends WidgetType {
+    constructor(
+        private readonly lang: string,
+        private readonly codeFrom: number,
+        private readonly codeTo: number
+    ) {
         super();
     }
 
-    eq(other: CodeLangWidget) {
-        return other.lang === this.lang;
+    eq(other: CodeHeaderWidget) {
+        return other.lang === this.lang && other.codeFrom === this.codeFrom && other.codeTo === this.codeTo;
     }
 
+    toDOM(view: EditorView) {
+        const container = document.createElement("div");
+        container.className = "cm-code-header";
+
+        const langSpan = document.createElement("span");
+        langSpan.className = "cm-code-lang-tag";
+        langSpan.textContent = this.lang;
+        container.appendChild(langSpan);
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "cm-code-copy-btn";
+        copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy`;
+
+        copyBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const fullText = view.state.doc.sliceString(this.codeFrom, this.codeTo);
+            const lines = fullText.split('\n');
+            if (lines.length >= 2) {
+                const innerCode = lines.slice(1, -1).join('\n');
+                navigator.clipboard.writeText(innerCode).then(() => {
+                    const originalHtml = copyBtn.innerHTML;
+                    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copied!`;
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHtml;
+                    }, 2000);
+                });
+            }
+        });
+
+        container.contentEditable = "false";
+        container.appendChild(copyBtn);
+        return container;
+    }
+
+    ignoreEvent() {
+        return true;
+    }
+}
+
+export class CodeFooterWidget extends WidgetType {
+    eq() { return true; }
     toDOM() {
-        const el = document.createElement("span");
-        el.className = "cm-code-lang";
-        el.textContent = this.lang;
-        return el;
+        const div = document.createElement("div");
+        div.className = "cm-code-footer";
+        return div;
+    }
+    ignoreEvent() {
+        return true;
     }
 }
 
@@ -125,6 +204,76 @@ export const HIDE_MARKS = new Set([
     "CodeMark",
     "ListMark",
 ]);
+
+export const codeBlockStateField = StateField.define<DecorationSet>({
+    create(state) {
+        return buildCodeBlockDecorations(state);
+    },
+    update(value, tr) {
+        if (tr.docChanged || tr.selection) {
+            return buildCodeBlockDecorations(tr.state);
+        }
+        return value;
+    },
+    provide: (f) => EditorView.decorations.from(f)
+});
+
+function buildCodeBlockDecorations(state: EditorState) {
+    const widgets: any[] = [];
+    const headPos = state.selection.main.head;
+
+    syntaxTree(state).iterate({
+        enter: (node) => {
+            if (node.type.name === "FencedCode") {
+                const hasCursor = headPos >= node.from && headPos <= node.to;
+                const startLine = state.doc.lineAt(node.from);
+                const endLine = state.doc.lineAt(node.to);
+
+                if (!hasCursor) {
+                    const langMatch = startLine.text.match(/^```([^\s]*)/);
+                    const lang = langMatch ? langMatch[1] : "";
+
+                    widgets.push(
+                        Decoration.replace({
+                            widget: new CodeHeaderWidget(lang, node.from, node.to),
+                            block: true
+                        }).range(startLine.from, startLine.to)
+                    );
+
+                    if (endLine.number > startLine.number) {
+                        widgets.push(
+                            Decoration.replace({
+                                widget: new CodeFooterWidget(),
+                                block: true
+                            }).range(endLine.from, endLine.to)
+                        );
+                    }
+                }
+
+                for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
+                    if (!hasCursor && (lineNumber === startLine.number || lineNumber === endLine.number)) {
+                        continue;
+                    }
+                    const line = state.doc.line(lineNumber);
+                    widgets.push(Decoration.line({ class: "cm-live-code" }).range(line.from, line.from));
+                }
+                return false;
+            }
+
+            if (node.type.name === "CodeBlock") {
+                const startLine = state.doc.lineAt(node.from);
+                const endLine = state.doc.lineAt(node.to);
+                for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
+                    const line = state.doc.line(lineNumber);
+                    widgets.push(Decoration.line({ class: "cm-live-code" }).range(line.from, line.from));
+                }
+                return false;
+            }
+        }
+    });
+
+    return Decoration.set(widgets, true);
+}
 
 export function buildLivePreviewDecorations(view: EditorView) {
     const widgets: any[] = [];
@@ -161,34 +310,18 @@ export function buildLivePreviewDecorations(view: EditorView) {
             to: rangeTo,
             enter: (node) => {
                 const name = node.type.name;
+                if (name === "FencedCode" || name === "CodeBlock") {
+                    return false; // Handled by StateField now
+                }
+
                 const onActiveLine = activeLine
                     ? node.from >= activeLine.from && node.to <= activeLine.to
                     : false;
 
                 if (!onActiveLine && HIDE_MARKS.has(name)) {
-                    // Exception: Do not hide CodeMark if it belongs to a FencedCode block (triple backticks)
-                    // Otherwise, the entire FencedCode block collapses visually.
-                    let shouldHide = true;
-                    if (name === "CodeMark" && node.node.parent?.type.name === "FencedCode") {
-                        shouldHide = false;
-                    }
-
-                    if (shouldHide) {
-                        widgets.push(
-                            Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
-                        );
-                    }
-                }
-
-                if (name === "CodeInfo" && !onActiveLine) {
-                    const lang = view.state.doc.sliceString(node.from, node.to).trim();
-                    if (lang) {
-                        widgets.push(
-                            Decoration.replace({ widget: new CodeLangWidget(lang) }).range(node.from, node.to)
-                        );
-                    } else {
-                        widgets.push(Decoration.replace({}).range(node.from, node.to));
-                    }
+                    widgets.push(
+                        Decoration.mark({ class: "cm-live-hide" }).range(node.from, node.to)
+                    );
                 }
 
                 const headingClass = HEADING_CLASS[name];
@@ -198,32 +331,11 @@ export function buildLivePreviewDecorations(view: EditorView) {
                 }
 
                 if (name === "BlockQuote") {
-                    const startLine = view.state.doc.lineAt(
-                        Math.max(node.from, rangeFrom),
-                    );
+                    const startLine = view.state.doc.lineAt(Math.max(node.from, rangeFrom));
                     const endLine = view.state.doc.lineAt(Math.min(node.to, rangeTo));
-                    for (
-                        let lineNumber = startLine.number;
-                        lineNumber <= endLine.number;
-                        lineNumber += 1
-                    ) {
+                    for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
                         const line = view.state.doc.line(lineNumber);
                         addLineClass(line.from, "cm-live-blockquote");
-                    }
-                }
-
-                if (name === "FencedCode" || name === "CodeBlock") {
-                    const startLine = view.state.doc.lineAt(
-                        Math.max(node.from, rangeFrom),
-                    );
-                    const endLine = view.state.doc.lineAt(Math.min(node.to, rangeTo));
-                    for (
-                        let lineNumber = startLine.number;
-                        lineNumber <= endLine.number;
-                        lineNumber += 1
-                    ) {
-                        const line = view.state.doc.line(lineNumber);
-                        addLineClass(line.from, "cm-live-code");
                     }
                 }
 
