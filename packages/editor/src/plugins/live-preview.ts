@@ -1,6 +1,6 @@
 import { Decoration, DecorationSet, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
-import { StateField, EditorState } from "@codemirror/state";
+import { StateField, EditorState, RangeSetBuilder } from "@codemirror/state";
 
 export const LIVE_PREVIEW_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-heading-1": {
@@ -218,8 +218,15 @@ export const codeBlockStateField = StateField.define<DecorationSet>({
 });
 
 function buildCodeBlockDecorations(state: EditorState) {
-    const widgets: any[] = [];
+    const builder = new RangeSetBuilder<Decoration>();
     const headPos = state.selection.main.head;
+
+    // To remain O(1) in the viewport, we only iterate the visible syntax tree nodes using viewport
+    // Unfortunately state doesn't have visibleRanges, but typically docChanged logic works efficiently inside CodeMirror 6 StateFields if we build linearly. 
+    // Here we use iterate over the entire parsed tree but it's optimized by CM6 as the tree is built incrementally.
+
+    // For block decorations, CodeMirror strictly requires them to be built sequentially in a StateField.
+    // Let's iterate linearly:
 
     syntaxTree(state).iterate({
         enter: (node) => {
@@ -232,46 +239,33 @@ function buildCodeBlockDecorations(state: EditorState) {
                     const langMatch = startLine.text.match(/^```([^\s]*)/);
                     const lang = langMatch ? langMatch[1] : "";
 
-                    widgets.push(
+                    builder.add(
+                        startLine.from,
+                        startLine.to,
                         Decoration.replace({
                             widget: new CodeHeaderWidget(lang, node.from, node.to),
                             block: true
-                        }).range(startLine.from, startLine.to)
+                        })
                     );
 
                     if (endLine.number > startLine.number) {
-                        widgets.push(
+                        builder.add(
+                            endLine.from,
+                            endLine.to,
                             Decoration.replace({
                                 widget: new CodeFooterWidget(),
                                 block: true
-                            }).range(endLine.from, endLine.to)
+                            })
                         );
                     }
                 }
 
-                for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
-                    if (!hasCursor && (lineNumber === startLine.number || lineNumber === endLine.number)) {
-                        continue;
-                    }
-                    const line = state.doc.line(lineNumber);
-                    widgets.push(Decoration.line({ class: "cm-live-code" }).range(line.from, line.from));
-                }
-                return false;
-            }
-
-            if (node.type.name === "CodeBlock") {
-                const startLine = state.doc.lineAt(node.from);
-                const endLine = state.doc.lineAt(node.to);
-                for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
-                    const line = state.doc.line(lineNumber);
-                    widgets.push(Decoration.line({ class: "cm-live-code" }).range(line.from, line.from));
-                }
                 return false;
             }
         }
     });
 
-    return Decoration.set(widgets, true);
+    return builder.finish();
 }
 
 export function buildLivePreviewDecorations(view: EditorView) {
@@ -279,6 +273,7 @@ export function buildLivePreviewDecorations(view: EditorView) {
     const activeLine = view.hasFocus
         ? view.state.doc.lineAt(view.state.selection.main.head)
         : null;
+    const headPos = view.state.selection.main.head;
 
     const addLineClass = (pos: number, className: string) => {
         widgets.push(Decoration.line({ class: className }).range(pos, pos));
@@ -290,27 +285,60 @@ export function buildLivePreviewDecorations(view: EditorView) {
 
         const tree = ensureSyntaxTree(view.state, rangeTo, 50);
         const resolvedTree = tree ?? syntaxTree(view.state);
+
+        const codeBlockRanges: { from: number, to: number }[] = [];
         const isInCodeBlock = (pos: number) => {
-            for (
-                let cursor: any = resolvedTree.resolve(pos, 1);
-                cursor;
-                cursor = cursor.parent
-            ) {
-                const name = cursor.type.name;
-                if (name === "FencedCode" || name === "CodeBlock") {
-                    return true;
-                }
-            }
-            return false;
+            return codeBlockRanges.some(r => pos >= r.from && pos <= r.to);
         };
 
+        // First pass to identify code block ranges for line styling and other checks
         resolvedTree.iterate({
             from: rangeFrom,
             to: rangeTo,
             enter: (node) => {
                 const name = node.type.name;
                 if (name === "FencedCode" || name === "CodeBlock") {
-                    return false; // Handled by StateField now
+                    codeBlockRanges.push({ from: node.from, to: node.to });
+
+                    const hasCursor = headPos >= node.from && headPos <= node.to;
+                    const startLine = view.state.doc.lineAt(node.from);
+                    const endLine = view.state.doc.lineAt(node.to);
+
+                    if (name === "FencedCode") {
+                        const startRenderLine = Math.max(startLine.number, view.state.doc.lineAt(rangeFrom).number);
+                        const endRenderLine = Math.min(endLine.number, view.state.doc.lineAt(rangeTo).number);
+
+                        for (let lineNumber = startRenderLine; lineNumber <= endRenderLine; lineNumber += 1) {
+                            if (!hasCursor && (lineNumber === startLine.number || lineNumber === endLine.number)) {
+                                continue;
+                            }
+                            const line = view.state.doc.line(lineNumber);
+                            addLineClass(line.from, "cm-live-code");
+                        }
+                    } else if (name === "CodeBlock") {
+                        const startRenderLine = Math.max(startLine.number, view.state.doc.lineAt(rangeFrom).number);
+                        const endRenderLine = Math.min(endLine.number, view.state.doc.lineAt(rangeTo).number);
+
+                        for (let lineNumber = startRenderLine; lineNumber <= endRenderLine; lineNumber += 1) {
+                            const line = view.state.doc.line(lineNumber);
+                            addLineClass(line.from, "cm-live-code");
+                        }
+                    }
+                    return false; // Don't descend into code blocks for other decorations in this pass
+                }
+            }
+        });
+
+        // Second pass for other decorations
+        resolvedTree.iterate({
+            from: rangeFrom,
+            to: rangeTo,
+            enter: (node) => {
+                const name = node.type.name;
+
+                // Skip nodes inside code blocks as their line styling is handled above
+                if (isInCodeBlock(node.from)) {
+                    return false;
                 }
 
                 const onActiveLine = activeLine
