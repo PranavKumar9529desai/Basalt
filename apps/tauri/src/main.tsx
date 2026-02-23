@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import "./App.css";
-import "@workspace/ui/src/styles/globals.css";
-import "@workspace/ui/src/styles/editor.css";
+import "../../../packages/ui/src/styles/globals.css";
+import "../../../packages/ui/src/styles/editor.css";
 import { ThemeProvider } from "./app-shell/ThemeProvider";
 
 // Import the generated route tree

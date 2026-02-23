@@ -44,6 +44,11 @@
   background-color: var(--sat-editor-code-bg, #0a0f1a);
 }
 
+.cm-activeLine,
+.cm-activeLineGutter {
+  background-color: transparent !important;
+}
+
 .cm-code-lang-tag,
 .cm-code-copy-btn {
   color: var(--sat-editor-code-muted, #94a3b8);
