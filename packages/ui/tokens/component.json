@@ -1,0 +1,42 @@
+{
+  "layout": {
+    "surfaceMain": "{surface.1}",
+    "surfaceRaised": "{surface.2}",
+    "surfaceCard": "{surface.3}",
+    "border": "{border.default}",
+    "shadowSm": "{shadow.sm}",
+    "shadowMd": "{shadow.md}",
+    "shadowLg": "{shadow.lg}",
+    "radiusSm": "{radius.sm}",
+    "radiusMd": "{radius.md}",
+    "radiusLg": "{radius.lg}"
+  },
+  "editor": {
+    "background": "{surface.1}",
+    "heading1": "{text.primary}",
+    "heading2": "{text.primary}",
+    "heading3": "{text.primary}",
+    "heading4": "{text.primary}",
+    "heading5": "{text.primary}",
+    "heading6": "{text.primary}",
+    "heading7": "{palette.heading7}",
+    "accent": "{accent.primary}",
+    "inlineBg": "{palette.codeBg}",
+    "blockquoteBorder": "#334155",
+    "blockquoteText": "#cbd5f5",
+    "codeBg": "{palette.codeBg}",
+    "codeMuted": "{palette.codeMuted}",
+    "codeHoverBg": "{palette.codeHoverBg}",
+    "codeHoverText": "{palette.codeHoverText}",
+    "popoverBg": "{palette.popoverBg}",
+    "popoverBorder": "{palette.popoverBorder}",
+    "popoverText": "{palette.popoverText}",
+    "popoverMuted": "{palette.popoverMuted}",
+    "popoverActiveBg": "{palette.popoverActiveBg}",
+    "popoverActiveText": "{palette.popoverActiveText}",
+    "taskAccent": "{palette.taskAccent}"
+  },
+  "control": {
+    "focusRing": "{focus.ring}"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "catppuccin-mocha",
+  "label": "Catppuccin Mocha",
+  "mode": "dark",
+  "description": "Catppuccin cozy dark variant.",
+  "overrides": {
+    "surface": {
+      "1": "#1e1e2e",
+      "2": "#181825",
+      "3": "#11111b"
+    },
+    "text": {
+      "primary": "#cdd6f4",
+      "muted": "#a6adc8",
+      "inverse": "#11111b"
+    },
+    "accent": {
+      "primary": "#f5e0dc",
+      "strong": "#cba6f7"
+    },
+    "layout": {
+      "border": "#313244"
+    },
+    "editor": {
+      "background": "#1e1e2e",
+      "inlineBg": "#181825",
+      "blockquoteBorder": "#313244",
+      "blockquoteText": "#cdd6f4",
+      "codeBg": "#181825",
+      "codeMuted": "#a6adc8",
+      "codeHoverBg": "#313244",
+      "codeHoverText": "#cdd6f4",
+      "popoverBg": "#1e1e2e",
+      "popoverBorder": "#313244",
+      "popoverText": "#cdd6f4",
+      "popoverMuted": "#a6adc8",
+      "popoverActiveBg": "#313244",
+      "popoverActiveText": "#f5e0dc",
+      "taskAccent": "#a6e3a1",
+      "heading7": "#cdd6f4"
+    }
+  }
+}

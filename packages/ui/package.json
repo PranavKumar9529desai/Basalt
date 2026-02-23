@@ -6,7 +6,11 @@
   "exports": {
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
-    "./hooks/*": "./src/hooks/*.ts"
+    "./hooks/*": "./src/hooks/*.ts",
+    "./theme/manifest": "./theme/manifest.ts"
+  },
+  "scripts": {
+    "build:tokens": "bun run tokens/build.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

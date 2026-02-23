@@ -1,0 +1,43 @@
+{
+  "id": "solarized-dark",
+  "label": "Solarized Dark",
+  "mode": "dark",
+  "description": "Solarized dark palette.",
+  "overrides": {
+    "surface": {
+      "1": "#002b36",
+      "2": "#073642",
+      "3": "#0f3944"
+    },
+    "text": {
+      "primary": "#93a1a1",
+      "muted": "#839496",
+      "inverse": "#fdf6e3"
+    },
+    "accent": {
+      "primary": "#b58900",
+      "strong": "#cb4b16"
+    },
+    "layout": {
+      "border": "#0f3944"
+    },
+    "editor": {
+      "background": "#002b36",
+      "inlineBg": "#073642",
+      "blockquoteBorder": "#0f3944",
+      "blockquoteText": "#fdf6e3",
+      "codeBg": "#073642",
+      "codeMuted": "#93a1a1",
+      "codeHoverBg": "#0f3944",
+      "codeHoverText": "#fdf6e3",
+      "popoverBg": "#003844",
+      "popoverBorder": "#0f3944",
+      "popoverText": "#fdf6e3",
+      "popoverMuted": "#93a1a1",
+      "popoverActiveBg": "#0f3944",
+      "popoverActiveText": "#b58900",
+      "taskAccent": "#859900",
+      "heading7": "#93a1a1"
+    }
+  }
+}

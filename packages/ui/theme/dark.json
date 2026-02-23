@@ -1,0 +1,7 @@
+{
+  "id": "dark",
+  "label": "Dark",
+  "mode": "dark",
+  "description": "Baseline dark theme for Basalt.",
+  "overrides": {}
+}

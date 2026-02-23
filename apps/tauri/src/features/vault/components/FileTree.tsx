@@ -50,9 +50,9 @@ export function FileTree({
   });
 
   return (
-    <div className="flex flex-col h-full bg-slate-900/60 border border-slate-800 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-800 shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--sat-layout-border)] shrink-0">
         {/* Files icon */}
         <svg
           width="13"
@@ -60,7 +60,7 @@ export function FileTree({
           viewBox="0 0 16 16"
           fill="none"
           aria-hidden="true"
-          className="text-slate-400 shrink-0"
+          className="text-[var(--sat-text-muted)] shrink-0"
         >
           <rect
             x="2"
@@ -80,14 +80,14 @@ export function FileTree({
             rx="1"
             stroke="currentColor"
             strokeWidth="1.2"
-            fill="#0f172a"
+            fill="var(--sat-surface-1)"
           />
         </svg>
-        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-[var(--sat-text-primary)] uppercase tracking-wide">
           Files
         </span>
         {visibleNodes.length > 0 && (
-          <span className="ml-auto text-xs text-slate-500 tabular-nums">
+          <span className="ml-auto text-xs text-[var(--sat-text-muted)] tabular-nums">
             {visibleNodes.filter((n) => n.kind === "file").length}
           </span>
         )}
@@ -146,7 +146,7 @@ function EmptyState() {
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden="true"
-        className="text-slate-700"
+        className="text-[var(--sat-text-muted)]"
       >
         <path
           d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
@@ -155,11 +155,11 @@ function EmptyState() {
           fill="none"
         />
       </svg>
-      <p className="text-xs text-slate-500 text-center leading-relaxed">
+      <p className="text-xs text-[var(--sat-text-muted)] text-center leading-relaxed">
         No markdown files found.
         <br />
-        Create a <code className="text-slate-400">.md</code> file in your vault
-        folder.
+        Create a <code className="text-[var(--sat-text-muted)]">.md</code> file
+        in your vault folder.
       </p>
     </div>
   );

@@ -23,7 +23,7 @@ export const VaultSplash: FC<VaultSplashProps> = ({
     <div className="flex flex-col items-center justify-center flex-1 gap-8">
       {/* Logo / wordmark */}
       <div className="flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] flex items-center justify-center">
           {/* Simple geometric mark — replace with real SVG logo later */}
           <svg
             width="32"
@@ -34,22 +34,22 @@ export const VaultSplash: FC<VaultSplashProps> = ({
           >
             <polygon
               points="16,3 29,24 3,24"
-              stroke="#94a3b8"
+              stroke="var(--sat-text-muted)"
               strokeWidth="2"
               fill="none"
             />
             <polygon
               points="16,10 24,24 8,24"
-              stroke="#475569"
+              stroke="var(--sat-text-muted)"
               strokeWidth="1.5"
-              fill="#1e293b"
+              fill="var(--sat-surface-3)"
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--sat-text-primary)]">
           Basalt
         </h1>
-        <p className="text-sm text-slate-400 text-center max-w-xs leading-relaxed">
+        <p className="text-sm text-[var(--sat-text-muted)] text-center max-w-xs leading-relaxed">
           A fast, local-first markdown notebook.
           <br />
           Open a folder to get started.
@@ -64,8 +64,8 @@ export const VaultSplash: FC<VaultSplashProps> = ({
         className="
           inline-flex items-center gap-2
           px-6 py-3 rounded-lg
-          bg-blue-600 hover:bg-blue-500 active:bg-blue-700
-          text-white font-semibold text-sm
+          bg-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-strong)] active:bg-[var(--sat-accent-strong)]
+          text-[var(--sat-text-inverse)] font-semibold text-sm
           disabled:opacity-50 disabled:cursor-not-allowed
           transition-colors shadow-sm
         "
@@ -73,7 +73,7 @@ export const VaultSplash: FC<VaultSplashProps> = ({
         {isIndexing ? (
           <>
             {/* Spinner */}
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-[var(--sat-text-inverse)]/40 border-t-[var(--sat-text-inverse)] rounded-full animate-spin" />
             Indexing…
           </>
         ) : (
@@ -100,7 +100,9 @@ export const VaultSplash: FC<VaultSplashProps> = ({
 
       {/* Status / error */}
       {status && (
-        <p className="text-xs text-red-400 max-w-sm text-center">{status}</p>
+        <p className="text-xs text-[var(--sat-state-danger)] max-w-sm text-center">
+          {status}
+        </p>
       )}
     </div>
   );

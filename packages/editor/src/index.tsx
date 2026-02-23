@@ -3,7 +3,6 @@ import CodeMirror from "@uiw/react-codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { EditorView, keymap } from "@codemirror/view";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { closeBrackets } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
 
@@ -92,7 +91,7 @@ export const Editor: React.FC<EditorProps> = ({
     const themeStack: Extension[] = [];
     if (themeExtensions) themeStack.push(...themeExtensions);
     if (includeDefaultTheme) {
-      themeStack.push(oneDark, CUSTOM_THEME);
+      themeStack.push(CUSTOM_THEME);
     }
 
     return [

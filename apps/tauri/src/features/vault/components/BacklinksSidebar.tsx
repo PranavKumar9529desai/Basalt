@@ -28,9 +28,9 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   onOpenNote,
 }) => {
   return (
-    <div className="flex flex-col h-full bg-slate-900/60 border border-slate-800 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-800 shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--sat-layout-border)] shrink-0">
         {/* Link icon */}
         <svg
           width="13"
@@ -38,7 +38,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           aria-hidden="true"
-          className="text-slate-400 shrink-0"
+          className="text-[var(--sat-text-muted)] shrink-0"
         >
           <path
             d="M6.5 9.5a3.536 3.536 0 0 0 5 0l2-2a3.536 3.536 0 0 0-5-5L7.5 3.5"
@@ -53,11 +53,11 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
             strokeLinecap="round"
           />
         </svg>
-        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-[var(--sat-text-primary)] uppercase tracking-wide">
           Backlinks
         </span>
         {backlinks.length > 0 && (
-          <span className="ml-auto text-xs text-slate-500 tabular-nums">
+          <span className="ml-auto text-xs text-[var(--sat-text-muted)] tabular-nums">
             {backlinks.length}
           </span>
         )}
@@ -73,7 +73,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
-              className="text-slate-700"
+              className="text-[var(--sat-text-muted)]"
             >
               <path
                 d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
@@ -90,7 +90,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                 strokeLinejoin="round"
               />
             </svg>
-            <p className="text-xs text-slate-500 text-center">
+            <p className="text-xs text-[var(--sat-text-muted)] text-center">
               No notes link here yet.
             </p>
           </div>
@@ -107,8 +107,8 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                   w-full text-left
                   flex items-center gap-2
                   px-3 py-1.5
-                  text-sm text-slate-300
-                  hover:bg-slate-800 hover:text-slate-100
+                  text-sm text-[var(--sat-text-primary)]
+                  hover:bg-[var(--sat-surface-3)]
                   transition-colors truncate
                 "
               >
@@ -119,7 +119,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                   viewBox="0 0 16 16"
                   fill="none"
                   aria-hidden="true"
-                  className="shrink-0 text-slate-500"
+                  className="shrink-0 text-[var(--sat-text-muted)]"
                 >
                   <path
                     d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"

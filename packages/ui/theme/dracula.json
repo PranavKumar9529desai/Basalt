@@ -1,0 +1,43 @@
+{
+  "id": "dracula",
+  "label": "Dracula",
+  "mode": "dark",
+  "description": "Dracula classic dark purple.",
+  "overrides": {
+    "surface": {
+      "1": "#282a36",
+      "2": "#1e1f29",
+      "3": "#191a21"
+    },
+    "text": {
+      "primary": "#f8f8f2",
+      "muted": "#bd93f9",
+      "inverse": "#191a21"
+    },
+    "accent": {
+      "primary": "#ff79c6",
+      "strong": "#bd93f9"
+    },
+    "layout": {
+      "border": "#44475a"
+    },
+    "editor": {
+      "background": "#282a36",
+      "inlineBg": "#1e1f29",
+      "blockquoteBorder": "#44475a",
+      "blockquoteText": "#f8f8f2",
+      "codeBg": "#1e1f29",
+      "codeMuted": "#bd93f9",
+      "codeHoverBg": "#44475a",
+      "codeHoverText": "#f8f8f2",
+      "popoverBg": "#282a36",
+      "popoverBorder": "#44475a",
+      "popoverText": "#f8f8f2",
+      "popoverMuted": "#bd93f9",
+      "popoverActiveBg": "#44475a",
+      "popoverActiveText": "#ff79c6",
+      "taskAccent": "#50fa7b",
+      "heading7": "#f8f8f2"
+    }
+  }
+}

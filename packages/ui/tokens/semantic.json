@@ -1,0 +1,28 @@
+{
+  "surface": {
+    "1": "{palette.surface1}",
+    "2": "{palette.surface2}",
+    "3": "{palette.surface3}"
+  },
+  "text": {
+    "primary": "{palette.textPrimary}",
+    "muted": "{palette.textMuted}",
+    "inverse": "{palette.textInverse}"
+  },
+  "accent": {
+    "primary": "{palette.accent}",
+    "strong": "{palette.accentStrong}"
+  },
+  "border": {
+    "default": "{palette.border}"
+  },
+  "state": {
+    "success": "{palette.success}",
+    "warning": "{palette.warning}",
+    "danger": "{palette.danger}",
+    "info": "{palette.info}"
+  },
+  "focus": {
+    "ring": "{palette.focusRing}"
+  }
+}

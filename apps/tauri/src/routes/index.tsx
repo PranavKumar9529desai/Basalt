@@ -32,9 +32,11 @@ export const Route = createFileRoute("/")({
   },
 
   pendingComponent: () => (
-    <div className="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400">
-      <div className="w-5 h-5 border-2 border-slate-500 border-t-blue-400 rounded-full animate-spin" />
-      <span className="text-sm">Loading vault…</span>
+    <div className="flex flex-col items-center justify-center flex-1 gap-3 text-[var(--sat-text-muted)]">
+      <div className="w-5 h-5 border-2 border-[var(--sat-text-muted)] border-t-[var(--sat-accent-primary)] rounded-full animate-spin" />
+      <span className="text-sm text-[var(--sat-text-primary)]">
+        Loading vault…
+      </span>
     </div>
   ),
 
@@ -117,10 +119,10 @@ function RouteComponent() {
         </div>
 
         {/* ── Centre: editor ── */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-lg overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] rounded-lg overflow-hidden">
           {/* Editor header */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
-            <span className="text-sm text-slate-300 flex-1 truncate">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--sat-layout-border)] shrink-0">
+            <span className="text-sm text-[var(--sat-text-primary)] flex-1 truncate">
               {editor.selected ? editor.selected.name : "No note selected"}
             </span>
             <SaveIndicator status={editor.saveStatus} />
@@ -171,21 +173,21 @@ interface ConflictBannerProps {
 
 function ConflictBanner({ onKeepMine, onDiscard }: ConflictBannerProps) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 bg-red-900/40 border-b border-red-700 text-sm text-red-200 shrink-0">
+    <div className="flex items-center gap-3 px-3 py-2 bg-[color-mix(in srgb,var(--sat-state-danger) 18%,transparent)] border-b border-[var(--sat-state-danger)] text-sm text-[var(--sat-text-primary)] shrink-0">
       <span className="flex-1 text-xs leading-snug">
         File changed externally. Keep your edits or discard them?
       </span>
       <button
         type="button"
         onClick={onKeepMine}
-        className="px-2.5 py-1 rounded bg-red-700 hover:bg-red-600 text-white text-xs font-semibold transition-colors"
+        className="px-2.5 py-1 rounded bg-[var(--sat-state-danger)] hover:opacity-90 text-[var(--sat-text-inverse)] text-xs font-semibold transition-colors"
       >
         Keep mine
       </button>
       <button
         type="button"
         onClick={onDiscard}
-        className="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition-colors"
+        className="px-2.5 py-1 rounded bg-[var(--sat-surface-2)] hover:bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)] text-xs font-semibold transition-colors"
       >
         Discard
       </button>

@@ -5,10 +5,16 @@ import type { SaveStatus } from "../types";
 // ---------------------------------------------------------------------------
 
 const CONFIG: Record<SaveStatus, { dot: string; label: string }> = {
-  saved:    { dot: "bg-emerald-500",            label: "Saved"    },
-  saving:   { dot: "bg-yellow-400 animate-pulse", label: "Saving…"  },
-  unsaved:  { dot: "bg-slate-400",              label: "Unsaved"  },
-  conflict: { dot: "bg-red-500 animate-pulse",  label: "Conflict" },
+  saved: { dot: "bg-[var(--sat-state-success)]", label: "Saved" },
+  saving: {
+    dot: "bg-[var(--sat-state-warning)] animate-pulse",
+    label: "Saving…",
+  },
+  unsaved: { dot: "bg-[var(--sat-text-muted)]", label: "Unsaved" },
+  conflict: {
+    dot: "bg-[var(--sat-state-danger)] animate-pulse",
+    label: "Conflict",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -23,7 +29,7 @@ export function SaveIndicator({ status }: SaveIndicatorProps) {
   const { dot, label } = CONFIG[status];
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-slate-400 select-none">
+    <div className="flex items-center gap-1.5 text-xs text-[var(--sat-text-muted)] select-none">
       <span className={`inline-block w-2 h-2 rounded-full ${dot}`} />
       <span>{label}</span>
     </div>

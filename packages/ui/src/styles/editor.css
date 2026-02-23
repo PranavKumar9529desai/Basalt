@@ -1,0 +1,61 @@
+/* Semantic mapping for CodeMirror classes to design tokens */
+
+.cm-editor {
+  background-color: var(--sat-editor-background, var(--sat-surface-1));
+  color: var(--sat-text-primary);
+}
+
+.cm-content {
+  color: var(--sat-text-primary);
+}
+
+.cm-line.cm-live-heading-1,
+.cm-line.cm-live-heading-2,
+.cm-line.cm-live-heading-3,
+.cm-line.cm-live-heading-4,
+.cm-line.cm-live-heading-5,
+.cm-line.cm-live-heading-6 {
+  color: var(--sat-text-primary);
+}
+
+.cm-line.cm-live-heading-7 {
+  color: var(--sat-editor-heading-7, var(--sat-text-primary));
+}
+
+.cm-live-inline-code {
+  background-color: var(--sat-editor-inline-bg, #111827);
+}
+
+.cm-live-wikilink {
+  color: var(--sat-editor-accent, var(--sat-accent-primary));
+}
+
+.cm-live-blockquote {
+  border-left-color: var(--sat-editor-blockquote-border, #334155);
+  color: var(--sat-editor-blockquote-text, var(--sat-text-muted));
+}
+
+.cm-live-code {
+  background-color: var(--sat-editor-code-bg, #0a0f1a);
+}
+
+.cm-code-header,
+.cm-code-footer {
+  background-color: var(--sat-editor-code-bg, #0a0f1a);
+}
+
+.cm-code-lang-tag,
+.cm-code-copy-btn {
+  color: var(--sat-editor-code-muted, #94a3b8);
+}
+
+.cm-tooltip.cm-tooltip-autocomplete {
+  background-color: var(--sat-editor-popover-bg, #1e1e24);
+  color: var(--sat-editor-popover-text, #e2e8f0);
+  border-color: var(--sat-editor-popover-border, #333338);
+}
+
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background-color: var(--sat-editor-popover-active-bg, #2d2d35);
+  color: var(--sat-editor-popover-active-text, #ffffff);
+}

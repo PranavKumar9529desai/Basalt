@@ -1,0 +1,43 @@
+{
+  "id": "solarized-light",
+  "label": "Solarized Light",
+  "mode": "light",
+  "description": "Ethan Schoonover's Solarized light palette.",
+  "overrides": {
+    "surface": {
+      "1": "#fdf6e3",
+      "2": "#eee8d5",
+      "3": "#e0dbc4"
+    },
+    "text": {
+      "primary": "#586e75",
+      "muted": "#657b83",
+      "inverse": "#002b36"
+    },
+    "accent": {
+      "primary": "#2aa198",
+      "strong": "#268bd2"
+    },
+    "layout": {
+      "border": "#d3cbb8"
+    },
+    "editor": {
+      "background": "#fdf6e3",
+      "inlineBg": "#eee8d5",
+      "blockquoteBorder": "#d3cbb8",
+      "blockquoteText": "#073642",
+      "codeBg": "#f5eeda",
+      "codeMuted": "#657b83",
+      "codeHoverBg": "#e9e2cf",
+      "codeHoverText": "#073642",
+      "popoverBg": "#fdf6e3",
+      "popoverBorder": "#d3cbb8",
+      "popoverText": "#073642",
+      "popoverMuted": "#586e75",
+      "popoverActiveBg": "#e6dfcb",
+      "popoverActiveText": "#2aa198",
+      "taskAccent": "#859900",
+      "heading7": "#073642"
+    }
+  }
+}

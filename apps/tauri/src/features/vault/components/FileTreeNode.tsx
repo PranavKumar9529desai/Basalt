@@ -50,15 +50,15 @@ function FolderIcon({ isOpen }: { isOpen: boolean }) {
         // Open folder
         <path
           d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5.5H13.5A1 1 0 0 1 14.5 6.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z"
-          stroke="#60a5fa"
+          stroke="var(--sat-accent-primary)"
           strokeWidth="1.2"
-          fill="#1e3a5f"
+          fill="var(--sat-surface-2)"
         />
       ) : (
         // Closed folder
         <path
           d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5.5H13.5A1 1 0 0 1 14.5 6.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z"
-          stroke="#94a3b8"
+          stroke="var(--sat-text-muted)"
           strokeWidth="1.2"
           fill="none"
         />
@@ -79,13 +79,13 @@ function FileIcon() {
     >
       <path
         d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"
-        stroke="#64748b"
+        stroke="var(--sat-text-muted)"
         strokeWidth="1.2"
         fill="none"
       />
       <path
         d="M9.5 1.5V5.5H13.5"
-        stroke="#64748b"
+        stroke="var(--sat-text-muted)"
         strokeWidth="1.2"
         strokeLinecap="round"
       />
@@ -140,8 +140,8 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         transition-colors duration-75
         ${
           isSelected
-            ? "bg-blue-600/20 text-blue-100"
-            : "text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+            ? "bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)]"
+            : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]"
         }
       `}
       role={isFolder ? "button" : "option"}
@@ -164,7 +164,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         {isFolder && (
           <ChevronRight
             className={`
-              text-slate-500 transition-transform duration-150
+              text-[var(--sat-text-muted)] transition-transform duration-150
               ${isOpen ? "rotate-90" : ""}
             `}
           />
@@ -177,13 +177,11 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
       </span>
 
       {/* Label */}
-      <span className="truncate leading-none">
-        {node.name}
-      </span>
+      <span className="truncate leading-none">{node.name}</span>
 
       {/* Child count badge — shown only for folders with children */}
       {isFolder && node.childCount > 0 && (
-        <span className="ml-auto mr-2 text-[10px] text-slate-600 tabular-nums shrink-0">
+        <span className="ml-auto mr-2 text-[10px] text-[var(--sat-text-muted)] tabular-nums shrink-0">
           {node.childCount}
         </span>
       )}

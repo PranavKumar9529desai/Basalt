@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color: var(--sat-text-primary);
+  background-color: var(--sat-surface-1);
+}
+
+body {
+  background-color: var(--sat-surface-1);
+  color: var(--sat-text-primary);
+}

@@ -1,0 +1,37 @@
+# Codex CLI rules (Starlark-like syntax)
+
+defaults {
+  package_manager = "bun"
+  search_tool = "rg"
+  code_index = "mcp"
+  planning = "sequential"  # use sequential thinking mcp tool before major changes
+}
+
+allow {
+  # fast, read-only commands
+  prefix_rule = ["ls"]
+  prefix_rule = ["pwd"]
+  prefix_rule = ["cat"]
+  prefix_rule = ["rg"]
+  prefix_rule = ["bun", "--version"]
+  prefix_rule = ["bun", "install"]  # bun is primary package manager
+  prefix_rule = ["bun", "run"]      # includes bun run <script>
+}
+
+prompt {
+  # network or dependency changes
+  prefix_rule = ["bun", "add"]
+  prefix_rule = ["bun", "remove"]
+  prefix_rule = ["bun", "update"]
+
+  # git mutations should be explicit
+  prefix_rule = ["git", "commit"]
+  prefix_rule = ["git", "push"]
+}
+
+forbid {
+  # destructive or unsafe
+  regex_rule = "(?i)^rm\\s+-rf\\b"
+  regex_rule = "(?i)^sudo\\b"
+  regex_rule = "(?i)curl\\s+.*\\|\\s*sh"
+}

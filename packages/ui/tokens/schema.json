@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Basalt Theme Tokens",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "palette": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "radius": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "spacing": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "shadow": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "font": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

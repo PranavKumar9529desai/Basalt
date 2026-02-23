@@ -31,9 +31,9 @@ export const Toolbar: FC<ToolbarProps> = ({
   onReindex,
 }) => {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 shrink-0">
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--sat-layout-border)] shrink-0">
       {/* Vault badge */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 min-w-0">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] min-w-0">
         {/* Folder icon */}
         <svg
           width="13"
@@ -41,7 +41,7 @@ export const Toolbar: FC<ToolbarProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           aria-hidden="true"
-          className="shrink-0 text-slate-400"
+          className="shrink-0 text-[var(--sat-text-muted)]"
         >
           <path
             d="M1.5 3.5A1 1 0 0 1 2.5 2.5H6l1.5 2H13.5A1 1 0 0 1 14.5 5.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V3.5Z"
@@ -50,9 +50,11 @@ export const Toolbar: FC<ToolbarProps> = ({
             fill="none"
           />
         </svg>
-        <span className="text-xs text-slate-400 shrink-0">Vault</span>
+        <span className="text-xs text-[var(--sat-text-muted)] shrink-0">
+          Vault
+        </span>
         <span
-          className="text-xs font-semibold text-slate-100 truncate max-w-[160px]"
+          className="text-xs font-semibold text-[var(--sat-text-primary)] truncate max-w-[160px]"
           title={vaultPath}
         >
           {vaultNameFromPath(vaultPath)}
@@ -66,8 +68,8 @@ export const Toolbar: FC<ToolbarProps> = ({
         disabled={isIndexing}
         className="
           px-2.5 py-1 rounded-md text-xs font-medium
-          bg-slate-800 border border-slate-700
-          text-slate-300 hover:text-slate-100 hover:bg-slate-700
+          bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)]
+          text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]
           disabled:opacity-50 disabled:cursor-not-allowed
           transition-colors shrink-0
         "
@@ -83,15 +85,15 @@ export const Toolbar: FC<ToolbarProps> = ({
         className="
           inline-flex items-center gap-1.5
           px-2.5 py-1 rounded-md text-xs font-medium
-          bg-slate-800 border border-slate-700
-          text-slate-300 hover:text-slate-100 hover:bg-slate-700
+          bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)]
+          text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]
           disabled:opacity-50 disabled:cursor-not-allowed
           transition-colors shrink-0
         "
       >
         {isIndexing ? (
           <>
-            <span className="w-3 h-3 border border-slate-500 border-t-blue-400 rounded-full animate-spin" />
+            <span className="w-3 h-3 border border-[var(--sat-text-muted)] border-t-[var(--sat-accent-primary)] rounded-full animate-spin" />
             Indexing…
           </>
         ) : (
@@ -125,7 +127,10 @@ export const Toolbar: FC<ToolbarProps> = ({
 
       {/* Status message — pushes to the right */}
       {status && (
-        <span className="ml-auto text-xs text-slate-400 truncate max-w-xs" title={status}>
+        <span
+          className="ml-auto text-xs text-[var(--sat-text-muted)] truncate max-w-xs"
+          title={status}
+        >
           {status}
         </span>
       )}

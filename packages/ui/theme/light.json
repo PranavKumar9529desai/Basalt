@@ -1,0 +1,43 @@
+{
+  "id": "light",
+  "label": "Light",
+  "mode": "light",
+  "description": "Bright neutral light theme.",
+  "overrides": {
+    "surface": {
+      "1": "#f8fafc",
+      "2": "#eef2f6",
+      "3": "#e2e8f0"
+    },
+    "text": {
+      "primary": "#0f172a",
+      "muted": "#475569",
+      "inverse": "#ffffff"
+    },
+    "accent": {
+      "primary": "#2563eb",
+      "strong": "#1d4ed8"
+    },
+    "layout": {
+      "border": "#cbd5e1"
+    },
+    "editor": {
+      "background": "#ffffff",
+      "inlineBg": "#f1f5f9",
+      "blockquoteBorder": "#cbd5e1",
+      "blockquoteText": "#0f172a",
+      "codeBg": "#f8fafc",
+      "codeMuted": "#64748b",
+      "codeHoverBg": "#e2e8f0",
+      "codeHoverText": "#0f172a",
+      "popoverBg": "#ffffff",
+      "popoverBorder": "#cbd5e1",
+      "popoverText": "#0f172a",
+      "popoverMuted": "#475569",
+      "popoverActiveBg": "#dbeafe",
+      "popoverActiveText": "#1d4ed8",
+      "taskAccent": "#16a34a",
+      "heading7": "#1f2937"
+    }
+  }
+}

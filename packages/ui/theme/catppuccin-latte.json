@@ -1,0 +1,43 @@
+{
+  "id": "catppuccin-latte",
+  "label": "Catppuccin Latte",
+  "mode": "light",
+  "description": "Catppuccin pastel light variant.",
+  "overrides": {
+    "surface": {
+      "1": "#e6e9ef",
+      "2": "#dce0e8",
+      "3": "#ccd0da"
+    },
+    "text": {
+      "primary": "#4c4f69",
+      "muted": "#6c6f85",
+      "inverse": "#eff1f5"
+    },
+    "accent": {
+      "primary": "#dc8a78",
+      "strong": "#8839ef"
+    },
+    "layout": {
+      "border": "#bcc0cc"
+    },
+    "editor": {
+      "background": "#eff1f5",
+      "inlineBg": "#e6e9ef",
+      "blockquoteBorder": "#bcc0cc",
+      "blockquoteText": "#4c4f69",
+      "codeBg": "#e6e9ef",
+      "codeMuted": "#6c6f85",
+      "codeHoverBg": "#dce0e8",
+      "codeHoverText": "#4c4f69",
+      "popoverBg": "#eff1f5",
+      "popoverBorder": "#bcc0cc",
+      "popoverText": "#4c4f69",
+      "popoverMuted": "#6c6f85",
+      "popoverActiveBg": "#dfdff3",
+      "popoverActiveText": "#8839ef",
+      "taskAccent": "#40a02b",
+      "heading7": "#4c4f69"
+    }
+  }
+}
