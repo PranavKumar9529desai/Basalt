@@ -228,6 +228,14 @@ export const Editor: React.FC<EditorProps> = ({
     themeExtensions,
   ]);
 
+  const menuAnchor = useMemo(() => {
+    if (!menuState) return null;
+    return {
+      getBoundingClientRect: () =>
+        new DOMRect(menuState.x, menuState.y, 0, 0),
+    };
+  }, [menuState]);
+
   return (
     <div className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}>
       <div className="flex-1 overflow-hidden relative">
@@ -246,13 +254,7 @@ export const Editor: React.FC<EditorProps> = ({
           />
 
           {menuState && (
-            <ContextMenuContent
-              style={{
-                position: "fixed",
-                left: menuState.x,
-                top: menuState.y,
-              }}
-            >
+            <ContextMenuContent anchor={menuAnchor}>
               <ContextMenuItem
                 icon={<IconLink />}
                 onClick={() => handleCommand("link")}

@@ -12,10 +12,12 @@ const ContextMenuPortal = ContextMenuPrimitive.Portal;
 
 const ContextMenuContent = React.forwardRef<
     HTMLDivElement,
-    ContextMenuPrimitive.PopupProps
->(({ className, ...props }, ref) => (
+    ContextMenuPrimitive.PopupProps & {
+        anchor?: any;
+    }
+>(({ className, anchor, ...props }, ref) => (
     <ContextMenuPortal>
-        <ContextMenuPrimitive.Positioner sideOffset={4} collisionPadding={10}>
+        <ContextMenuPrimitive.Positioner anchor={anchor} sideOffset={4} collisionPadding={10}>
             <ContextMenuPrimitive.Popup
                 ref={ref}
                 className={cn(
@@ -100,10 +102,12 @@ ContextMenuSubTrigger.displayName = "ContextMenuSubTrigger";
 
 const ContextMenuSubContent = React.forwardRef<
     HTMLDivElement,
-    ContextMenuPrimitive.PopupProps
->(({ className, ...props }, ref) => (
+    ContextMenuPrimitive.PopupProps & {
+        anchor?: any;
+    }
+>(({ className, anchor, ...props }, ref) => (
     <ContextMenuPortal>
-        <ContextMenuPrimitive.Positioner sideOffset={4} collisionPadding={10}>
+        <ContextMenuPrimitive.Positioner anchor={anchor} sideOffset={4} collisionPadding={10}>
             <ContextMenuPrimitive.Popup
                 ref={ref}
                 className={cn(
