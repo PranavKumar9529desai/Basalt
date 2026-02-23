@@ -13,7 +13,6 @@ import { useEditor } from "../features/vault/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { FileTree } from "../features/vault/components/FileTree";
 import { Toolbar } from "../features/vault/components/Toolbar";
-import { BacklinksSidebar } from "../features/vault/components/BacklinksSidebar";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 
@@ -146,17 +145,21 @@ function RouteComponent() {
               onFetchLinks={editor.onFetchLinks}
               onFetchTags={editor.onFetchTags}
               onOpenLink={editor.handleOpenLink}
+              onSearch={(query) => {
+                console.log("Searching for:", query);
+                // Future integration: trigger global search modal
+              }}
             />
           </div>
         </div>
 
         {/* ── Right sidebar: backlinks ── */}
-        <div className="w-52 shrink-0 flex flex-col min-h-0">
+        {/*<div className="w-52 shrink-0 flex flex-col min-h-0">
           <BacklinksSidebar
             backlinks={editor.backlinks}
             onOpenNote={(note: LinkSuggestion) => editor.loadNote(note)}
           />
-        </div>
+        </div>*/}
       </div>
     </div>
   );
