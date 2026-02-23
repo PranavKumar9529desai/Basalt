@@ -9,8 +9,8 @@ import { EditorView } from "@codemirror/view";
 // Theme to style the autocomplete popup like Obsidian
 export const SUGGESTIONS_THEME = EditorView.baseTheme({
   ".cm-tooltip-autocomplete": {
-    backgroundColor: "#1e1e24", // Match Obsidian dark mode
-    border: "1px solid #333338",
+    backgroundColor: "var(--sat-editor-popover-bg, #1e1e24)", // Match Obsidian dark mode
+    border: "1px solid var(--sat-editor-popover-border, #333338)",
     borderRadius: "6px",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
     padding: "4px",
@@ -23,15 +23,15 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
     padding: "6px 8px !important",
     borderRadius: "4px",
     lineHeight: "1.4",
-    color: "#e2e8f0",
+    color: "var(--sat-editor-popover-text, #e2e8f0)",
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
     position: "relative",
   },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-    backgroundColor: "#2d2d35 !important",
-    color: "#ffffff !important",
+    backgroundColor: "var(--sat-editor-popover-active-bg, #2d2d35) !important",
+    color: "var(--sat-editor-popover-active-text, #ffffff) !important",
   },
   ".cm-completionIcon": {
     display: "none !important", // Hide the default Type icon (which displays as a missing glyph box)
@@ -42,7 +42,7 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
   },
   ".cm-completionDetail": {
     fontSize: "11px",
-    color: "#94a3b8",
+    color: "var(--sat-editor-popover-muted, #94a3b8)",
     marginTop: "2px",
     fontStyle: "normal",
     whiteSpace: "nowrap",
@@ -52,7 +52,7 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
   },
   ".cm-completionMatchedText": {
     textDecoration: "none",
-    color: "#a78bfa", // Highlight matching text in purple
+    color: "var(--sat-editor-accent, #a78bfa)", // Highlight matching text in purple
   },
 });
 
