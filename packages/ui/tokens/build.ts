@@ -116,7 +116,7 @@ function loadThemes(baseMap: Dict): ThemeBuild[] {
   return files.map((file) => {
     const full = path.join(THEME_DIR, file);
     const raw = readJson(full);
-    const overridesFlat = flatten(raw.overrides as Dict ?? {});
+    const overridesFlat = flatten((raw.overrides as Dict) ?? {});
     const resolved: Dict = {};
     for (const [k, v] of Object.entries(overridesFlat)) {
       resolved[k] = resolveRefs(v, { ...baseMap, ...overridesFlat });
@@ -189,7 +189,8 @@ function generateManifest(themes: ThemeBuild[], defaultId: string): string {
   const arr = themes
     .map(
       (t) =>
-        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${t.meta.mode ?? "light"
+        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${
+          t.meta.mode ?? "light"
         }", description: ${JSON.stringify(t.meta.description ?? "")} },`,
     )
     .join("\n");

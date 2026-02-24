@@ -1,74 +1,69 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
-    "vcs": {
-        "enabled": true,
-        "clientKind": "git",
-        "useIgnoreFile": true
-    },
-    "files": {
-        "ignoreUnknown": true
-    },
+  "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useImportType": "off"
+      },
+      "a11y": {
+        "useValidAriaRole": "warn"
+      },
+      "suspicious": {
+        "noUnknownAtRules": {
+          "level": "error",
+          "options": {
+            "ignore": ["tailwind", "layer", "apply", "config"]
+          }
+        }
+      }
+    }
+  },
+  "javascript": {
     "formatter": {
-        "enabled": true,
-        "indentStyle": "space",
-        "indentWidth": 2,
-        "lineWidth": 80
+      "quoteStyle": "double",
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
     },
     "linter": {
-        "enabled": true,
-        "rules": {
-            "recommended": true,
-            "style": {
-                "useImportType": "off"
-            },
-            "a11y": {
-                "useValidAriaRole": "warn"
-            },
-            "suspicious": {
-                "noUnknownAtRules": {
-                    "level": "error",
-                    "options": {
-                        "ignore": [
-                            "tailwind",
-                            "layer",
-                            "apply",
-                            "config"
-                        ]
-                    }
-                }
-            }
-        }
-    },
-    "javascript": {
-        "formatter": {
-            "quoteStyle": "double",
-            "trailingCommas": "all"
-        }
-    },
-    "css": {
-        "parser": {
-            "cssModules": true,
-            "tailwindDirectives": true
-        },
-        "linter": {
-            "enabled": true
-        }
-    },
-    "overrides": [
-        {
-            "includes": [
-                "crates/**",
-                "target/**",
-                "**/dist/**",
-                "**/.tauri/**",
-                "apps/tauri/src/routeTree.gen.ts"
-            ],
-            "linter": {
-                "enabled": false
-            },
-            "formatter": {
-                "enabled": false
-            }
-        }
-    ]
+      "enabled": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "crates/**",
+        "target/**",
+        "**/dist/**",
+        "**/.tauri/**",
+        "apps/tauri/src/routeTree.gen.ts"
+      ],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
 }

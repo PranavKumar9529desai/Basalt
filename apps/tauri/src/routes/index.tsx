@@ -9,10 +9,7 @@ import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useEditor } from "../features/vault/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
-import type {
-  BootResult,
-  FlatTreeNode,
-} from "../features/vault/types";
+import type { BootResult, FlatTreeNode } from "../features/vault/types";
 
 // ---------------------------------------------------------------------------
 // Route — loader fetches boot (includes pre-built tree) in one round-trip
