@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import {
   defaultThemeId,
   type ThemeId,
@@ -26,21 +27,42 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
     const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeId | null;
     if (stored && themes.some((t) => t.id === stored)) {
       setThemeId(stored);
-      return;
+    } else {
+      const prefersDark = window.matchMedia?.(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      if (prefersDark && themes.some((t) => t.mode === "dark")) {
+        setThemeId("dark" as ThemeId);
+      }
     }
 
-    const prefersDark = window.matchMedia?.(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    if (prefersDark && themes.some((t) => t.mode === "dark")) {
-      setThemeId("dark" as ThemeId);
-    }
+    // Check Rust for the "true" source of truth after mount to ensure sync with dot-config
+    invoke<Record<string, unknown>>("get_settings")
+      .then((settings) => {
+        const backendTheme = settings.theme as ThemeId;
+        if (
+          backendTheme &&
+          themes.some((t) => t.id === backendTheme) &&
+          backendTheme !== themeId
+        ) {
+          setThemeId(backendTheme);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch settings from backend:", err);
+      });
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount to hydrate initial theme state
   }, []);
 
-  // Apply data-theme attribute and persist
+  // Apply data-theme attribute and persist to both localStorage and Rust backend
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", themeId);
     window.localStorage.setItem(STORAGE_KEY, themeId);
+
+    // Persist to Rust backend config for long-term consistency and portability
+    invoke("set_setting", { key: "theme", value: themeId }).catch((err) => {
+      console.error("Failed to persist theme to backend:", err);
+    });
   }, [themeId]);
 
   const value = useMemo<ThemeContextValue>(

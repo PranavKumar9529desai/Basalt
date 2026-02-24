@@ -1,4 +1,4 @@
-import { IconCommand, IconSearch } from "@tabler/icons-react";
+import { IconCommand as TablerIconCommand, IconSearch as TablerIconSearch } from "@tabler/icons-react";
 import React, {
   useCallback,
   useEffect,
@@ -8,6 +8,9 @@ import React, {
 } from "react";
 import type { Command } from "../../../editor/src/commands/registry";
 import { useCommandRegistry } from "../../../editor/src/commands/context";
+
+const IconCommand = TablerIconCommand as any;
+const IconSearch = TablerIconSearch as any;
 
 export const CommandPalette: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -94,15 +97,15 @@ export const CommandPalette: React.FC = () => {
       {/* Reduced blur and increased opacity for better performance and visibility */}
       <button
         type="button"
-        className="fixed inset-0 bg-slate-950/60 backdrop-blur-[2px] pointer-events-auto transition-opacity duration-200 border-none outline-none cursor-default"
+        className="fixed inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-auto transition-opacity duration-200 border-none outline-none cursor-default"
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
         tabIndex={-1}
       />
 
-      <div className="w-full max-w-xl bg-slate-900 border border-slate-700 shadow-2xl rounded-xl overflow-hidden flex flex-col pointer-events-auto transform transition-all duration-200 scale-100">
-        <div className="flex items-center px-4 py-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
-          <IconSearch className="w-5 h-5 text-slate-400 mr-3" />
+      <div className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-xl overflow-hidden flex flex-col pointer-events-auto transform transition-all duration-200 scale-100">
+        <div className="flex items-center px-4 py-4 border-b border-border bg-card/50 backdrop-blur-md">
+          <IconSearch className="w-5 h-5 text-muted-foreground mr-3" />
           <input
             ref={inputRef}
             type="text"
@@ -110,9 +113,9 @@ export const CommandPalette: React.FC = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent border-none outline-none text-slate-100 placeholder-slate-500 text-base"
+            className="flex-1 bg-transparent border-none outline-none text-foreground placeholder-muted-foreground text-base"
           />
-          <div className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+          <div className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
             ESC
           </div>
         </div>
@@ -123,8 +126,8 @@ export const CommandPalette: React.FC = () => {
         >
           {filteredCommands.length === 0 ? (
             <div className="px-4 py-12 text-center">
-              <IconCommand className="w-8 h-8 text-slate-700 mx-auto mb-2 opacity-20" />
-              <div className="text-slate-500 text-sm">
+              <IconCommand className="w-8 h-8 text-muted mx-auto mb-2 opacity-20" />
+              <div className="text-muted-foreground text-sm">
                 No commands found for "{query}"
               </div>
             </div>
@@ -141,22 +144,22 @@ export const CommandPalette: React.FC = () => {
           )}
         </div>
 
-        <div className="px-4 py-2.5 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between">
+        <div className="px-4 py-2.5 bg-background/80 border-t border-border flex items-center justify-between">
           <div className="flex gap-4">
-            <div className="flex items-center text-[10px] text-slate-500 font-medium uppercase tracking-wider">
-              <span className="bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 mr-1.5 text-slate-300 font-bold">
+            <div className="flex items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              <span className="bg-muted border border-border rounded px-1.5 py-0.5 mr-1.5 text-foreground/80 font-bold">
                 ↑↓
               </span>
               navigate
             </div>
-            <div className="flex items-center text-[10px] text-slate-500 font-medium uppercase tracking-wider">
-              <span className="bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 mr-1.5 text-slate-300 font-bold">
+            <div className="flex items-center text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              <span className="bg-muted border border-border rounded px-1.5 py-0.5 mr-1.5 text-foreground/80 font-bold">
                 Enter
               </span>
               execute
             </div>
           </div>
-          <div className="text-[10px] font-black text-indigo-500/40 tracking-tighter italic">
+          <div className="text-[10px] font-black text-primary/40 tracking-tighter italic">
             BASALT CORE
           </div>
         </div>
@@ -187,18 +190,16 @@ const CommandItem: React.FC<CommandItemProps> = React.memo(
         role="option"
         aria-selected={isSelected}
         tabIndex={0}
-        className={`px-3 py-2.5 mx-2 rounded-lg cursor-pointer flex items-center transition-colors duration-150 group outline-none ${
-          isSelected
-            ? "bg-indigo-600 shadow-lg shadow-indigo-600/20"
-            : "hover:bg-slate-800/50"
-        }`}
+        className={`px-3 py-2.5 mx-2 rounded-lg cursor-pointer flex items-center transition-colors duration-150 group outline-none ${isSelected
+          ? "bg-primary shadow-lg shadow-primary/20"
+          : "hover:bg-accent/50"
+          }`}
       >
         <div
-          className={`w-8 h-8 rounded-md flex items-center justify-center mr-3 shrink-0 ${
-            isSelected
-              ? "bg-white/20 text-white"
-              : "bg-slate-800 text-slate-400 group-hover:text-slate-200"
-          }`}
+          className={`w-8 h-8 rounded-md flex items-center justify-center mr-3 shrink-0 ${isSelected
+            ? "bg-primary-foreground/20 text-primary-foreground"
+            : "bg-muted text-muted-foreground group-hover:text-foreground"
+            }`}
         >
           {cmd.icon ? (
             <span className="flex items-center justify-center">
@@ -212,15 +213,14 @@ const CommandItem: React.FC<CommandItemProps> = React.memo(
         </div>
         <div className="flex-1 min-w-0">
           <div
-            className={`text-sm font-semibold truncate ${isSelected ? "text-white" : "text-slate-200"}`}
+            className={`text-sm font-semibold truncate ${isSelected ? "text-primary-foreground" : "text-foreground"}`}
           >
             {cmd.name}
           </div>
           {cmd.category && (
             <div
-              className={`text-[10px] font-bold uppercase tracking-tight ${
-                isSelected ? "text-indigo-100/70" : "text-slate-500"
-              }`}
+              className={`text-[10px] font-bold uppercase tracking-tight ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
+                }`}
             >
               {cmd.category}
             </div>
@@ -231,11 +231,10 @@ const CommandItem: React.FC<CommandItemProps> = React.memo(
             {cmd.hotkeys.map((key: string) => (
               <span
                 key={key}
-                className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                  isSelected
-                    ? "border-white/30 bg-white/10 text-white"
-                    : "border-slate-700 bg-slate-800/50 text-slate-500"
-                }`}
+                className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${isSelected
+                  ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
+                  : "border-border bg-muted/50 text-muted-foreground"
+                  }`}
               >
                 {key}
               </span>

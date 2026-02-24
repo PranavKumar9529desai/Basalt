@@ -30,9 +30,19 @@ impl Default for AppState {
 // Persistent config
 // ---------------------------------------------------------------------------
 
+/// Global application configuration.
+///
+/// STORAGE STRATEGY:
+/// 1. Global (System-wide): Stored in `~/.local/share/...` (via app_data_dir).
+///    Used for app-shell state: recent vaults, global preferences, window state.
+/// 2. Local (Vault-specific): Stored in `vault_path/.basalt/`. (Planned)
+///    Used for data context: graph metadata cache, per-vault plugins/themes.
 #[derive(Serialize, Deserialize, Default, Clone)]
 struct AppConfig {
     last_vault: Option<String>,
+    /// Modular settings map for scalability (themes, extensions, etc.)
+    #[serde(default)]
+    settings: std::collections::HashMap<String, serde_json::Value>,
 }
 
 fn config_path(app: &tauri::AppHandle) -> PathBuf {
@@ -141,6 +151,8 @@ struct BootResult {
     /// Pre-built, pre-sorted flat tree — ready for the sidebar to render.
     /// Empty when `status == "no_vault"`.
     tree: Vec<FlatTreeNode>,
+    /// Persisted settings from config.json
+    settings: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -197,7 +209,7 @@ struct FileChangeEvent {
 fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, String> {
     let config = load_config(&app);
 
-    let vault_path = match config.last_vault {
+    let vault_path = match config.last_vault.clone() {
         Some(p) => p,
         None => {
             return Ok(BootResult {
@@ -205,6 +217,7 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
                 note_count: 0,
                 status: "no_vault".into(),
                 tree: Vec::new(),
+                settings: config.settings,
             })
         }
     };
@@ -216,6 +229,7 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
             note_count: 0,
             status: "no_vault".into(),
             tree: Vec::new(),
+            settings: config.settings,
         });
     }
 
@@ -285,6 +299,7 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
         note_count,
         status,
         tree,
+        settings: config.settings,
     })
 }
 
@@ -325,12 +340,9 @@ fn set_vault(
     }
 
     // Persist config so next boot auto-loads this vault.
-    save_config(
-        &app,
-        &AppConfig {
-            last_vault: Some(vault_path.clone()),
-        },
-    );
+    let mut config = load_config(&app);
+    config.last_vault = Some(vault_path.clone());
+    save_config(&app, &config);
 
     // (Re-)start the watcher.
     start_watcher(&state, &vault_path, &app)?;
@@ -348,7 +360,16 @@ fn set_vault(
         note_count,
         status: "full_index".into(),
         tree,
+        settings: config.settings,
     })
+}
+
+/// Stores a configuration setting in the app config.
+#[tauri::command]
+fn set_setting(key: String, value: serde_json::Value, app: tauri::AppHandle) {
+    let mut config = load_config(&app);
+    config.settings.insert(key, value);
+    save_config(&app, &config);
 }
 
 /// Re-index the current vault from scratch (e.g. user presses "Re-index").
@@ -512,6 +533,12 @@ fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<Strin
     Ok(out)
 }
 
+/// Returns the current application settings map.
+#[tauri::command]
+fn get_settings(app: tauri::AppHandle) -> std::collections::HashMap<String, serde_json::Value> {
+    load_config(&app).settings
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -525,6 +552,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             boot,
             set_vault,
+            set_setting,
+            get_settings,
             reindex_vault,
             get_vault_tree,
             open_vault_dialog,

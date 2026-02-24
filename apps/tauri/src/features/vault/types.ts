@@ -63,6 +63,8 @@ export interface BootResult {
   status: string;
   /** Pre-sorted flat tree, empty when status === "no_vault". */
   tree: FlatTreeNode[];
+  /** Persisted settings from config.json */
+  settings: Record<string, unknown>;
 }
 
 /**

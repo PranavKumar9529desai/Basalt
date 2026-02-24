@@ -1,4 +1,8 @@
-import { IconFilePlus, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconFilePlus as TablerIconFilePlus, IconPlus as TablerIconPlus, IconTrash as TablerIconTrash } from "@tabler/icons-react";
+
+const IconFilePlus = TablerIconFilePlus as any;
+const IconPlus = TablerIconPlus as any;
+const IconTrash = TablerIconTrash as any;
 import { globalCommandRegistry } from "@workspace/editor";
 import type React from "react";
 import { useEffect } from "react";

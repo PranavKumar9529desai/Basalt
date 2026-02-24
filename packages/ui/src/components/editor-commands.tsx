@@ -1,15 +1,25 @@
 import type { EditorView } from "@codemirror/view";
 import {
-  IconBold,
-  IconCopy,
-  IconH1,
-  IconH2,
-  IconH3,
-  IconItalic,
-  IconScissors,
-  IconSelectAll,
-  IconStrikethrough,
+  IconBold as TablerIconBold,
+  IconCopy as TablerIconCopy,
+  IconH1 as TablerIconH1,
+  IconH2 as TablerIconH2,
+  IconH3 as TablerIconH3,
+  IconItalic as TablerIconItalic,
+  IconScissors as TablerIconScissors,
+  IconSelectAll as TablerIconSelectAll,
+  IconStrikethrough as TablerIconStrikethrough,
 } from "@tabler/icons-react";
+
+const IconBold = TablerIconBold as any;
+const IconCopy = TablerIconCopy as any;
+const IconH1 = TablerIconH1 as any;
+const IconH2 = TablerIconH2 as any;
+const IconH3 = TablerIconH3 as any;
+const IconItalic = TablerIconItalic as any;
+const IconScissors = TablerIconScissors as any;
+const IconSelectAll = TablerIconSelectAll as any;
+const IconStrikethrough = TablerIconStrikethrough as any;
 import { useCallback, useMemo } from "react";
 import { useCommand } from "../../../editor/src/commands/context";
 
