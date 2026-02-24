@@ -1,16 +1,11 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
 import {
-  themes,
   defaultThemeId,
   type ThemeId,
   type ThemeMeta,
+  themes,
 } from "@workspace/ui/theme/manifest";
+import type React from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type ThemeContextValue = {
   themeId: ThemeId;
@@ -57,7 +52,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
     [themeId],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 };
 
 export function useTheme(): ThemeContextValue {

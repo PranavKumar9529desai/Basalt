@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
-import type { DecorationContext, DecorationCollector } from "./types";
+import type { DecorationCollector, DecorationContext } from "./types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -8,12 +8,12 @@ import type { DecorationContext, DecorationCollector } from "./types";
 
 /** Lezer node types whose syntax markers should be hidden on non-active lines */
 export const HIDE_MARKS = new Set([
-    "HeaderMark",
-    "QuoteMark",
-    "LinkMark",
-    "EmphasisMark",
-    "CodeMark",
-    "WikiLinkMark",
+  "HeaderMark",
+  "QuoteMark",
+  "LinkMark",
+  "EmphasisMark",
+  "CodeMark",
+  "WikiLinkMark",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -21,9 +21,9 @@ export const HIDE_MARKS = new Set([
 // ---------------------------------------------------------------------------
 
 export const MARK_HIDING_THEME = EditorView.baseTheme({
-    ".cm-live-hide": {
-        display: "none",
-    },
+  ".cm-live-hide": {
+    display: "none",
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -40,36 +40,36 @@ export const MARK_HIDING_THEME = EditorView.baseTheme({
  * Returns true if the node was handled.
  */
 export function handleMarkHidingNode(
-    node: SyntaxNodeRef,
-    ctx: DecorationContext,
-    collector: DecorationCollector,
+  node: SyntaxNodeRef,
+  ctx: DecorationContext,
+  collector: DecorationCollector,
 ): boolean {
-    const name = node.type.name;
-    if (!HIDE_MARKS.has(name)) return false;
+  const name = node.type.name;
+  if (!HIDE_MARKS.has(name)) return false;
 
-    // Check if this node is on the active (focused) line
-    const onActiveLine = ctx.activeLine
-        ? node.from >= ctx.activeLine.from && node.to <= ctx.activeLine.to
-        : false;
+  // Check if this node is on the active (focused) line
+  const onActiveLine = ctx.activeLine
+    ? node.from >= ctx.activeLine.from && node.to <= ctx.activeLine.to
+    : false;
 
-    if (onActiveLine) return true; // Don't hide marks on the active line
+  if (onActiveLine) return true; // Don't hide marks on the active line
 
-    let hideFrom = node.from;
-    let hideTo = node.to;
+  const hideFrom = node.from;
+  let hideTo = node.to;
 
-    // For HeaderMark (#) and QuoteMark (>), also hide the trailing space
-    if (name === "HeaderMark" || name === "QuoteMark") {
-        const docLength = ctx.view.state.doc.length;
-        while (hideTo < docLength) {
-            const nextChar = ctx.view.state.doc.sliceString(hideTo, hideTo + 1);
-            if (nextChar === " ") {
-                hideTo += 1;
-            } else {
-                break;
-            }
-        }
+  // For HeaderMark (#) and QuoteMark (>), also hide the trailing space
+  if (name === "HeaderMark" || name === "QuoteMark") {
+    const docLength = ctx.view.state.doc.length;
+    while (hideTo < docLength) {
+      const nextChar = ctx.view.state.doc.sliceString(hideTo, hideTo + 1);
+      if (nextChar === " ") {
+        hideTo += 1;
+      } else {
+        break;
+      }
     }
+  }
 
-    collector.addMark(hideFrom, hideTo, "cm-live-hide");
-    return true;
+  collector.addMark(hideFrom, hideTo, "cm-live-hide");
+  return true;
 }

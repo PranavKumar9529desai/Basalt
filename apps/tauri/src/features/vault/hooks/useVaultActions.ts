@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { useRouter } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useState } from "react";
 import type { BootResult } from "../types";
 
 // ---------------------------------------------------------------------------

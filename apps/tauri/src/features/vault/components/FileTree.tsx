@@ -1,5 +1,5 @@
-import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRef } from "react";
 import type { FlatTreeNode } from "../types";
 import { FileTreeNode, TREE_ROW_HEIGHT } from "./FileTreeNode";
 

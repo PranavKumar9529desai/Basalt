@@ -1,31 +1,9 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { EditorView, keymap } from "@codemirror/view";
-import { closeBrackets } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
-
-import { CUSTOM_THEME } from "./theme";
-import { backticksKeymap } from "./plugins/backticks";
-import { taskListPlugin, TASK_CHECKBOX_THEME } from "./plugins/task-list";
-import {
-  livePreviewPlugin,
-  LIVE_PREVIEW_THEME,
-} from "./plugins/live-preview";
-import {
-  createSuggestionsPlugin,
-  SUGGESTIONS_THEME,
-  FetchLinksFn,
-  FetchTagsFn,
-} from "./plugins/suggestions";
-import { wikiLinkExtension, clickableLinksPlugin } from "./plugins/links";
-import {
-  contextMenuExtension,
-  ContextMenuState,
-} from "./plugins/context-menu";
-
-import { CommandPalette } from "../../ui/src/components/CommandPalette";
+import { EditorView, keymap } from "@codemirror/view";
+import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -35,20 +13,38 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
+import type React from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { CommandPalette } from "../../ui/src/components/CommandPalette";
 import { CommandProvider, useCommandRegistry } from "./commands/context";
 import { useEditorCommands } from "./hooks/use-editor-commands";
+import { backticksKeymap } from "./plugins/backticks";
+import {
+  type ContextMenuState,
+  contextMenuExtension,
+} from "./plugins/context-menu";
+import { clickableLinksPlugin, wikiLinkExtension } from "./plugins/links";
+import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./plugins/live-preview";
+import {
+  createSuggestionsPlugin,
+  type FetchLinksFn,
+  type FetchTagsFn,
+  SUGGESTIONS_THEME,
+} from "./plugins/suggestions";
+import { TASK_CHECKBOX_THEME, taskListPlugin } from "./plugins/task-list";
+import { CUSTOM_THEME } from "./theme";
 
-export * from "./commands/registry";
 export * from "./commands/context";
+export * from "./commands/registry";
 export * from "./hooks/use-editor-commands";
 
 // ----------------------------------------------------------------------------
 // BASALT EDITOR ARCHITECTURE NOTE
-// 
+//
 // The Basalt editor is built on CodeMirror 6, using a highly modular plugin
 // system. Most editor features (live preview, wiki-links, task lists) are
 // implemented as CodeMirror Extensions.
-// 
+//
 // The editor also integrates with a global Command Registry, allowing
 // both built-in features and external extensions to register commands
 // that can be triggered via the Command Palette (Ctrl+P) or Context Menu.
@@ -111,7 +107,7 @@ const EditorContent: React.FC<EditorProps> = ({
       setMenuState(null);
       execute(commandId);
     },
-    [execute]
+    [execute],
   );
 
   const handleChange = useCallback(
@@ -123,7 +119,7 @@ const EditorContent: React.FC<EditorProps> = ({
         onChange(val);
       }
     },
-    [isControlled, onChange]
+    [isControlled, onChange],
   );
 
   const editorExtensions = useMemo(() => {
@@ -163,17 +159,18 @@ const EditorContent: React.FC<EditorProps> = ({
   const menuAnchor = useMemo(() => {
     if (!menuState) return null;
     return {
-      getBoundingClientRect: () =>
-        new DOMRect(menuState.x, menuState.y, 0, 0),
+      getBoundingClientRect: () => new DOMRect(menuState.x, menuState.y, 0, 0),
     };
   }, [menuState]);
 
   // Group commands for context menu
-  const formatCommands = commands.filter(c => c.category === "Format");
-  const editorCommands = commands.filter(c => c.category === "Editor");
+  const formatCommands = commands.filter((c) => c.category === "Format");
+  const editorCommands = commands.filter((c) => c.category === "Editor");
 
   return (
-    <div className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}>
+    <div
+      className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
+    >
       <div className="flex-1 overflow-hidden relative">
         <CommandPalette />
         <ContextMenu
@@ -192,7 +189,7 @@ const EditorContent: React.FC<EditorProps> = ({
 
           {menuState && (
             <ContextMenuContent anchor={menuAnchor}>
-              {editorCommands.map(cmd => (
+              {editorCommands.map((cmd) => (
                 <ContextMenuItem
                   key={cmd.id}
                   icon={cmd.icon}
@@ -222,7 +219,7 @@ const EditorContent: React.FC<EditorProps> = ({
               <ContextMenuSub>
                 <ContextMenuSubTrigger>Format</ContextMenuSubTrigger>
                 <ContextMenuSubContent>
-                  {formatCommands.map(cmd => (
+                  {formatCommands.map((cmd) => (
                     <ContextMenuItem
                       key={cmd.id}
                       onClick={() => handleCommand(cmd.id)}
@@ -233,7 +230,6 @@ const EditorContent: React.FC<EditorProps> = ({
                   ))}
                 </ContextMenuSubContent>
               </ContextMenuSub>
-
             </ContextMenuContent>
           )}
         </ContextMenu>

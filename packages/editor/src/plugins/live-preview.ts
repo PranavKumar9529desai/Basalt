@@ -16,41 +16,40 @@
  * Both are exported together as `livePreviewPlugin` (an array of extensions).
  */
 
+import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
+import { StateEffect, StateField } from "@codemirror/state";
 import {
   Decoration,
-  DecorationSet,
+  type DecorationSet,
   EditorView,
   ViewPlugin,
 } from "@codemirror/view";
-import { StateField, StateEffect } from "@codemirror/state";
-import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
-import type {
-  DecorationContext,
-  DecorationCollector,
-} from "./decorations/types";
-
-// Handler modules
-import {
-  HEADINGS_THEME,
-  handleHeadingNode,
-  handleHeading7Lines,
-} from "./decorations/headings";
-import {
-  CODE_BLOCKS_THEME,
-  handleCodeBlockNode,
-} from "./decorations/code-blocks";
 import {
   BLOCKQUOTES_THEME,
   handleBlockquoteNode,
 } from "./decorations/blockquotes";
 import {
-  INLINE_MARKS_THEME,
+  CODE_BLOCKS_THEME,
+  handleCodeBlockNode,
+} from "./decorations/code-blocks";
+// Handler modules
+import {
+  HEADINGS_THEME,
+  handleHeading7Lines,
+  handleHeadingNode,
+} from "./decorations/headings";
+import {
   handleInlineNode,
+  INLINE_MARKS_THEME,
 } from "./decorations/inline-marks";
 import {
-  MARK_HIDING_THEME,
   handleMarkHidingNode,
+  MARK_HIDING_THEME,
 } from "./decorations/mark-hiding";
+import type {
+  DecorationCollector,
+  DecorationContext,
+} from "./decorations/types";
 import { isInCodeBlock } from "./decorations/types";
 
 // ---------------------------------------------------------------------------

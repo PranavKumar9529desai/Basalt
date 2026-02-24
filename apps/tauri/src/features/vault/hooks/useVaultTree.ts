@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { FlatTreeNode, FileChangeEvent } from "../types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FileChangeEvent, FlatTreeNode } from "../types";
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -74,7 +74,8 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
 
       // Derive the immediate parent's rel_path by dropping the last segment.
       const lastSlash = node.relPath.lastIndexOf("/");
-      const parentRel = lastSlash === -1 ? "" : node.relPath.slice(0, lastSlash);
+      const parentRel =
+        lastSlash === -1 ? "" : node.relPath.slice(0, lastSlash);
 
       return openFolders.has(parentRel);
     });

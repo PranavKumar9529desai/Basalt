@@ -1,8 +1,8 @@
 import {
   autocompletion,
-  CompletionContext,
-  CompletionResult,
-  Completion,
+  type Completion,
+  type CompletionContext,
+  type CompletionResult,
 } from "@codemirror/autocomplete";
 import { EditorView } from "@codemirror/view";
 

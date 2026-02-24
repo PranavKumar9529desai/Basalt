@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { FlatTreeNode, FileChangeEvent, LinkSuggestion, SaveStatus } from "../types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  FileChangeEvent,
+  FlatTreeNode,
+  LinkSuggestion,
+  SaveStatus,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -268,15 +273,18 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
 
   // ── Editor autocomplete ───────────────────────────────────────────────────
 
-  const onFetchLinks = useCallback(async (query: string): Promise<LinkSuggestion[]> => {
-    try {
-      return await invoke<LinkSuggestion[]>("autocomplete_links", {
-        prefix: query,
-      });
-    } catch {
-      return [];
-    }
-  }, []);
+  const onFetchLinks = useCallback(
+    async (query: string): Promise<LinkSuggestion[]> => {
+      try {
+        return await invoke<LinkSuggestion[]>("autocomplete_links", {
+          prefix: query,
+        });
+      } catch {
+        return [];
+      }
+    },
+    [],
+  );
 
   const onFetchTags = useCallback(async (query: string): Promise<string[]> => {
     try {

@@ -1,3 +1,4 @@
+import { syntaxTree } from "@codemirror/language";
 import { RangeSetBuilder } from "@codemirror/state";
 import {
   Decoration,
@@ -5,7 +6,6 @@ import {
   ViewPlugin,
   WidgetType,
 } from "@codemirror/view";
-import { syntaxTree } from "@codemirror/language";
 
 export const TASK_CHECKBOX_THEME = EditorView.baseTheme({
   ".cm-task-marker": {

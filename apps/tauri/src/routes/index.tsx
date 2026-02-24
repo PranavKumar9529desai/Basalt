@@ -1,20 +1,19 @@
-import { useCallback, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { Editor } from "@workspace/editor";
-
+import { useCallback, useEffect } from "react";
+import { FileTree } from "../features/vault/components/FileTree";
+import { SaveIndicator } from "../features/vault/components/SaveIndicator";
+import { Toolbar } from "../features/vault/components/Toolbar";
+import { VaultSplash } from "../features/vault/components/VaultSplash";
+import { useEditor } from "../features/vault/hooks/useEditor";
+import { useVaultActions } from "../features/vault/hooks/useVaultActions";
+import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import type {
   BootResult,
   FlatTreeNode,
   LinkSuggestion,
 } from "../features/vault/types";
-import { useVaultTree } from "../features/vault/hooks/useVaultTree";
-import { useEditor } from "../features/vault/hooks/useEditor";
-import { useVaultActions } from "../features/vault/hooks/useVaultActions";
-import { FileTree } from "../features/vault/components/FileTree";
-import { Toolbar } from "../features/vault/components/Toolbar";
-import { SaveIndicator } from "../features/vault/components/SaveIndicator";
-import { VaultSplash } from "../features/vault/components/VaultSplash";
 
 // ---------------------------------------------------------------------------
 // Route — loader fetches boot (includes pre-built tree) in one round-trip

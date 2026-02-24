@@ -1,6 +1,6 @@
 import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
-import type { DecorationContext, DecorationCollector } from "./types";
+import type { DecorationCollector, DecorationContext } from "./types";
 
 // ---------------------------------------------------------------------------
 // Widgets
