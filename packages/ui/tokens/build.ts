@@ -1,7 +1,7 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
-type Dict = Record<string, any>;
+type Dict = Record<string, unknown>;
 
 const TOKENS_DIR = path.resolve(import.meta.dirname);
 const THEME_DIR = path.resolve(TOKENS_DIR, "../theme");
@@ -34,10 +34,10 @@ function flatten(obj: Dict, prefix = ""): Dict {
   return out;
 }
 
-function resolveRefs(value: any, lookup: Dict): any {
+function resolveRefs(value: unknown, lookup: Dict): unknown {
   if (typeof value !== "string") return value;
   return value.replace(/\{([^}]+)\}/g, (_, ref) => {
-    if (lookup[ref] !== undefined) return lookup[ref];
+    if (lookup[ref] !== undefined) return String(lookup[ref]);
     return value;
   });
 }
@@ -116,18 +116,19 @@ function loadThemes(baseMap: Dict): ThemeBuild[] {
   return files.map((file) => {
     const full = path.join(THEME_DIR, file);
     const raw = readJson(full);
-    const overridesFlat = flatten(raw.overrides ?? {});
+    const overridesFlat = flatten(raw.overrides as Dict ?? {});
     const resolved: Dict = {};
     for (const [k, v] of Object.entries(overridesFlat)) {
       resolved[k] = resolveRefs(v, { ...baseMap, ...overridesFlat });
     }
+    const meta: ThemeMeta = {
+      id: String(raw.id ?? ""),
+      label: String(raw.label ?? ""),
+      mode: raw.mode ? String(raw.mode) : undefined,
+      description: raw.description ? String(raw.description) : undefined,
+    };
     return {
-      meta: {
-        id: raw.id,
-        label: raw.label,
-        mode: raw.mode,
-        description: raw.description,
-      },
+      meta,
       overrides: resolved,
     };
   });
@@ -169,7 +170,7 @@ function generateCss(baseMap: Dict, themes: ThemeBuild[]): string {
     lines.push("}");
   }
 
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }
 
 function generateTypes(baseMap: Dict): string {
@@ -188,8 +189,7 @@ function generateManifest(themes: ThemeBuild[], defaultId: string): string {
   const arr = themes
     .map(
       (t) =>
-        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${
-          t.meta.mode ?? "light"
+        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${t.meta.mode ?? "light"
         }", description: ${JSON.stringify(t.meta.description ?? "")} },`,
     )
     .join("\n");

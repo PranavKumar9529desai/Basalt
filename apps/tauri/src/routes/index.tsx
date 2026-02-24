@@ -12,7 +12,6 @@ import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import type {
   BootResult,
   FlatTreeNode,
-  LinkSuggestion,
 } from "../features/vault/types";
 
 // ---------------------------------------------------------------------------

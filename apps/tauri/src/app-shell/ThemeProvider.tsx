@@ -30,8 +30,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
     }
 
     const prefersDark =
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches;
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     if (prefersDark && themes.some((t) => t.mode === "dark")) {
       setThemeId("dark" as ThemeId);
     }

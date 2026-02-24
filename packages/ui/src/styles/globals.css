@@ -115,8 +115,7 @@
   --radius: var(--sat-layout-radius-md);
 }
 
-[data-theme="dark"] {
-}
+/* Dark mode specific overrides can go here */
 
 [data-theme="light"] {
   --sat-surface-1: #f8fafc;

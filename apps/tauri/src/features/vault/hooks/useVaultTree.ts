@@ -91,7 +91,7 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
       if (isOpen) {
         // Close: remove this folder AND all descendant folders so that their
         // children don't stay "visible" even after the parent collapses.
-        const prefix = relPath + "/";
+        const prefix = `${relPath}/`;
         for (const p of next) {
           if (p === relPath || p.startsWith(prefix)) {
             next.delete(p);
