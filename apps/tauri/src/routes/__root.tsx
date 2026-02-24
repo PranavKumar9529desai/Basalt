@@ -1,9 +1,11 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
+import { AppCommands } from "../commands/app-commands";
 
 export const Route = createRootRoute({
   component: () => (
     <div className="p-4 flex flex-col min-h-screen bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]">
+      <AppCommands />
       <div className="flex gap-4 p-2 border-b border-[var(--sat-layout-border)] mb-4 items-center">
         <Link
           to="/"
@@ -25,3 +27,4 @@ export const Route = createRootRoute({
     </div>
   ),
 });
+

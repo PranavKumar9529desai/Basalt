@@ -5,7 +5,10 @@
   "type": "module",
   "main": "src/index.tsx",
   "exports": {
-    ".": "./src/index.tsx"
+    ".": "./src/index.tsx",
+    "./commands/registry": "./src/commands/registry.ts",
+    "./commands/context": "./src/commands/context.tsx",
+    "./hooks/use-editor-commands": "./src/hooks/use-editor-commands.tsx"
   },
   "scripts": {
     "dev": "tsc --watch",

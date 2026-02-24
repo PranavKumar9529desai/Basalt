@@ -5,17 +5,6 @@ import { languages } from "@codemirror/language-data";
 import { EditorView, keymap } from "@codemirror/view";
 import { closeBrackets } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
-import {
-  IconLink,
-  IconSearch,
-  IconCopy,
-  IconScissors,
-  IconClipboard,
-  IconFileText,
-  IconHighlight,
-  IconEraser,
-  IconPlus,
-} from "@tabler/icons-react";
 
 import { CUSTOM_THEME } from "./theme";
 import { backticksKeymap } from "./plugins/backticks";
@@ -36,10 +25,7 @@ import {
   ContextMenuState,
 } from "./plugins/context-menu";
 
-import { CommandProvider, useCommand } from "./commands/context";
-import { CommandPalette } from "./components/CommandPalette";
-import { IconBold, IconItalic, IconStrikethrough, IconCopy, IconScissors, IconClipboard, IconSelectAll, IconH1, IconH2, IconH3 } from "@tabler/icons-react";
-
+import { CommandPalette } from "../../ui/src/components/CommandPalette";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -49,10 +35,23 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
+import { CommandProvider, useCommandRegistry } from "./commands/context";
+import { useEditorCommands } from "./hooks/use-editor-commands";
+
+export * from "./commands/registry";
+export * from "./commands/context";
+export * from "./hooks/use-editor-commands";
 
 // ----------------------------------------------------------------------------
 // BASALT EDITOR ARCHITECTURE NOTE
-// ... (rest of note)
+// 
+// The Basalt editor is built on CodeMirror 6, using a highly modular plugin
+// system. Most editor features (live preview, wiki-links, task lists) are
+// implemented as CodeMirror Extensions.
+// 
+// The editor also integrates with a global Command Registry, allowing
+// both built-in features and external extensions to register commands
+// that can be triggered via the Command Palette (Ctrl+P) or Context Menu.
 // ----------------------------------------------------------------------------
 
 export interface EditorProps {
@@ -81,7 +80,7 @@ const BASIC_SETUP = {
   foldGutter: false,
 };
 
-export const Editor: React.FC<EditorProps> = ({
+const EditorContent: React.FC<EditorProps> = ({
   initialContent = "",
   value,
   onChange,
@@ -101,212 +100,79 @@ export const Editor: React.FC<EditorProps> = ({
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const view = editorRef.current?.view;
+  const { execute, commands } = useCommandRegistry();
 
   // --- EDITOR COMMANDS ---
-  const wrapSelection = useCallback(
-    (prefix: string, suffix: string = prefix) => {
-      if (!view) return;
-      const { from, to } = view.state.selection.main;
-      const text = view.state.sliceDoc(from, to);
-      view.dispatch({
-        changes: { from, to, insert: `${prefix}${text}${suffix}` },
-        selection: { anchor: from + prefix.length + text.length },
-      });
-      view.focus();
+  // Registers editor formatting commands automatically
+  useEditorCommands(view);
+
+  const handleCommand = useCallback(
+    (commandId: string) => {
+      setMenuState(null);
+      execute(commandId);
     },
-    [view]
+    [execute]
   );
 
-  [view]
+  const handleChange = useCallback(
+    (val: string) => {
+      if (!isControlled) {
+        setInternalValue(val);
+      }
+      if (onChange) {
+        onChange(val);
+      }
+    },
+    [isControlled, onChange]
   );
 
-// Register Core Commands
-useCommand(useMemo(() => ({
-  id: "editor:bold",
-  name: "Bold",
-  category: "Editor",
-  icon: <IconBold className="w-4 h-4" />,
-  callback: () => wrapSelection("**")
-}), [wrapSelection]));
-
-useCommand(useMemo(() => ({
-  id: "editor:italic",
-  name: "Italic",
-  category: "Editor",
-  icon: <IconItalic className="w-4 h-4" />,
-  callback: () => wrapSelection("*")
-}), [wrapSelection]));
-
-useCommand(useMemo(() => ({
-  id: "editor:strikethrough",
-  name: "Strikethrough",
-  category: "Editor",
-  icon: <IconStrikethrough className="w-4 h-4" />,
-  callback: () => wrapSelection("~~")
-}), [wrapSelection]));
-
-useCommand(useMemo(() => ({
-  id: "editor:h1",
-  name: "Heading 1",
-  category: "Editor",
-  icon: <IconH1 className="w-4 h-4" />,
-  callback: () => applyToLineStart("# ")
-}), [applyToLineStart]));
-
-useCommand(useMemo(() => ({
-  id: "editor:h2",
-  name: "Heading 2",
-  category: "Editor",
-  icon: <IconH2 className="w-4 h-4" />,
-  callback: () => applyToLineStart("## ")
-}), [applyToLineStart]));
-
-useCommand(useMemo(() => ({
-  id: "editor:h3",
-  name: "Heading 3",
-  category: "Editor",
-  icon: <IconH3 className="w-4 h-4" />,
-  callback: () => applyToLineStart("### ")
-}), [applyToLineStart]));
-
-useCommand(useMemo(() => ({
-  id: "editor:copy",
-  name: "Copy",
-  category: "Editor",
-  icon: <IconCopy className="w-4 h-4" />,
-  callback: () => document.execCommand("copy")
-}), []));
-
-useCommand(useMemo(() => ({
-  id: "editor:cut",
-  name: "Cut",
-  category: "Editor",
-  icon: <IconScissors className="w-4 h-4" />,
-  callback: () => document.execCommand("cut")
-}), []));
-
-useCommand(useMemo(() => ({
-  id: "editor:select-all",
-  name: "Select All",
-  category: "Editor",
-  icon: <IconSelectAll className="w-4 h-4" />,
-  callback: () => view?.dispatch({
-    selection: { anchor: 0, head: view.state.doc.length },
-  })
-}), [view]));
-
-const handleCommand = useCallback(
-  (command: string) => {
-    setMenuState(null);
-    switch (command) {
-      case "bold":
-        wrapSelection("**");
-        break;
-      case "italic":
-        wrapSelection("*");
-        break;
-      case "strikethrough":
-        wrapSelection("~~");
-        break;
-      case "link":
-        wrapSelection("[[", "]]");
-        break;
-      case "external-link":
-        wrapSelection("[", "](url)");
-        break;
-      case "h1":
-        applyToLineStart("# ");
-        break;
-      case "h2":
-        applyToLineStart("## ");
-        break;
-      case "h3":
-        applyToLineStart("### ");
-        break;
-      case "select-all":
-        view?.dispatch({
-          selection: { anchor: 0, head: view.state.doc.length },
-        });
-        break;
-      case "cut":
-        document.execCommand("cut");
-        break;
-      case "copy":
-        document.execCommand("copy");
-        break;
-      case "paste":
-      case "paste-plain":
-        navigator.clipboard.readText().then((text) => {
-          if (view) {
-            const { from, to } = view.state.selection.main;
-            const content = command === "paste-plain"
-              ? text.replace(/[\r\n]+/g, " ") // Simplistic plain text for now, or just text
-              : text;
-            view.dispatch({ changes: { from, to, insert: content } });
-          }
-        });
-        break;
+  const editorExtensions = useMemo(() => {
+    const themeStack: Extension[] = [];
+    if (themeExtensions) themeStack.push(...themeExtensions);
+    if (includeDefaultTheme) {
+      themeStack.push(CUSTOM_THEME);
     }
-  },
-  [view, wrapSelection, applyToLineStart]
-);
 
-const handleChange = useCallback(
-  (val: string) => {
-    if (!isControlled) {
-      setInternalValue(val);
-    }
-    if (onChange) {
-      onChange(val);
-    }
-  },
-  [isControlled, onChange]
-);
+    return [
+      markdown({
+        base: markdownLanguage,
+        codeLanguages: languages,
+        extensions: [wikiLinkExtension],
+      }),
+      ...themeStack,
+      TASK_CHECKBOX_THEME,
+      taskListPlugin,
+      LIVE_PREVIEW_THEME,
+      livePreviewPlugin,
+      closeBrackets(),
+      keymap.of(backticksKeymap),
+      SUGGESTIONS_THEME,
+      createSuggestionsPlugin(onFetchLinks, onFetchTags),
+      clickableLinksPlugin(onOpenLink),
+      contextMenuExtension(setMenuState),
+      EditorView.lineWrapping,
+    ];
+  }, [
+    includeDefaultTheme,
+    onFetchLinks,
+    onFetchTags,
+    onOpenLink,
+    themeExtensions,
+  ]);
 
-const editorExtensions = useMemo(() => {
-  const themeStack: Extension[] = [];
-  if (themeExtensions) themeStack.push(...themeExtensions);
-  if (includeDefaultTheme) {
-    themeStack.push(CUSTOM_THEME);
-  }
+  const menuAnchor = useMemo(() => {
+    if (!menuState) return null;
+    return {
+      getBoundingClientRect: () =>
+        new DOMRect(menuState.x, menuState.y, 0, 0),
+    };
+  }, [menuState]);
 
-  return [
-    markdown({
-      base: markdownLanguage,
-      codeLanguages: languages,
-      extensions: [wikiLinkExtension],
-    }),
-    ...themeStack,
-    TASK_CHECKBOX_THEME,
-    taskListPlugin,
-    LIVE_PREVIEW_THEME,
-    livePreviewPlugin,
-    closeBrackets(),
-    keymap.of(backticksKeymap),
-    SUGGESTIONS_THEME,
-    createSuggestionsPlugin(onFetchLinks, onFetchTags),
-    clickableLinksPlugin(onOpenLink),
-    contextMenuExtension(setMenuState),
-    EditorView.lineWrapping,
-  ];
-}, [
-  includeDefaultTheme,
-  onFetchLinks,
-  onFetchTags,
-  onOpenLink,
-  themeExtensions,
-]);
+  // Group commands for context menu
+  const formatCommands = commands.filter(c => c.category === "Format");
+  const editorCommands = commands.filter(c => c.category === "Editor");
 
-const menuAnchor = useMemo(() => {
-  if (!menuState) return null;
-  return {
-    getBoundingClientRect: () =>
-      new DOMRect(menuState.x, menuState.y, 0, 0),
-  };
-}, [menuState]);
-
-return (
-  <CommandProvider>
+  return (
     <div className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}>
       <div className="flex-1 overflow-hidden relative">
         <CommandPalette />
@@ -326,129 +192,58 @@ return (
 
           {menuState && (
             <ContextMenuContent anchor={menuAnchor}>
-              <ContextMenuItem
-                icon={<IconLink />}
-                onClick={() => handleCommand("link")}
-              >
-                Add link
-              </ContextMenuItem>
-              <ContextMenuItem
-                icon={<IconLink className="opacity-70" />}
-                onClick={() => handleCommand("external-link")}
-              >
-                Add external link
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              {menuState.selection.text && (
+              {editorCommands.map(cmd => (
                 <ContextMenuItem
-                  icon={<IconSearch />}
-                  onClick={() => {
-                    onSearch?.(menuState.selection.text);
-                    setMenuState(null);
-                  }}
+                  key={cmd.id}
+                  icon={cmd.icon}
+                  onClick={() => handleCommand(cmd.id)}
+                  shortcut={cmd.hotkeys?.[0]}
                 >
-                  Search for "{menuState.selection.text}"
+                  {cmd.name}
                 </ContextMenuItem>
-              )}
-              <ContextMenuItem
-                icon={<IconPlus />}
-                onClick={() => handleCommand("extract")}
-              >
-                Extract current selection...
-              </ContextMenuItem>
+              ))}
 
               <ContextMenuSeparator />
-              <ContextMenuSub>
-                <ContextMenuSubTrigger icon={<IconFileText />}>
-                  Format
-                </ContextMenuSubTrigger>
-                <ContextMenuSubContent>
-                  <ContextMenuItem onClick={() => handleCommand("bold")}>
-                    Bold
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => handleCommand("italic")}>
-                    Italic
-                  </ContextMenuItem>
+
+              {menuState.selection.text && (
+                <>
                   <ContextMenuItem
-                    onClick={() => handleCommand("strikethrough")}
+                    onClick={() => {
+                      onSearch?.(menuState.selection.text);
+                      setMenuState(null);
+                    }}
                   >
-                    Strikethrough
+                    Search for "{menuState.selection.text}"
                   </ContextMenuItem>
-                </ContextMenuSubContent>
-              </ContextMenuSub>
+                  <ContextMenuSeparator />
+                </>
+              )}
 
               <ContextMenuSub>
-                <ContextMenuSubTrigger icon={<IconFileText />}>
-                  Paragraph
-                </ContextMenuSubTrigger>
+                <ContextMenuSubTrigger>Format</ContextMenuSubTrigger>
                 <ContextMenuSubContent>
-                  <ContextMenuItem onClick={() => handleCommand("h1")}>
-                    Heading 1
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => handleCommand("h2")}>
-                    Heading 2
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => handleCommand("h3")}>
-                    Heading 3
-                  </ContextMenuItem>
+                  {formatCommands.map(cmd => (
+                    <ContextMenuItem
+                      key={cmd.id}
+                      onClick={() => handleCommand(cmd.id)}
+                      shortcut={cmd.hotkeys?.[0]}
+                    >
+                      {cmd.name}
+                    </ContextMenuItem>
+                  ))}
                 </ContextMenuSubContent>
               </ContextMenuSub>
 
-              <ContextMenuSub>
-                <ContextMenuSubTrigger icon={<IconPlus />}>
-                  Insert
-                </ContextMenuSubTrigger>
-                <ContextMenuSubContent>
-                  <ContextMenuItem>Callout</ContextMenuItem>
-                  <ContextMenuItem>Code block</ContextMenuItem>
-                  <ContextMenuItem>Table</ContextMenuItem>
-                </ContextMenuSubContent>
-              </ContextMenuSub>
-
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                icon={<IconScissors />}
-                shortcut="Ctrl+X"
-                onClick={() => handleCommand("cut")}
-              >
-                Cut
-              </ContextMenuItem>
-              <ContextMenuItem
-                icon={<IconCopy />}
-                shortcut="Ctrl+C"
-                onClick={() => handleCommand("copy")}
-              >
-                Copy
-              </ContextMenuItem>
-              <ContextMenuItem
-                icon={<IconClipboard />}
-                shortcut="Ctrl+V"
-                onClick={() => handleCommand("paste")}
-              >
-                Paste
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleCommand("paste-plain")}>
-                Paste as plain text
-              </ContextMenuItem>
-              <ContextMenuItem
-                shortcut="Ctrl+A"
-                onClick={() => handleCommand("select-all")}
-              >
-                Select all
-              </ContextMenuItem>
-
-              <ContextMenuSeparator />
-              <ContextMenuItem icon={<IconHighlight />}>
-                Highlight
-              </ContextMenuItem>
-              <ContextMenuItem icon={<IconEraser />}>
-                Erase highlight
-              </ContextMenuItem>
             </ContextMenuContent>
           )}
         </ContextMenu>
       </div>
     </div>
+  );
+};
+
+export const Editor: React.FC<EditorProps> = (props) => (
+  <CommandProvider>
+    <EditorContent {...props} />
   </CommandProvider>
 );
-};
