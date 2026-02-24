@@ -13,7 +13,6 @@ export const HIDE_MARKS = new Set([
     "LinkMark",
     "EmphasisMark",
     "CodeMark",
-    "ListMark",
     "WikiLinkMark",
 ]);
 

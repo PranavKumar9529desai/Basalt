@@ -23,4 +23,7 @@ export const CUSTOM_THEME = EditorView.theme({
     "&.cm-focused": {
         outline: "none",
     },
+    ".cm-cursor, .cm-dropCursor": {
+        borderLeft: "2px solid var(--sat-editor-accent, #a78bfa)",
+    },
 });

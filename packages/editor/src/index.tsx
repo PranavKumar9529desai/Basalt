@@ -36,6 +36,10 @@ import {
   ContextMenuState,
 } from "./plugins/context-menu";
 
+import { CommandProvider, useCommand } from "./commands/context";
+import { CommandPalette } from "./components/CommandPalette";
+import { IconBold, IconItalic, IconStrikethrough, IconCopy, IconScissors, IconClipboard, IconSelectAll, IconH1, IconH2, IconH3 } from "@tabler/icons-react";
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -113,132 +117,199 @@ export const Editor: React.FC<EditorProps> = ({
     [view]
   );
 
-  const applyToLineStart = useCallback(
-    (prefix: string) => {
-      if (!view) return;
-      const { head } = view.state.selection.main;
-      const line = view.state.doc.lineAt(head);
-      view.dispatch({
-        changes: { from: line.from, to: line.from, insert: prefix },
-      });
-      view.focus();
-    },
-    [view]
+  [view]
   );
 
-  const handleCommand = useCallback(
-    (command: string) => {
-      setMenuState(null);
-      switch (command) {
-        case "bold":
-          wrapSelection("**");
-          break;
-        case "italic":
-          wrapSelection("*");
-          break;
-        case "strikethrough":
-          wrapSelection("~~");
-          break;
-        case "link":
-          wrapSelection("[[", "]]");
-          break;
-        case "external-link":
-          wrapSelection("[", "](url)");
-          break;
-        case "h1":
-          applyToLineStart("# ");
-          break;
-        case "h2":
-          applyToLineStart("## ");
-          break;
-        case "h3":
-          applyToLineStart("### ");
-          break;
-        case "select-all":
-          view?.dispatch({
-            selection: { anchor: 0, head: view.state.doc.length },
-          });
-          break;
-        case "cut":
-          document.execCommand("cut");
-          break;
-        case "copy":
-          document.execCommand("copy");
-          break;
-        case "paste":
-        case "paste-plain":
-          navigator.clipboard.readText().then((text) => {
-            if (view) {
-              const { from, to } = view.state.selection.main;
-              const content = command === "paste-plain"
-                ? text.replace(/[\r\n]+/g, " ") // Simplistic plain text for now, or just text
-                : text;
-              view.dispatch({ changes: { from, to, insert: content } });
-            }
-          });
-          break;
-      }
-    },
-    [view, wrapSelection, applyToLineStart]
-  );
+// Register Core Commands
+useCommand(useMemo(() => ({
+  id: "editor:bold",
+  name: "Bold",
+  category: "Editor",
+  icon: <IconBold className="w-4 h-4" />,
+  callback: () => wrapSelection("**")
+}), [wrapSelection]));
 
-  const handleChange = useCallback(
-    (val: string) => {
-      if (!isControlled) {
-        setInternalValue(val);
-      }
-      if (onChange) {
-        onChange(val);
-      }
-    },
-    [isControlled, onChange]
-  );
+useCommand(useMemo(() => ({
+  id: "editor:italic",
+  name: "Italic",
+  category: "Editor",
+  icon: <IconItalic className="w-4 h-4" />,
+  callback: () => wrapSelection("*")
+}), [wrapSelection]));
 
-  const editorExtensions = useMemo(() => {
-    const themeStack: Extension[] = [];
-    if (themeExtensions) themeStack.push(...themeExtensions);
-    if (includeDefaultTheme) {
-      themeStack.push(CUSTOM_THEME);
+useCommand(useMemo(() => ({
+  id: "editor:strikethrough",
+  name: "Strikethrough",
+  category: "Editor",
+  icon: <IconStrikethrough className="w-4 h-4" />,
+  callback: () => wrapSelection("~~")
+}), [wrapSelection]));
+
+useCommand(useMemo(() => ({
+  id: "editor:h1",
+  name: "Heading 1",
+  category: "Editor",
+  icon: <IconH1 className="w-4 h-4" />,
+  callback: () => applyToLineStart("# ")
+}), [applyToLineStart]));
+
+useCommand(useMemo(() => ({
+  id: "editor:h2",
+  name: "Heading 2",
+  category: "Editor",
+  icon: <IconH2 className="w-4 h-4" />,
+  callback: () => applyToLineStart("## ")
+}), [applyToLineStart]));
+
+useCommand(useMemo(() => ({
+  id: "editor:h3",
+  name: "Heading 3",
+  category: "Editor",
+  icon: <IconH3 className="w-4 h-4" />,
+  callback: () => applyToLineStart("### ")
+}), [applyToLineStart]));
+
+useCommand(useMemo(() => ({
+  id: "editor:copy",
+  name: "Copy",
+  category: "Editor",
+  icon: <IconCopy className="w-4 h-4" />,
+  callback: () => document.execCommand("copy")
+}), []));
+
+useCommand(useMemo(() => ({
+  id: "editor:cut",
+  name: "Cut",
+  category: "Editor",
+  icon: <IconScissors className="w-4 h-4" />,
+  callback: () => document.execCommand("cut")
+}), []));
+
+useCommand(useMemo(() => ({
+  id: "editor:select-all",
+  name: "Select All",
+  category: "Editor",
+  icon: <IconSelectAll className="w-4 h-4" />,
+  callback: () => view?.dispatch({
+    selection: { anchor: 0, head: view.state.doc.length },
+  })
+}), [view]));
+
+const handleCommand = useCallback(
+  (command: string) => {
+    setMenuState(null);
+    switch (command) {
+      case "bold":
+        wrapSelection("**");
+        break;
+      case "italic":
+        wrapSelection("*");
+        break;
+      case "strikethrough":
+        wrapSelection("~~");
+        break;
+      case "link":
+        wrapSelection("[[", "]]");
+        break;
+      case "external-link":
+        wrapSelection("[", "](url)");
+        break;
+      case "h1":
+        applyToLineStart("# ");
+        break;
+      case "h2":
+        applyToLineStart("## ");
+        break;
+      case "h3":
+        applyToLineStart("### ");
+        break;
+      case "select-all":
+        view?.dispatch({
+          selection: { anchor: 0, head: view.state.doc.length },
+        });
+        break;
+      case "cut":
+        document.execCommand("cut");
+        break;
+      case "copy":
+        document.execCommand("copy");
+        break;
+      case "paste":
+      case "paste-plain":
+        navigator.clipboard.readText().then((text) => {
+          if (view) {
+            const { from, to } = view.state.selection.main;
+            const content = command === "paste-plain"
+              ? text.replace(/[\r\n]+/g, " ") // Simplistic plain text for now, or just text
+              : text;
+            view.dispatch({ changes: { from, to, insert: content } });
+          }
+        });
+        break;
     }
+  },
+  [view, wrapSelection, applyToLineStart]
+);
 
-    return [
-      markdown({
-        base: markdownLanguage,
-        codeLanguages: languages,
-        extensions: [wikiLinkExtension],
-      }),
-      ...themeStack,
-      TASK_CHECKBOX_THEME,
-      taskListPlugin,
-      LIVE_PREVIEW_THEME,
-      livePreviewPlugin,
-      closeBrackets(),
-      keymap.of(backticksKeymap),
-      SUGGESTIONS_THEME,
-      createSuggestionsPlugin(onFetchLinks, onFetchTags),
-      clickableLinksPlugin(onOpenLink),
-      contextMenuExtension(setMenuState),
-      EditorView.lineWrapping,
-    ];
-  }, [
-    includeDefaultTheme,
-    onFetchLinks,
-    onFetchTags,
-    onOpenLink,
-    themeExtensions,
-  ]);
+const handleChange = useCallback(
+  (val: string) => {
+    if (!isControlled) {
+      setInternalValue(val);
+    }
+    if (onChange) {
+      onChange(val);
+    }
+  },
+  [isControlled, onChange]
+);
 
-  const menuAnchor = useMemo(() => {
-    if (!menuState) return null;
-    return {
-      getBoundingClientRect: () =>
-        new DOMRect(menuState.x, menuState.y, 0, 0),
-    };
-  }, [menuState]);
+const editorExtensions = useMemo(() => {
+  const themeStack: Extension[] = [];
+  if (themeExtensions) themeStack.push(...themeExtensions);
+  if (includeDefaultTheme) {
+    themeStack.push(CUSTOM_THEME);
+  }
 
-  return (
+  return [
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: languages,
+      extensions: [wikiLinkExtension],
+    }),
+    ...themeStack,
+    TASK_CHECKBOX_THEME,
+    taskListPlugin,
+    LIVE_PREVIEW_THEME,
+    livePreviewPlugin,
+    closeBrackets(),
+    keymap.of(backticksKeymap),
+    SUGGESTIONS_THEME,
+    createSuggestionsPlugin(onFetchLinks, onFetchTags),
+    clickableLinksPlugin(onOpenLink),
+    contextMenuExtension(setMenuState),
+    EditorView.lineWrapping,
+  ];
+}, [
+  includeDefaultTheme,
+  onFetchLinks,
+  onFetchTags,
+  onOpenLink,
+  themeExtensions,
+]);
+
+const menuAnchor = useMemo(() => {
+  if (!menuState) return null;
+  return {
+    getBoundingClientRect: () =>
+      new DOMRect(menuState.x, menuState.y, 0, 0),
+  };
+}, [menuState]);
+
+return (
+  <CommandProvider>
     <div className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}>
       <div className="flex-1 overflow-hidden relative">
+        <CommandPalette />
         <ContextMenu
           open={!!menuState}
           onOpenChange={(open) => !open && setMenuState(null)}
@@ -378,5 +449,6 @@ export const Editor: React.FC<EditorProps> = ({
         </ContextMenu>
       </div>
     </div>
-  );
+  </CommandProvider>
+);
 };

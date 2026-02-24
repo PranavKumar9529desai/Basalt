@@ -1,4 +1,5 @@
 pub mod arena;
+pub mod fuzzy_search;
 pub mod graph;
 pub mod inline;
 pub mod markdown_parser;
@@ -7,6 +8,7 @@ pub mod types;
 pub mod utf16_mapper;
 
 pub use arena::StringArena;
+pub use fuzzy_search::{fuzzy_match, search_commands};
 pub use graph::NoteGraph;
 pub use markdown_parser::parse_markdown;
 pub use metadata::{extract_metadata, FileMetadata};
