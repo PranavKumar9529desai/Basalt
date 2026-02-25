@@ -74,6 +74,7 @@ export interface EditorProps {
 const BASIC_SETUP = {
   lineNumbers: false,
   foldGutter: false,
+  highlightActiveLine: false,
 };
 
 const EditorContent: React.FC<EditorProps> = ({

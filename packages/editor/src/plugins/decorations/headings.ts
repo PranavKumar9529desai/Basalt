@@ -25,58 +25,7 @@ export const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
 // Theme
 // ---------------------------------------------------------------------------
 
-export const HEADINGS_THEME = EditorView.baseTheme({
-  ".cm-line.cm-live-heading-1": {
-    fontSize: "2.5em",
-    fontWeight: "700",
-    lineHeight: "1.2",
-    paddingTop: "1.5rem",
-    paddingBottom: "0.5rem",
-  },
-  ".cm-line.cm-live-heading-2": {
-    fontSize: "2.0em",
-    fontWeight: "650",
-    lineHeight: "1.2",
-    paddingTop: "1.2rem",
-    paddingBottom: "0.4rem",
-  },
-  ".cm-line.cm-live-heading-3": {
-    fontSize: "1.6em",
-    fontWeight: "600",
-    lineHeight: "1.3",
-    paddingTop: "1.0rem",
-    paddingBottom: "0.3rem",
-  },
-  ".cm-line.cm-live-heading-4": {
-    fontSize: "1.4em",
-    fontWeight: "600",
-    lineHeight: "1.35",
-    paddingTop: "0.8rem",
-    paddingBottom: "0.2rem",
-  },
-  ".cm-line.cm-live-heading-5": {
-    fontSize: "1.2em",
-    fontWeight: "600",
-    lineHeight: "1.4",
-    paddingTop: "0.6rem",
-    paddingBottom: "0.1rem",
-  },
-  ".cm-line.cm-live-heading-6": {
-    fontSize: "1.1em",
-    fontWeight: "600",
-    lineHeight: "1.45",
-    paddingTop: "0.4rem",
-    paddingBottom: "0.1rem",
-  },
-  ".cm-line.cm-live-heading-7": {
-    fontSize: "1.0em",
-    fontWeight: "600",
-    lineHeight: "1.5",
-    paddingTop: "0.2rem",
-    paddingBottom: "0.1rem",
-    color: "var(--sat-editor-heading-7, #cbd5e1)",
-  },
-});
+export const HEADINGS_THEME = EditorView.baseTheme({});
 
 // ---------------------------------------------------------------------------
 // Node Handler (called during shared tree walk)
