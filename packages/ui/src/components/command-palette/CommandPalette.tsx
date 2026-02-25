@@ -56,7 +56,7 @@ export function CommandPalette({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="p-0 overflow-hidden shadow-2xl sm:max-w-[650px] border-none bg-popover top-[15vh] translate-y-0"
+                className="p-0 overflow-hidden shadow-2xl sm:max-w-[650px] border-none ring-0 focus:ring-0 bg-popover top-[15vh] translate-y-0"
                 showCloseButton={false}
             >
                 <Command
@@ -72,9 +72,9 @@ export function CommandPalette({
                         />
                         <button
                             onClick={() => onOpenChange(false)}
-                            className="p-1 rounded-full hover:bg-muted/50 transition-colors text-muted-foreground/30 hover:text-muted-foreground shrink-0"
+                            className="size-5 rounded-full bg-muted hover:bg-muted-foreground/40 transition-all flex items-center justify-center text-foreground/70 hover:text-foreground shrink-0"
                         >
-                            <IconX size={14} />
+                            <IconX size={10} strokeWidth={3} />
                         </button>
                     </div>
 
