@@ -2,9 +2,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const BLOCKQUOTES_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-blockquote": {
@@ -14,9 +11,6 @@ export const BLOCKQUOTES_THEME = EditorView.baseTheme({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Node Handler
-// ---------------------------------------------------------------------------
 
 /**
  * Handles BlockQuote nodes — adds line-level blockquote classes.

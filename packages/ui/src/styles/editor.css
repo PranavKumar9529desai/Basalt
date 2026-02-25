@@ -116,3 +116,8 @@
   background-color: var(--sat-editor-popover-active-bg, #2d2d35);
   color: var(--sat-editor-popover-active-text, #ffffff);
 }
+
+/* Remove default underline added by CodeMirror defaultHighlightStyle */
+.cm-heading {
+  text-decoration: none !important;
+}

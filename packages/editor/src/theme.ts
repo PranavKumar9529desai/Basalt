@@ -1,6 +1,8 @@
 import { EditorView } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
 
-export const CUSTOM_THEME = EditorView.theme({
+const baseTheme = EditorView.theme({
   "&": {
     height: "100%",
     backgroundColor: "transparent",
@@ -25,3 +27,14 @@ export const CUSTOM_THEME = EditorView.theme({
     borderLeft: "2px solid var(--sat-editor-accent, #a78bfa)",
   },
 });
+
+// Use this to Override default Configuration of COdemirro
+
+const defaultHighlightStyleOverride = HighlightStyle.define([
+  { tag: t.heading, textDecoration: "none" }
+]);
+
+export const CUSTOM_THEME = [
+  baseTheme,
+  syntaxHighlighting(defaultHighlightStyleOverride)
+];

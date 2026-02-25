@@ -1,9 +1,7 @@
 import type { FC } from "react";
 import type { FlatTreeNode } from "../types";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+
 
 /** Pixels of indentation per depth level. */
 const INDENT_PX = 12;

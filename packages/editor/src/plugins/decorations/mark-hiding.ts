@@ -2,9 +2,7 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+
 
 /** Lezer node types whose syntax markers should be hidden on non-active lines */
 export const HIDE_MARKS = new Set([
@@ -16,9 +14,6 @@ export const HIDE_MARKS = new Set([
   "WikiLinkMark",
 ]);
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const MARK_HIDING_THEME = EditorView.baseTheme({
   ".cm-live-hide": {
@@ -26,9 +21,6 @@ export const MARK_HIDING_THEME = EditorView.baseTheme({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Node Handler
-// ---------------------------------------------------------------------------
 
 /**
  * Handles WYSIWYM mark hiding — hides syntax markers (like #, >, **, etc.)

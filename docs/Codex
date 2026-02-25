@@ -1805,9 +1805,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
     ".cm-live-inline-code": {
@@ -1829,9 +1826,6 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
     },
 });
 
-// ---------------------------------------------------------------------------
-// Node Handler
-// ---------------------------------------------------------------------------
 
 /**
  * Handles InlineCode and WikiLink nodes — adds mark decorations for styling.
@@ -1877,9 +1871,7 @@ import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationContext, DecorationCollector } from "./types";
 import { isInCodeBlock } from "./types";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+
 
 export const HEADING_CLASS: Record<string, string> = {
     ATXHeading1: "cm-live-heading-1",
@@ -1895,9 +1887,6 @@ export const HEADING_CLASS: Record<string, string> = {
 
 export const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const HEADINGS_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-heading-1": {
@@ -2172,9 +2161,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationContext, DecorationCollector } from "./types";
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const BLOCKQUOTES_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-blockquote": {
@@ -2184,9 +2170,6 @@ export const BLOCKQUOTES_THEME = EditorView.baseTheme({
     },
 });
 
-// ---------------------------------------------------------------------------
-// Node Handler
-// ---------------------------------------------------------------------------
 
 /**
  * Handles BlockQuote nodes — adds line-level blockquote classes.
@@ -2303,9 +2286,6 @@ export class CodeFooterWidget extends WidgetType {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const CODE_BLOCKS_THEME = EditorView.baseTheme({
     ".cm-line.cm-live-code": {

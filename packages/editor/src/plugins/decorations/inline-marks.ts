@@ -2,9 +2,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
 
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
@@ -26,9 +23,6 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Node Handler
-// ---------------------------------------------------------------------------
 
 /**
  * Handles InlineCode and WikiLink nodes — adds mark decorations for styling.
