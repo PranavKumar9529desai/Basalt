@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { Editor } from "@workspace/editor";
 import { useCallback, useEffect } from "react";
+import { Editor } from "../features/editor";
 import { FileTree } from "../features/vault/components/FileTree";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
 import { Toolbar } from "../features/vault/components/Toolbar";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
-import { useEditor } from "../features/vault/hooks/useEditor";
+import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";

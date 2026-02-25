@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Editor } from "@workspace/editor";
+import { Editor } from "../features/editor";
 
 export const Route = createFileRoute("/new")({
   component: RouteComponent,

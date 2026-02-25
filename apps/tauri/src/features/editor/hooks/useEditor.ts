@@ -6,11 +6,18 @@ import type {
   FlatTreeNode,
   LinkSuggestion,
   SaveStatus,
-} from "../types";
-
-
+} from "../../vault/types";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
+
+// ---------------------------------------------------------------------------
+// Utility: always-fresh ref without a dedicated useEffect
+// ---------------------------------------------------------------------------
+function useLatestRef<T>(value: T) {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
 
 // ---------------------------------------------------------------------------
 // Hook input / output types
@@ -85,20 +92,18 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
   const [status, setStatus] = useState<string | null>(null);
 
   // ── Stable refs ───────────────────────────────────────────────────────────
-  // Async callbacks (save, watcher) capture these refs so they always see the
-  // latest values without being re-created on every render.
-  const selectedRef = useRef<LinkSuggestion | null>(null);
-  const contentRef = useRef("");
+  // useLatestRef syncs on every render — no extra useEffect needed.
+  const selectedRef = useLatestRef(selected);
+  const contentRef = useLatestRef(content);
   const isDirtyRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Clear pending autosave on unmount ──────────────────────────────────────
   useEffect(() => {
-    selectedRef.current = selected;
-  }, [selected]);
-
-  useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   // ── Backlinks ─────────────────────────────────────────────────────────────
 
@@ -208,10 +213,10 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
               path: changedPath,
             });
             setContent(text);
-            contentRef.current = text;
             setSaveStatus("saved");
           } catch (err) {
             console.error("[useEditor] silent reload failed:", err);
+            setStatus(`Reload failed: ${String(err)}`);
           }
         }
       },
@@ -235,7 +240,6 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
         const text = await invoke<string>("open_file", { path: note.path });
         setSelected(note);
         setContent(text);
-        contentRef.current = text;
         isDirtyRef.current = false;
         setSaveStatus("saved");
         await refreshBacklinks(note.path);
@@ -256,7 +260,6 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
     try {
       const text = await invoke<string>("open_file", { path: note.path });
       setContent(text);
-      contentRef.current = text;
       isDirtyRef.current = false;
       setSaveStatus("saved");
       setStatus(null);

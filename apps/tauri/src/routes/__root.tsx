@@ -1,7 +1,7 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
 import { AppCommands } from "../commands/app-commands";
-import { EditorCommandPalette } from "../features/editor/components/EditorCommandPalette";
+import { EditorCommandPalette } from "../features/editor/components/command-palette";
 
 export const Route = createRootRoute({
   component: () => (

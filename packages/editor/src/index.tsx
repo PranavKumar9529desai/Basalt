@@ -1,8 +1,4 @@
-import { closeBrackets } from "@codemirror/autocomplete";
-import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { languages } from "@codemirror/language-data";
 import type { Extension } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import {
   ContextMenu,
@@ -14,30 +10,21 @@ import {
   ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
 import type React from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCommandStore } from "./commands/store";
-import { useEditorCommands } from "./hooks/use-editor-commands";
-import { backticksKeymap } from "./extensions/backticks";
+import { registerEditorCommands } from "./commands/editor-commands";
+import { createEditorExtensions } from "./create-extensions";
 import {
   type ContextMenuState,
   contextMenuExtension,
 } from "./extensions/context-menu";
-import { clickableLinksPlugin, wikiLinkExtension } from "./extensions/wiki-links";
-import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./extensions/live-preview";
-import {
-  createSuggestionsPlugin,
-  type FetchLinksFn,
-  type FetchTagsFn,
-  SUGGESTIONS_THEME,
-} from "./extensions/suggestions";
-import { TASK_CHECKBOX_THEME, taskListPlugin } from "./extensions/task-list";
-import { CUSTOM_THEME } from "./themes/base";
+import type { FetchLinksFn, FetchTagsFn } from "./types";
 
 export * from "./commands/store";
-export * from "./hooks/use-editor-commands";
-
-// ----------------------------------------------------------------------------
-// BASALT EDITOR ARCHITECTURE NOTE
+export * from "./commands/editor-commands";
+export * from "./extensions/context-menu";
+export * from "./types";
+export * from "./create-extensions";
 //
 // The Basalt editor is built on CodeMirror 6, using a highly modular plugin
 // system. Most editor features (live preview, wiki-links, task lists) are
@@ -101,7 +88,11 @@ const EditorContent: React.FC<EditorProps> = ({
 
   // --- EDITOR COMMANDS ---
   // Registers editor formatting commands automatically
-  useEditorCommands(view);
+  useEffect(() => {
+    if (view) {
+      return registerEditorCommands(view);
+    }
+  }, [view]);
 
   const handleCommand = useCallback(
     (commandId: string) => {
@@ -124,30 +115,15 @@ const EditorContent: React.FC<EditorProps> = ({
   );
 
   const editorExtensions = useMemo(() => {
-    const themeStack: Extension[] = [];
-    if (themeExtensions) themeStack.push(...themeExtensions);
-    if (includeDefaultTheme) {
-      themeStack.push(CUSTOM_THEME);
-    }
-
     return [
-      markdown({
-        base: markdownLanguage,
-        codeLanguages: languages,
-        extensions: [wikiLinkExtension],
+      ...createEditorExtensions({
+        onFetchLinks,
+        onFetchTags,
+        onOpenLink,
+        themeExtensions,
+        includeDefaultTheme,
       }),
-      ...themeStack,
-      TASK_CHECKBOX_THEME,
-      taskListPlugin,
-      LIVE_PREVIEW_THEME,
-      livePreviewPlugin,
-      closeBrackets(),
-      keymap.of(backticksKeymap),
-      SUGGESTIONS_THEME,
-      createSuggestionsPlugin(onFetchLinks, onFetchTags),
-      clickableLinksPlugin(onOpenLink),
       contextMenuExtension(setMenuState),
-      EditorView.lineWrapping,
     ];
   }, [
     includeDefaultTheme,

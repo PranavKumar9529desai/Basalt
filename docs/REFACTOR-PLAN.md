@@ -1,7 +1,7 @@
 # Basalt Refactor Plan — Editor, UI & Theme Packages
 
 > **Created**: 2025-02-25  
-> **Status**: Planning (not yet started)  
+> **Status**: In Progress (Phases 0-1 complete)  
 > **Scope**: `packages/editor`, `packages/ui`, NEW `packages/theme`
 
 ---
@@ -11,8 +11,8 @@
 1. [Why This Refactor](#1-why-this-refactor)
 2. [Current Problems (Detailed)](#2-current-problems-detailed)
 3. [Target Architecture](#3-target-architecture)
-4. [Phase 0 — Create `packages/theme`](#4-phase-0--create-packagestheme)
-5. [Phase 1 — Rewrite CommandPalette with shadcn Command](#5-phase-1--rewrite-commandpalette-with-shadcn-command)
+4. [Phase 0 — Create `packages/theme`](#4-phase-0--create-packagestheme) (Done)
+5. [Phase 1 — Rewrite CommandPalette with shadcn Command](#5-phase-1--rewrite-commandpalette-with-shadcn-command) (Done)
 6. [Phase 2 — Clean the Editor Package](#6-phase-2--clean-the-editor-package)
 7. [Phase 3 — Rewrite FileTree & Swap ContextMenu](#7-phase-3--rewrite-filetree--swap-contextmenu)
 8. [What NOT to Touch](#8-what-not-to-touch)
@@ -369,7 +369,7 @@ cd apps/tauri && bun run dev               # App still starts
 
 ---
 
-## 5. Phase 1 — Rewrite CommandPalette with shadcn Command
+## 5. Phase 1 — Rewrite CommandPalette with shadcn Command (Done)
 
 **Goal**: Replace the hand-rolled CommandPalette with shadcn's `Command` component.
 This eliminates the `ui → editor` circular dependency.
@@ -592,21 +592,18 @@ Update all internal imports (`./plugins/` → `./extensions/`).
 
 Also rename `links.ts` → `wiki-links.ts` for clarity.
 
-#### 6.4 Consolidate editor themes into `themes/` directory
+#### 6.4 ~~Consolidate editor themes into `themes/` directory~~ (Skipped)
 
-Create `packages/editor/src/themes/` directory:
-
-- Move `theme.ts` → `themes/base.ts`
-  - Clean up the comment: `// Use this to Override default Configuration of COdemirro` → proper JSDoc
-- Create `themes/decorations.ts` — move the aggregated `LIVE_PREVIEW_THEME` array here
-- Create `themes/suggestions.ts` — extract `SUGGESTIONS_THEME` from `extensions/suggestions.ts`
-- Create `themes/task-list.ts` — extract `TASK_CHECKBOX_THEME` from `extensions/task-list.ts`
-
-Each extension file will then import its theme from `../themes/`.
-
-> **Note**: The individual decoration theme exports (`HEADINGS_THEME`, `CODE_BLOCKS_THEME`, etc.)
-> remain in their decoration handler files because they're tightly coupled to the CSS class names
-> those handlers emit. The `themes/decorations.ts` file just re-aggregates them.
+> **Decision**: Skipped. The theme constants (`SUGGESTIONS_THEME`, `TASK_CHECKBOX_THEME`,
+> `LIVE_PREVIEW_THEME`) are small (~11 lines each) and tightly coupled to the plugins
+> that create the CSS classes they style. Extracting them into separate `themes/*.ts`
+> files adds indirection without benefit — you'd jump between two files to understand
+> one feature. **Colocation wins here.**
+>
+> What was kept:
+> - `themes/base.ts` already exists — structural editor styling (padding, fonts, cursor)
+>   that isn't tied to any specific plugin. This is the correct separation.
+> - Each extension file keeps its own `baseTheme()` co-located with the logic.
 
 #### 6.5 Merge command files — single source of truth
 

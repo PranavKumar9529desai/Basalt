@@ -56,10 +56,7 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
   },
 });
 
-export type FetchLinksFn = (
-  query: string,
-) => Promise<Array<{ name: string; path: string }>>;
-export type FetchTagsFn = (query: string) => Promise<string[]>;
+import type { FetchLinksFn, FetchTagsFn } from "../types";
 
 export function createSuggestionsPlugin(
   onFetchLinks?: FetchLinksFn,
