@@ -16,15 +16,15 @@
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
     "@workspace/editor": "workspace:*",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "^1.161.4",
     "@tanstack/router-vite-plugin": "^1.161.4",
     "@tauri-apps/cli": "^2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.24",
     "postcss": "^8.5.6",

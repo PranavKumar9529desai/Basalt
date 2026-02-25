@@ -28,14 +28,14 @@
     "zustand": "^5.0.11"
   },
   "peerDependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
   },
   "devDependencies": {
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default",
     "typescript": "^5.8.3"
   }
 }
