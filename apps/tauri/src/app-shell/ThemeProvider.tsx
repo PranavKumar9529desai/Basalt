@@ -4,7 +4,7 @@ import {
   type ThemeId,
   type ThemeMeta,
   themes,
-} from "@workspace/ui/theme/manifest";
+} from "@workspace/theme/manifest";
 import type React from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 

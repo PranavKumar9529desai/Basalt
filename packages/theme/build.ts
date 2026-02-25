@@ -4,11 +4,11 @@ import path from "node:path";
 type Dict = Record<string, unknown>;
 
 const TOKENS_DIR = path.resolve(import.meta.dirname);
-const THEME_DIR = path.resolve(TOKENS_DIR, "../theme");
-const STYLES_DIR = path.resolve(TOKENS_DIR, "../src/styles");
-const OUTPUT_CSS = path.join(STYLES_DIR, "globals.css");
-const OUTPUT_TYPES = path.join(STYLES_DIR, "tokens.d.ts");
-const MANIFEST_TS = path.resolve(TOKENS_DIR, "../theme/manifest.ts");
+const THEME_DIR = path.resolve(TOKENS_DIR, "themes");
+const STYLES_DIR = path.resolve(TOKENS_DIR, "src/generated");
+const OUTPUT_CSS = path.join(STYLES_DIR, "tokens.css");
+const OUTPUT_TYPES = path.join(TOKENS_DIR, "src/types.ts");
+const MANIFEST_TS = path.resolve(TOKENS_DIR, "themes/manifest.ts");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,9 +61,9 @@ function toCssVars(map: Dict): string[] {
 // ---------------------------------------------------------------------------
 
 function buildBaseMap(): Dict {
-  const base = readJson(path.join(TOKENS_DIR, "base.json"));
-  const semantic = readJson(path.join(TOKENS_DIR, "semantic.json"));
-  const component = readJson(path.join(TOKENS_DIR, "component.json"));
+  const base = readJson(path.join(TOKENS_DIR, "tokens", "base.json"));
+  const semantic = readJson(path.join(TOKENS_DIR, "tokens", "semantic.json"));
+  const component = readJson(path.join(TOKENS_DIR, "tokens", "component.json"));
 
   // Stage 1: base
   const baseFlat = flatten(base);
@@ -189,8 +189,7 @@ function generateManifest(themes: ThemeBuild[], defaultId: string): string {
   const arr = themes
     .map(
       (t) =>
-        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${
-          t.meta.mode ?? "light"
+        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${t.meta.mode ?? "light"
         }", description: ${JSON.stringify(t.meta.description ?? "")} },`,
     )
     .join("\n");
