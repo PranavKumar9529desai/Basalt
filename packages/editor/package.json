@@ -6,8 +6,7 @@
   "main": "src/index.tsx",
   "exports": {
     ".": "./src/index.tsx",
-    "./commands/registry": "./src/commands/registry.ts",
-    "./commands/context": "./src/commands/context.tsx",
+    "./commands/store": "./src/commands/store.ts",
     "./hooks/use-editor-commands": "./src/hooks/use-editor-commands.tsx"
   },
   "scripts": {
@@ -25,7 +24,8 @@
     "@codemirror/view": "^6.36.2",
     "@uiw/react-codemirror": "^4.23.8",
     "react-markdown": "^9.0.3",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "zustand": "^5.0.11"
   },
   "peerDependencies": {
     "react": "^19.1.0",

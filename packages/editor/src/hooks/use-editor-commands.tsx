@@ -14,10 +14,13 @@ import {
   IconSelect,
   IconStrikethrough,
 } from "@tabler/icons-react";
-import { useCallback } from "react";
-import { useCommand } from "../commands/context";
+import { useCallback, useMemo, useEffect } from "react";
+import { useCommandStore } from "../commands/store";
 
 export function useEditorCommands(view: EditorView | undefined) {
+  const register = useCommandStore((s) => s.register);
+  const unregister = useCommandStore((s) => s.unregister);
+
   const wrapSelection = useCallback(
     (prefix: string, suffix: string = prefix) => {
       if (!view) return;
@@ -92,166 +95,121 @@ export function useEditorCommands(view: EditorView | undefined) {
     [view],
   );
 
-  // Register commands with the global registry
-  useCommand(
-    view
-      ? {
-          id: "editor:bold",
-          name: "Bold",
-          category: "Format",
-          icon: <IconBold size={16} />,
-          hotkeys: ["Ctrl+B"],
-          callback: () => wrapSelection("**"),
-        }
-      : null,
-  );
+  const commands = useMemo(() => {
+    if (!view) return [];
 
-  useCommand(
-    view
-      ? {
-          id: "editor:italic",
-          name: "Italic",
-          category: "Format",
-          icon: <IconItalic size={16} />,
-          hotkeys: ["Ctrl+I"],
-          callback: () => wrapSelection("*"),
-        }
-      : null,
-  );
+    return [
+      {
+        id: "editor:bold",
+        name: "Bold",
+        category: "Format",
+        icon: <IconBold size={16} />,
+        hotkeys: ["Ctrl+B"],
+        callback: () => wrapSelection("**"),
+      },
+      {
+        id: "editor:italic",
+        name: "Italic",
+        category: "Format",
+        icon: <IconItalic size={16} />,
+        hotkeys: ["Ctrl+I"],
+        callback: () => wrapSelection("*"),
+      },
+      {
+        id: "editor:strikethrough",
+        name: "Strikethrough",
+        category: "Format",
+        icon: <IconStrikethrough size={16} />,
+        callback: () => wrapSelection("~~"),
+      },
+      {
+        id: "editor:link",
+        name: "WikiLink",
+        category: "Editor",
+        icon: <IconLink size={16} />,
+        callback: () => wrapSelection("[[", "]]"),
+      },
+      {
+        id: "editor:external-link",
+        name: "External Link",
+        category: "Editor",
+        icon: <IconExternalLink size={16} />,
+        callback: () => wrapSelection("[", "](url)"),
+      },
+      {
+        id: "editor:h1",
+        name: "Heading 1",
+        category: "Format",
+        icon: <IconH1 size={16} />,
+        callback: () => applyToLineStart("# "),
+      },
+      {
+        id: "editor:h2",
+        name: "Heading 2",
+        category: "Format",
+        icon: <IconH2 size={16} />,
+        callback: () => applyToLineStart("## "),
+      },
+      {
+        id: "editor:h3",
+        name: "Heading 3",
+        category: "Format",
+        icon: <IconH3 size={16} />,
+        callback: () => applyToLineStart("### "),
+      },
+      {
+        id: "editor:select-all",
+        name: "Select All",
+        category: "Editor",
+        icon: <IconSelect size={16} />,
+        hotkeys: ["Ctrl+A"],
+        callback: () => {
+          if (view) selectAll(view);
+        },
+      },
+      {
+        id: "editor:cut",
+        name: "Cut",
+        category: "Editor",
+        icon: <IconScissors size={16} />,
+        hotkeys: ["Ctrl+X"],
+        callback: () => document.execCommand("cut"),
+      },
+      {
+        id: "editor:copy",
+        name: "Copy",
+        category: "Editor",
+        icon: <IconCopy size={16} />,
+        hotkeys: ["Ctrl+C"],
+        callback: () => document.execCommand("copy"),
+      },
+      {
+        id: "editor:paste",
+        name: "Paste",
+        category: "Editor",
+        icon: <IconClipboard size={16} />,
+        hotkeys: ["Ctrl+V"],
+        callback: () => {
+          navigator.clipboard.readText().then((text) => {
+            if (view) {
+              const { from, to } = view.state.selection.main;
+              view.dispatch({ changes: { from, to, insert: text } });
+              view.focus();
+            }
+          });
+        },
+      },
+    ];
+  }, [view, wrapSelection, applyToLineStart]);
 
-  useCommand(
-    view
-      ? {
-          id: "editor:strikethrough",
-          name: "Strikethrough",
-          category: "Format",
-          icon: <IconStrikethrough size={16} />,
-          callback: () => wrapSelection("~~"),
-        }
-      : null,
-  );
+  useEffect(() => {
+    if (commands.length === 0) return;
+    commands.forEach((cmd) => register(cmd));
+    return () => {
+      commands.forEach((cmd) => unregister(cmd.id));
+    };
+  }, [commands, register, unregister]);
 
-  useCommand(
-    view
-      ? {
-          id: "editor:link",
-          name: "WikiLink",
-          category: "Editor",
-          icon: <IconLink size={16} />,
-          callback: () => wrapSelection("[[", "]]"),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:external-link",
-          name: "External Link",
-          category: "Editor",
-          icon: <IconExternalLink size={16} />,
-          callback: () => wrapSelection("[", "](url)"),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:h1",
-          name: "Heading 1",
-          category: "Format",
-          icon: <IconH1 size={16} />,
-          callback: () => applyToLineStart("# "),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:h2",
-          name: "Heading 2",
-          category: "Format",
-          icon: <IconH2 size={16} />,
-          callback: () => applyToLineStart("## "),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:h3",
-          name: "Heading 3",
-          category: "Format",
-          icon: <IconH3 size={16} />,
-          callback: () => applyToLineStart("### "),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:select-all",
-          name: "Select All",
-          category: "Editor",
-          icon: <IconSelect size={16} />,
-          hotkeys: ["Ctrl+A"],
-          callback: () => {
-            if (view) selectAll(view);
-          },
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:cut",
-          name: "Cut",
-          category: "Editor",
-          icon: <IconScissors size={16} />,
-          hotkeys: ["Ctrl+X"],
-          callback: () => document.execCommand("cut"),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:copy",
-          name: "Copy",
-          category: "Editor",
-          icon: <IconCopy size={16} />,
-          hotkeys: ["Ctrl+C"],
-          callback: () => document.execCommand("copy"),
-        }
-      : null,
-  );
-
-  useCommand(
-    view
-      ? {
-          id: "editor:paste",
-          name: "Paste",
-          category: "Editor",
-          icon: <IconClipboard size={16} />,
-          hotkeys: ["Ctrl+V"],
-          callback: () => {
-            navigator.clipboard.readText().then((text) => {
-              if (view) {
-                const { from, to } = view.state.selection.main;
-                view.dispatch({ changes: { from, to, insert: text } });
-                view.focus();
-              }
-            });
-          },
-        }
-      : null,
-  );
 
   return {
     wrapSelection,

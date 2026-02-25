@@ -28,8 +28,10 @@ const baseTheme = EditorView.theme({
   },
 });
 
-// Use this to Override default Configuration of COdemirro
-
+/**
+ * Use this to override default syntax highlighting of CodeMirror.
+ * For example, preventing default underlines on headings.
+ */
 const defaultHighlightStyleOverride = HighlightStyle.define([
   { tag: t.heading, textDecoration: "none" }
 ]);

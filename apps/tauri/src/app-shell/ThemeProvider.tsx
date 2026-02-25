@@ -23,6 +23,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
   const [themeId, setThemeId] = useState<ThemeId>(defaultThemeId);
 
   // On mount, hydrate from storage or prefers-color-scheme
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount to hydrate initial theme state
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeId | null;
     if (stored && themes.some((t) => t.id === stored)) {
@@ -51,7 +52,6 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
       .catch((err) => {
         console.error("Failed to fetch settings from backend:", err);
       });
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount to hydrate initial theme state
   }, []);
 
   // Apply data-theme attribute and persist to both localStorage and Rust backend

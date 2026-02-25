@@ -119,5 +119,5 @@
 
 /* Remove default underline added by CodeMirror defaultHighlightStyle */
 .cm-heading {
-  text-decoration: none !important;
+  text-decoration: none;
 }

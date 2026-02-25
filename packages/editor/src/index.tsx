@@ -15,27 +15,25 @@ import {
 } from "@workspace/ui/components/ui/context-menu";
 import type React from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { CommandPalette } from "../../ui/src/components/CommandPalette";
-import { CommandProvider, useCommandRegistry } from "./commands/context";
+import { useCommandStore } from "./commands/store";
 import { useEditorCommands } from "./hooks/use-editor-commands";
-import { backticksKeymap } from "./plugins/backticks";
+import { backticksKeymap } from "./extensions/backticks";
 import {
   type ContextMenuState,
   contextMenuExtension,
-} from "./plugins/context-menu";
-import { clickableLinksPlugin, wikiLinkExtension } from "./plugins/links";
-import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./plugins/live-preview";
+} from "./extensions/context-menu";
+import { clickableLinksPlugin, wikiLinkExtension } from "./extensions/wiki-links";
+import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./extensions/live-preview";
 import {
   createSuggestionsPlugin,
   type FetchLinksFn,
   type FetchTagsFn,
   SUGGESTIONS_THEME,
-} from "./plugins/suggestions";
-import { TASK_CHECKBOX_THEME, taskListPlugin } from "./plugins/task-list";
-import { CUSTOM_THEME } from "./theme";
+} from "./extensions/suggestions";
+import { TASK_CHECKBOX_THEME, taskListPlugin } from "./extensions/task-list";
+import { CUSTOM_THEME } from "./themes/base";
 
-export * from "./commands/context";
-export * from "./commands/registry";
+export * from "./commands/store";
 export * from "./hooks/use-editor-commands";
 
 // ----------------------------------------------------------------------------
@@ -97,7 +95,9 @@ const EditorContent: React.FC<EditorProps> = ({
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const view = editorRef.current?.view;
-  const { execute, commands } = useCommandRegistry();
+  const execute = useCommandStore((s) => s.execute);
+  const commandsObj = useCommandStore((s) => s.commands);
+  const commands = useMemo(() => Object.values(commandsObj), [commandsObj]);
 
   // --- EDITOR COMMANDS ---
   // Registers editor formatting commands automatically
@@ -173,7 +173,6 @@ const EditorContent: React.FC<EditorProps> = ({
       className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
     >
       <div className="flex-1 overflow-hidden relative">
-        <CommandPalette />
         <ContextMenu
           open={!!menuState}
           onOpenChange={(open) => !open && setMenuState(null)}
@@ -240,7 +239,5 @@ const EditorContent: React.FC<EditorProps> = ({
 };
 
 export const Editor: React.FC<EditorProps> = (props) => (
-  <CommandProvider>
-    <EditorContent {...props} />
-  </CommandProvider>
+  <EditorContent {...props} />
 );

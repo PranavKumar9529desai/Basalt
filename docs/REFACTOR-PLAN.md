@@ -278,7 +278,7 @@ apps/tauri/src/features/
 
 ---
 
-## 4. Phase 0 — Create `packages/theme`
+## 4. Phase 0 — Create `packages/theme` (Done)
 
 **Goal**: Move all theme/token infrastructure out of `packages/ui` into its own package.
 
