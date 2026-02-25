@@ -1,8 +1,5 @@
 import type { FC } from "react";
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface VaultSplashProps {
   isIndexing: boolean;
@@ -10,9 +7,6 @@ interface VaultSplashProps {
   onOpenVault: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export const VaultSplash: FC<VaultSplashProps> = ({
   isIndexing,

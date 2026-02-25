@@ -93,9 +93,6 @@ function FileIcon() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface FileTreeNodeProps {
   node: FlatTreeNode;
@@ -107,9 +104,6 @@ interface FileTreeNodeProps {
   style: React.CSSProperties;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export const FileTreeNode: FC<FileTreeNodeProps> = ({
   node,
@@ -138,10 +132,9 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         text-left text-sm
         cursor-pointer select-none
         transition-colors duration-75
-        ${
-          isSelected
-            ? "bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)]"
-            : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]"
+        ${isSelected
+          ? "bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)]"
+          : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]"
         }
       `}
       role="treeitem"

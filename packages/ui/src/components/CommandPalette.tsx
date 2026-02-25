@@ -1,5 +1,6 @@
 import { IconCommand as TablerIconCommand, IconSearch as TablerIconSearch } from "@tabler/icons-react";
 import React, {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -205,7 +206,7 @@ const CommandItem: React.FC<CommandItemProps> = React.memo(
             <span className="flex items-center justify-center">
               {typeof cmd.icon === "bigint"
                 ? String(cmd.icon)
-                : (cmd.icon as React.ReactNode)}
+                : (cmd.icon as ReactNode)}
             </span>
           ) : (
             <IconCommand className="w-4 h-4" />

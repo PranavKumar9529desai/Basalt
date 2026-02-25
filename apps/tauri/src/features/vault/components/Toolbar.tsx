@@ -7,9 +7,6 @@ import type { FC } from "react";
 const vaultNameFromPath = (p: string) =>
   p.split("/").filter(Boolean).pop() ?? p;
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface ToolbarProps {
   vaultPath: string;
@@ -19,9 +16,6 @@ interface ToolbarProps {
   onReindex: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export const Toolbar: FC<ToolbarProps> = ({
   vaultPath,

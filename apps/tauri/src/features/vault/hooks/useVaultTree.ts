@@ -3,10 +3,6 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FileChangeEvent, FlatTreeNode } from "../types";
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
 export interface UseVaultTreeReturn {
   /** The full flat tree as built by Rust — pre-sorted, pre-annotated. */
   treeNodes: FlatTreeNode[];

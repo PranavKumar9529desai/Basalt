@@ -17,9 +17,6 @@ const CONFIG: Record<SaveStatus, { dot: string; label: string }> = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 interface SaveIndicatorProps {
   status: SaveStatus;

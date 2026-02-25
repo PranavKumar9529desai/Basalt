@@ -64,10 +64,6 @@ export interface UseEditorReturn {
   setStatus: (msg: string | null) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
 /**
  * Owns all note-editing state: which note is open, its content, save status,
  * conflict detection, autosave debouncing, and editor autocomplete.

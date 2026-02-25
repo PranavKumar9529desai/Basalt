@@ -15,10 +15,6 @@ export interface UseVaultActionsReturn {
   reindexVault: () => Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
 /**
  * Owns the two vault-level mutations: picking a new vault folder and
  * triggering a full re-index of the current one.

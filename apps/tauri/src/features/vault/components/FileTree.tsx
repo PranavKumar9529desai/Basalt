@@ -3,9 +3,6 @@ import { useRef } from "react";
 import type { FlatTreeNode } from "../types";
 import { FileTreeNode, TREE_ROW_HEIGHT } from "./FileTreeNode";
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface FileTreeProps {
   visibleNodes: FlatTreeNode[];
@@ -15,9 +12,6 @@ interface FileTreeProps {
   onFolderToggle: (relPath: string) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 /**
  * The vault sidebar file tree.

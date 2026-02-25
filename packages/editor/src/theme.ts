@@ -13,8 +13,6 @@ export const CUSTOM_THEME = EditorView.theme({
     padding: "24px 32px",
   },
   ".cm-content": {
-    maxWidth: "800px",
-    margin: "0 auto",
     fontFamily: "inherit",
   },
   ".cm-line": {

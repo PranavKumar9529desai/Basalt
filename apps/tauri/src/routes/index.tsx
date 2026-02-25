@@ -48,7 +48,7 @@ function RouteComponent() {
 
   // ── Feature hooks ─────────────────────────────────────────────────────────
 
-  const { visibleNodes, openFolders, toggleFolder, setTreeNodes } =
+  const { treeNodes, visibleNodes, openFolders, toggleFolder, setTreeNodes } =
     useVaultTree(boot.tree);
 
   const vaultActions = useVaultActions();
@@ -60,11 +60,11 @@ function RouteComponent() {
 
   const findNote = useCallback(
     (name: string): FlatTreeNode | undefined =>
-      visibleNodes.find(
+      treeNodes.find(
         (n) =>
           n.kind === "file" && (n.name === name || n.name === `${name}.md`),
       ),
-    [visibleNodes],
+    [treeNodes],
   );
 
   const editor = useEditor({ findNote });

@@ -1,9 +1,6 @@
 import type { FC } from "react";
 import type { LinkSuggestion } from "../types";
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface BacklinksSidebarProps {
   backlinks: string[];
@@ -19,9 +16,6 @@ function pathToLinkSuggestion(path: string): LinkSuggestion {
   return { name, path };
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   backlinks,
