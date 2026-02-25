@@ -152,8 +152,8 @@ function generateCss(baseMap: Dict, themes: ThemeBuild[]): string {
   lines.push("  --secondary-foreground: var(--sat-text-primary);");
   lines.push("  --muted: var(--sat-surface-3);");
   lines.push("  --muted-foreground: var(--sat-text-muted);");
-  lines.push("  --accent: var(--sat-surface-3);");
-  lines.push("  --accent-foreground: var(--sat-text-primary);");
+  lines.push("  --accent: var(--sat-editor-popover-active-bg);");
+  lines.push("  --accent-foreground: var(--sat-editor-popover-active-text);");
   lines.push("  --destructive: var(--sat-state-danger);");
   lines.push("  --destructive-foreground: var(--sat-text-inverse);");
   lines.push("  --border: var(--sat-layout-border);");

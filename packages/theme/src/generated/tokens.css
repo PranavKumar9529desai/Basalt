@@ -101,8 +101,8 @@
   --secondary-foreground: var(--sat-text-primary);
   --muted: var(--sat-surface-3);
   --muted-foreground: var(--sat-text-muted);
-  --accent: var(--sat-surface-3);
-  --accent-foreground: var(--sat-text-primary);
+  --accent: var(--sat-editor-popover-active-bg);
+  --accent-foreground: var(--sat-editor-popover-active-text);
   --destructive: var(--sat-state-danger);
   --destructive-foreground: var(--sat-text-inverse);
   --border: var(--sat-layout-border);
