@@ -19,7 +19,7 @@ export interface UseVaultFileTreeControllerOptions {
   openFolder: (relPath: string) => void;
   toggleFolder: (relPath: string) => void;
   refreshTree: () => Promise<void>;
-  onFileOpen?: (node: FlatTreeNode) => void;
+  onFileOpen?: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
 }
 
 export interface UseVaultFileTreeControllerReturn {
@@ -316,8 +316,12 @@ export function useVaultFileTreeController({
         },
         visibleNodes,
       );
+      const clickDetail =
+        "detail" in e && typeof e.detail === "number" ? e.detail : 1;
+      const mode: "preview" | "pinned" = clickDetail >= 2 ? "pinned" : "preview";
+
       if (onFileOpen) {
-        onFileOpen(node);
+        onFileOpen(node, mode);
       } else {
         editor.loadNote({ name: node.name, path: node.path });
       }

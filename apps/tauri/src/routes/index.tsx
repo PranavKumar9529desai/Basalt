@@ -41,6 +41,15 @@ interface InactiveGroupPaneProps {
   onActivate: () => void;
 }
 
+type TabClickOpenBehavior = "preview" | "pinned" | "vscode";
+
+function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
+  if (value === "preview" || value === "pinned" || value === "vscode") {
+    return value;
+  }
+  return "vscode";
+}
+
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
     const boot = await invoke<BootResult>("boot");
@@ -94,8 +103,12 @@ function RouteComponent() {
   const syncSeqRef = useRef(0);
   const pendingLoadPathRef = useRef<string | null>(null);
   const tabDrivenSelectionRef = useRef<string | null>(null);
+  const tabClickOpenBehavior = parseTabClickOpenBehavior(
+    boot.settings?.tabClickOpenBehavior,
+  );
   const {
     openInPreview,
+    openPinned,
     setTabTitle,
     markTabDirty,
     setFocusedGroup,
@@ -144,8 +157,13 @@ function RouteComponent() {
     openFolder,
     toggleFolder,
     refreshTree,
-    onFileOpen: (node) => {
-      const tabId = openInPreview({ path: node.path, title: node.name });
+    onFileOpen: (node, mode) => {
+      const effectiveMode =
+        tabClickOpenBehavior === "vscode" ? mode : tabClickOpenBehavior;
+      const tabId =
+        effectiveMode === "pinned"
+          ? openPinned({ path: node.path, title: node.name })
+          : openInPreview({ path: node.path, title: node.name });
       setTabTitle(tabId, node.name);
     },
   });
