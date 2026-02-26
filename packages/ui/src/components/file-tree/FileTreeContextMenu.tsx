@@ -59,14 +59,14 @@ export function FileTreeContextMenu({
   return (
     <ContextMenu open={open} onOpenChange={onOpenChange}>
       {open && targetKind && (
-        <ContextMenuContent anchor={menuAnchor} className="ring-0 p-4 ">
+        <ContextMenuContent anchor={menuAnchor} className="ring-0 p-4">
           {isMultiSelect ? (
             <>
               <ContextMenuItem disabled={isRoot} onClick={onMove}>
                 <span className="inline-flex min-w-4 items-center justify-center">
                   <IconCut size={14} />
                 </span>
-                Move
+                Cut
               </ContextMenuItem>
               <ContextMenuItem
                 disabled={isRoot}
@@ -100,7 +100,7 @@ export function FileTreeContextMenu({
                 <span className="inline-flex min-w-4 items-center justify-center">
                   <IconCut size={14} />
                 </span>
-                Move
+                Cut
               </ContextMenuItem>
               <ContextMenuItem disabled={isNote || !canPaste} onClick={onPaste}>
                 <span className="inline-flex min-w-4 items-center justify-center">

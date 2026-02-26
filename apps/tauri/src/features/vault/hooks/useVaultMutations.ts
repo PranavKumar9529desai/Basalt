@@ -207,8 +207,10 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     setIsLoading(true);
     setError(null);
     try {
-      for (const path of paths) {
-        await invoke("delete_file", { path });
+      if (paths.length === 1) {
+        await invoke("delete_file", { path: paths[0] });
+      } else {
+        await invoke("delete_paths", { paths });
       }
       setDeleteConfirmOpen(false);
       setPendingDeletePaths([]);

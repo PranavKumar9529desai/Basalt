@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use basalt_fs::{indexer::index_directory, path_utils::resolve_creation_path};
+use basalt_fs::path_utils::resolve_creation_path;
 use serde::Serialize;
 use tauri::Emitter;
 use tauri::State;
@@ -256,57 +256,7 @@ pub fn create_folder(
 
 #[tauri::command]
 pub fn delete_file(path: String, state: State<AppState>, app: tauri::AppHandle) -> Result<(), String> {
-    let abs = Path::new(&path)
-        .canonicalize()
-        .map_err(|e| format!("invalid path: {e}"))?;
-    let vault_root = canonical_vault_path(&app)?;
-    ensure_inside_vault(&abs, &vault_root)?;
-    let is_dir = abs.is_dir();
-
-    if !abs.exists() {
-        return Err("file does not exist".to_string());
-    }
-
-    if is_dir {
-        std::fs::remove_dir_all(&abs).map_err(|e| format!("failed to delete directory: {e}"))?;
-    } else {
-        std::fs::remove_file(&abs).map_err(|e| format!("failed to delete file: {e}"))?;
-    }
-
-    {
-        let mut vault = state
-            .vault
-            .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-
-        if is_dir {
-            let abs_str = abs.to_string_lossy().to_string();
-            let prefix = format!("{abs_str}/");
-            let to_remove: Vec<String> = vault
-                .graph
-                .metadata_cache
-                .keys()
-                .filter_map(|id| vault.arena.get_string(*id).cloned())
-                .filter(|p| p == &abs_str || p.starts_with(&prefix))
-                .collect();
-
-            for path in to_remove {
-                vault.remove_document(&path);
-            }
-        } else {
-            vault.remove_document(abs.to_str().unwrap_or_default());
-        }
-    }
-
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: abs.to_string_lossy().to_string(),
-            kind: "deleted".into(),
-        },
-    );
-
-    Ok(())
+    apply_delete_paths(vec![path], state, app)
 }
 
 fn canonical_vault_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -325,6 +275,101 @@ fn ensure_inside_vault(path: &Path, vault_root: &Path) -> Result<(), String> {
     } else {
         Err("path is outside the current vault".to_string())
     }
+}
+
+fn prune_nested_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut sorted = paths;
+    sorted.sort_by_key(|p| p.components().count());
+
+    let mut kept: Vec<PathBuf> = Vec::new();
+    for path in sorted {
+        let has_ancestor = kept.iter().any(|parent| path.starts_with(parent));
+        if !has_ancestor {
+            kept.push(path);
+        }
+    }
+    kept
+}
+
+fn apply_delete_paths(
+    raw_paths: Vec<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    if raw_paths.is_empty() {
+        return Err("no paths provided".to_string());
+    }
+
+    let vault_root = canonical_vault_path(&app)?;
+
+    let mut canonical: Vec<PathBuf> = Vec::new();
+    for raw in raw_paths {
+        let abs = Path::new(&raw)
+            .canonicalize()
+            .map_err(|e| format!("invalid path '{raw}': {e}"))?;
+        ensure_inside_vault(&abs, &vault_root)?;
+        if !abs.exists() {
+            return Err(format!("path does not exist: {}", abs.display()));
+        }
+        canonical.push(abs);
+    }
+
+    let targets = prune_nested_paths(canonical);
+
+    let mut delete_order = targets.clone();
+    delete_order.sort_by_key(|p| std::cmp::Reverse(p.components().count()));
+    for abs in &delete_order {
+        if abs.is_dir() {
+            std::fs::remove_dir_all(abs).map_err(|e| format!("failed to delete directory: {e}"))?;
+        } else {
+            std::fs::remove_file(abs).map_err(|e| format!("failed to delete file: {e}"))?;
+        }
+    }
+
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+
+        for abs in &targets {
+            if abs.is_dir() {
+                let abs_str = abs.to_string_lossy().to_string();
+                let prefix = format!("{abs_str}/");
+                let to_remove: Vec<String> = vault
+                    .graph
+                    .metadata_cache
+                    .keys()
+                    .filter_map(|id| vault.arena.get_string(*id).cloned())
+                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
+                    .collect();
+                for path in to_remove {
+                    vault.remove_document(&path);
+                }
+            } else {
+                vault.remove_document(abs.to_str().unwrap_or_default());
+            }
+        }
+    }
+
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: vault_root.to_string_lossy().to_string(),
+            kind: "modified".into(),
+        },
+    );
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_paths(
+    paths: Vec<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    apply_delete_paths(paths, state, app)
 }
 
 #[tauri::command]
@@ -358,6 +403,7 @@ pub fn move_paths(
         .map_err(|e| format!("invalid destination: {e}"))?;
     ensure_inside_vault(&destination_path, &vault_root)?;
 
+    let mut source_pairs: Vec<(PathBuf, PathBuf)> = Vec::new();
     for raw_source in &source_paths {
         let source = Path::new(raw_source)
             .canonicalize()
@@ -384,18 +430,56 @@ pub fn move_paths(
             ));
         }
 
-        std::fs::rename(&source, &destination_item)
+        source_pairs.push((source, destination_item));
+    }
+
+    for (source, destination_item) in &source_pairs {
+        std::fs::rename(source, destination_item)
             .map_err(|e| format!("failed to move '{}': {e}", source.display()))?;
     }
 
-    // Keep in-memory index aligned for immediate tree refresh.
-    let reindexed = index_directory(&vault_root);
     {
         let mut vault = state
             .vault
             .write()
             .map_err(|_| "vault lock poisoned".to_string())?;
-        *vault = reindexed;
+
+        let updates: Vec<(String, String)> = source_pairs
+            .iter()
+            .map(|(src, dst)| {
+                (
+                    src.to_string_lossy().to_string(),
+                    dst.to_string_lossy().to_string(),
+                )
+            })
+            .collect();
+
+        for (source_str, destination_str) in updates {
+            if source_str.ends_with(".md") {
+                vault.remove_document(&source_str);
+                if let Ok(content) = std::fs::read_to_string(&destination_str) {
+                    vault.add_document(&destination_str, &content);
+                }
+            } else {
+                let prefix = format!("{source_str}/");
+                let descendants: Vec<String> = vault
+                    .graph
+                    .metadata_cache
+                    .keys()
+                    .filter_map(|id| vault.arena.get_string(*id).cloned())
+                    .filter(|p| p.starts_with(&prefix))
+                    .collect();
+
+                for old_path in descendants {
+                    let suffix = old_path.trim_start_matches(&prefix);
+                    let new_path = format!("{destination_str}/{suffix}");
+                    vault.remove_document(&old_path);
+                    if let Ok(content) = std::fs::read_to_string(&new_path) {
+                        vault.add_document(&new_path, &content);
+                    }
+                }
+            }
+        }
     }
 
     let _ = app.emit(

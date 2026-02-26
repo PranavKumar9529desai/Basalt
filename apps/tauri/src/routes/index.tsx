@@ -313,9 +313,13 @@ function RouteComponent() {
 
     if (shouldUseSelection) {
       const nodes = treeNodes.filter((n) => selection.selectedIds.has(n.path));
-      mutations.requestDeleteMany(
-        nodes.map((node) => ({ path: node.path, name: node.name })),
-      );
+      if (nodes.length > 0) {
+        mutations.requestDeleteMany(
+          nodes.map((node) => ({ path: node.path, name: node.name })),
+        );
+      } else {
+        mutations.requestDelete(target.node.path, target.node.name);
+      }
     } else {
       mutations.requestDelete(target.node.path, target.node.name);
     }
@@ -350,9 +354,16 @@ function RouteComponent() {
             const nodes = treeNodes.filter((n) =>
               selection.selectedIds.has(n.path),
             );
-            mutations.requestDeleteMany(
-              nodes.map((node) => ({ path: node.path, name: node.name })),
-            );
+            if (nodes.length > 0) {
+              mutations.requestDeleteMany(
+                nodes.map((node) => ({ path: node.path, name: node.name })),
+              );
+            } else if (editor.selected) {
+              mutations.requestDelete(
+                editor.selected.path,
+                editor.selected.name,
+              );
+            }
           } else if (editor.selected) {
             mutations.requestDelete(editor.selected.path, editor.selected.name);
           }
@@ -496,6 +507,7 @@ function RouteComponent() {
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={handleConfirmDelete}
+        isLoading={mutations.isLoading}
       />
     </div>
   );
