@@ -1,7 +1,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::Vault;
+use crate::utils::mtime_secs;
+use crate::vault::Vault;
 use ignore::WalkBuilder;
+use std::collections::HashMap;
 use std::path::Path;
 
 pub fn index_directory(path: &Path) -> Vault {
@@ -25,6 +27,53 @@ pub fn index_directory(path: &Path) -> Vault {
     }
 
     vault
+}
+
+/// Walk `vault_path`, re-parsing only files whose mtime is newer than the
+/// recorded value in `cached_mtimes`.  Also removes documents that no longer
+/// exist on disk.  Returns the updated mtime map.
+pub fn incremental_reindex(
+    vault_path: &Path,
+    vault: &mut Vault,
+    cached_mtimes: &HashMap<String, u64>,
+) -> HashMap<String, u64> {
+    let mut new_mtimes: HashMap<String, u64> = HashMap::new();
+
+    let walker = WalkBuilder::new(vault_path).build();
+    for entry in walker.flatten() {
+        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+            continue;
+        }
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let path_str = match path.to_str() {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+
+        let current_mtime = mtime_secs(path).unwrap_or(0);
+        new_mtimes.insert(path_str.clone(), current_mtime);
+
+        let cached_mtime = cached_mtimes.get(&path_str).copied().unwrap_or(0);
+        if current_mtime > cached_mtime {
+            // New or modified — re-parse.
+            if let Ok(content) = std::fs::read_to_string(path) {
+                vault.add_document(&path_str, &content);
+            }
+        }
+        // If mtime is unchanged the cached graph data is already correct.
+    }
+
+    // Remove documents that have been deleted since the cache was written.
+    for cached_path in cached_mtimes.keys() {
+        if !new_mtimes.contains_key(cached_path) {
+            vault.remove_document(cached_path);
+        }
+    }
+
+    new_mtimes
 }
 
 #[cfg(test)]
