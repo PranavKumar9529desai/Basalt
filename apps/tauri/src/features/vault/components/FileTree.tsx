@@ -9,7 +9,7 @@ export interface FileTreeProps {
   openFolders: Set<string>;
   selectedPath: string | null;
   onFileClick: (node: FlatTreeNode) => void;
-  onFolderToggle: (relPath: string) => void;
+  onFolderToggle: (node: FlatTreeNode) => void;
   /** Ghost node for inline creation (rendered under the correct parent). */
   ghostNode?: (FileNode & { parentRelPath?: string }) | null;
   /** Called when the user commits an inline edit (Enter/blur). */
@@ -86,7 +86,7 @@ export function FileTree({
   const handleToggle = (fileNode: FileNode) => {
     // Re-lookup to pass the relPath to Tauri
     const original = visibleNodes.find((n) => n.path === fileNode.id);
-    if (original) onFolderToggle(original.relPath);
+    if (original) onFolderToggle(original);
   };
 
   return (

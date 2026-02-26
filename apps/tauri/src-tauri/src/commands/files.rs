@@ -29,7 +29,12 @@ pub fn open_file(path: String) -> Result<String, String> {
 
 /// Write content to a markdown file and re-index it in the vault.
 #[tauri::command]
-pub fn save_file(path: String, content: String, state: State<AppState>) -> Result<(), String> {
+pub fn save_file(
+    path: String,
+    content: String,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
     let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
     std::fs::write(&abs, &content).map_err(|e| e.to_string())?;
 
@@ -41,6 +46,14 @@ pub fn save_file(path: String, content: String, state: State<AppState>) -> Resul
     if let Some(path_str) = abs.to_str() {
         vault.add_document(path_str, &content);
     }
+
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: abs.to_string_lossy().to_string(),
+            kind: "modified".into(),
+        },
+    );
 
     Ok(())
 }
@@ -184,6 +197,15 @@ pub fn create_note(
             .map_err(|_| "vault lock poisoned".to_string())?;
         vault.add_document(&abs_path, &content);
     }
+
+    // Emit change so the frontend refreshes immediately.
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: abs_path.clone(),
+            kind: "created".into(),
+        },
+    );
 
     let clean_name = file_name.trim_end_matches(".md").to_string();
 

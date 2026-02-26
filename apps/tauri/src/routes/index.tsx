@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Editor } from "../features/editor";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { FileTree } from "../features/vault/components/FileTree";
@@ -73,6 +73,8 @@ function RouteComponent() {
 
   const mutations = useVaultMutations();
 
+  const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
+
   const selectedNode = useMemo(
     () => treeNodes.find((n) => n.path === editor.selected?.path),
     [treeNodes, editor.selected],
@@ -80,7 +82,7 @@ function RouteComponent() {
 
   const deriveParentContext = useCallback(
     (target?: FlatTreeNode) => {
-      const node = target ?? selectedNode;
+      const node = target ?? focusedNode ?? selectedNode;
       if (!node) return { parentRelPath: "", depth: 0 };
 
       const isFolder = node.kind === "folder";
@@ -95,7 +97,7 @@ function RouteComponent() {
       const depth = parentDepth + 1;
       return { parentRelPath, depth };
     },
-    [selectedNode],
+    [focusedNode, selectedNode],
   );
 
   const startNoteInline = useCallback(() => {
@@ -165,6 +167,10 @@ function RouteComponent() {
         if (result) {
           editor.loadNote({ name: result.name, path: result.path });
         }
+        if (parentRelPath) {
+          openFolder(parentRelPath);
+        }
+        await refreshTree();
       }
     },
     [mutations, editor, openFolder, parseInlineName, refreshTree, vaultPath],
@@ -219,10 +225,14 @@ function RouteComponent() {
           visibleNodes={visibleNodes}
           openFolders={openFolders}
           selectedPath={editor.selected?.path ?? null}
-          onFileClick={(node: FlatTreeNode) =>
-            editor.loadNote({ name: node.name, path: node.path })
-          }
-          onFolderToggle={toggleFolder}
+          onFileClick={(node: FlatTreeNode) => {
+            setFocusedNode(node);
+            editor.loadNote({ name: node.name, path: node.path });
+          }}
+          onFolderToggle={(node: FlatTreeNode) => {
+            setFocusedNode(node);
+            toggleFolder(node.relPath);
+          }}
           ghostNode={mutations.ghostNode}
           onCommitEdit={handleCommitEdit}
           onCancelEdit={handleCancelEdit}
