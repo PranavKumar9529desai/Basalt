@@ -92,7 +92,7 @@ function RouteComponent() {
       <AppActivityBar />
 
       {/* ── Left sidebar: file tree ── */}
-      <AppSidebar>
+      <AppSidebar defaultWidth={boot.workspace?.sidebarWidth as number | undefined}>
         <FileTree
           visibleNodes={visibleNodes}
           openFolders={openFolders}

@@ -1,14 +1,24 @@
 import { IconFilePlus, IconFolderPlus, IconArrowsSort, IconChevronUp } from "@tabler/icons-react";
 import { SidebarPanel, SidebarHeader, type SidebarAction } from "@workspace/ui/components/sidebar";
-// import { useCommandStore } from "@workspace/editor/commands/store";
-import type { ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { type ReactNode, useRef, useCallback } from "react";
 
 interface AppSidebarProps {
     children: ReactNode;
+    /** Initial sidebar width from .basalt/workspace.json (Tier 3). */
+    defaultWidth?: number;
 }
 
-export function AppSidebar({ children }: AppSidebarProps) {
-    // const execute = useCommandStore((s) => s.execute);
+export function AppSidebar({ children, defaultWidth }: AppSidebarProps) {
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Debounce-save sidebar width to .basalt/workspace.json (Tier 3)
+    const handleWidthChange = useCallback((width: number) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            invoke("set_workspace_key", { key: "sidebarWidth", value: width });
+        }, 400);
+    }, []);
 
     const actions: SidebarAction[] = [
         {
@@ -38,7 +48,7 @@ export function AppSidebar({ children }: AppSidebarProps) {
     ];
 
     return (
-        <SidebarPanel>
+        <SidebarPanel defaultWidth={defaultWidth} onWidthChange={handleWidthChange}>
             <SidebarHeader actions={actions} />
             {children}
         </SidebarPanel>

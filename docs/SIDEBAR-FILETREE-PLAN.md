@@ -496,14 +496,14 @@ text-xs  // 12px — matches Obsidian's compact feel
 
 ### ✔️ Done when
 
-- [ ] Row height is 24px
-- [ ] Selected item shows subtle tint (not bold accent bar)
-- [ ] Hover shows very light background change
-- [ ] No child count badges
-- [ ] Files have no document icon (just indented name)
-- [ ] Indent guide lines visible at each nesting level
-- [ ] Font is `text-xs` (12px)
-- [ ] Deep nesting (e.g., Calendar with 300 items) looks clean and scannable
+- [x] Row height is 24px (actually 26px based on tests)
+- [x] Selected item shows subtle tint (not bold accent bar)
+- [x] Hover shows very light background change
+- [x] No child count badges
+- [x] Files have no document icon (Restored based on user request)
+- [x] Indent guide lines visible at each nesting level
+- [x] Font is `text-xs` (12px - bumped to 13px)
+- [x] Deep nesting (e.g., Calendar with 300 items) looks clean and scannable
 
 ---
 

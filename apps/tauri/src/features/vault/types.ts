@@ -63,8 +63,10 @@ export interface BootResult {
   status: string;
   /** Pre-sorted flat tree, empty when status === "no_vault". */
   tree: FlatTreeNode[];
-  /** Persisted settings from config.json */
+  /** Persisted settings from config.json (Tier 1: global) */
   settings: Record<string, unknown>;
+  /** Per-vault workspace state from .basalt/workspace.json (Tier 3: vault-local) */
+  workspace: Record<string, unknown>;
 }
 
 /**

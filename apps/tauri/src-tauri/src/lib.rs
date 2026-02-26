@@ -26,17 +26,12 @@ impl Default for AppState {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Persistent config
-// ---------------------------------------------------------------------------
 
-/// Global application configuration.
-///
-/// STORAGE STRATEGY:
-/// 1. Global (System-wide): Stored in `~/.local/share/...` (via app_data_dir).
-///    Used for app-shell state: recent vaults, global preferences, window state.
-/// 2. Local (Vault-specific): Stored in `vault_path/.basalt/`. (Planned)
-///    Used for data context: graph metadata cache, per-vault plugins/themes.
+
+/// Three-tier storage:
+///   Tier 1 – app_data_dir()/config.json    → global prefs, vault list (NOT portable)
+///   Tier 2 – app_cache_dir()/<hash>.json   → vault index/metadata cache (regeneratable)
+///   Tier 3 – vault_path/.basalt/           → per-vault workspace & appearance (portable)
 #[derive(Serialize, Deserialize, Default, Clone)]
 struct AppConfig {
     last_vault: Option<String>,
@@ -92,11 +87,46 @@ fn cache_filename(vault_path: &str) -> String {
 }
 
 fn cache_path(app: &tauri::AppHandle, vault_path: &str) -> PathBuf {
+    // Tier 2: Use app_cache_dir (not app_data_dir) so the OS knows this is
+    // regeneratable data and can safely purge it when disk space is low.
     app.path()
-        .app_data_dir()
-        .expect("app data dir unavailable")
-        .join("cache")
+        .app_cache_dir()
+        .expect("app cache dir unavailable")
         .join(cache_filename(vault_path))
+}
+
+// ---------------------------------------------------------------------------
+// Tier 3: Vault workspace helpers (.basalt/workspace.json)
+// ---------------------------------------------------------------------------
+
+/// Returns the path to the `.basalt/` directory inside a vault root.
+fn basalt_dir(vault_path: &str) -> PathBuf {
+    Path::new(vault_path).join(".basalt")
+}
+
+/// Returns the path to the workspace.json file inside `.basalt/`.
+fn workspace_path(vault_path: &str) -> PathBuf {
+    basalt_dir(vault_path).join("workspace.json")
+}
+
+/// Load the per-vault workspace state. Returns an empty map if the file
+/// doesn't exist yet (first time opening this vault).
+fn load_workspace(vault_path: &str) -> std::collections::HashMap<String, serde_json::Value> {
+    let path = workspace_path(vault_path);
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+/// Persist the full workspace state to `.basalt/workspace.json`.
+fn save_workspace(vault_path: &str, workspace: &std::collections::HashMap<String, serde_json::Value>) {
+    let dir = basalt_dir(vault_path);
+    let _ = std::fs::create_dir_all(&dir);
+    let path = workspace_path(vault_path);
+    if let Ok(json) = serde_json::to_string_pretty(workspace) {
+        let _ = std::fs::write(path, json);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -151,8 +181,10 @@ struct BootResult {
     /// Pre-built, pre-sorted flat tree — ready for the sidebar to render.
     /// Empty when `status == "no_vault"`.
     tree: Vec<FlatTreeNode>,
-    /// Persisted settings from config.json
+    /// Persisted settings from config.json (Tier 1: global)
     settings: std::collections::HashMap<String, serde_json::Value>,
+    /// Per-vault workspace state from .basalt/workspace.json (Tier 3: vault-local)
+    workspace: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -218,6 +250,7 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
                 status: "no_vault".into(),
                 tree: Vec::new(),
                 settings: config.settings,
+                workspace: Default::default(),
             })
         }
     };
@@ -230,6 +263,7 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
             status: "no_vault".into(),
             tree: Vec::new(),
             settings: config.settings,
+            workspace: Default::default(),
         });
     }
 
@@ -294,12 +328,15 @@ fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, Str
         build_flat_tree(&vault, Path::new(&vault_path))
     };
 
+    let workspace = load_workspace(&vault_path);
+
     Ok(BootResult {
         vault_path: Some(vault_path),
         note_count,
         status,
         tree,
         settings: config.settings,
+        workspace,
     })
 }
 
@@ -355,12 +392,15 @@ fn set_vault(
         build_flat_tree(&vault, &root)
     };
 
+    let workspace = load_workspace(&vault_path);
+
     Ok(BootResult {
         vault_path: Some(vault_path),
         note_count,
         status: "full_index".into(),
         tree,
         settings: config.settings,
+        workspace,
     })
 }
 
@@ -539,6 +579,24 @@ fn get_settings(app: tauri::AppHandle) -> std::collections::HashMap<String, serd
     load_config(&app).settings
 }
 
+/// Returns the per-vault workspace state (Tier 3: .basalt/workspace.json).
+#[tauri::command]
+fn get_workspace(app: tauri::AppHandle) -> std::collections::HashMap<String, serde_json::Value> {
+    let config = load_config(&app);
+    config.last_vault.map(|vp| load_workspace(&vp)).unwrap_or_default()
+}
+
+/// Stores a single key in the per-vault workspace (Tier 3: .basalt/workspace.json).
+#[tauri::command]
+fn set_workspace_key(key: String, value: serde_json::Value, app: tauri::AppHandle) {
+    let config = load_config(&app);
+    if let Some(vault_path) = config.last_vault {
+        let mut ws = load_workspace(&vault_path);
+        ws.insert(key, value);
+        save_workspace(&vault_path, &ws);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -562,6 +620,8 @@ pub fn run() {
             get_backlinks,
             autocomplete_links,
             autocomplete_tags,
+            get_workspace,
+            set_workspace_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
