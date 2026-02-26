@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 /// Three-tier storage:
 ///   Tier 1 – app_data_dir()/config.json    → global prefs, vault list (NOT portable)

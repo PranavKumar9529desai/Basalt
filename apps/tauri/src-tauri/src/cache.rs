@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use basalt_fs::{incremental_reindex, indexer::index_directory, VaultCache};
+use tauri::Manager;
 
 use crate::app_state::AppState;
 use crate::config::{load_config, save_config};
@@ -39,7 +40,8 @@ pub fn load_or_index_vault(
     if let Some(cache) = VaultCache::load(&cache_file) {
         // Restore vault from cache then patch only the files that changed.
         let mut vault = cache.vault;
-        let new_mtimes = incremental_reindex(Path::new(vault_path), &mut vault, &cache.file_mtimes);
+        let _new_mtimes =
+            incremental_reindex(Path::new(vault_path), &mut vault, &cache.file_mtimes);
         let note_count = vault.graph.metadata_cache.len();
 
         // Persist updated cache (rebuild to keep fresh file mtimes).

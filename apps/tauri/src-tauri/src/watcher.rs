@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use basalt_fs::watcher::VaultWatcher;
 use serde::Serialize;
-use tauri::Manager;
+use tauri::Emitter;
 
 use crate::app_state::AppState;
 

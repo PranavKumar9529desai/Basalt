@@ -1,6 +1,3 @@
-use tauri::State;
-
-use crate::app_state::AppState;
 use crate::config::{load_config, save_config};
 use crate::workspace::{load_workspace, save_workspace};
 
