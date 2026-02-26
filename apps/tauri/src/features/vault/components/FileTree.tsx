@@ -10,8 +10,8 @@ export interface FileTreeProps {
   selectedPath: string | null;
   onFileClick: (node: FlatTreeNode) => void;
   onFolderToggle: (relPath: string) => void;
-  /** Ghost node for inline creation (rendered at top of tree). */
-  ghostNode?: FileNode | null;
+  /** Ghost node for inline creation (rendered under the correct parent). */
+  ghostNode?: (FileNode & { parentRelPath?: string }) | null;
   /** Called when the user commits an inline edit (Enter/blur). */
   onCommitEdit?: (node: FileNode, newName: string) => void;
   /** Called when the user cancels an inline edit (Escape). */
@@ -48,9 +48,33 @@ export function FileTree({
       }) satisfies FileNode,
   );
 
-  // Prepend the ghost node if present (appears at top of tree)
+  // Insert the ghost node directly under its intended parent
   if (ghostNode) {
-    mappedNodes.unshift(ghostNode);
+    const parentRel = ghostNode.parentRelPath ?? "";
+
+    // Default insertion: start of list
+    let insertAt = 0;
+
+    if (parentRel) {
+      // Find the parent in the visible list
+      const parentIndex = visibleNodes.findIndex((n) => n.relPath === parentRel);
+      if (parentIndex !== -1) {
+        const parentPath = visibleNodes[parentIndex].path;
+        const mappedParentIndex = mappedNodes.findIndex((n) => n.id === parentPath);
+        insertAt = mappedParentIndex === -1 ? mappedNodes.length : mappedParentIndex + 1;
+      } else {
+        insertAt = mappedNodes.length;
+      }
+    } else {
+      // Root-level: place after the last root item for a natural order
+      const lastRootIndex = [...mappedNodes]
+        .map((n, idx) => (n.depth === 0 ? idx : -1))
+        .filter((idx) => idx !== -1)
+        .pop();
+      insertAt = lastRootIndex !== undefined ? lastRootIndex + 1 : 0;
+    }
+
+    mappedNodes.splice(insertAt, 0, ghostNode);
   }
 
   const handleSelect = (fileNode: FileNode) => {

@@ -28,6 +28,12 @@ export interface UseVaultTreeReturn {
   toggleFolder: (relPath: string) => void;
 
   /**
+   * Force a folder (and its ancestors) open.
+   * Useful after creating a folder so it appears immediately.
+   */
+  openFolder: (relPath: string) => void;
+
+  /**
    * Re-fetch the tree from Rust and update state.
    * Call this after any `vault://file-changed` event or explicit re-index.
    */
@@ -102,6 +108,21 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
     });
   }, []);
 
+  // Open a folder and all ancestors.
+  const openFolder = useCallback((relPath: string) => {
+    if (!relPath) return;
+    const parts = relPath.split("/").filter(Boolean);
+    setOpenFolders((prev) => {
+      const next = new Set(prev);
+      let acc = "";
+      for (const part of parts) {
+        acc = acc ? `${acc}/${part}` : part;
+        next.add(acc);
+      }
+      return next;
+    });
+  }, []);
+
   // ── Tree refresh ───────────────────────────────────────────────────────
 
   const refreshTree = useCallback(async () => {
@@ -138,6 +159,7 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
     visibleNodes,
     setTreeNodes,
     toggleFolder,
+    openFolder,
     refreshTree,
   };
 }

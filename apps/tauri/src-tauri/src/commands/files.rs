@@ -2,10 +2,12 @@ use std::path::Path;
 
 use basalt_fs::path_utils::resolve_creation_path;
 use serde::Serialize;
+use tauri::Emitter;
 use tauri::State;
 
 use crate::app_state::AppState;
 use crate::config::load_config;
+use crate::watcher::FileChangeEvent;
 
 fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
     let p = Path::new(path);
@@ -217,6 +219,15 @@ pub fn create_folder(
     }
 
     std::fs::create_dir_all(&folder_path).map_err(|e| format!("failed to create folder: {e}"))?;
+
+    // Emit change so the frontend refreshes immediately (watchers may miss mkdir).
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: folder_path.to_string_lossy().to_string(),
+            kind: "created".into(),
+        },
+    );
 
     Ok(folder_path.to_string_lossy().to_string())
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Editor } from "../features/editor";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { FileTree } from "../features/vault/components/FileTree";
@@ -43,8 +43,15 @@ function RouteComponent() {
 
   const vaultPath = boot.vault_path;
 
-  const { treeNodes, visibleNodes, openFolders, toggleFolder, setTreeNodes } =
-    useVaultTree(boot.tree);
+  const {
+    treeNodes,
+    visibleNodes,
+    openFolders,
+    toggleFolder,
+    openFolder,
+    refreshTree,
+    setTreeNodes,
+  } = useVaultTree(boot.tree);
 
   const vaultActions = useVaultActions();
 
@@ -66,22 +73,101 @@ function RouteComponent() {
 
   const mutations = useVaultMutations();
 
+  const selectedNode = useMemo(
+    () => treeNodes.find((n) => n.path === editor.selected?.path),
+    [treeNodes, editor.selected],
+  );
+
+  const deriveParentContext = useCallback(
+    (target?: FlatTreeNode) => {
+      const node = target ?? selectedNode;
+      if (!node) return { parentRelPath: "", depth: 0 };
+
+      const isFolder = node.kind === "folder";
+      const parentRelPath = isFolder
+        ? node.relPath
+        : (() => {
+            const lastSlash = node.relPath.lastIndexOf("/");
+            return lastSlash === -1 ? "" : node.relPath.slice(0, lastSlash);
+          })();
+
+      const parentDepth = isFolder ? node.depth : Math.max(0, node.depth - 1);
+      const depth = parentDepth + 1;
+      return { parentRelPath, depth };
+    },
+    [selectedNode],
+  );
+
+  const startNoteInline = useCallback(() => {
+    const ctx = deriveParentContext();
+    if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+    mutations.createNoteInline(ctx);
+  }, [deriveParentContext, mutations, openFolder]);
+
+  const startFolderInline = useCallback(() => {
+    const ctx = deriveParentContext();
+    if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+    mutations.createFolderInline(ctx);
+  }, [deriveParentContext, mutations, openFolder]);
+
+  // Helper to parse VS Code–style input with slashes and trailing "/"
+  const parseInlineName = useCallback(
+    (raw: string, baseParent: string | undefined) => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+
+      const isFolder = trimmed.endsWith("/");
+      const withoutTrailing = trimmed.replace(/[\\/]+$/, "");
+      if (!withoutTrailing) return null;
+
+      const segments = withoutTrailing.split("/").filter(Boolean);
+      const leaf = segments.pop()!;
+
+      const parentSegments = segments;
+      if (baseParent) {
+        parentSegments.unshift(...baseParent.split("/").filter(Boolean));
+      }
+
+      const parentRelPath = parentSegments.join("/");
+      return {
+        leaf,
+        parentRelPath,
+        isFolder,
+      };
+    },
+    [],
+  );
 
 
   const handleCommitEdit = useCallback(
-    async (node: FileNode, newName: string) => {
+    async (node: FileNode & { parentRelPath?: string }, newName: string) => {
       mutations.clearGhost();
-      if (node.isFolder) {
-        await mutations.createFolder(newName);
-        // Folder appears via watcher — no editor action needed
+
+      const parsed = parseInlineName(newName, node.parentRelPath);
+      if (!parsed) return;
+
+      const { leaf, parentRelPath, isFolder } = parsed;
+
+      if (isFolder || node.isFolder) {
+        const folderPath = await mutations.createFolder(leaf, parentRelPath);
+        if (folderPath && vaultPath) {
+          const prefix = `${vaultPath}/`;
+          const relPath = folderPath.startsWith(prefix)
+            ? folderPath.slice(prefix.length)
+            : folderPath;
+          if (relPath) {
+            openFolder(relPath);
+          }
+        }
+        await refreshTree();
       } else {
-        const result = await mutations.createNote(newName);
+        const result = await mutations.createNote(leaf, parentRelPath || undefined);
         if (result) {
           editor.loadNote({ name: result.name, path: result.path });
         }
       }
     },
-    [mutations, editor],
+    [mutations, editor, openFolder, parseInlineName, refreshTree, vaultPath],
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -113,7 +199,7 @@ function RouteComponent() {
   return (
     <div className="flex flex-1 min-h-0">
       <AppCommands
-        onCreateNote={() => mutations.createNoteInline()}
+        onCreateNote={startNoteInline}
         onDeleteNote={() => {
           if (editor.selected) {
             mutations.requestDelete(editor.selected.path, editor.selected.name);
@@ -126,8 +212,8 @@ function RouteComponent() {
       {/* ── Left sidebar: file tree ── */}
       <AppSidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
-        onCreateNote={() => mutations.createNoteInline()}
-        onCreateFolder={() => mutations.createFolderInline()}
+        onCreateNote={startNoteInline}
+        onCreateFolder={startFolderInline}
       >
         <FileTree
           visibleNodes={visibleNodes}

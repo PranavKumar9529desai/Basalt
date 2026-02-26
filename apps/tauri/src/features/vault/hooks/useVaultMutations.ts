@@ -6,14 +6,18 @@ import type { FileNode } from "@workspace/ui/components/file-tree";
 // Ghost node IDs — used to identify the ephemeral inline-edit node
 const GHOST_ID = "__ghost__";
 
+type GhostNode = FileNode & {
+    parentRelPath?: string;
+};
+
 export interface UseVaultMutationsReturn {
     // ── Ghost node (inline create) ────────────────────────────────────
     /** The ghost node to inject into the tree, or null. */
-    ghostNode: FileNode | null;
+    ghostNode: GhostNode | null;
     /** Start inline creation of a note (shows ghost input in the tree). */
-    createNoteInline: () => void;
+    createNoteInline: (opts?: { parentRelPath?: string; depth?: number }) => void;
     /** Start inline creation of a folder. */
-    createFolderInline: () => void;
+    createFolderInline: (opts?: { parentRelPath?: string; depth?: number }) => void;
     /** Remove the ghost node (cancel). */
     clearGhost: () => void;
 
@@ -36,7 +40,7 @@ export interface UseVaultMutationsReturn {
 
 export function useVaultMutations(): UseVaultMutationsReturn {
     // ── Ghost node state ────────────────────────────────────────────────
-    const [ghostNode, setGhostNode] = useState<FileNode | null>(null);
+    const [ghostNode, setGhostNode] = useState<GhostNode | null>(null);
 
     // ── Delete dialog state ─────────────────────────────────────────────
     const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -48,23 +52,27 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     const [isLoading, setIsLoading] = useState(false);
 
     // ── Ghost node actions ──────────────────────────────────────────────
-    const createNoteInline = useCallback(() => {
+    const createNoteInline = useCallback((opts?: { parentRelPath?: string; depth?: number }) => {
+        const depth = opts?.depth ?? 0;
         setGhostNode({
             id: GHOST_ID,
             name: "",
             isFolder: false,
-            depth: 0,
+            depth,
+            parentRelPath: opts?.parentRelPath,
             isEditing: true,
         });
         setError(null);
     }, []);
 
-    const createFolderInline = useCallback(() => {
+    const createFolderInline = useCallback((opts?: { parentRelPath?: string; depth?: number }) => {
+        const depth = opts?.depth ?? 0;
         setGhostNode({
             id: GHOST_ID,
             name: "",
             isFolder: true,
-            depth: 0,
+            depth,
+            parentRelPath: opts?.parentRelPath,
             isEditing: true,
         });
         setError(null);
