@@ -47,8 +47,8 @@ impl DirEntry {
     }
 }
 
-/// Walk every `.md` path stored in `vault.arena`, build a sorted directory
-/// tree in memory, then emit a pre-order DFS flat array.
+/// Walk every active document path from `metadata_cache`, build a sorted
+/// directory tree in memory, then emit a pre-order DFS flat array.
 ///
 /// Sorting rules (applied at every level):
 ///   1. Folders come before files.
@@ -69,17 +69,19 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
 
     let mut root = DirEntry::new_folder(root_name, root_abs.as_ref(), "");
 
-    // ── Insert every indexed .md path into the internal tree ──────────────
-    // Collect first so we can sort for deterministic output even if the arena
-    // iteration order changes between runs.
-    let mut paths: Vec<&String> = vault
-        .arena
-        .all_strings()
-        .filter(|p| p.ends_with(".md"))
+    // ── Insert every active indexed .md path into the internal tree ───────
+    // Source of truth for "real files" is metadata_cache, not the arena.
+    // Arena may contain unresolved link targets or historical interned paths.
+    let mut paths: Vec<String> = vault
+        .graph
+        .metadata_cache
+        .keys()
+        .filter_map(|id| vault.arena.get_string(*id).cloned())
+        .filter(|p| p.ends_with(".md") && Path::new(p).exists())
         .collect();
     paths.sort_unstable();
 
-    for abs_path in paths {
+    for abs_path in &paths {
         // Derive the vault-relative path.
         let rel = abs_path
             .strip_prefix(&root_prefix)

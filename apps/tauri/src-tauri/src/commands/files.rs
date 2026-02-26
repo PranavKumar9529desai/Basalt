@@ -259,25 +259,43 @@ pub fn delete_file(path: String, state: State<AppState>, app: tauri::AppHandle) 
     let abs = Path::new(&path)
         .canonicalize()
         .map_err(|e| format!("invalid path: {e}"))?;
+    let vault_root = canonical_vault_path(&app)?;
+    ensure_inside_vault(&abs, &vault_root)?;
+    let is_dir = abs.is_dir();
 
     if !abs.exists() {
         return Err("file does not exist".to_string());
     }
 
-    if abs.is_dir() {
+    if is_dir {
         std::fs::remove_dir_all(&abs).map_err(|e| format!("failed to delete directory: {e}"))?;
     } else {
         std::fs::remove_file(&abs).map_err(|e| format!("failed to delete file: {e}"))?;
     }
 
-    let vault_root = canonical_vault_path(&app)?;
-    let reindexed = index_directory(&vault_root);
     {
         let mut vault = state
             .vault
             .write()
             .map_err(|_| "vault lock poisoned".to_string())?;
-        *vault = reindexed;
+
+        if is_dir {
+            let abs_str = abs.to_string_lossy().to_string();
+            let prefix = format!("{abs_str}/");
+            let to_remove: Vec<String> = vault
+                .graph
+                .metadata_cache
+                .keys()
+                .filter_map(|id| vault.arena.get_string(*id).cloned())
+                .filter(|p| p == &abs_str || p.starts_with(&prefix))
+                .collect();
+
+            for path in to_remove {
+                vault.remove_document(&path);
+            }
+        } else {
+            vault.remove_document(abs.to_str().unwrap_or_default());
+        }
     }
 
     let _ = app.emit(
