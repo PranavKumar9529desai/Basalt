@@ -1,7 +1,6 @@
 import type { FC } from "react";
 import type { LinkSuggestion } from "../types";
 
-
 interface BacklinksSidebarProps {
   backlinks: string[];
   onOpenNote: (note: LinkSuggestion) => void;
@@ -15,7 +14,6 @@ function pathToLinkSuggestion(path: string): LinkSuggestion {
   const name = path.split("/").pop() ?? path;
   return { name, path };
 }
-
 
 export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   backlinks,

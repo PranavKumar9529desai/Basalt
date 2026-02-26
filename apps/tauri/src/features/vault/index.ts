@@ -11,7 +11,10 @@ export { FileTree } from "./components/FileTree";
 export { SaveIndicator } from "./components/SaveIndicator";
 export { Toolbar } from "./components/Toolbar";
 export { VaultSplash } from "./components/VaultSplash";
-export type { UseEditorOptions, UseEditorReturn } from "../editor/hooks/useEditor";
+export type {
+  UseEditorOptions,
+  UseEditorReturn,
+} from "../editor/hooks/useEditor";
 export { useEditor } from "../editor/hooks/useEditor";
 export type { UseVaultActionsReturn } from "./hooks/useVaultActions";
 export { useVaultActions } from "./hooks/useVaultActions";

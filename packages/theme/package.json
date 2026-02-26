@@ -1,18 +1,18 @@
 {
-    "name": "@workspace/theme",
-    "version": "0.1.0",
-    "private": true,
-    "type": "module",
-    "exports": {
-        ".": "./src/index.ts",
-        "./manifest": "./themes/manifest.ts",
-        "./tokens.css": "./src/generated/tokens.css"
-    },
-    "scripts": {
-        "build:tokens": "bun run build.ts"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5.0.0"
-    }
+  "name": "@workspace/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./themes/manifest.ts",
+    "./tokens.css": "./src/generated/tokens.css"
+  },
+  "scripts": {
+    "build:tokens": "bun run build.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
 }

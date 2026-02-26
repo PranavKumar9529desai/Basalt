@@ -2,7 +2,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
-
 export const BLOCKQUOTES_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-blockquote": {
     borderLeft: "3px solid var(--sat-editor-blockquote-border, #334155)",
@@ -10,7 +9,6 @@ export const BLOCKQUOTES_THEME = EditorView.baseTheme({
     color: "var(--sat-editor-blockquote-text, #cbd5f5)",
   },
 });
-
 
 /**
  * Handles BlockQuote nodes — adds line-level blockquote classes.

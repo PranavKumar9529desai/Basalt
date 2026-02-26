@@ -2,7 +2,6 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
 
-
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
     fontFamily:
@@ -22,7 +21,6 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
     textDecorationColor: "var(--sat-editor-accent, #a78bfa)",
   },
 });
-
 
 /**
  * Handles InlineCode and WikiLink nodes — adds mark decorations for styling.

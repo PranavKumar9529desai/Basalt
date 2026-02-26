@@ -1,8 +1,4 @@
-import { IconFilePlus as TablerIconFilePlus, IconPlus as TablerIconPlus, IconTrash as TablerIconTrash } from "@tabler/icons-react";
-
-const IconFilePlus = TablerIconFilePlus as any;
-const IconPlus = TablerIconPlus as any;
-const IconTrash = TablerIconTrash as any;
+import { IconFilePlus, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
@@ -15,41 +11,48 @@ export const AppCommands: React.FC = () => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
 
-  const commands = useMemo(() => [
-    {
-      id: "app:new-file",
-      name: "Create New Note",
-      category: "File",
-      icon: <IconFilePlus size={16} />,
-      hotkeys: ["Ctrl+N"],
-      callback: () => {
-        console.log("Create new file command executed");
+  const commands = useMemo(
+    () => [
+      {
+        id: "app:new-file",
+        name: "Create New Note",
+        category: "File",
+        icon: <IconFilePlus size={16} />,
+        hotkeys: ["Ctrl+N"],
+        callback: () => {
+          console.log("Create new file command executed");
+        },
       },
-    },
-    {
-      id: "app:delete-file",
-      name: "Delete Current Note",
-      category: "File",
-      icon: <IconTrash size={16} />,
-      callback: () => {
-        console.log("Delete file command executed");
+      {
+        id: "app:delete-file",
+        name: "Delete Current Note",
+        category: "File",
+        icon: <IconTrash size={16} />,
+        callback: () => {
+          console.log("Delete file command executed");
+        },
       },
-    },
-    {
-      id: "app:extract-selection",
-      name: "Extract selection to new note",
-      category: "Editor",
-      icon: <IconPlus size={16} />,
-      callback: () => {
-        console.log("Extract selection command executed");
+      {
+        id: "app:extract-selection",
+        name: "Extract selection to new note",
+        category: "Editor",
+        icon: <IconPlus size={16} />,
+        callback: () => {
+          console.log("Extract selection command executed");
+        },
       },
-    },
-  ], []);
+    ],
+    [],
+  );
 
   useEffect(() => {
-    commands.forEach(c => register(c));
+    commands.forEach((c) => {
+      register(c);
+    });
     return () => {
-      commands.forEach(c => unregister(c.id));
+      commands.forEach((c) => {
+        unregister(c.id);
+      });
     };
   }, [commands, register, unregister]);
 

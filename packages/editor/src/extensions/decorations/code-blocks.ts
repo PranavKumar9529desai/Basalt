@@ -78,7 +78,6 @@ export class CodeFooterWidget extends WidgetType {
   }
 }
 
-
 export const CODE_BLOCKS_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-code": {
     backgroundColor: "var(--sat-editor-code-bg, #0a0f1a)",

@@ -189,7 +189,8 @@ function generateManifest(themes: ThemeBuild[], defaultId: string): string {
   const arr = themes
     .map(
       (t) =>
-        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${t.meta.mode ?? "light"
+        `  { id: "${t.meta.id}", label: "${t.meta.label}", mode: "${
+          t.meta.mode ?? "light"
         }", description: ${JSON.stringify(t.meta.description ?? "")} },`,
     )
     .join("\n");

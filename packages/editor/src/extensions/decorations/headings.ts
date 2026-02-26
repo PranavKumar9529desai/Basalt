@@ -3,8 +3,6 @@ import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { isInCodeBlock } from "./types";
 
-
-
 export const HEADING_CLASS: Record<string, string> = {
   ATXHeading1: "cm-live-heading-1",
   ATXHeading2: "cm-live-heading-2",
@@ -18,7 +16,6 @@ export const HEADING_CLASS: Record<string, string> = {
 };
 
 export const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
-
 
 export const HEADINGS_THEME = EditorView.baseTheme({});
 

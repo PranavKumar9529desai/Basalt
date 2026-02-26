@@ -33,10 +33,10 @@ const baseTheme = EditorView.theme({
  * For example, preventing default underlines on headings.
  */
 const defaultHighlightStyleOverride = HighlightStyle.define([
-  { tag: t.heading, textDecoration: "none" }
+  { tag: t.heading, textDecoration: "none" },
 ]);
 
 export const CUSTOM_THEME = [
   baseTheme,
-  syntaxHighlighting(defaultHighlightStyleOverride)
+  syntaxHighlighting(defaultHighlightStyleOverride),
 ];

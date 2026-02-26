@@ -1,12 +1,10 @@
 import type { FC } from "react";
 
-
 interface VaultSplashProps {
   isIndexing: boolean;
   status: string | null;
   onOpenVault: () => void;
 }
-
 
 export const VaultSplash: FC<VaultSplashProps> = ({
   isIndexing,
