@@ -259,13 +259,13 @@ interface ActivityBarItemData {
 
 ### ✔️ Done when
 
-- [ ] 44px ribbon visible on far-left edge
-- [ ] "Explorer" icon shown and highlighted as active
-- [ ] "Search" and "Settings" icons shown (Search top, Settings bottom)
-- [ ] Hovering any icon shows a tooltip to the right
-- [ ] Clicking "Explorer" keeps sidebar open (future: toggle)
-- [ ] Uses `--sat-*` theme vars, no hard-coded colors
-- [ ] Component in `packages/ui/` has zero Tauri imports
+- [x] 44px ribbon visible on far-left edge
+- [x] "Explorer" icon shown and highlighted as active
+- [x] "Search" and "Settings" icons shown (Search top, Settings bottom)
+- [x] Hovering any icon shows a tooltip to the right
+- [x] Clicking "Explorer" keeps sidebar open (future: toggle)
+- [x] Uses `--sat-*` theme vars, no hard-coded colors
+- [x] Component in `packages/ui/` has zero Tauri imports
 
 ---
 

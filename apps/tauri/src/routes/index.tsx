@@ -9,6 +9,7 @@ import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";
+import { AppActivityBar } from "../app-shell/AppActivityBar";
 
 // ---------------------------------------------------------------------------
 // Route — loader fetches boot (includes pre-built tree) in one round-trip
@@ -86,8 +87,8 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* Activity Bar placeholder */}
-      <div className="w-11 shrink-0 border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]"></div>
+      {/* Activity Bar */}
+      <AppActivityBar />
 
       {/* ── Left sidebar: file tree ── */}
       <div className="w-56 shrink-0 flex flex-col min-h-0 border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]">
