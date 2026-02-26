@@ -3,11 +3,18 @@ import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
 
+export interface AppCommandsProps {
+  onCreateNote?: () => void;
+  onDeleteNote?: () => void;
+}
+
 /**
  * Global commands for the Basalt application.
- * These are registered once at the root level.
  */
-export const AppCommands: React.FC = () => {
+export const AppCommands: React.FC<AppCommandsProps> = ({
+  onCreateNote,
+  onDeleteNote
+}) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
 
@@ -20,7 +27,8 @@ export const AppCommands: React.FC = () => {
         icon: <IconFilePlus size={16} />,
         hotkeys: ["Ctrl+N"],
         callback: () => {
-          console.log("Create new file command executed");
+          if (onCreateNote) onCreateNote();
+          else console.log("Create new file command executed");
         },
       },
       {
@@ -29,7 +37,8 @@ export const AppCommands: React.FC = () => {
         category: "File",
         icon: <IconTrash size={16} />,
         callback: () => {
-          console.log("Delete file command executed");
+          if (onDeleteNote) onDeleteNote();
+          else console.log("Delete file command executed");
         },
       },
       {
@@ -42,7 +51,7 @@ export const AppCommands: React.FC = () => {
         },
       },
     ],
-    [],
+    [onCreateNote, onDeleteNote],
   );
 
   useEffect(() => {

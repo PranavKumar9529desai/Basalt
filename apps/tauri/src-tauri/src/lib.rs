@@ -598,6 +598,162 @@ fn set_workspace_key(key: String, value: serde_json::Value, app: tauri::AppHandl
 }
 
 // ---------------------------------------------------------------------------
+// File Operations Commands
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+struct CreateNoteResult {
+    /// Absolute path of the newly created file.
+    path: String,
+    /// Display name (filename without extension).
+    name: String,
+}
+
+#[tauri::command]
+fn create_note(
+    name: String,
+    parent: Option<String>,    // relative folder path inside vault, e.g. "Daily Journal"
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<CreateNoteResult, String> {
+    let config = load_config(&app);
+    let vault_path = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    // ── Build the file path ──────────────────────────────────────────
+    // Strip .md if user included it, then force-add it.
+    let clean_name = name.trim().trim_end_matches(".md");
+    if clean_name.is_empty() {
+        return Err("note name cannot be empty".into());
+    }
+
+    // Reject invalid filesystem characters.
+    if clean_name.chars().any(|c| matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')) {
+        return Err("note name contains invalid characters".into());
+    }
+
+    let file_name = format!("{clean_name}.md");
+
+    let target_dir = match &parent {
+        Some(rel) if !rel.is_empty() => Path::new(&vault_path).join(rel),
+        _ => PathBuf::from(&vault_path),
+    };
+
+    let file_path = target_dir.join(&file_name);
+
+    if file_path.exists() {
+        return Err(format!("'{file_name}' already exists"));
+    }
+
+    // ── Ensure parent directory exists ───────────────────────────────
+    if !target_dir.exists() {
+        std::fs::create_dir_all(&target_dir)
+            .map_err(|e| format!("failed to create directory: {e}"))?;
+    }
+
+    // ── Generate frontmatter ─────────────────────────────────────────
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let content = format!(
+        "---\ntype: note\ntopic:\nstatus: inbox\ncreated: {today}\nupdated: {today}\ntags: []\naliases: []\n---\n\n"
+    );
+
+    std::fs::write(&file_path, &content)
+        .map_err(|e| format!("failed to write file: {e}"))?;
+
+    // ── Update in-memory vault index ─────────────────────────────────
+    let abs_path = file_path
+        .canonicalize()
+        .map_err(|e| format!("canonicalize failed: {e}"))?
+        .to_string_lossy()
+        .to_string();
+
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        vault.add_document(&abs_path, &content);
+    }
+
+    Ok(CreateNoteResult {
+        path: abs_path,
+        name: clean_name.to_string(),
+    })
+}
+
+#[tauri::command]
+fn create_folder(
+    name: String,
+    parent: Option<String>,    // relative folder path inside vault
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let config = load_config(&app);
+    let vault_path = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    let clean_name = name.trim();
+    if clean_name.is_empty() {
+        return Err("folder name cannot be empty".into());
+    }
+
+    if clean_name.chars().any(|c| matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')) {
+        return Err("folder name contains invalid characters".into());
+    }
+
+    let target_dir = match &parent {
+        Some(rel) if !rel.is_empty() => Path::new(&vault_path).join(rel),
+        _ => PathBuf::from(&vault_path),
+    };
+
+    let folder_path = target_dir.join(clean_name);
+
+    if folder_path.exists() {
+        return Err(format!("'{clean_name}' already exists"));
+    }
+
+    std::fs::create_dir_all(&folder_path)
+        .map_err(|e| format!("failed to create folder: {e}"))?;
+
+    Ok(folder_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn delete_file(
+    path: String,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let abs = Path::new(&path)
+        .canonicalize()
+        .map_err(|e| format!("invalid path: {e}"))?;
+
+    if !abs.exists() {
+        return Err("file does not exist".to_string());
+    }
+
+    // ── Remove from vault index first ────────────────────────────────
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        vault.remove_document(abs.to_str().unwrap_or_default());
+    }
+
+    // ── Delete from disk ─────────────────────────────────────────────
+    if abs.is_dir() {
+        std::fs::remove_dir_all(&abs)
+            .map_err(|e| format!("failed to delete directory: {e}"))?;
+    } else {
+        std::fs::remove_file(&abs)
+            .map_err(|e| format!("failed to delete file: {e}"))?;
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -622,6 +778,9 @@ pub fn run() {
             autocomplete_tags,
             get_workspace,
             set_workspace_key,
+            create_note,
+            create_folder,
+            delete_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

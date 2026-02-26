@@ -35,9 +35,6 @@ export interface FlatTreeNode {
   childCount: number;
 }
 
-// ---------------------------------------------------------------------------
-// Editor / link types
-// ---------------------------------------------------------------------------
 
 /** Returned by `autocomplete_links` — used for wikilink completion only. */
 export interface LinkSuggestion {
@@ -47,9 +44,6 @@ export interface LinkSuggestion {
 
 export type SaveStatus = "saved" | "saving" | "unsaved" | "conflict";
 
-// ---------------------------------------------------------------------------
-// Tauri command response types
-// ---------------------------------------------------------------------------
 
 /**
  * Returned by both `boot` and `set_vault`.
@@ -77,4 +71,10 @@ export interface FileChangeEvent {
   path: string;
   /** "created" | "modified" | "deleted" */
   kind: "created" | "modified" | "deleted";
+}
+
+/** Returned by `create_note` Rust command. */
+export interface CreateNoteResult {
+  path: string;
+  name: string;
 }

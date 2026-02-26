@@ -16,9 +16,11 @@ interface AppSidebarProps {
   children: ReactNode;
   /** Initial sidebar width from .basalt/workspace.json (Tier 3). */
   defaultWidth?: number;
+  onCreateNote: () => void;
+  onCreateFolder: () => void;
 }
 
-export function AppSidebar({ children, defaultWidth }: AppSidebarProps) {
+export function AppSidebar({ children, defaultWidth, onCreateNote, onCreateFolder }: AppSidebarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce-save sidebar width to .basalt/workspace.json (Tier 3)
@@ -34,13 +36,13 @@ export function AppSidebar({ children, defaultWidth }: AppSidebarProps) {
       id: "new-note",
       icon: <IconFilePlus size={16} stroke={1.5} />,
       label: "New note",
-      onClick: () => console.log("create_note"),
+      onClick: onCreateNote,
     },
     {
       id: "new-folder",
       icon: <IconFolderPlus size={16} stroke={1.5} />,
       label: "New folder",
-      onClick: () => console.log("create_folder"),
+      onClick: onCreateFolder,
     },
     {
       id: "sort",
