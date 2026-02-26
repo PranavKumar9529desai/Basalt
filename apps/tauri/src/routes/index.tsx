@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect } from "react";
 import { Editor } from "../features/editor";
+import { AppSidebar } from "../app-shell/AppSidebar";
 import { FileTree } from "../features/vault/components/FileTree";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
@@ -91,7 +92,7 @@ function RouteComponent() {
       <AppActivityBar />
 
       {/* ── Left sidebar: file tree ── */}
-      <div className="w-56 shrink-0 flex flex-col min-h-0 border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]">
+      <AppSidebar>
         <FileTree
           visibleNodes={visibleNodes}
           openFolders={openFolders}
@@ -101,7 +102,7 @@ function RouteComponent() {
           }
           onFolderToggle={toggleFolder}
         />
-      </div>
+      </AppSidebar>
 
       {/* ── Centre: editor ── */}
       <div className="flex-1 flex flex-col min-h-0 bg-[var(--sat-surface-1)]">

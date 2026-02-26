@@ -364,13 +364,13 @@ interface SidebarAction {
 
 ### ✔️ Done when
 
-- [ ] Sidebar panel is flush — no border-radius, full height
-- [ ] Resize handle visible on hover, drag-resizable between 160-400px
-- [ ] Header shows 4 action icons with tooltips
-- [ ] File tree renders inside the sidebar without its own card wrapper
-- [ ] shadcn `ScrollArea` used for scrollable content
-- [ ] Uses `--sat-*` theme vars, no hard-coded colors
-- [ ] Collapse/expand works (optional — can defer)
+- [x] Sidebar panel is flush — no border-radius, full height
+- [x] Resize handle visible on hover, drag-resizable between 160-400px
+- [x] Header shows 4 action icons with tooltips
+- [x] File tree renders inside the sidebar without its own card wrapper
+- [x] shadcn `ScrollArea` used for scrollable content
+- [x] Uses `--sat-*` theme vars, no hard-coded colors
+- [x] Collapse/expand works (optional — can defer)
 
 ---
 

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./components/sidebar": "./src/components/sidebar/index.ts",
     "./components/file-tree": "./src/components/file-tree/index.ts",
     "./components/activity-bar": "./src/components/activity-bar/index.ts",
     "./components/*": "./src/components/*.tsx",
