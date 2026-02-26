@@ -1,31 +1,19 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { ThemeSelect } from "../app-shell/ThemeSelect";
+import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { AppCommands } from "../commands/app-commands";
 import { EditorCommandPalette } from "../features/editor/components/command-palette";
+import { StatusBar } from "../app-shell/StatusBar";
 
 export const Route = createRootRoute({
   component: () => (
-    <div className="p-4 flex flex-col min-h-screen bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]">
+    <div className="flex flex-col h-screen bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] overflow-hidden">
       <AppCommands />
       <EditorCommandPalette />
-      <div className="flex gap-4 p-2 border-b border-[var(--sat-layout-border)] mb-4 items-center">
-        <Link
-          to="/"
-          className="hover:text-[var(--sat-accent-primary)] [&.active]:text-[var(--sat-accent-primary)] [&.active]:font-bold"
-        >
-          Home
-        </Link>
-        <Link
-          to="/new"
-          className="hover:text-[var(--sat-accent-primary)] [&.active]:text-[var(--sat-accent-primary)] [&.active]:font-bold"
-        >
-          New Page
-        </Link>
-        <div className="ml-auto">
-          <ThemeSelect />
-        </div>
+      {/* Main workspace area — fills all space */}
+      <div className="flex flex-1 min-h-0">
+        <Outlet />
       </div>
-      <Outlet />
+      {/* Status bar — always visible */}
+      <StatusBar />
     </div>
   ),
 });

@@ -4,7 +4,6 @@ import { useCallback, useEffect } from "react";
 import { Editor } from "../features/editor";
 import { FileTree } from "../features/vault/components/FileTree";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
-import { Toolbar } from "../features/vault/components/Toolbar";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
@@ -69,8 +68,7 @@ function RouteComponent() {
 
   const editor = useEditor({ findNote });
 
-  // Merge status messages: vault actions take priority over editor status.
-  const statusMessage = vaultActions.status ?? editor.status;
+
 
   // ── No-vault splash ───────────────────────────────────────────────────────
 
@@ -87,74 +85,57 @@ function RouteComponent() {
   // ── Main layout ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full gap-0">
-      {/* Top toolbar */}
-      <Toolbar
-        vaultPath={vaultPath}
-        isIndexing={vaultActions.isIndexing}
-        status={statusMessage}
-        onChangeVault={vaultActions.pickAndSetVault}
-        onReindex={vaultActions.reindexVault}
-      />
+    <div className="flex flex-1 min-h-0">
+      {/* Activity Bar placeholder */}
+      <div className="w-11 shrink-0 border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]"></div>
 
-      {/* Three-column body */}
-      <div className="flex flex-1 min-h-0 gap-3 p-3">
-        {/* ── Left sidebar: file tree ── */}
-        <div className="w-56 shrink-0 flex flex-col min-h-0">
-          <FileTree
-            visibleNodes={visibleNodes}
-            openFolders={openFolders}
-            selectedPath={editor.selected?.path ?? null}
-            onFileClick={(node: FlatTreeNode) =>
-              editor.loadNote({ name: node.name, path: node.path })
-            }
-            onFolderToggle={toggleFolder}
-          />
+      {/* ── Left sidebar: file tree ── */}
+      <div className="w-56 shrink-0 flex flex-col min-h-0 border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]">
+        <FileTree
+          visibleNodes={visibleNodes}
+          openFolders={openFolders}
+          selectedPath={editor.selected?.path ?? null}
+          onFileClick={(node: FlatTreeNode) =>
+            editor.loadNote({ name: node.name, path: node.path })
+          }
+          onFolderToggle={toggleFolder}
+        />
+      </div>
+
+      {/* ── Centre: editor ── */}
+      <div className="flex-1 flex flex-col min-h-0 bg-[var(--sat-surface-1)]">
+        {/* Editor header */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--sat-layout-border)] shrink-0 bg-[var(--sat-surface-1)]">
+          <span className="text-sm text-[var(--sat-text-primary)] flex-1 truncate">
+            {editor.selected ? editor.selected.name : "No note selected"}
+          </span>
+          <SaveIndicator status={editor.saveStatus} />
         </div>
 
-        {/* ── Centre: editor ── */}
-        <div className="flex-1 flex flex-col min-h-0 bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] rounded-lg overflow-hidden">
-          {/* Editor header */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--sat-layout-border)] shrink-0">
-            <span className="text-sm text-[var(--sat-text-primary)] flex-1 truncate">
-              {editor.selected ? editor.selected.name : "No note selected"}
-            </span>
-            <SaveIndicator status={editor.saveStatus} />
-          </div>
-
-          {/* Conflict banner */}
-          {editor.saveStatus === "conflict" && (
-            <ConflictBanner
-              onKeepMine={editor.performSave}
-              onDiscard={editor.discardAndReload}
-            />
-          )}
-
-          {/* Editor */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Editor
-              className="h-full"
-              value={editor.content}
-              onChange={editor.handleChange}
-              initialContent=""
-              onFetchLinks={editor.onFetchLinks}
-              onFetchTags={editor.onFetchTags}
-              onOpenLink={editor.handleOpenLink}
-              onSearch={(query) => {
-                console.log("Searching for:", query);
-                // Future integration: trigger global search modal
-              }}
-            />
-          </div>
-        </div>
-
-        {/* ── Right sidebar: backlinks ── */}
-        {/*<div className="w-52 shrink-0 flex flex-col min-h-0">
-          <BacklinksSidebar
-            backlinks={editor.backlinks}
-            onOpenNote={(note: LinkSuggestion) => editor.loadNote(note)}
+        {/* Conflict banner */}
+        {editor.saveStatus === "conflict" && (
+          <ConflictBanner
+            onKeepMine={editor.performSave}
+            onDiscard={editor.discardAndReload}
           />
-        </div>*/}
+        )}
+
+        {/* Editor */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Editor
+            className="h-full"
+            value={editor.content}
+            onChange={editor.handleChange}
+            initialContent=""
+            onFetchLinks={editor.onFetchLinks}
+            onFetchTags={editor.onFetchTags}
+            onOpenLink={editor.handleOpenLink}
+            onSearch={(query) => {
+              console.log("Searching for:", query);
+              // Future integration: trigger global search modal
+            }}
+          />
+        </div>
       </div>
     </div>
   );
