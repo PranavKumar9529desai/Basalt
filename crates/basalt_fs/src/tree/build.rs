@@ -102,6 +102,11 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         insert_path(&mut root, &parts, abs_path, &root_prefix);
     }
 
+    // ── Also include on-disk directories (so empty folders are visible) ───
+    if vault_root.is_dir() {
+        insert_disk_dirs(&mut root, vault_root, &root_prefix);
+    }
+
     // ── Flatten into a pre-order DFS array ────────────────────────────────
     let mut out = Vec::new();
     flatten_children(&root, 0, &mut out);
@@ -141,6 +146,45 @@ fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix:
             .entry(name.to_string())
             .or_insert_with(|| DirEntry::new_folder(name, &child_abs, &child_rel));
         insert_path(entry, &parts[1..], abs_path, root_prefix);
+    }
+}
+
+/// Walk on-disk subdirectories of `disk_path` and merge any that are missing
+/// from `node` into the tree. This ensures empty folders show up. Skips hidden
+/// directories (names starting with `.`) so `.basalt`, `.git`, etc. stay hidden.
+fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
+    let Ok(entries) = std::fs::read_dir(disk_path) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let Ok(ft) = entry.file_type() else { continue };
+        if !ft.is_dir() {
+            continue;
+        }
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+
+        // Skip hidden directories
+        if name_str.starts_with('.') {
+            continue;
+        }
+
+        let child_rel = if node.rel_path.is_empty() {
+            name_str.to_string()
+        } else {
+            format!("{}/{}", node.rel_path, name_str)
+        };
+
+        let child_abs = format!("{}{}", root_prefix, child_rel);
+
+        let child = node
+            .children
+            .entry(name_str.to_string())
+            .or_insert_with(|| DirEntry::new_folder(&*name_str, &child_abs, &child_rel));
+
+        // Recurse into subdirectories
+        insert_disk_dirs(child, &entry.path(), root_prefix);
     }
 }
 

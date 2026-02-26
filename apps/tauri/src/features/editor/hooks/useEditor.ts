@@ -42,6 +42,9 @@ export interface UseEditorReturn {
   /** Open a note: flush any pending save first, then load from disk. */
   loadNote: (note: LinkSuggestion) => Promise<void>;
 
+  /** Close the current note (e.g. after deletion). */
+  closeNote: () => void;
+
   /** Called by the editor whenever its content changes. */
   handleChange: (value: string) => void;
 
@@ -227,8 +230,6 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
     };
   }, []);
 
-  // ── Load a note ───────────────────────────────────────────────────────────
-
   const loadNote = useCallback(
     async (note: LinkSuggestion) => {
       // Flush any pending autosave for the currently open note first.
@@ -251,6 +252,15 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
     },
     [performSave, refreshBacklinks],
   );
+
+  const closeNote = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSelected(null);
+    setContent("");
+    setBacklinks([]);
+    setSaveStatus("saved");
+    isDirtyRef.current = false;
+  }, []);
 
   // ── Discard conflict and reload from disk ─────────────────────────────────
 
@@ -313,6 +323,7 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
     status,
     setStatus,
     loadNote,
+    closeNote,
     handleChange,
     performSave,
     discardAndReload,

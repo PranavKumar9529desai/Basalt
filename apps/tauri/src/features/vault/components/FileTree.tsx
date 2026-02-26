@@ -10,6 +10,12 @@ export interface FileTreeProps {
   selectedPath: string | null;
   onFileClick: (node: FlatTreeNode) => void;
   onFolderToggle: (relPath: string) => void;
+  /** Ghost node for inline creation (rendered at top of tree). */
+  ghostNode?: FileNode | null;
+  /** Called when the user commits an inline edit (Enter/blur). */
+  onCommitEdit?: (node: FileNode, newName: string) => void;
+  /** Called when the user cancels an inline edit (Escape). */
+  onCancelEdit?: (node: FileNode) => void;
 }
 
 /**
@@ -25,9 +31,12 @@ export function FileTree({
   selectedPath,
   onFileClick,
   onFolderToggle,
+  ghostNode,
+  onCommitEdit,
+  onCancelEdit,
 }: FileTreeProps) {
   // Map Tauri-specific nodes to the dumb UI primitives
-  const mappedNodes = visibleNodes.map(
+  const mappedNodes: FileNode[] = visibleNodes.map(
     (node) =>
       ({
         id: node.path,
@@ -38,6 +47,11 @@ export function FileTree({
         childCount: node.childCount,
       }) satisfies FileNode,
   );
+
+  // Prepend the ghost node if present (appears at top of tree)
+  if (ghostNode) {
+    mappedNodes.unshift(ghostNode);
+  }
 
   const handleSelect = (fileNode: FileNode) => {
     // Re-lookup the original `FlatTreeNode` from `visibleNodes` by path
@@ -58,6 +72,8 @@ export function FileTree({
       expandedIds={new Set()} // Unused, we provide isOpen natively above
       onSelect={handleSelect}
       onToggleExpand={handleToggle}
+      onCommitEdit={onCommitEdit}
+      onCancelEdit={onCancelEdit}
     />
   );
 }

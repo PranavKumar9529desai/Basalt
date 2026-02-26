@@ -7,6 +7,8 @@
     "./components/sidebar": "./src/components/sidebar/index.ts",
     "./components/file-tree": "./src/components/file-tree/index.ts",
     "./components/activity-bar": "./src/components/activity-bar/index.ts",
+    "./components/input-dialog": "./src/components/input-dialog/index.ts",
+    "./components/confirm-dialog": "./src/components/confirm-dialog/index.ts",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
     "./hooks/*": "./src/hooks/*.ts"

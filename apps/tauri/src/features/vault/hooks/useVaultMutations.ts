@@ -1,17 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
 import type { CreateNoteResult } from "../types";
+import type { FileNode } from "@workspace/ui/components/file-tree";
+
+// Ghost node IDs — used to identify the ephemeral inline-edit node
+const GHOST_ID = "__ghost__";
 
 export interface UseVaultMutationsReturn {
-    // ── Dialog state ──────────────────────────────────────────────────
-    isCreateNoteOpen: boolean;
-    setCreateNoteOpen: (open: boolean) => void;
-    isCreateFolderOpen: boolean;
-    setCreateFolderOpen: (open: boolean) => void;
+    // ── Ghost node (inline create) ────────────────────────────────────
+    /** The ghost node to inject into the tree, or null. */
+    ghostNode: FileNode | null;
+    /** Start inline creation of a note (shows ghost input in the tree). */
+    createNoteInline: () => void;
+    /** Start inline creation of a folder. */
+    createFolderInline: () => void;
+    /** Remove the ghost node (cancel). */
+    clearGhost: () => void;
+
+    // ── Delete dialog state ───────────────────────────────────────────
     isDeleteConfirmOpen: boolean;
     setDeleteConfirmOpen: (open: boolean) => void;
-
-    /** The path of the file pending deletion (set before confirm dialog opens). */
     pendingDeletePath: string | null;
     pendingDeleteName: string | null;
 
@@ -20,37 +28,17 @@ export interface UseVaultMutationsReturn {
     isLoading: boolean;
 
     // ── Actions ───────────────────────────────────────────────────────
-    /**
-     * Create a new note. Returns the result on success so the caller
-     * can immediately open it in the editor.
-     * @param name — note title (without .md)
-     * @param parent — optional relative folder path
-     */
     createNote: (name: string, parent?: string) => Promise<CreateNoteResult | null>;
-
-    /**
-     * Create a new folder.
-     * @param name — folder name
-     * @param parent — optional relative parent folder path
-     */
     createFolder: (name: string, parent?: string) => Promise<string | null>;
-
-    /**
-     * Request deletion of a file. Opens the confirm dialog.
-     * Call `confirmDelete()` after user confirms.
-     */
     requestDelete: (path: string, name: string) => void;
-
-    /**
-     * Execute the pending deletion after user confirms.
-     */
     confirmDelete: () => Promise<boolean>;
 }
 
 export function useVaultMutations(): UseVaultMutationsReturn {
-    // ── Dialog state ────────────────────────────────────────────────────
-    const [isCreateNoteOpen, setCreateNoteOpen] = useState(false);
-    const [isCreateFolderOpen, setCreateFolderOpen] = useState(false);
+    // ── Ghost node state ────────────────────────────────────────────────
+    const [ghostNode, setGhostNode] = useState<FileNode | null>(null);
+
+    // ── Delete dialog state ─────────────────────────────────────────────
     const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(null);
     const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
@@ -59,7 +47,34 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    // ── Create note ─────────────────────────────────────────────────────
+    // ── Ghost node actions ──────────────────────────────────────────────
+    const createNoteInline = useCallback(() => {
+        setGhostNode({
+            id: GHOST_ID,
+            name: "",
+            isFolder: false,
+            depth: 0,
+            isEditing: true,
+        });
+        setError(null);
+    }, []);
+
+    const createFolderInline = useCallback(() => {
+        setGhostNode({
+            id: GHOST_ID,
+            name: "",
+            isFolder: true,
+            depth: 0,
+            isEditing: true,
+        });
+        setError(null);
+    }, []);
+
+    const clearGhost = useCallback(() => {
+        setGhostNode(null);
+    }, []);
+
+    // ── Create note (Rust invoke) ───────────────────────────────────────
     const createNote = useCallback(
         async (name: string, parent?: string): Promise<CreateNoteResult | null> => {
             setError(null);
@@ -69,7 +84,6 @@ export function useVaultMutations(): UseVaultMutationsReturn {
                     name,
                     parent: parent ?? null,
                 });
-                setCreateNoteOpen(false);
                 return result;
             } catch (err) {
                 setError(String(err));
@@ -81,7 +95,7 @@ export function useVaultMutations(): UseVaultMutationsReturn {
         [],
     );
 
-    // ── Create folder ───────────────────────────────────────────────────
+    // ── Create folder (Rust invoke) ─────────────────────────────────────
     const createFolder = useCallback(
         async (name: string, parent?: string): Promise<string | null> => {
             setError(null);
@@ -91,7 +105,6 @@ export function useVaultMutations(): UseVaultMutationsReturn {
                     name,
                     parent: parent ?? null,
                 });
-                setCreateFolderOpen(false);
                 return result;
             } catch (err) {
                 setError(String(err));
@@ -130,10 +143,10 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     }, [pendingDeletePath]);
 
     return {
-        isCreateNoteOpen,
-        setCreateNoteOpen,
-        isCreateFolderOpen,
-        setCreateFolderOpen,
+        ghostNode,
+        createNoteInline,
+        createFolderInline,
+        clearGhost,
         isDeleteConfirmOpen,
         setDeleteConfirmOpen,
         pendingDeletePath,

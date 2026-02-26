@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { type FC, useRef, useEffect, useCallback } from "react";
 import type { FileNode } from "./types";
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -85,6 +85,74 @@ function FileIcon() {
   );
 }
 
+
+interface InlineEditInputProps {
+  node: FileNode;
+  onCommitEdit?: (node: FileNode, newName: string) => void;
+  onCancelEdit?: (node: FileNode) => void;
+}
+
+function InlineEditInput({ node, onCommitEdit, onCancelEdit }: InlineEditInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef(false);
+
+  useEffect(() => {
+    // Auto-focus and select all text when the input mounts
+    const el = inputRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, []);
+
+  const commit = useCallback(
+    (value: string) => {
+      if (committedRef.current) return; // prevent double-fire
+      committedRef.current = true;
+      const trimmed = value.trim();
+      if (trimmed && onCommitEdit) {
+        onCommitEdit(node, trimmed);
+      } else if (onCancelEdit) {
+        onCancelEdit(node);
+      }
+    },
+    [node, onCommitEdit, onCancelEdit],
+  );
+
+  const cancel = useCallback(() => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    if (onCancelEdit) onCancelEdit(node);
+  }, [node, onCancelEdit]);
+
+  return (
+    <input
+      ref={inputRef}
+      className="flex-1 min-w-0 h-[18px] px-1 text-[13px] leading-none bg-transparent border border-[var(--sat-accent-primary)] rounded-sm text-[var(--sat-text-primary)] outline-none placeholder:text-[var(--sat-text-muted)]"
+      defaultValue={node.name}
+      placeholder={node.isFolder ? "Folder name" : "Note title"}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit(e.currentTarget.value);
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cancel();
+        }
+        // Stop propagation so tree keyboard nav doesn't interfere
+        e.stopPropagation();
+      }}
+      onBlur={(e) => {
+        commit(e.currentTarget.value);
+      }}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+
+
 interface FileTreeNodeProps {
   node: FileNode;
   isOpen: boolean;
@@ -92,6 +160,8 @@ interface FileTreeNodeProps {
   onFileClick: (node: FileNode, e: React.UIEvent) => void;
   onFolderToggle: (node: FileNode, e: React.UIEvent) => void;
   onContextMenu?: (node: FileNode, e: React.MouseEvent) => void;
+  onCommitEdit?: (node: FileNode, newName: string) => void;
+  onCancelEdit?: (node: FileNode) => void;
   /** Passed from the virtualizer so the row sits at the correct scroll offset. */
   style: React.CSSProperties;
 }
@@ -103,12 +173,16 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   onFileClick,
   onFolderToggle,
   onContextMenu,
+  onCommitEdit,
+  onCancelEdit,
   style,
 }) => {
   const isFolder = node.isFolder;
+  const isEditing = node.isEditing ?? false;
   const paddingLeft = node.depth * INDENT_PX + 6;
 
   const handleClick = (e: React.UIEvent) => {
+    if (isEditing) return; // Don't navigate while editing
     e.stopPropagation();
     if (isFolder) {
       onFolderToggle(node, e);
@@ -118,6 +192,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
+    if (isEditing) return;
     if (onContextMenu) {
       onContextMenu(node, e);
     }
@@ -130,9 +205,11 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         "group flex items-center w-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
         // Avoid transform transitions causing subpixel antialiasing weirdness on Webkit:
         "transform-gpu transition-colors duration-75",
-        isSelected
-          ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_15%,transparent)] text-[var(--sat-text-primary)]"
-          : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
+        isEditing
+          ? "bg-[var(--sat-surface-2)]"
+          : isSelected
+            ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_15%,transparent)] text-[var(--sat-text-primary)]"
+            : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
       )}
       role="treeitem"
       aria-selected={isSelected}
@@ -140,12 +217,13 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       onKeyDown={(e) => {
+        if (isEditing) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleClick(e);
         }
       }}
-      tabIndex={0}
+      tabIndex={isEditing ? -1 : 0}
     >
       {/* Indentation guide lines */}
       <div
@@ -178,15 +256,23 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         {isFolder ? <FolderIcon isOpen={isOpen} /> : <FileIcon />}
       </span>
 
-      {/* Label */}
-      <span
-        className={cn(
-          "truncate leading-none antialiased",
-          isSelected ? "font-medium" : "font-normal",
-        )}
-      >
-        {node.name}
-      </span>
+      {/* Label or inline edit input */}
+      {isEditing ? (
+        <InlineEditInput
+          node={node}
+          onCommitEdit={onCommitEdit}
+          onCancelEdit={onCancelEdit}
+        />
+      ) : (
+        <span
+          className={cn(
+            "truncate leading-none antialiased",
+            isSelected ? "font-medium" : "font-normal",
+          )}
+        >
+          {node.name}
+        </span>
+      )}
     </div>
   );
 };

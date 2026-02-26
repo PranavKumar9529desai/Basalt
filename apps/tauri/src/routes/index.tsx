@@ -9,12 +9,12 @@ import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
+import { useVaultMutations } from "../features/vault/hooks/useVaultMutations";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
-
-// ---------------------------------------------------------------------------
-// Route — loader fetches boot (includes pre-built tree) in one round-trip
-// ---------------------------------------------------------------------------
+import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
+import { AppCommands } from "../commands/app-commands";
+import type { FileNode } from "@workspace/ui/components/file-tree";
 
 interface LoaderData {
   boot: BootResult;
@@ -38,16 +38,10 @@ export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
-// ---------------------------------------------------------------------------
-// Route component — thin composition layer only, no business logic here
-// ---------------------------------------------------------------------------
-
 function RouteComponent() {
   const { boot } = Route.useLoaderData();
 
   const vaultPath = boot.vault_path;
-
-  // ── Feature hooks ─────────────────────────────────────────────────────────
 
   const { treeNodes, visibleNodes, openFolders, toggleFolder, setTreeNodes } =
     useVaultTree(boot.tree);
@@ -70,6 +64,38 @@ function RouteComponent() {
 
   const editor = useEditor({ findNote });
 
+  const mutations = useVaultMutations();
+
+
+
+  const handleCommitEdit = useCallback(
+    async (node: FileNode, newName: string) => {
+      mutations.clearGhost();
+      if (node.isFolder) {
+        await mutations.createFolder(newName);
+        // Folder appears via watcher — no editor action needed
+      } else {
+        const result = await mutations.createNote(newName);
+        if (result) {
+          editor.loadNote({ name: result.name, path: result.path });
+        }
+      }
+    },
+    [mutations, editor],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    mutations.clearGhost();
+  }, [mutations]);
+
+  // After deleting the current note, clear the editor
+  const handleConfirmDelete = useCallback(async () => {
+    const deleted = await mutations.confirmDelete();
+    if (deleted && mutations.pendingDeletePath === editor.selected?.path) {
+      editor.closeNote();
+    }
+  }, [mutations, editor]);
+
   // ── No-vault splash ───────────────────────────────────────────────────────
 
   if (!vaultPath) {
@@ -86,12 +112,22 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-1 min-h-0">
+      <AppCommands
+        onCreateNote={() => mutations.createNoteInline()}
+        onDeleteNote={() => {
+          if (editor.selected) {
+            mutations.requestDelete(editor.selected.path, editor.selected.name);
+          }
+        }}
+      />
       {/* Activity Bar */}
       <AppActivityBar />
 
       {/* ── Left sidebar: file tree ── */}
       <AppSidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
+        onCreateNote={() => mutations.createNoteInline()}
+        onCreateFolder={() => mutations.createFolderInline()}
       >
         <FileTree
           visibleNodes={visibleNodes}
@@ -101,6 +137,9 @@ function RouteComponent() {
             editor.loadNote({ name: node.name, path: node.path })
           }
           onFolderToggle={toggleFolder}
+          ghostNode={mutations.ghostNode}
+          onCommitEdit={handleCommitEdit}
+          onCancelEdit={handleCancelEdit}
         />
       </AppSidebar>
 
@@ -134,18 +173,26 @@ function RouteComponent() {
             onOpenLink={editor.handleOpenLink}
             onSearch={(query) => {
               console.log("Searching for:", query);
-              // Future integration: trigger global search modal
             }}
           />
         </div>
       </div>
+
+      {/* ── Delete confirmation dialog ── */}
+      <ConfirmDialog
+        open={mutations.isDeleteConfirmOpen}
+        onOpenChange={mutations.setDeleteConfirmOpen}
+        title="Delete note"
+        description={`Permanently delete "${mutations.pendingDeleteName}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Conflict banner — extracted to keep RouteComponent readable
-// ---------------------------------------------------------------------------
+
 
 interface ConflictBannerProps {
   onKeepMine: () => void;

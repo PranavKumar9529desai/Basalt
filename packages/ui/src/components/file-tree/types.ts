@@ -5,6 +5,7 @@ export interface FileNode {
   isOpen?: boolean; // Whether the node is currently open/expanded
   depth: number; // The indentation depth level (0 is root level)
   childCount?: number; // How many children this folder has, to show the child count badge
+  isEditing?: boolean; // When true, render an inline input instead of the label
 }
 
 export interface FileTreeProps {
@@ -14,5 +15,9 @@ export interface FileTreeProps {
   onSelect: (node: FileNode, e: React.UIEvent) => void;
   onToggleExpand: (node: FileNode, e: React.UIEvent) => void;
   onContextMenu?: (node: FileNode, e: React.MouseEvent) => void;
+  /** Called when the user confirms an inline edit (Enter or blur with text). */
+  onCommitEdit?: (node: FileNode, newName: string) => void;
+  /** Called when the user cancels an inline edit (Escape or blur with empty). */
+  onCancelEdit?: (node: FileNode) => void;
   className?: string;
 }

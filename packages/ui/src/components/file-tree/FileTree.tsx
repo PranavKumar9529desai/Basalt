@@ -44,6 +44,8 @@ export function FileTree({
   onSelect,
   onToggleExpand,
   onContextMenu,
+  onCommitEdit,
+  onCancelEdit,
   className,
 }: FileTreeProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,6 +81,8 @@ export function FileTree({
                 onFileClick={onSelect}
                 onFolderToggle={onToggleExpand}
                 onContextMenu={onContextMenu}
+                onCommitEdit={onCommitEdit}
+                onCancelEdit={onCancelEdit}
                 style={{
                   position: "absolute",
                   top: 0,
