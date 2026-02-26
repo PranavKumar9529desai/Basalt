@@ -19,6 +19,7 @@ export interface UseVaultFileTreeControllerOptions {
   openFolder: (relPath: string) => void;
   toggleFolder: (relPath: string) => void;
   refreshTree: () => Promise<void>;
+  onFileOpen?: (node: FlatTreeNode) => void;
 }
 
 export interface UseVaultFileTreeControllerReturn {
@@ -57,6 +58,7 @@ export function useVaultFileTreeController({
   openFolder,
   toggleFolder,
   refreshTree,
+  onFileOpen,
 }: UseVaultFileTreeControllerOptions): UseVaultFileTreeControllerReturn {
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
 
@@ -314,9 +316,13 @@ export function useVaultFileTreeController({
         },
         visibleNodes,
       );
-      editor.loadNote({ name: node.name, path: node.path });
+      if (onFileOpen) {
+        onFileOpen(node);
+      } else {
+        editor.loadNote({ name: node.name, path: node.path });
+      }
     },
-    [editor, selection, visibleNodes],
+    [editor, onFileOpen, selection, visibleNodes],
   );
 
   const onTreeFolderToggle = useCallback(

@@ -4,7 +4,7 @@ import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
 import { Button } from "@workspace/ui/components/ui/button";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
@@ -91,13 +91,28 @@ function RouteComponent() {
 
   const editor = useEditor({ findNote });
   const tabs = useTabs();
+  const syncSeqRef = useRef(0);
+  const pendingLoadPathRef = useRef<string | null>(null);
+  const tabDrivenSelectionRef = useRef<string | null>(null);
+  const {
+    openInPreview,
+    setTabTitle,
+    markTabDirty,
+    setFocusedGroup,
+    activateTab,
+    closeTab,
+    closeOtherTabs,
+    closeTabsToRight,
+    togglePinTab,
+    splitGroupWithTab,
+  } = tabs;
 
   useTabPersistence({ workspace: boot.workspace });
 
   const focusedGroup = tabs.groups[tabs.focusedGroupId];
   const activeTab =
     focusedGroup?.activeTabId != null
-      ? tabs.tabs[focusedGroup.activeTabId] ?? null
+      ? (tabs.tabs[focusedGroup.activeTabId] ?? null)
       : null;
 
   const syncActiveTabToEditor = useCallback(() => {
@@ -129,57 +144,156 @@ function RouteComponent() {
     openFolder,
     toggleFolder,
     refreshTree,
+    onFileOpen: (node) => {
+      const tabId = openInPreview({ path: node.path, title: node.name });
+      setTabTitle(tabId, node.name);
+    },
   });
 
   useEffect(() => {
     if (!editor.selected) return;
-    const tabId = tabs.openInPreview({
+    if (activeTab && editor.selected.path !== activeTab.path) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip editor->tabs (stale selectedPath)", {
+          seq: ++syncSeqRef.current,
+          selectedPath: editor.selected.path,
+          activePath: activeTab.path,
+        });
+      }
+      return;
+    }
+    if (pendingLoadPathRef.current) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip editor->tabs (tabs->editor in-flight)", {
+          seq: ++syncSeqRef.current,
+          selectedPath: editor.selected.path,
+          pendingPath: pendingLoadPathRef.current,
+        });
+      }
+      return;
+    }
+    if (tabDrivenSelectionRef.current === editor.selected.path) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip editor->tabs (tab-driven selection)", {
+          seq: ++syncSeqRef.current,
+          path: editor.selected.path,
+        });
+      }
+      tabDrivenSelectionRef.current = null;
+      return;
+    }
+    if (activeTab?.path === editor.selected.path) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip editor->tabs (already active)", {
+          seq: ++syncSeqRef.current,
+          path: editor.selected.path,
+        });
+      }
+      return;
+    }
+    if (import.meta.env.DEV) {
+      console.debug("[tabs-sync] editor->tabs openInPreview", {
+        seq: ++syncSeqRef.current,
+        selectedPath: editor.selected.path,
+        selectedName: editor.selected.name,
+        activePath: activeTab?.path ?? null,
+      });
+    }
+    const tabId = openInPreview({
       path: editor.selected.path,
       title: editor.selected.name,
     });
-    tabs.setTabTitle(tabId, editor.selected.name);
-  }, [editor.selected, tabs]);
+    setTabTitle(tabId, editor.selected.name);
+  }, [activeTab?.path, editor.selected, openInPreview, setTabTitle]);
 
   useEffect(() => {
     if (!activeTab) return;
     if (editor.saveStatus === "saved") {
-      tabs.markTabDirty(activeTab.id, false);
+      markTabDirty(activeTab.id, false);
     }
-  }, [activeTab, editor.saveStatus, tabs]);
+  }, [activeTab, editor.saveStatus, markTabDirty]);
+
+  const selectedPath = editor.selected?.path ?? null;
 
   useEffect(() => {
-    if (!activeTab) {
-      if (editor.selected) {
-        editor.closeNote();
+    if (!activeTab) return;
+
+    if (selectedPath === activeTab.path) {
+      pendingLoadPathRef.current = null;
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip tabs->editor (already selected)", {
+          seq: ++syncSeqRef.current,
+          path: activeTab.path,
+        });
       }
       return;
     }
-    if (editor.selected?.path !== activeTab.path) {
-      void editor.loadNote({ name: activeTab.title, path: activeTab.path });
+
+    if (pendingLoadPathRef.current === activeTab.path) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] skip tabs->editor (load in-flight)", {
+          seq: ++syncSeqRef.current,
+          pendingPath: pendingLoadPathRef.current,
+        });
+      }
+      return;
     }
-  }, [activeTab, editor]);
+
+    pendingLoadPathRef.current = activeTab.path;
+    tabDrivenSelectionRef.current = activeTab.path;
+    if (selectedPath !== activeTab.path) {
+      if (import.meta.env.DEV) {
+        console.debug("[tabs-sync] tabs->editor loadNote", {
+          seq: ++syncSeqRef.current,
+          selectedPath,
+          activePath: activeTab.path,
+        });
+      }
+      void editor
+        .loadNote({ name: activeTab.title, path: activeTab.path })
+        .finally(() => {
+          if (pendingLoadPathRef.current === activeTab.path) {
+            pendingLoadPathRef.current = null;
+          }
+        });
+    }
+  }, [activeTab, selectedPath, editor.loadNote]);
+
+  useEffect(() => {
+    if (activeTab) return;
+    pendingLoadPathRef.current = null;
+    tabDrivenSelectionRef.current = null;
+    if (!selectedPath) return;
+    if (import.meta.env.DEV) {
+      console.debug("[tabs-sync] tabs->editor closeNote (no active tab)", {
+        seq: ++syncSeqRef.current,
+        selectedPath,
+      });
+    }
+    editor.closeNote();
+  }, [activeTab, selectedPath, editor.closeNote]);
 
   const handleTabSelect = useCallback(
     (groupId: TabGroupId, tabId: string) => {
-      tabs.setFocusedGroup(groupId);
-      tabs.activateTab(groupId, tabId);
+      setFocusedGroup(groupId);
+      activateTab(groupId, tabId);
     },
-    [tabs],
+    [activateTab, setFocusedGroup],
   );
 
   const handleTabClose = useCallback(
     (groupId: TabGroupId, tabId: string) => {
-      tabs.closeTab(groupId, tabId, { force: true });
+      closeTab(groupId, tabId, { force: true });
       syncActiveTabToEditor();
     },
-    [syncActiveTabToEditor, tabs],
+    [closeTab, syncActiveTabToEditor],
   );
 
   const handleTabPinToggle = useCallback(
     (tabId: string) => {
-      tabs.togglePinTab(tabId);
+      togglePinTab(tabId);
     },
-    [tabs],
+    [togglePinTab],
   );
 
   const handleConfirmDeleteWithTabs = useCallback(async () => {
@@ -199,6 +313,35 @@ function RouteComponent() {
     syncActiveTabToEditor();
   }, [controller, mutations.pendingDeletePaths, syncActiveTabToEditor]);
 
+  const handleCloseActiveTab = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    closeTab(focusedGroup.id, activeTab.id, { force: true });
+    syncActiveTabToEditor();
+  }, [activeTab, closeTab, focusedGroup, syncActiveTabToEditor]);
+
+  const handleCloseOtherTabs = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    closeOtherTabs(focusedGroup.id, activeTab.id);
+    syncActiveTabToEditor();
+  }, [activeTab, closeOtherTabs, focusedGroup, syncActiveTabToEditor]);
+
+  const handleCloseTabsToRight = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    closeTabsToRight(focusedGroup.id, activeTab.id);
+    syncActiveTabToEditor();
+  }, [activeTab, closeTabsToRight, focusedGroup, syncActiveTabToEditor]);
+
+  const handleTogglePinActiveTab = useCallback(() => {
+    if (!activeTab) return;
+    togglePinTab(activeTab.id);
+  }, [activeTab, togglePinTab]);
+
+  const handleSplitRight = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    splitGroupWithTab(focusedGroup.id, "right", activeTab.id);
+    syncActiveTabToEditor();
+  }, [activeTab, focusedGroup, splitGroupWithTab, syncActiveTabToEditor]);
+
   if (!vaultPath) {
     return (
       <VaultSplash
@@ -217,6 +360,12 @@ function RouteComponent() {
       <AppCommands
         onCreateNote={controller.startNoteInline}
         onDeleteNote={controller.handleDeleteFromCommands}
+        onCloseActiveTab={handleCloseActiveTab}
+        onCloseOtherTabs={handleCloseOtherTabs}
+        onCloseTabsToRight={handleCloseTabsToRight}
+        onTogglePinActiveTab={handleTogglePinActiveTab}
+        onSplitRight={handleSplitRight}
+        hasActiveTab={Boolean(activeTab)}
       />
       <AppActivityBar />
 
@@ -245,7 +394,9 @@ function RouteComponent() {
           {tabs.orderedGroups.map((group, index) => {
             const isFocused = group.id === tabs.focusedGroupId;
             const groupActiveTab =
-              group.activeTabId != null ? tabs.tabs[group.activeTabId] ?? null : null;
+              group.activeTabId != null
+                ? (tabs.tabs[group.activeTabId] ?? null)
+                : null;
             const groupTabs = group.tabIds
               .map((tabId) => tabs.tabs[tabId])
               .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
@@ -263,7 +414,6 @@ function RouteComponent() {
               <div
                 key={group.id}
                 className={`flex-1 min-w-0 ${index > 0 ? "border-l border-[var(--sat-layout-border)]" : ""}`}
-                onMouseDown={() => tabs.setFocusedGroup(group.id)}
               >
                 <TabGroupFrame
                   tabsBar={
@@ -295,7 +445,7 @@ function RouteComponent() {
                           value={editor.content}
                           onChange={(value) => {
                             if (activeTab) {
-                              tabs.markTabDirty(activeTab.id, true);
+                              markTabDirty(activeTab.id, true);
                             }
                             editor.handleChange(value);
                           }}
@@ -312,7 +462,7 @@ function RouteComponent() {
                   ) : (
                     <InactiveGroupPane
                       activeTitle={groupActiveTab?.title ?? null}
-                      onActivate={() => tabs.setFocusedGroup(group.id)}
+                      onActivate={() => setFocusedGroup(group.id)}
                     />
                   )}
                 </TabGroupFrame>
@@ -360,7 +510,10 @@ function RouteComponent() {
   );
 }
 
-function InactiveGroupPane({ activeTitle, onActivate }: InactiveGroupPaneProps) {
+function InactiveGroupPane({
+  activeTitle,
+  onActivate,
+}: InactiveGroupPaneProps) {
   return (
     <div className="flex h-full items-center justify-center bg-[var(--sat-surface-2)] px-6 text-center">
       <Button

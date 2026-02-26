@@ -278,6 +278,9 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       const group = state.groups[groupId];
       const tab = state.tabs[tabId];
       if (!group || !tab || !group.tabIds.includes(tabId)) return state;
+      if (group.activeTabId === tabId && state.focusedGroupId === groupId) {
+        return state;
+      }
 
       return {
         focusedGroupId: groupId,
@@ -310,6 +313,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     set((state) => {
       const tab = state.tabs[tabId];
       if (!tab) return state;
+      if (tab.isDirty === isDirty) return state;
       return {
         tabs: {
           ...state.tabs,
@@ -563,7 +567,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
         [toGroupId]: nextTo,
       };
       let nextGroupOrder = [...state.groupOrder];
-      let nextFocusedGroupId = toGroupId;
+      const nextFocusedGroupId = toGroupId;
 
       if (nextFrom.tabIds.length === 0 && nextGroupOrder.length > 1) {
         const { [fromGroupId]: _, ...rest } = nextGroups;
@@ -611,7 +615,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
         },
       };
 
-      let nextOrder = [...state.groupOrder];
+      const nextOrder = [...state.groupOrder];
       const sourceIndex = nextOrder.indexOf(groupId);
       const insertIndex =
         direction === "left" || direction === "top"

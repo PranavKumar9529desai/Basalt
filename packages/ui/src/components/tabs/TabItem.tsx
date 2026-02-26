@@ -26,6 +26,7 @@ export function TabItem({
   return (
     <div
       role="tab"
+      tabIndex={tab.disabled ? -1 : 0}
       aria-selected={tab.isActive}
       data-active={tab.isActive ? "true" : "false"}
       data-preview={tab.isPreview ? "true" : "false"}
@@ -93,4 +94,3 @@ export function TabItem({
     </div>
   );
 }
-

@@ -26,12 +26,10 @@ export function useTabPersistence({
     (state) => state.hydrateFromWorkspaceSnapshot,
   );
   const toWorkspaceSnapshot = useTabsStore((state) => state.toWorkspaceSnapshot);
-  const persistTrigger = useTabsStore((state) => ({
-    tabs: state.tabs,
-    groups: state.groups,
-    groupOrder: state.groupOrder,
-    focusedGroupId: state.focusedGroupId,
-  }));
+  const tabs = useTabsStore((state) => state.tabs);
+  const groups = useTabsStore((state) => state.groups);
+  const groupOrder = useTabsStore((state) => state.groupOrder);
+  const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
 
   const restoredRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,6 +61,14 @@ export function useTabPersistence({
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [debounceMs, enabled, persistTrigger, toWorkspaceSnapshot, workspaceKey]);
+  }, [
+    debounceMs,
+    enabled,
+    focusedGroupId,
+    groupOrder,
+    groups,
+    tabs,
+    toWorkspaceSnapshot,
+    workspaceKey,
+  ]);
 }
-

@@ -146,9 +146,10 @@ Status update (2026-02-26):
   - Tab close and delete-confirm flows now close corresponding tabs
   - Dirty indicator is synced from editor change/save status
   - Multi-group panes are rendered side-by-side with per-group tab bars and focus switching
+  - Command palette actions wired for active tab operations (`close`, `close others`, `close right`, `pin/unpin`, `split right`)
 - Pending:
   - per-visible-pane editor instances (current implementation keeps one focused editor instance)
-  - command palette tab actions
+  - command palette tab actions for move/reorder between groups and split directions beyond right
   - extraction of route glue into `app-shell` once the feature API stabilizes
 
 Exit criteria:
