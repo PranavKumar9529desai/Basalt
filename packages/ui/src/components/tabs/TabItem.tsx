@@ -1,7 +1,7 @@
 import { IconPinned, IconX } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
 import { cn } from "@workspace/ui/lib/utils";
-import type { MouseEvent } from "react";
+import type { DragEvent, MouseEvent } from "react";
 import type { TabItemData } from "./types";
 
 export interface TabItemProps {
@@ -10,6 +10,10 @@ export interface TabItemProps {
   onClose?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
+  onDragStart?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onDrop?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
   className?: string;
 }
 
@@ -19,6 +23,10 @@ export function TabItem({
   onClose,
   onPinToggle,
   onContextMenu,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
   className,
 }: TabItemProps) {
   const canClose = tab.canClose ?? true;
@@ -38,6 +46,11 @@ export function TabItem({
         className,
       )}
       onContextMenu={(event) => onContextMenu?.(tab.id, event)}
+      draggable={!tab.disabled}
+      onDragStart={(event) => onDragStart?.(tab.id, event)}
+      onDragOver={(event) => onDragOver?.(tab.id, event)}
+      onDrop={(event) => onDrop?.(tab.id, event)}
+      onDragEnd={(event) => onDragEnd?.(tab.id, event)}
     >
       <Button
         type="button"

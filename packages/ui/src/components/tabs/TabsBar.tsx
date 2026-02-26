@@ -1,7 +1,7 @@
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 import { Separator } from "@workspace/ui/components/ui/separator";
 import { cn } from "@workspace/ui/lib/utils";
-import type { MouseEvent, ReactNode } from "react";
+import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
 
@@ -11,6 +11,10 @@ export interface TabsBarProps {
   onCloseTab?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onTabContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
+  onTabDragStart?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onTabDragOver?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onTabDrop?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onTabDragEnd?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
   className?: string;
@@ -22,6 +26,10 @@ export function TabsBar({
   onCloseTab,
   onPinToggle,
   onTabContextMenu,
+  onTabDragStart,
+  onTabDragOver,
+  onTabDrop,
+  onTabDragEnd,
   leftSlot,
   rightSlot,
   className,
@@ -46,6 +54,10 @@ export function TabsBar({
               onClose={onCloseTab}
               onPinToggle={onPinToggle}
               onContextMenu={onTabContextMenu}
+              onDragStart={onTabDragStart}
+              onDragOver={onTabDragOver}
+              onDrop={onTabDrop}
+              onDragEnd={onTabDragEnd}
             />
           ))}
         </div>

@@ -4,7 +4,7 @@ import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
 import { Button } from "@workspace/ui/components/ui/button";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type DragEvent } from "react";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
@@ -39,6 +39,11 @@ interface ConflictBannerProps {
 interface InactiveGroupPaneProps {
   activeTitle: string | null;
   onActivate: () => void;
+}
+
+interface DraggedTabState {
+  tabId: string;
+  fromGroupId: TabGroupId;
 }
 
 type TabClickOpenBehavior = "preview" | "pinned" | "vscode";
@@ -103,6 +108,7 @@ function RouteComponent() {
   const syncSeqRef = useRef(0);
   const pendingLoadPathRef = useRef<string | null>(null);
   const tabDrivenSelectionRef = useRef<string | null>(null);
+  const draggedTabRef = useRef<DraggedTabState | null>(null);
   const tabClickOpenBehavior = parseTabClickOpenBehavior(
     boot.settings?.tabClickOpenBehavior,
   );
@@ -360,6 +366,59 @@ function RouteComponent() {
     syncActiveTabToEditor();
   }, [activeTab, focusedGroup, splitGroupWithTab, syncActiveTabToEditor]);
 
+  const handleTabDragStart = useCallback(
+    (groupId: TabGroupId, tabId: string, event: DragEvent<HTMLDivElement>) => {
+      draggedTabRef.current = { tabId, fromGroupId: groupId };
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", tabId);
+    },
+    [],
+  );
+
+  const handleTabDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleTabDropOnTab = useCallback(
+    (groupId: TabGroupId, targetTabId: string, event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const dragged = draggedTabRef.current;
+      if (!dragged || dragged.tabId === targetTabId) return;
+
+      const state = useTabsStore.getState();
+      const sourceGroup = state.groups[dragged.fromGroupId];
+      const targetGroup = state.groups[groupId];
+      if (!sourceGroup || !targetGroup) return;
+
+      if (dragged.fromGroupId === groupId) {
+        const fromIndex = sourceGroup.tabIds.indexOf(dragged.tabId);
+        const toIndex = targetGroup.tabIds.indexOf(targetTabId);
+        if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+          state.moveTabWithinGroup(groupId, fromIndex, toIndex);
+          state.activateTab(groupId, dragged.tabId);
+        }
+      } else {
+        const toIndex = targetGroup.tabIds.indexOf(targetTabId);
+        state.moveTabBetweenGroups({
+          fromGroupId: dragged.fromGroupId,
+          toGroupId: groupId,
+          tabId: dragged.tabId,
+          toIndex: toIndex === -1 ? undefined : toIndex,
+        });
+        state.setFocusedGroup(groupId);
+        state.activateTab(groupId, dragged.tabId);
+      }
+
+      draggedTabRef.current = null;
+    },
+    [],
+  );
+
+  const handleTabDragEnd = useCallback(() => {
+    draggedTabRef.current = null;
+  }, []);
+
   if (!vaultPath) {
     return (
       <VaultSplash
@@ -440,6 +499,14 @@ function RouteComponent() {
                       onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
                       onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
                       onPinToggle={handleTabPinToggle}
+                      onTabDragStart={(tabId, event) =>
+                        handleTabDragStart(group.id, tabId, event)
+                      }
+                      onTabDragOver={(_, event) => handleTabDragOver(event)}
+                      onTabDrop={(tabId, event) =>
+                        handleTabDropOnTab(group.id, tabId, event)
+                      }
+                      onTabDragEnd={handleTabDragEnd}
                       rightSlot={
                         isFocused ? (
                           <SaveIndicator status={editor.saveStatus} />
