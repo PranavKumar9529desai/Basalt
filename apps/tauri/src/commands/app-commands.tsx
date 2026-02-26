@@ -13,7 +13,7 @@ export interface AppCommandsProps {
  */
 export const AppCommands: React.FC<AppCommandsProps> = ({
   onCreateNote,
-  onDeleteNote
+  onDeleteNote,
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);

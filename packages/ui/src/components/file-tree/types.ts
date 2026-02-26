@@ -10,8 +10,7 @@ export interface FileNode {
 
 export interface FileTreeProps {
   nodes: FileNode[]; // Flat array of VISIBLE nodes
-  selectedId?: string | null;
-  expandedIds: Set<string>;
+  selectedIds?: Set<string>;
   onSelect: (node: FileNode, e: React.UIEvent) => void;
   onToggleExpand: (node: FileNode, e: React.UIEvent) => void;
   onContextMenu?: (node: FileNode, e: React.MouseEvent) => void;

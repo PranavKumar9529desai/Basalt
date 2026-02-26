@@ -56,7 +56,8 @@
         "target/**",
         "**/dist/**",
         "**/.tauri/**",
-        "apps/tauri/src/routeTree.gen.ts"
+        "apps/tauri/src/routeTree.gen.ts",
+        "packages/theme/src/generated/**"
       ],
       "linter": {
         "enabled": false

@@ -20,7 +20,12 @@ interface AppSidebarProps {
   onCreateFolder: () => void;
 }
 
-export function AppSidebar({ children, defaultWidth, onCreateNote, onCreateFolder }: AppSidebarProps) {
+export function AppSidebar({
+  children,
+  defaultWidth,
+  onCreateNote,
+  onCreateFolder,
+}: AppSidebarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce-save sidebar width to .basalt/workspace.json (Tier 3)

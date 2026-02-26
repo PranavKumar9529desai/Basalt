@@ -8,8 +8,9 @@ export interface FileTreeProps {
   visibleNodes: FlatTreeNode[];
   openFolders: Set<string>;
   selectedPath: string | null;
-  onFileClick: (node: FlatTreeNode) => void;
-  onFolderToggle: (node: FlatTreeNode) => void;
+  selectedIds?: Set<string>;
+  onFileClick: (node: FlatTreeNode, e: React.UIEvent) => void;
+  onFolderToggle: (node: FlatTreeNode, e: React.UIEvent) => void;
   /** Ghost node for inline creation (rendered under the correct parent). */
   ghostNode?: (FileNode & { parentRelPath?: string }) | null;
   /** Called when the user commits an inline edit (Enter/blur). */
@@ -29,6 +30,7 @@ export function FileTree({
   visibleNodes,
   openFolders,
   selectedPath,
+  selectedIds,
   onFileClick,
   onFolderToggle,
   ghostNode,
@@ -57,11 +59,16 @@ export function FileTree({
 
     if (parentRel) {
       // Find the parent in the visible list
-      const parentIndex = visibleNodes.findIndex((n) => n.relPath === parentRel);
+      const parentIndex = visibleNodes.findIndex(
+        (n) => n.relPath === parentRel,
+      );
       if (parentIndex !== -1) {
         const parentPath = visibleNodes[parentIndex].path;
-        const mappedParentIndex = mappedNodes.findIndex((n) => n.id === parentPath);
-        insertAt = mappedParentIndex === -1 ? mappedNodes.length : mappedParentIndex + 1;
+        const mappedParentIndex = mappedNodes.findIndex(
+          (n) => n.id === parentPath,
+        );
+        insertAt =
+          mappedParentIndex === -1 ? mappedNodes.length : mappedParentIndex + 1;
       } else {
         insertAt = mappedNodes.length;
       }
@@ -77,22 +84,23 @@ export function FileTree({
     mappedNodes.splice(insertAt, 0, ghostNode);
   }
 
-  const handleSelect = (fileNode: FileNode) => {
+  const handleSelect = (fileNode: FileNode, e: React.UIEvent) => {
     // Re-lookup the original `FlatTreeNode` from `visibleNodes` by path
     const original = visibleNodes.find((n) => n.path === fileNode.id);
-    if (original) onFileClick(original);
+    if (original) onFileClick(original, e);
   };
 
-  const handleToggle = (fileNode: FileNode) => {
+  const handleToggle = (fileNode: FileNode, e: React.UIEvent) => {
     // Re-lookup to pass the relPath to Tauri
     const original = visibleNodes.find((n) => n.path === fileNode.id);
-    if (original) onFolderToggle(original);
+    if (original) onFolderToggle(original, e);
   };
 
   return (
     <FileTreeUI
       nodes={mappedNodes}
       selectedId={selectedPath}
+      selectedIds={selectedIds}
       expandedIds={new Set()} // Unused, we provide isOpen natively above
       onSelect={handleSelect}
       onToggleExpand={handleToggle}

@@ -85,14 +85,17 @@ function FileIcon() {
   );
 }
 
-
 interface InlineEditInputProps {
   node: FileNode;
   onCommitEdit?: (node: FileNode, newName: string) => void;
   onCancelEdit?: (node: FileNode) => void;
 }
 
-function InlineEditInput({ node, onCommitEdit, onCancelEdit }: InlineEditInputProps) {
+function InlineEditInput({
+  node,
+  onCommitEdit,
+  onCancelEdit,
+}: InlineEditInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const committedRef = useRef(false);
 
@@ -150,8 +153,6 @@ function InlineEditInput({ node, onCommitEdit, onCancelEdit }: InlineEditInputPr
     />
   );
 }
-
-
 
 interface FileTreeNodeProps {
   node: FileNode;

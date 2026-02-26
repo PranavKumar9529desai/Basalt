@@ -35,7 +35,6 @@ export interface FlatTreeNode {
   childCount: number;
 }
 
-
 /** Returned by `autocomplete_links` — used for wikilink completion only. */
 export interface LinkSuggestion {
   name: string;
@@ -43,7 +42,6 @@ export interface LinkSuggestion {
 }
 
 export type SaveStatus = "saved" | "saving" | "unsaved" | "conflict";
-
 
 /**
  * Returned by both `boot` and `set_vault`.

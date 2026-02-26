@@ -10,16 +10,22 @@ import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import { useVaultMutations } from "../features/vault/hooks/useVaultMutations";
+import { useVaultSelection } from "../features/vault/hooks/useVaultSelection";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { AppCommands } from "../commands/app-commands";
 import type { FileNode } from "@workspace/ui/components/file-tree";
+import { ThemeSelect } from "../app-shell/ThemeSelect";
 
 interface LoaderData {
   boot: BootResult;
 }
 
+interface ConflictBannerProps {
+  onKeepMine: () => void;
+  onDiscard: () => void;
+}
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
     const boot = await invoke<BootResult>("boot");
@@ -72,6 +78,7 @@ function RouteComponent() {
   const editor = useEditor({ findNote });
 
   const mutations = useVaultMutations();
+  const selection = useVaultSelection();
 
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
 
@@ -123,7 +130,8 @@ function RouteComponent() {
       if (!withoutTrailing) return null;
 
       const segments = withoutTrailing.split("/").filter(Boolean);
-      const leaf = segments.pop()!;
+      const leaf = segments.pop();
+      if (!leaf) return null;
 
       const parentSegments = segments;
       if (baseParent) {
@@ -139,7 +147,6 @@ function RouteComponent() {
     },
     [],
   );
-
 
   const handleCommitEdit = useCallback(
     async (node: FileNode & { parentRelPath?: string }, newName: string) => {
@@ -163,7 +170,10 @@ function RouteComponent() {
         }
         await refreshTree();
       } else {
-        const result = await mutations.createNote(leaf, parentRelPath || undefined);
+        const result = await mutations.createNote(
+          leaf,
+          parentRelPath || undefined,
+        );
         if (result) {
           editor.loadNote({ name: result.name, path: result.path });
         }
@@ -204,10 +214,20 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-1 min-h-0">
+      <div className="absolute top-10 right-10 z-50 size-fit">
+        <ThemeSelect />
+      </div>
       <AppCommands
         onCreateNote={startNoteInline}
         onDeleteNote={() => {
-          if (editor.selected) {
+          if (selection.selectedIds.size > 0) {
+            // Delete first selected for now; bulk delete can be added later.
+            const firstId = Array.from(selection.selectedIds)[0];
+            const node = treeNodes.find((n) => n.path === firstId);
+            if (node) {
+              mutations.requestDelete(node.path, node.name);
+            }
+          } else if (editor.selected) {
             mutations.requestDelete(editor.selected.path, editor.selected.name);
           }
         }}
@@ -225,12 +245,41 @@ function RouteComponent() {
           visibleNodes={visibleNodes}
           openFolders={openFolders}
           selectedPath={editor.selected?.path ?? null}
-          onFileClick={(node: FlatTreeNode) => {
+          selectedIds={selection.selectedIds}
+          onFileClick={(node: FlatTreeNode, e) => {
             setFocusedNode(node);
+            selection.handleSelect(
+              {
+                id: node.path,
+                name: node.name,
+                isFolder: node.kind === "folder",
+                depth: node.depth,
+              },
+              {
+                metaKey: (e as React.MouseEvent).metaKey,
+                ctrlKey: (e as React.MouseEvent).ctrlKey,
+                shiftKey: (e as React.MouseEvent).shiftKey,
+              },
+              visibleNodes,
+            );
             editor.loadNote({ name: node.name, path: node.path });
           }}
-          onFolderToggle={(node: FlatTreeNode) => {
+          onFolderToggle={(node: FlatTreeNode, e) => {
             setFocusedNode(node);
+            selection.handleSelect(
+              {
+                id: node.path,
+                name: node.name,
+                isFolder: true,
+                depth: node.depth,
+              },
+              {
+                metaKey: (e as React.MouseEvent).metaKey,
+                ctrlKey: (e as React.MouseEvent).ctrlKey,
+                shiftKey: (e as React.MouseEvent).shiftKey,
+              },
+              visibleNodes,
+            );
             toggleFolder(node.relPath);
           }}
           ghostNode={mutations.ghostNode}
@@ -286,13 +335,6 @@ function RouteComponent() {
       />
     </div>
   );
-}
-
-
-
-interface ConflictBannerProps {
-  onKeepMine: () => void;
-  onDiscard: () => void;
 }
 
 function ConflictBanner({ onKeepMine, onDiscard }: ConflictBannerProps) {

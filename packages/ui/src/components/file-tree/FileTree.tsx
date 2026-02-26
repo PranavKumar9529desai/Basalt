@@ -39,8 +39,7 @@ function EmptyState() {
 
 export function FileTree({
   nodes,
-  selectedId,
-  expandedIds,
+  selectedIds,
   onSelect,
   onToggleExpand,
   onContextMenu,
@@ -76,8 +75,8 @@ export function FileTree({
               <FileTreeNode
                 key={node.id}
                 node={node}
-                isOpen={node.isOpen ?? expandedIds.has(node.id)}
-                isSelected={node.id === selectedId}
+                isOpen={node.isOpen ?? false}
+                isSelected={selectedIds ? selectedIds.has(node.id) : false}
                 onFileClick={onSelect}
                 onFolderToggle={onToggleExpand}
                 onContextMenu={onContextMenu}
