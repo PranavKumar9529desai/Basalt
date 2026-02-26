@@ -4,12 +4,9 @@
 // ---------------------------------------------------------------------------
 
 export { BacklinksSidebar } from "./components/BacklinksSidebar";
-// ---------------------------------------------------------------------------
-// Components
-// ---------------------------------------------------------------------------
 export { FileTree } from "./components/FileTree";
 export { SaveIndicator } from "./components/SaveIndicator";
-export { Toolbar } from "./components/Toolbar";
+
 export { VaultSplash } from "./components/VaultSplash";
 export type {
   UseEditorOptions,

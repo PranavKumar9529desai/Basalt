@@ -70,8 +70,6 @@ function RouteComponent() {
 
   const editor = useEditor({ findNote });
 
-
-
   // ── No-vault splash ───────────────────────────────────────────────────────
 
   if (!vaultPath) {
@@ -92,7 +90,9 @@ function RouteComponent() {
       <AppActivityBar />
 
       {/* ── Left sidebar: file tree ── */}
-      <AppSidebar defaultWidth={boot.workspace?.sidebarWidth as number | undefined}>
+      <AppSidebar
+        defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
+      >
         <FileTree
           visibleNodes={visibleNodes}
           openFolders={openFolders}

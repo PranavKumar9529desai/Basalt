@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 
@@ -167,7 +165,7 @@ function CommandItem({
 function CommandShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
       data-slot="command-shortcut"

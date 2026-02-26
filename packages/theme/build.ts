@@ -26,7 +26,7 @@ function flatten(obj: Dict, prefix = ""): Dict {
   for (const [key, value] of Object.entries(obj)) {
     const nextKey = prefix ? `${prefix}.${key}` : key;
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      Object.assign(out, flatten(value, nextKey));
+      Object.assign(out, flatten(value as Dict, nextKey));
     } else {
       out[nextKey] = value;
     }

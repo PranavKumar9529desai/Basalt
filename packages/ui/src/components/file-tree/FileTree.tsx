@@ -56,7 +56,10 @@ export function FileTree({
   });
 
   return (
-    <ScrollArea viewportRef={scrollRef} className={cn("flex-1 h-full", className)}>
+    <ScrollArea
+      viewportRef={scrollRef}
+      className={cn("flex-1 h-full", className)}
+    >
       {nodes.length === 0 ? (
         <EmptyState />
       ) : (

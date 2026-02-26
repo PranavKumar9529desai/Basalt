@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
@@ -79,7 +77,10 @@ function DialogContent({
   );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="dialog-header"
@@ -94,7 +95,7 @@ function DialogFooter({
   showCloseButton = false,
   children,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.HTMLAttributes<HTMLDivElement> & {
   showCloseButton?: boolean;
 }) {
   return (
