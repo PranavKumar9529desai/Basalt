@@ -27,7 +27,7 @@ export interface FileTreeContextMenuProps {
   onOpenChange: (open: boolean) => void;
   onNewNote: () => void;
   onNewFolder: () => void;
-  onMove: () => void;
+  onCut: () => void;
   onPaste: () => void;
   onDelete: () => void;
 }
@@ -41,7 +41,7 @@ export function FileTreeContextMenu({
   onOpenChange,
   onNewNote,
   onNewFolder,
-  onMove,
+  onCut,
   onPaste,
   onDelete,
 }: FileTreeContextMenuProps) {
@@ -62,7 +62,7 @@ export function FileTreeContextMenu({
         <ContextMenuContent anchor={menuAnchor} className="ring-0 p-4">
           {isMultiSelect ? (
             <>
-              <ContextMenuItem disabled={isRoot} onClick={onMove}>
+              <ContextMenuItem disabled={isRoot} onClick={onCut}>
                 <span className="inline-flex min-w-4 items-center justify-center">
                   <IconCut size={14} />
                 </span>
@@ -96,7 +96,7 @@ export function FileTreeContextMenu({
 
               <ContextMenuSeparator />
 
-              <ContextMenuItem disabled={isRoot} onClick={onMove}>
+              <ContextMenuItem disabled={isRoot} onClick={onCut}>
                 <span className="inline-flex min-w-4 items-center justify-center">
                   <IconCut size={14} />
                 </span>
