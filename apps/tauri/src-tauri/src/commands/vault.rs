@@ -53,12 +53,19 @@ pub fn get_vault_tree(
         .last_vault
         .ok_or_else(|| "no vault configured".to_string())?;
 
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+    let vault_root = Path::new(&vault_path);
+    let reindexed = index_directory(vault_root);
+    let tree = build_flat_tree(&reindexed, vault_root);
 
-    Ok(build_flat_tree(&vault, Path::new(&vault_path)))
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        *vault = reindexed;
+    }
+
+    Ok(tree)
 }
 
 /// Open the native folder-picker dialog and return the chosen path (or null).

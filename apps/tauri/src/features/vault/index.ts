@@ -17,6 +17,10 @@ export type { UseVaultActionsReturn } from "./hooks/useVaultActions";
 export { useVaultActions } from "./hooks/useVaultActions";
 export type { UseVaultMutationsReturn } from "./hooks/useVaultMutations";
 export { useVaultMutations } from "./hooks/useVaultMutations";
+export type { UseVaultClipboardReturn } from "./hooks/useVaultClipboard";
+export { useVaultClipboard } from "./hooks/useVaultClipboard";
+export type { UseVaultContextMenuReturn } from "./hooks/useVaultContextMenu";
+export { useVaultContextMenu } from "./hooks/useVaultContextMenu";
 export type { UseVaultTreeReturn } from "./hooks/useVaultTree";
 
 export { useVaultTree } from "./hooks/useVaultTree";

@@ -1,22 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
+import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
+import type { FileNode } from "@workspace/ui/components/file-tree";
+import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Editor } from "../features/editor";
+import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { AppSidebar } from "../app-shell/AppSidebar";
+import { ThemeSelect } from "../app-shell/ThemeSelect";
+import { AppCommands } from "../commands/app-commands";
+import { Editor } from "../features/editor";
+import { useEditor } from "../features/editor/hooks/useEditor";
 import { FileTree } from "../features/vault/components/FileTree";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
-import { useEditor } from "../features/editor/hooks/useEditor";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
-import { useVaultTree } from "../features/vault/hooks/useVaultTree";
+import { useVaultClipboard } from "../features/vault/hooks/useVaultClipboard";
+import { useVaultContextMenu } from "../features/vault/hooks/useVaultContextMenu";
 import { useVaultMutations } from "../features/vault/hooks/useVaultMutations";
 import { useVaultSelection } from "../features/vault/hooks/useVaultSelection";
+import { useVaultTree } from "../features/vault/hooks/useVaultTree";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";
-import { AppActivityBar } from "../app-shell/AppActivityBar";
-import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
-import { AppCommands } from "../commands/app-commands";
-import type { FileNode } from "@workspace/ui/components/file-tree";
-import { ThemeSelect } from "../app-shell/ThemeSelect";
 
 interface LoaderData {
   boot: BootResult;
@@ -79,6 +82,8 @@ function RouteComponent() {
 
   const mutations = useVaultMutations();
   const selection = useVaultSelection();
+  const clipboard = useVaultClipboard();
+  const contextMenu = useVaultContextMenu();
 
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
 
@@ -107,6 +112,15 @@ function RouteComponent() {
     [focusedNode, selectedNode],
   );
 
+  const deriveParentContextFromMenuTarget = useCallback(() => {
+    const target = contextMenu.menuState.target;
+    if (!target) return { parentRelPath: "", depth: 0 };
+    if (target.kind === "root" || !target.node) {
+      return { parentRelPath: "", depth: 0 };
+    }
+    return deriveParentContext(target.node);
+  }, [contextMenu.menuState.target, deriveParentContext]);
+
   const startNoteInline = useCallback(() => {
     const ctx = deriveParentContext();
     if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
@@ -118,6 +132,34 @@ function RouteComponent() {
     if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
     mutations.createFolderInline(ctx);
   }, [deriveParentContext, mutations, openFolder]);
+
+  const cutIds = useMemo(
+    () => new Set(clipboard.clipboard.items.map((item) => item.path)),
+    [clipboard.clipboard.items],
+  );
+
+  const canPasteToMenuTarget = useMemo(() => {
+    if (!clipboard.hasItems) return false;
+    const target = contextMenu.menuState.target;
+    if (!target) return false;
+    if (target.kind === "file") return false;
+
+    const destinationPath =
+      target.kind === "folder" ? (target.node?.path ?? null) : null;
+    if (!destinationPath) return true;
+
+    return clipboard.clipboard.items.every((item) => {
+      if (item.path === destinationPath) return false;
+      if (item.isFolder && destinationPath.startsWith(`${item.path}/`)) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    clipboard.clipboard.items,
+    clipboard.hasItems,
+    contextMenu.menuState.target,
+  ]);
 
   // Helper to parse VS Code–style input with slashes and trailing "/"
   const parseInlineName = useCallback(
@@ -192,11 +234,95 @@ function RouteComponent() {
 
   // After deleting the current note, clear the editor
   const handleConfirmDelete = useCallback(async () => {
+    const deletesSelectedEditor =
+      editor.selected !== null &&
+      mutations.pendingDeletePaths.includes(editor.selected.path);
     const deleted = await mutations.confirmDelete();
-    if (deleted && mutations.pendingDeletePath === editor.selected?.path) {
+    if (deleted && deletesSelectedEditor) {
       editor.closeNote();
     }
   }, [mutations, editor]);
+
+  const handleMenuNewNote = useCallback(() => {
+    const ctx = deriveParentContextFromMenuTarget();
+    contextMenu.closeMenu();
+    setTimeout(() => {
+      if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+      mutations.createNoteInline(ctx);
+    }, 0);
+  }, [contextMenu, deriveParentContextFromMenuTarget, mutations, openFolder]);
+
+  const handleMenuNewFolder = useCallback(() => {
+    const ctx = deriveParentContextFromMenuTarget();
+    contextMenu.closeMenu();
+    setTimeout(() => {
+      if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+      mutations.createFolderInline(ctx);
+    }, 0);
+  }, [contextMenu, deriveParentContextFromMenuTarget, mutations, openFolder]);
+
+  const handleMenuMove = useCallback(() => {
+    const target = contextMenu.menuState.target;
+    if (!target || target.kind === "root" || !target.node) return;
+
+    const includeSelection =
+      selection.selectedIds.size > 1 &&
+      selection.selectedIds.has(target.node.path);
+
+    const sourceNodes = includeSelection
+      ? treeNodes.filter((n) => selection.selectedIds.has(n.path))
+      : [target.node];
+
+    clipboard.setCutItems(
+      sourceNodes.map((node) => ({
+        path: node.path,
+        isFolder: node.kind === "folder",
+      })),
+    );
+    contextMenu.closeMenu();
+  }, [clipboard, contextMenu, selection.selectedIds, treeNodes]);
+
+  const handleMenuPaste = useCallback(async () => {
+    const target = contextMenu.menuState.target;
+    if (!target || target.kind === "file") return;
+
+    const destinationRelPath =
+      target.kind === "folder" ? (target.node?.relPath ?? "") : "";
+
+    const moved = await mutations.movePaths(
+      clipboard.clipboard.items.map((item) => item.path),
+      destinationRelPath,
+    );
+    if (moved) {
+      clipboard.clearClipboard();
+      await refreshTree();
+      if (destinationRelPath) {
+        openFolder(destinationRelPath);
+      }
+    }
+    contextMenu.closeMenu();
+  }, [clipboard, contextMenu, mutations, openFolder, refreshTree]);
+
+  const handleMenuDelete = useCallback(() => {
+    const target = contextMenu.menuState.target;
+    if (!target || target.kind === "root" || !target.node) return;
+
+    const shouldUseSelection =
+      selection.selectedIds.size > 1 &&
+      selection.selectedIds.has(target.node.path);
+
+    if (shouldUseSelection) {
+      const nodes = treeNodes.filter((n) => selection.selectedIds.has(n.path));
+      mutations.requestDeleteMany(
+        nodes.map((node) => ({ path: node.path, name: node.name })),
+      );
+    } else {
+      mutations.requestDelete(target.node.path, target.node.name);
+    }
+    contextMenu.closeMenu();
+  }, [contextMenu, mutations, selection.selectedIds, treeNodes]);
+
+  const isMultiSelectContextMenu = contextMenu.menuState.isMultiSelect;
 
   // ── No-vault splash ───────────────────────────────────────────────────────
 
@@ -221,12 +347,12 @@ function RouteComponent() {
         onCreateNote={startNoteInline}
         onDeleteNote={() => {
           if (selection.selectedIds.size > 0) {
-            // Delete first selected for now; bulk delete can be added later.
-            const firstId = Array.from(selection.selectedIds)[0];
-            const node = treeNodes.find((n) => n.path === firstId);
-            if (node) {
-              mutations.requestDelete(node.path, node.name);
-            }
+            const nodes = treeNodes.filter((n) =>
+              selection.selectedIds.has(n.path),
+            );
+            mutations.requestDeleteMany(
+              nodes.map((node) => ({ path: node.path, name: node.name })),
+            );
           } else if (editor.selected) {
             mutations.requestDelete(editor.selected.path, editor.selected.name);
           }
@@ -244,8 +370,8 @@ function RouteComponent() {
         <FileTree
           visibleNodes={visibleNodes}
           openFolders={openFolders}
-          selectedPath={editor.selected?.path ?? null}
           selectedIds={selection.selectedIds}
+          cutIds={cutIds}
           onFileClick={(node: FlatTreeNode, e) => {
             setFocusedNode(node);
             selection.handleSelect(
@@ -281,6 +407,20 @@ function RouteComponent() {
               visibleNodes,
             );
             toggleFolder(node.relPath);
+          }}
+          onContextMenu={(node: FlatTreeNode, e) => {
+            setFocusedNode(node);
+            const isMultiSelect =
+              selection.selectedIds.size > 1 &&
+              selection.selectedIds.has(node.path);
+            if (!selection.selectedIds.has(node.path)) {
+              selection.setSelection(new Set([node.path]));
+            }
+            selection.setFocusedId(node.path);
+            contextMenu.openForNode(node, e, isMultiSelect);
+          }}
+          onBackgroundContextMenu={(e) => {
+            contextMenu.openForRoot(e);
           }}
           ghostNode={mutations.ghostNode}
           onCommitEdit={handleCommitEdit}
@@ -324,11 +464,35 @@ function RouteComponent() {
       </div>
 
       {/* ── Delete confirmation dialog ── */}
+      <FileTreeContextMenu
+        open={contextMenu.isOpen}
+        anchor={contextMenu.menuState.anchor}
+        targetKind={contextMenu.menuState.target?.kind ?? null}
+        isMultiSelect={isMultiSelectContextMenu}
+        canPaste={canPasteToMenuTarget}
+        onOpenChange={(open) => {
+          if (!open) contextMenu.closeMenu();
+        }}
+        onNewNote={handleMenuNewNote}
+        onNewFolder={handleMenuNewFolder}
+        onMove={handleMenuMove}
+        onPaste={handleMenuPaste}
+        onDelete={handleMenuDelete}
+      />
+
       <ConfirmDialog
         open={mutations.isDeleteConfirmOpen}
         onOpenChange={mutations.setDeleteConfirmOpen}
-        title="Delete note"
-        description={`Permanently delete "${mutations.pendingDeleteName}"? This cannot be undone.`}
+        title={
+          mutations.pendingDeletePaths.length > 1
+            ? "Delete selected items"
+            : "Delete note"
+        }
+        description={
+          mutations.pendingDeletePaths.length > 1
+            ? `Permanently delete ${mutations.pendingDeletePaths.length} selected items? This cannot be undone.`
+            : `Permanently delete "${mutations.pendingDeleteName}"? This cannot be undone.`
+        }
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={handleConfirmDelete}

@@ -1,9 +1,9 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef } from "react";
-import type { FileTreeProps } from "./types";
-import { FileTreeNode, TREE_ROW_HEIGHT } from "./FileTreeNode";
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 import { cn } from "@workspace/ui/lib/utils";
+import { useRef } from "react";
+import { FileTreeNode, TREE_ROW_HEIGHT } from "./FileTreeNode";
+import type { FileTreeProps } from "./types";
 
 // ---------------------------------------------------------------------------
 // Empty state
@@ -43,6 +43,7 @@ export function FileTree({
   onSelect,
   onToggleExpand,
   onContextMenu,
+  onBackgroundContextMenu,
   onCommitEdit,
   onCancelEdit,
   className,
@@ -60,6 +61,13 @@ export function FileTree({
     <ScrollArea
       viewportRef={scrollRef}
       className={cn("flex-1 h-full", className)}
+      onContextMenu={(e) => {
+        if (!onBackgroundContextMenu) return;
+        const target = e.target as HTMLElement;
+        if (target.closest("[role='treeitem']")) return;
+        e.preventDefault();
+        onBackgroundContextMenu(e);
+      }}
     >
       {nodes.length === 0 ? (
         <EmptyState />

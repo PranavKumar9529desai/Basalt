@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use basalt_fs::path_utils::resolve_creation_path;
+use basalt_fs::{indexer::index_directory, path_utils::resolve_creation_path};
 use serde::Serialize;
 use tauri::Emitter;
 use tauri::State;
@@ -255,7 +255,7 @@ pub fn create_folder(
 }
 
 #[tauri::command]
-pub fn delete_file(path: String, state: State<AppState>) -> Result<(), String> {
+pub fn delete_file(path: String, state: State<AppState>, app: tauri::AppHandle) -> Result<(), String> {
     let abs = Path::new(&path)
         .canonicalize()
         .map_err(|e| format!("invalid path: {e}"))?;
@@ -264,19 +264,129 @@ pub fn delete_file(path: String, state: State<AppState>) -> Result<(), String> {
         return Err("file does not exist".to_string());
     }
 
-    {
-        let mut vault = state
-            .vault
-            .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-        vault.remove_document(abs.to_str().unwrap_or_default());
-    }
-
     if abs.is_dir() {
         std::fs::remove_dir_all(&abs).map_err(|e| format!("failed to delete directory: {e}"))?;
     } else {
         std::fs::remove_file(&abs).map_err(|e| format!("failed to delete file: {e}"))?;
     }
+
+    let vault_root = canonical_vault_path(&app)?;
+    let reindexed = index_directory(&vault_root);
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        *vault = reindexed;
+    }
+
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: abs.to_string_lossy().to_string(),
+            kind: "deleted".into(),
+        },
+    );
+
+    Ok(())
+}
+
+fn canonical_vault_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let config = load_config(app);
+    let vault_path_str = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+    Path::new(&vault_path_str)
+        .canonicalize()
+        .map_err(|e| format!("invalid vault path: {e}"))
+}
+
+fn ensure_inside_vault(path: &Path, vault_root: &Path) -> Result<(), String> {
+    if path.starts_with(vault_root) {
+        Ok(())
+    } else {
+        Err("path is outside the current vault".to_string())
+    }
+}
+
+#[tauri::command]
+pub fn move_paths(
+    source_paths: Vec<String>,
+    destination_rel_path: Option<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    if source_paths.is_empty() {
+        return Err("no source paths provided".to_string());
+    }
+
+    let vault_root = canonical_vault_path(&app)?;
+
+    let destination_path = match destination_rel_path.as_deref() {
+        Some(rel) if !rel.is_empty() => vault_root.join(rel),
+        _ => vault_root.clone(),
+    };
+
+    if !destination_path.exists() {
+        return Err("destination folder does not exist".to_string());
+    }
+
+    if !destination_path.is_dir() {
+        return Err("destination must be a folder".to_string());
+    }
+
+    let destination_path = destination_path
+        .canonicalize()
+        .map_err(|e| format!("invalid destination: {e}"))?;
+    ensure_inside_vault(&destination_path, &vault_root)?;
+
+    for raw_source in &source_paths {
+        let source = Path::new(raw_source)
+            .canonicalize()
+            .map_err(|e| format!("invalid source path '{raw_source}': {e}"))?;
+        ensure_inside_vault(&source, &vault_root)?;
+
+        if source == destination_path {
+            return Err("cannot move an item into itself".to_string());
+        }
+
+        if source.is_dir() && destination_path.starts_with(&source) {
+            return Err("cannot move a folder into itself or its descendant".to_string());
+        }
+
+        let Some(file_name) = source.file_name() else {
+            return Err(format!("failed to resolve file name for '{raw_source}'"));
+        };
+
+        let destination_item = destination_path.join(file_name);
+        if destination_item.exists() {
+            return Err(format!(
+                "destination already contains '{}'",
+                file_name.to_string_lossy()
+            ));
+        }
+
+        std::fs::rename(&source, &destination_item)
+            .map_err(|e| format!("failed to move '{}': {e}", source.display()))?;
+    }
+
+    // Keep in-memory index aligned for immediate tree refresh.
+    let reindexed = index_directory(&vault_root);
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        *vault = reindexed;
+    }
+
+    let _ = app.emit(
+        "vault://file-changed",
+        FileChangeEvent {
+            path: destination_path.to_string_lossy().to_string(),
+            kind: "modified".into(),
+        },
+    );
 
     Ok(())
 }

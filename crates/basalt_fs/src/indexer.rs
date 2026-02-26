@@ -73,6 +73,19 @@ pub fn incremental_reindex(
         }
     }
 
+    // Defensive cleanup: if graph/arena contains any markdown path not present
+    // on disk, remove it even when it's missing from cached_mtimes.
+    let stale_paths: Vec<String> = vault
+        .arena
+        .all_strings()
+        .filter(|p| p.ends_with(".md"))
+        .filter(|p| !new_mtimes.contains_key(*p))
+        .cloned()
+        .collect();
+    for path in stale_paths {
+        vault.remove_document(&path);
+    }
+
     new_mtimes
 }
 

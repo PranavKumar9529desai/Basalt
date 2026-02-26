@@ -1,6 +1,6 @@
-import { type FC, useRef, useEffect, useCallback } from "react";
-import type { FileNode } from "./types";
 import { cn } from "@workspace/ui/lib/utils";
+import { type FC, useCallback, useEffect, useRef } from "react";
+import type { FileNode } from "./types";
 
 /** Pixels of indentation per depth level. */
 const INDENT_PX = 16;
@@ -195,6 +195,8 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   const handleContextMenu = (e: React.MouseEvent) => {
     if (isEditing) return;
     if (onContextMenu) {
+      e.preventDefault();
+      e.stopPropagation();
       onContextMenu(node, e);
     }
   };
@@ -211,6 +213,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
           : isSelected
             ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_15%,transparent)] text-[var(--sat-text-primary)]"
             : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
+        node.isCut ? "opacity-60" : "",
       )}
       role="treeitem"
       aria-selected={isSelected}

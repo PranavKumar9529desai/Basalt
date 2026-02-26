@@ -1,16 +1,18 @@
 import {
-  FileTree as FileTreeUI,
   type FileNode,
+  FileTree as FileTreeUI,
 } from "@workspace/ui/components/file-tree";
 import type { FlatTreeNode } from "../types";
 
 export interface FileTreeProps {
   visibleNodes: FlatTreeNode[];
   openFolders: Set<string>;
-  selectedPath: string | null;
   selectedIds?: Set<string>;
+  cutIds?: Set<string>;
   onFileClick: (node: FlatTreeNode, e: React.UIEvent) => void;
   onFolderToggle: (node: FlatTreeNode, e: React.UIEvent) => void;
+  onContextMenu?: (node: FlatTreeNode, e: React.MouseEvent) => void;
+  onBackgroundContextMenu?: (e: React.MouseEvent) => void;
   /** Ghost node for inline creation (rendered under the correct parent). */
   ghostNode?: (FileNode & { parentRelPath?: string }) | null;
   /** Called when the user commits an inline edit (Enter/blur). */
@@ -29,10 +31,12 @@ export interface FileTreeProps {
 export function FileTree({
   visibleNodes,
   openFolders,
-  selectedPath,
   selectedIds,
+  cutIds,
   onFileClick,
   onFolderToggle,
+  onContextMenu,
+  onBackgroundContextMenu,
   ghostNode,
   onCommitEdit,
   onCancelEdit,
@@ -47,6 +51,7 @@ export function FileTree({
         isOpen: openFolders.has(node.relPath),
         depth: node.depth,
         childCount: node.childCount,
+        isCut: cutIds?.has(node.path) ?? false,
       }) satisfies FileNode,
   );
 
@@ -96,14 +101,20 @@ export function FileTree({
     if (original) onFolderToggle(original, e);
   };
 
+  const handleContextMenu = (fileNode: FileNode, e: React.MouseEvent) => {
+    if (!onContextMenu) return;
+    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    if (original) onContextMenu(original, e);
+  };
+
   return (
     <FileTreeUI
       nodes={mappedNodes}
-      selectedId={selectedPath}
       selectedIds={selectedIds}
-      expandedIds={new Set()} // Unused, we provide isOpen natively above
       onSelect={handleSelect}
       onToggleExpand={handleToggle}
+      onContextMenu={handleContextMenu}
+      onBackgroundContextMenu={onBackgroundContextMenu}
       onCommitEdit={onCommitEdit}
       onCancelEdit={onCancelEdit}
     />

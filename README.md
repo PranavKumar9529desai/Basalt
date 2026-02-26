@@ -15,4 +15,3 @@ Basalt is a Rust core for Obsidian-style Markdown parsing, fast vault metadata i
 - Full AST parsing is **per-file** via `parse_markdown`.
 - Offsets for tags/links/headings are stored in UTF-16 for editor compatibility.
 
-
