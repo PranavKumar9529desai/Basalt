@@ -513,7 +513,7 @@ cd apps/tauri && bun run dev
 
 ---
 
-## 6. Phase 2 — Clean the Editor Package
+## 6. Phase 2 — Clean the Editor Package (Done)
 
 **Goal**: Make `packages/editor` export **only** CodeMirror extensions and command
 infrastructure. No React rendering. No UI imports.
@@ -605,7 +605,7 @@ Also rename `links.ts` → `wiki-links.ts` for clarity.
 >   that isn't tied to any specific plugin. This is the correct separation.
 > - Each extension file keeps its own `baseTheme()` co-located with the logic.
 
-#### 6.5 Merge command files — single source of truth
+#### 6.5 Merge command files — single source of truth (Done)
 
 The ONE file for editor commands: `packages/editor/src/commands/editor-commands.ts`
 
@@ -614,7 +614,7 @@ The ONE file for editor commands: `packages/editor/src/commands/editor-commands.
 - **DELETE** `packages/editor/src/hooks/` directory (now empty)
 - **DELETE** `packages/ui/src/components/editor-commands.tsx` (duplicate — already done in Phase 1)
 
-#### 6.6 Rewrite `packages/editor/src/index.ts`
+#### 6.6 Rewrite `packages/editor/src/index.ts` (Done)
 
 The new index is a CLEAN re-export file (no React component):
 
@@ -638,7 +638,7 @@ export { CUSTOM_THEME } from "./themes/base";
 
 **Key**: No `<Editor>` React component exported. No `<ContextMenu>`. No `<CommandPalette>`.
 
-#### 6.7 Delete the context-menu plugin
+#### 6.7 Delete the context-menu plugin (Done)
 
 **DELETE** `packages/editor/src/extensions/context-menu.ts` (was `plugins/context-menu.ts`).
 
@@ -648,7 +648,7 @@ The context menu is a UI concern. The right-click handling moves to the features
 That component will use `EditorView.domEventHandlers({ contextmenu: ... })` as
 an additional extension passed via config, keeping it out of the editor package.
 
-#### 6.8 Create `apps/tauri/src/features/editor/`
+#### 6.8 Create `apps/tauri/src/features/editor/` (Done)
 
 New feature module that replaces what `index.tsx` used to do:
 
@@ -673,7 +673,7 @@ import { CommandProvider } from "@workspace/editor/commands/context";
 // ... useEditor hooks, context menu, command palette wiring
 ```
 
-#### 6.9 Update `packages/editor/package.json`
+#### 6.9 Update `packages/editor/package.json` (Done)
 
 Remove unused dependencies:
 - `react-markdown`

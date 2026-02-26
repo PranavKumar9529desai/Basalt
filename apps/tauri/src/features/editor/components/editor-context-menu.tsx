@@ -7,6 +7,7 @@ import {
     ContextMenuSub,
     ContextMenuSubContent,
     ContextMenuSubTrigger,
+    ContextMenuShortcut,
 } from "@workspace/ui/components/ui/context-menu";
 import { useCommandStore, contextMenuExtension, type ContextMenuState } from "@workspace/editor";
 import { EditorComponent, type EditorProps } from "./editor-component";
@@ -51,11 +52,13 @@ export function Editor({ ...props }: EditorProps) {
                         {editorCommands.map((cmd) => (
                             <ContextMenuItem
                                 key={cmd.id}
-                                icon={cmd.icon}
                                 onClick={() => handleCommand(cmd.id)}
-                                shortcut={cmd.hotkeys?.[0]}
                             >
-                                {cmd.name}
+                                <div className="flex size-4 shrink-0 items-center justify-center opacity-90 mr-2">
+                                    {cmd.icon}
+                                </div>
+                                <span>{cmd.name}</span>
+                                {cmd.hotkeys?.[0] && <ContextMenuShortcut>{cmd.hotkeys[0]}</ContextMenuShortcut>}
                             </ContextMenuItem>
                         ))}
 
@@ -82,9 +85,12 @@ export function Editor({ ...props }: EditorProps) {
                                     <ContextMenuItem
                                         key={cmd.id}
                                         onClick={() => handleCommand(cmd.id)}
-                                        shortcut={cmd.hotkeys?.[0]}
                                     >
-                                        {cmd.name}
+                                        <div className="flex size-4 shrink-0 items-center justify-center opacity-90 mr-2">
+                                            {cmd.icon}
+                                        </div>
+                                        <span>{cmd.name}</span>
+                                        {cmd.hotkeys?.[0] && <ContextMenuShortcut>{cmd.hotkeys[0]}</ContextMenuShortcut>}
                                     </ContextMenuItem>
                                 ))}
                             </ContextMenuSubContent>

@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/index.tsx",
+  "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.tsx",
+    ".": "./src/index.ts",
     "./commands/store": "./src/commands/store.ts",
-    "./hooks/use-editor-commands": "./src/hooks/use-editor-commands.tsx"
+    "./commands/editor-commands": "./src/commands/editor-commands.tsx",
+    "./create-extensions": "./src/create-extensions.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "dev": "tsc --watch",
@@ -23,8 +25,6 @@
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.2",
     "@uiw/react-codemirror": "^4.23.8",
-    "react-markdown": "^9.0.3",
-    "remark-gfm": "^4.0.0",
     "zustand": "^5.0.11"
   },
   "peerDependencies": {
