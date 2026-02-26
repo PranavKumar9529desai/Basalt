@@ -2,6 +2,7 @@ export { useTabsStore } from "./store";
 export { useTabs } from "./hooks/useTabs";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabIO } from "./hooks/useTabIO";
+export { useTabDnD } from "./hooks/useTabDnD";
 
 export type {
   OpenableTabInput,
@@ -24,4 +25,3 @@ export type {
   SaveFileInput,
   UseTabIOOptions,
 } from "./hooks/useTabIO";
-

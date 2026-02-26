@@ -10,10 +10,10 @@ export interface TabItemProps {
   onClose?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
-  onDragStart?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onDragOver?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onDrop?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onDragEnd?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   className?: string;
 }
 
@@ -57,11 +57,16 @@ export function TabItem({
         variant="ghost"
         size="sm"
         disabled={tab.disabled}
+        draggable={!tab.disabled}
         className={cn(
           "h-7 max-w-[220px] flex-1 justify-start gap-1 rounded-sm border border-transparent px-2 text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-2)]",
           !tab.isActive && "text-[var(--sat-text-secondary)]",
           tab.isPreview && "italic",
         )}
+        onDragStart={(event) => onDragStart?.(tab.id, event)}
+        onDragOver={(event) => onDragOver?.(tab.id, event)}
+        onDrop={(event) => onDrop?.(tab.id, event)}
+        onDragEnd={(event) => onDragEnd?.(tab.id, event)}
         onClick={() => onSelect?.(tab.id)}
       >
         {tab.icon}
@@ -79,6 +84,7 @@ export function TabItem({
           type="button"
           variant="ghost"
           size="icon-xs"
+          draggable={false}
           className="text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]"
           onClick={() => onPinToggle?.(tab.id)}
           aria-label="Unpin tab"
@@ -93,6 +99,7 @@ export function TabItem({
           type="button"
           variant="ghost"
           size="icon-xs"
+          draggable={false}
           className="text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]"
           onClick={(event) => {
             event.stopPropagation();

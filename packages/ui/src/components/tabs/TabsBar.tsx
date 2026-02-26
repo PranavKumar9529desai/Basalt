@@ -11,10 +11,10 @@ export interface TabsBarProps {
   onCloseTab?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onTabContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
-  onTabDragStart?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onTabDragOver?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onTabDrop?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
-  onTabDragEnd?: (tabId: string, event: DragEvent<HTMLDivElement>) => void;
+  onTabDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onTabDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onTabDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
   className?: string;

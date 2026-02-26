@@ -151,6 +151,15 @@ Status update (2026-02-26):
   - per-visible-pane editor instances (current implementation keeps one focused editor instance)
   - command palette tab actions for move/reorder between groups and split directions beyond right
   - extraction of route glue into `app-shell` once the feature API stabilizes
+  - full drag-and-drop polish (drop-on-empty-bar insertion, drag previews, keyboard parity)
+
+Status update (2026-02-27):
+- Completed:
+  - Runtime tab drag-and-drop baseline implemented:
+    - drag to reorder within a group
+    - drag tab onto another group's tab to move across groups
+    - drag tab onto split targets (`left`/`right`/`top`/`bottom`) to create/move into split panes
+  - DnD orchestration extracted into `apps/tauri/src/features/tabs/hooks/useTabDnD.ts` to keep route composition thinner
 
 Exit criteria:
 - Open many tabs without proportional editor mounts
