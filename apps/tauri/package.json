@@ -16,6 +16,7 @@
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
     "@workspace/editor": "workspace:*",
+    "zustand": "^5.0.11",
     "react": "catalog:default",
     "react-dom": "catalog:default"
   },

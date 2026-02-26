@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
+import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect } from "react";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
@@ -10,6 +11,10 @@ import { ThemeSelect } from "../app-shell/ThemeSelect";
 import { AppCommands } from "../commands/app-commands";
 import { Editor } from "../features/editor";
 import { useEditor } from "../features/editor/hooks/useEditor";
+import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
+import { useTabs } from "../features/tabs/hooks/useTabs";
+import { useTabsStore } from "../features/tabs/store";
+import type { TabGroupId } from "../features/tabs/types";
 import { FileTree } from "../features/vault/components/FileTree";
 import { SaveIndicator } from "../features/vault/components/SaveIndicator";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
@@ -30,6 +35,12 @@ interface ConflictBannerProps {
   onKeepMine: () => void;
   onDiscard: () => void;
 }
+
+interface InactiveGroupPaneProps {
+  activeTitle: string | null;
+  onActivate: () => void;
+}
+
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
     const boot = await invoke<BootResult>("boot");
@@ -65,7 +76,6 @@ function RouteComponent() {
 
   const vaultActions = useVaultActions();
 
-  // When the loader re-runs (after vault change / reindex) sync the tree.
   useEffect(() => {
     setTreeNodes(boot.tree);
   }, [boot.tree, setTreeNodes]);
@@ -80,6 +90,28 @@ function RouteComponent() {
   );
 
   const editor = useEditor({ findNote });
+  const tabs = useTabs();
+
+  useTabPersistence({ workspace: boot.workspace });
+
+  const focusedGroup = tabs.groups[tabs.focusedGroupId];
+  const activeTab =
+    focusedGroup?.activeTabId != null
+      ? tabs.tabs[focusedGroup.activeTabId] ?? null
+      : null;
+
+  const syncActiveTabToEditor = useCallback(() => {
+    const state = useTabsStore.getState();
+    const group = state.groups[state.focusedGroupId];
+    const tab = group?.activeTabId ? state.tabs[group.activeTabId] : null;
+    if (!tab) {
+      editor.closeNote();
+      return;
+    }
+    if (editor.selected?.path !== tab.path) {
+      void editor.loadNote({ name: tab.title, path: tab.path });
+    }
+  }, [editor]);
 
   const mutations = useVaultMutations();
   const selection = useVaultSelection();
@@ -99,7 +131,73 @@ function RouteComponent() {
     refreshTree,
   });
 
-  // ── No-vault splash ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!editor.selected) return;
+    const tabId = tabs.openInPreview({
+      path: editor.selected.path,
+      title: editor.selected.name,
+    });
+    tabs.setTabTitle(tabId, editor.selected.name);
+  }, [editor.selected, tabs]);
+
+  useEffect(() => {
+    if (!activeTab) return;
+    if (editor.saveStatus === "saved") {
+      tabs.markTabDirty(activeTab.id, false);
+    }
+  }, [activeTab, editor.saveStatus, tabs]);
+
+  useEffect(() => {
+    if (!activeTab) {
+      if (editor.selected) {
+        editor.closeNote();
+      }
+      return;
+    }
+    if (editor.selected?.path !== activeTab.path) {
+      void editor.loadNote({ name: activeTab.title, path: activeTab.path });
+    }
+  }, [activeTab, editor]);
+
+  const handleTabSelect = useCallback(
+    (groupId: TabGroupId, tabId: string) => {
+      tabs.setFocusedGroup(groupId);
+      tabs.activateTab(groupId, tabId);
+    },
+    [tabs],
+  );
+
+  const handleTabClose = useCallback(
+    (groupId: TabGroupId, tabId: string) => {
+      tabs.closeTab(groupId, tabId, { force: true });
+      syncActiveTabToEditor();
+    },
+    [syncActiveTabToEditor, tabs],
+  );
+
+  const handleTabPinToggle = useCallback(
+    (tabId: string) => {
+      tabs.togglePinTab(tabId);
+    },
+    [tabs],
+  );
+
+  const handleConfirmDeleteWithTabs = useCallback(async () => {
+    const deletedPaths = [...mutations.pendingDeletePaths];
+    await controller.handleConfirmDelete();
+
+    const state = useTabsStore.getState();
+    for (const path of deletedPaths) {
+      const tabId = `tab:${path}`;
+      for (const group of Object.values(state.groups)) {
+        if (group.tabIds.includes(tabId)) {
+          state.closeTab(group.id, tabId, { force: true });
+          break;
+        }
+      }
+    }
+    syncActiveTabToEditor();
+  }, [controller, mutations.pendingDeletePaths, syncActiveTabToEditor]);
 
   if (!vaultPath) {
     return (
@@ -111,8 +209,6 @@ function RouteComponent() {
     );
   }
 
-  // ── Main layout ───────────────────────────────────────────────────────────
-
   return (
     <div className="flex flex-1 min-h-0">
       <div className="absolute top-10 right-10 z-50 size-fit">
@@ -122,10 +218,8 @@ function RouteComponent() {
         onCreateNote={controller.startNoteInline}
         onDeleteNote={controller.handleDeleteFromCommands}
       />
-      {/* Activity Bar */}
       <AppActivityBar />
 
-      {/* ── Left sidebar: file tree ── */}
       <AppSidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
         onCreateNote={controller.startNoteInline}
@@ -146,42 +240,88 @@ function RouteComponent() {
         />
       </AppSidebar>
 
-      {/* ── Centre: editor ── */}
-      <div className="flex-1 flex flex-col min-h-0 bg-[var(--sat-surface-1)]">
-        {/* Editor header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--sat-layout-border)] shrink-0 bg-[var(--sat-surface-1)]">
-          <span className="text-sm text-[var(--sat-text-primary)] flex-1 truncate">
-            {editor.selected ? editor.selected.name : "No note selected"}
-          </span>
-          <SaveIndicator status={editor.saveStatus} />
-        </div>
+      <div className="flex-1 min-h-0 bg-[var(--sat-surface-1)]">
+        <div className="flex h-full min-h-0">
+          {tabs.orderedGroups.map((group, index) => {
+            const isFocused = group.id === tabs.focusedGroupId;
+            const groupActiveTab =
+              group.activeTabId != null ? tabs.tabs[group.activeTabId] ?? null : null;
+            const groupTabs = group.tabIds
+              .map((tabId) => tabs.tabs[tabId])
+              .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
+              .map((tab) => ({
+                id: tab.id,
+                title: tab.title,
+                isActive: group.activeTabId === tab.id,
+                isDirty: tab.isDirty,
+                isPinned: tab.isPinned,
+                isPreview: tab.isPreview,
+                canClose: true,
+              }));
 
-        {/* Conflict banner */}
-        {editor.saveStatus === "conflict" && (
-          <ConflictBanner
-            onKeepMine={editor.performSave}
-            onDiscard={editor.discardAndReload}
-          />
-        )}
-
-        {/* Editor */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <Editor
-            className="h-full"
-            value={editor.content}
-            onChange={editor.handleChange}
-            initialContent=""
-            onFetchLinks={editor.onFetchLinks}
-            onFetchTags={editor.onFetchTags}
-            onOpenLink={editor.handleOpenLink}
-            onSearch={(query) => {
-              console.log("Searching for:", query);
-            }}
-          />
+            return (
+              <div
+                key={group.id}
+                className={`flex-1 min-w-0 ${index > 0 ? "border-l border-[var(--sat-layout-border)]" : ""}`}
+                onMouseDown={() => tabs.setFocusedGroup(group.id)}
+              >
+                <TabGroupFrame
+                  tabsBar={
+                    <TabsBar
+                      tabs={groupTabs}
+                      onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
+                      onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
+                      onPinToggle={handleTabPinToggle}
+                      rightSlot={
+                        isFocused ? (
+                          <SaveIndicator status={editor.saveStatus} />
+                        ) : undefined
+                      }
+                    />
+                  }
+                  className="h-full border-0"
+                >
+                  {isFocused ? (
+                    <>
+                      {editor.saveStatus === "conflict" && (
+                        <ConflictBanner
+                          onKeepMine={editor.performSave}
+                          onDiscard={editor.discardAndReload}
+                        />
+                      )}
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        <Editor
+                          className="h-full"
+                          value={editor.content}
+                          onChange={(value) => {
+                            if (activeTab) {
+                              tabs.markTabDirty(activeTab.id, true);
+                            }
+                            editor.handleChange(value);
+                          }}
+                          initialContent=""
+                          onFetchLinks={editor.onFetchLinks}
+                          onFetchTags={editor.onFetchTags}
+                          onOpenLink={editor.handleOpenLink}
+                          onSearch={(query) => {
+                            console.log("Searching for:", query);
+                          }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <InactiveGroupPane
+                      activeTitle={groupActiveTab?.title ?? null}
+                      onActivate={() => tabs.setFocusedGroup(group.id)}
+                    />
+                  )}
+                </TabGroupFrame>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Delete confirmation dialog ── */}
       <FileTreeContextMenu
         open={contextMenu.isOpen}
         anchor={contextMenu.menuState.anchor}
@@ -213,9 +353,26 @@ function RouteComponent() {
         }
         confirmLabel="Delete"
         variant="destructive"
-        onConfirm={controller.handleConfirmDelete}
+        onConfirm={handleConfirmDeleteWithTabs}
         isLoading={mutations.isLoading}
       />
+    </div>
+  );
+}
+
+function InactiveGroupPane({ activeTitle, onActivate }: InactiveGroupPaneProps) {
+  return (
+    <div className="flex h-full items-center justify-center bg-[var(--sat-surface-2)] px-6 text-center">
+      <Button
+        type="button"
+        onClick={onActivate}
+        variant="outline"
+        className="border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)]"
+      >
+        {activeTitle
+          ? `Activate pane to edit: ${activeTitle}`
+          : "Activate pane to edit"}
+      </Button>
     </div>
   );
 }
