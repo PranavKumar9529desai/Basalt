@@ -21,10 +21,14 @@ impl Basalt {
         serde_wasm_bindgen::to_value(&meta).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
-    pub fn fuzzy_search_commands(&self, query: &str, candidates: JsValue) -> Result<JsValue, JsValue> {
+    pub fn fuzzy_search_commands(
+        &self,
+        query: &str,
+        candidates: JsValue,
+    ) -> Result<JsValue, JsValue> {
         let candidates: Vec<(String, String)> = serde_wasm_bindgen::from_value(candidates)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
-        
+
         let results = search_commands(query, candidates);
         serde_wasm_bindgen::to_value(&results).map_err(|e| JsValue::from_str(&e.to_string()))
     }

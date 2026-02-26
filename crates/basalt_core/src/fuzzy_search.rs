@@ -29,7 +29,7 @@ pub fn fuzzy_match(query: &str, text: &str) -> Option<i32> {
     // Fallback to a simple character-by-character check for true "fuzzy" matching
     let mut score = 0;
     let mut current_pos = 0;
-    
+
     for q_char in query.chars() {
         if let Some(pos) = text[current_pos..].find(q_char) {
             score += 10;
@@ -49,9 +49,7 @@ pub fn fuzzy_match(query: &str, text: &str) -> Option<i32> {
 pub fn search_commands(query: &str, candidates: Vec<(String, String)>) -> Vec<SearchResult> {
     let mut results: Vec<SearchResult> = candidates
         .into_iter()
-        .filter_map(|(id, name)| {
-            fuzzy_match(query, &name).map(|score| SearchResult { id, score })
-        })
+        .filter_map(|(id, name)| fuzzy_match(query, &name).map(|score| SearchResult { id, score }))
         .collect();
 
     results.sort_by(|a, b| b.score.cmp(&a.score));

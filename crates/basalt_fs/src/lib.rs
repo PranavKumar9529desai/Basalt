@@ -2,6 +2,7 @@ use anyhow::Result;
 
 pub mod cache;
 pub mod indexer;
+pub mod path_utils;
 pub mod tree;
 pub mod utils;
 pub mod vault;

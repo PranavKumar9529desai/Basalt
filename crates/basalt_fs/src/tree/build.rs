@@ -5,10 +5,6 @@ use crate::Vault;
 
 use super::types::{FlatTreeNode, NodeKind};
 
-// ---------------------------------------------------------------------------
-// Internal intermediate representation
-// ---------------------------------------------------------------------------
-
 /// A node in the temporary tree we build before flattening.
 /// `BTreeMap` for children gives us alphabetical ordering for free.
 struct DirEntry {
@@ -50,10 +46,6 @@ impl DirEntry {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
 
 /// Walk every `.md` path stored in `vault.arena`, build a sorted directory
 /// tree in memory, then emit a pre-order DFS flat array.
@@ -112,10 +104,6 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
     flatten_children(&root, 0, &mut out);
     out
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 /// Recursively insert `parts` (the segments of a relative path) under `node`.
 fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix: &str) {

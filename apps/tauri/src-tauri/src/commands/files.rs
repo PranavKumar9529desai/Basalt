@@ -1,0 +1,331 @@
+use std::path::Path;
+
+use basalt_fs::path_utils::resolve_creation_path;
+use serde::Serialize;
+use tauri::State;
+
+use crate::app_state::AppState;
+use crate::config::load_config;
+
+fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
+    let p = Path::new(path);
+    if p.extension().and_then(|e| e.to_str()) != Some("md") {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "only .md files are supported",
+        ));
+    }
+    p.canonicalize()
+}
+
+/// Read a markdown file from disk.
+#[tauri::command]
+pub fn open_file(path: String) -> Result<String, String> {
+    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
+    std::fs::read_to_string(abs).map_err(|e| e.to_string())
+}
+
+/// Write content to a markdown file and re-index it in the vault.
+#[tauri::command]
+pub fn save_file(path: String, content: String, state: State<AppState>) -> Result<(), String> {
+    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
+    std::fs::write(&abs, &content).map_err(|e| e.to_string())?;
+
+    let mut vault = state
+        .vault
+        .write()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+
+    if let Some(path_str) = abs.to_str() {
+        vault.add_document(path_str, &content);
+    }
+
+    Ok(())
+}
+
+/// Return the paths of all notes that link to the given file.
+#[tauri::command]
+pub fn get_backlinks(path: String, state: State<AppState>) -> Result<Vec<String>, String> {
+    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
+
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+
+    let Some(doc_id) = vault.arena.get_id(abs.to_str().unwrap_or_default()) else {
+        return Ok(Vec::new());
+    };
+    let Some(backlinks) = vault.graph.get_back_links(doc_id) else {
+        return Ok(Vec::new());
+    };
+
+    let results = backlinks
+        .iter()
+        .filter_map(|id| vault.arena.get_string(*id).cloned())
+        .collect();
+
+    Ok(results)
+}
+
+#[derive(Serialize)]
+pub struct LinkSuggestion {
+    pub name: String,
+    pub path: String,
+}
+
+/// Return note names and paths whose filename starts with `prefix`.
+#[tauri::command]
+pub fn autocomplete_links(
+    prefix: String,
+    state: State<AppState>,
+) -> Result<Vec<LinkSuggestion>, String> {
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+
+    let out = vault
+        .arena
+        .all_strings()
+        .filter(|p| p.ends_with(".md"))
+        .filter_map(|path_str| {
+            let name = Path::new(path_str).file_name()?.to_str()?;
+            if name.to_lowercase().starts_with(&prefix.to_lowercase()) {
+                Some(LinkSuggestion {
+                    name: name.to_string(),
+                    path: path_str.to_string(),
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok(out)
+}
+
+/// Return all tags in the vault that start with `prefix`.
+#[tauri::command]
+pub fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<String>, String> {
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+
+    let mut out: Vec<String> = vault
+        .graph
+        .metadata_cache
+        .values()
+        .flat_map(|meta| meta.tags.iter().cloned())
+        .filter(|tag| tag.to_lowercase().starts_with(&prefix.to_lowercase()))
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    out.sort();
+    Ok(out)
+}
+
+/// File creation result payload.
+#[derive(Serialize)]
+pub struct CreateNoteResult {
+    /// Absolute path of the newly created file.
+    pub path: String,
+    /// Display name (filename without extension).
+    pub name: String,
+}
+
+#[tauri::command]
+pub fn create_note(
+    name: String,
+    parent: Option<String>, // relative folder path inside vault, e.g. "Daily Journal"
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<CreateNoteResult, String> {
+    let config = load_config(&app);
+    let vault_path_str = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    let vault_path = Path::new(&vault_path_str);
+
+    let (target_dir, file_path, file_name) =
+        resolve_creation_path(vault_path, parent.as_deref(), &name, false)?;
+
+    if file_path.exists() {
+        return Err(format!("'{name}' already exists"));
+    }
+
+    if !target_dir.exists() {
+        std::fs::create_dir_all(&target_dir)
+            .map_err(|e| format!("failed to create directory: {e}"))?;
+    }
+
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let content = format!(
+        "---\ntype: note\ntopic:\nstatus: inbox\ncreated: {today}\nupdated: {today}\ntags: []\naliases: []\n---\n\n"
+    );
+
+    std::fs::write(&file_path, &content).map_err(|e| format!("failed to write file: {e}"))?;
+
+    let abs_path = file_path
+        .canonicalize()
+        .map_err(|e| format!("canonicalize failed: {e}"))?
+        .to_string_lossy()
+        .to_string();
+
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        vault.add_document(&abs_path, &content);
+    }
+
+    let clean_name = file_name.trim_end_matches(".md").to_string();
+
+    Ok(CreateNoteResult {
+        path: abs_path,
+        name: clean_name,
+    })
+}
+
+#[tauri::command]
+pub fn create_folder(
+    name: String,
+    parent: Option<String>, // relative folder path inside vault
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    let config = load_config(&app);
+    let vault_path_str = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    let vault_path = Path::new(&vault_path_str);
+
+    let (_, folder_path, _) = resolve_creation_path(vault_path, parent.as_deref(), &name, true)?;
+
+    if folder_path.exists() {
+        let clean_name = name.trim();
+        let components: Vec<&str> = clean_name
+            .split(|c| c == '/' || c == '\\')
+            .filter(|s| !s.is_empty())
+            .collect();
+        let last = components.last().unwrap_or(&clean_name);
+        return Err(format!("'{last}' already exists"));
+    }
+
+    std::fs::create_dir_all(&folder_path).map_err(|e| format!("failed to create folder: {e}"))?;
+
+    Ok(folder_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn delete_file(path: String, state: State<AppState>) -> Result<(), String> {
+    let abs = Path::new(&path)
+        .canonicalize()
+        .map_err(|e| format!("invalid path: {e}"))?;
+
+    if !abs.exists() {
+        return Err("file does not exist".to_string());
+    }
+
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        vault.remove_document(abs.to_str().unwrap_or_default());
+    }
+
+    if abs.is_dir() {
+        std::fs::remove_dir_all(&abs).map_err(|e| format!("failed to delete directory: {e}"))?;
+    } else {
+        std::fs::remove_file(&abs).map_err(|e| format!("failed to delete file: {e}"))?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_note_creation_path() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "test", false).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/test.md"));
+        assert_eq!(name, "test.md");
+    }
+
+    #[test]
+    fn test_valid_nested_note() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "a/b/c", false).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault/a/b"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/a/b/c.md"));
+        assert_eq!(name, "c.md");
+    }
+
+    #[test]
+    fn test_valid_folder_creation() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "my_folder", true).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/my_folder"));
+        assert_eq!(name, "my_folder");
+    }
+
+    #[test]
+    fn test_valid_nested_folder() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "a/b/c", true).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault/a/b"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/a/b/c"));
+        assert_eq!(name, "c");
+    }
+
+    #[test]
+    fn test_respects_parent_dir() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) =
+            resolve_creation_path(&vault, Some("parent"), "child", false).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault/parent"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/parent/child.md"));
+        assert_eq!(name, "child.md");
+    }
+
+    #[test]
+    fn test_rejects_empty_name() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "   ", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "///", false).is_err());
+    }
+
+    #[test]
+    fn test_rejects_invalid_chars() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "foo*bar", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "foo/bar?baz", false).is_err());
+    }
+
+    #[test]
+    fn test_rejects_too_deep() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10/11", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10", false).is_ok());
+    }
+
+    #[test]
+    fn test_rejects_long_components() {
+        let vault = std::path::PathBuf::from("/vault");
+        let long_name = "a".repeat(256);
+        assert!(resolve_creation_path(&vault, None, &long_name, false).is_err());
+
+        let valid_deep = "a".repeat(255);
+        assert!(resolve_creation_path(&vault, None, &valid_deep, false).is_ok());
+    }
+}
