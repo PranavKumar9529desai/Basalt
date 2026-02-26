@@ -75,6 +75,7 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
     >
       {children}
       <ResizeHandle
+        isResizing={isResizing}
         onMouseDown={(e: React.MouseEvent) => {
           e.preventDefault();
           setIsResizing(true);
