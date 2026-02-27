@@ -1,17 +1,27 @@
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useMemo, useState } from "react";
-import type { UseEditorReturn } from "../../editor/hooks/useEditor";
 import type { FlatTreeNode } from "../types";
 import type { UseVaultClipboardReturn } from "./useVaultClipboard";
 import type { UseVaultContextMenuReturn } from "./useVaultContextMenu";
 import type { UseVaultMutationsReturn } from "./useVaultMutations";
 import type { UseVaultSelectionReturn } from "./useVaultSelection";
 
+interface NoteSelection {
+  name: string;
+  path: string;
+}
+
+interface VaultNoteController {
+  selected: NoteSelection | null;
+  loadNote: (note: NoteSelection) => void | Promise<void>;
+  closeNote: () => void;
+}
+
 export interface UseVaultFileTreeControllerOptions {
   treeNodes: FlatTreeNode[];
   visibleNodes: FlatTreeNode[];
   vaultPath: string | null;
-  editor: UseEditorReturn;
+  editor: VaultNoteController;
   mutations: UseVaultMutationsReturn;
   selection: UseVaultSelectionReturn;
   clipboard: UseVaultClipboardReturn;

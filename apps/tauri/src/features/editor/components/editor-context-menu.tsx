@@ -44,7 +44,7 @@ export function Editor({ ...props }: EditorProps) {
   const cmExtension = useMemo(() => contextMenuExtension(setMenuState), []);
 
   return (
-    <div className="flex-1 overflow-hidden relative">
+    <div className="relative flex-1 min-h-0 overflow-hidden">
       <ContextMenu
         open={!!menuState}
         onOpenChange={(open) => !open && setMenuState(null)}

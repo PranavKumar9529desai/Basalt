@@ -95,9 +95,9 @@ export function EditorComponent({
 
   return (
     <div
-      className={`w-full h-full flex flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
+      className={`flex h-full min-h-0 w-full flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
     >
-      <div className="flex-1 overflow-hidden relative">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         <CodeMirror
           ref={editorRef}
           value={content}

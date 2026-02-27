@@ -2,12 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
 import { AppCommands } from "../commands/app-commands";
-import { useEditor } from "../features/editor/hooks/useEditor";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
@@ -86,12 +85,8 @@ function RouteComponent() {
     [treeNodes],
   );
 
-  const editor = useEditor({ findNote });
   const { renderGroupPane } = usePaneManager({ findNote });
   const tabs = useTabs();
-  const syncSeqRef = useRef(0);
-  const pendingLoadPathRef = useRef<string | null>(null);
-  const tabDrivenSelectionRef = useRef<string | null>(null);
   const tabClickOpenBehavior = parseTabClickOpenBehavior(
     boot.settings?.tabClickOpenBehavior,
   );
@@ -99,7 +94,6 @@ function RouteComponent() {
     openInPreview,
     openPinned,
     setTabTitle,
-    markTabDirty,
     setFocusedGroup,
     activateTab,
     closeTab,
@@ -125,7 +119,19 @@ function RouteComponent() {
     treeNodes,
     visibleNodes,
     vaultPath,
-    editor,
+    editor: {
+      selected: activeTab
+        ? { name: activeTab.title, path: activeTab.path }
+        : null,
+      loadNote: (note) => {
+        const tabId = openInPreview({ path: note.path, title: note.name });
+        setTabTitle(tabId, note.name);
+      },
+      closeNote: () => {
+        if (!focusedGroup || !activeTab) return;
+        closeTab(focusedGroup.id, activeTab.id, { force: true });
+      },
+    },
     mutations,
     selection,
     clipboard,
@@ -143,132 +149,6 @@ function RouteComponent() {
       setTabTitle(tabId, node.name);
     },
   });
-
-  useEffect(() => {
-    if (!editor.selected) return;
-    if (activeTab && editor.selected.path !== activeTab.path) {
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] skip editor->tabs (stale selectedPath)", {
-          seq: ++syncSeqRef.current,
-          selectedPath: editor.selected.path,
-          activePath: activeTab.path,
-        });
-      }
-      return;
-    }
-    if (pendingLoadPathRef.current) {
-      if (import.meta.env.DEV) {
-        console.debug(
-          "[tabs-sync] skip editor->tabs (tabs->editor in-flight)",
-          {
-            seq: ++syncSeqRef.current,
-            selectedPath: editor.selected.path,
-            pendingPath: pendingLoadPathRef.current,
-          },
-        );
-      }
-      return;
-    }
-    if (tabDrivenSelectionRef.current === editor.selected.path) {
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] skip editor->tabs (tab-driven selection)", {
-          seq: ++syncSeqRef.current,
-          path: editor.selected.path,
-        });
-      }
-      tabDrivenSelectionRef.current = null;
-      return;
-    }
-    if (activeTab?.path === editor.selected.path) {
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] skip editor->tabs (already active)", {
-          seq: ++syncSeqRef.current,
-          path: editor.selected.path,
-        });
-      }
-      return;
-    }
-    if (import.meta.env.DEV) {
-      console.debug("[tabs-sync] editor->tabs openInPreview", {
-        seq: ++syncSeqRef.current,
-        selectedPath: editor.selected.path,
-        selectedName: editor.selected.name,
-        activePath: activeTab?.path ?? null,
-      });
-    }
-    const tabId = openInPreview({
-      path: editor.selected.path,
-      title: editor.selected.name,
-    });
-    setTabTitle(tabId, editor.selected.name);
-  }, [activeTab?.path, editor.selected, openInPreview, setTabTitle]);
-
-  useEffect(() => {
-    if (!activeTab) return;
-    if (editor.saveStatus === "saved") {
-      markTabDirty(activeTab.id, false);
-    }
-  }, [activeTab, editor.saveStatus, markTabDirty]);
-
-  const selectedPath = editor.selected?.path ?? null;
-
-  useEffect(() => {
-    if (!activeTab) return;
-
-    if (selectedPath === activeTab.path) {
-      pendingLoadPathRef.current = null;
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] skip tabs->editor (already selected)", {
-          seq: ++syncSeqRef.current,
-          path: activeTab.path,
-        });
-      }
-      return;
-    }
-
-    if (pendingLoadPathRef.current === activeTab.path) {
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] skip tabs->editor (load in-flight)", {
-          seq: ++syncSeqRef.current,
-          pendingPath: pendingLoadPathRef.current,
-        });
-      }
-      return;
-    }
-
-    pendingLoadPathRef.current = activeTab.path;
-    tabDrivenSelectionRef.current = activeTab.path;
-    if (selectedPath !== activeTab.path) {
-      if (import.meta.env.DEV) {
-        console.debug("[tabs-sync] tabs->editor loadNote", {
-          seq: ++syncSeqRef.current,
-          selectedPath,
-          activePath: activeTab.path,
-        });
-      }
-      void editor
-        .loadNote({ name: activeTab.title, path: activeTab.path })
-        .finally(() => {
-          if (pendingLoadPathRef.current === activeTab.path) {
-            pendingLoadPathRef.current = null;
-          }
-        });
-    }
-  }, [activeTab, selectedPath, editor.loadNote]);
-
-  useEffect(() => {
-    if (activeTab) return;
-    pendingLoadPathRef.current = null;
-    tabDrivenSelectionRef.current = null;
-    if (!selectedPath) return;
-    if (import.meta.env.DEV) {
-      console.debug("[tabs-sync] tabs->editor closeNote (no active tab)", {
-        seq: ++syncSeqRef.current,
-        selectedPath,
-      });
-    }
-    editor.closeNote();
-  }, [activeTab, selectedPath, editor.closeNote]);
 
   const handleTabSelect = useCallback(
     (groupId: TabGroupId, tabId: string) => {
@@ -399,7 +279,6 @@ function RouteComponent() {
       </AppSidebar>
 
       <WorkspaceTabs
-        editor={editor}
         handleTabSelect={handleTabSelect}
         handleTabClose={handleTabClose}
         handleTabPinToggle={handleTabPinToggle}

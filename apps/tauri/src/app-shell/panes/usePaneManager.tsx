@@ -53,7 +53,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
     useEffect(() => {
         if (!activeTab) {
             lastLoadedPathRef.current = null;
-            void editor.closeNote();
+            editor.closeNote();
             return;
         }
 
@@ -63,7 +63,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
         }
         lastLoadedPathRef.current = path;
         void editor.loadNote({ name: activeTab.title, path });
-    }, [activeTab, editor]);
+    }, [activeTab?.path, activeTab?.title, editor.closeNote, editor.loadNote]);
 
     const handleEditorChange = useCallback(
         (value: string) => {
@@ -72,7 +72,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
             }
             editor.handleChange(value);
         },
-        [activeTab, markTabDirty, editor],
+        [activeTab, markTabDirty, editor.handleChange],
     );
 
     const handlePanePointerDown = useCallback(() => {
@@ -138,10 +138,24 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
                             onDiscard={editor.discardAndReload}
                         />
                     )}
-                    <button
-                        type="button"
-                        className="flex-1 min-h-0 overflow-hidden bg-transparent p-0 text-left border-0"
-                        onMouseDown={handlePanePointerDown}
+                    <div
+                        className="flex-1 min-h-0 overflow-hidden"
+                        onPointerDownCapture={handlePanePointerDown}
+                        onWheelCapture={(event) => {
+                            if (!import.meta.env.DEV) return;
+                            const target = event.target as HTMLElement | null;
+                            const splitZone = target?.closest("[data-tab-split-zone='true']");
+                            console.debug("[pane] wheel", {
+                                groupId: group.id,
+                                focused: context.isFocused,
+                                isDraggingTab,
+                                activeSplitTarget: getSplitTargetDirection(group.id),
+                                targetTag: target?.tagName ?? null,
+                                targetClass: target?.className ?? null,
+                                hitSplitZone: Boolean(splitZone),
+                                defaultPrevented: event.defaultPrevented,
+                            });
+                        }}
                     >
                         <Editor
                             className="h-full"
@@ -155,11 +169,11 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
                                 console.log("Searching for:", query);
                             }}
                         />
-                    </button>
+                    </div>
                 </>
             ) : (
                 <InactiveGroupPane
-                    activeTitle={activeTab?.title ?? null}
+                    activeTitle={null}
                     onActivate={onActivateGroup}
                 />
             )}

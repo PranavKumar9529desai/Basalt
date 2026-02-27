@@ -20,7 +20,7 @@ interface InactiveGroupPaneProps {
 }
 
 export interface WorkspaceTabsProps {
-    editor: UseEditorReturn;
+    editor?: UseEditorReturn;
     handleTabSelect: (groupId: TabGroupId, tabId: string) => void;
     handleTabClose: (groupId: TabGroupId, tabId: string) => void;
     handleTabPinToggle: (tabId: string) => void;
@@ -64,6 +64,9 @@ export function WorkspaceTabs({
         layoutRoot ?? { type: "group", groupId: fallbackGroupId };
 
     const renderDefaultGroupPane = (context: WorkspaceTabsGroupRenderContext) => {
+        if (!editor) {
+            return null;
+        }
         const {
             group,
             groupTabs,
