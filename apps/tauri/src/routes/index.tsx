@@ -333,6 +333,21 @@ function RouteComponent() {
     splitGroupWithTab(focusedGroup.id, "right", activeTab.id);
   }, [activeTab, focusedGroup, splitGroupWithTab]);
 
+  const handleSplitLeft = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    splitGroupWithTab(focusedGroup.id, "left", activeTab.id);
+  }, [activeTab, focusedGroup, splitGroupWithTab]);
+
+  const handleSplitUp = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    splitGroupWithTab(focusedGroup.id, "top", activeTab.id);
+  }, [activeTab, focusedGroup, splitGroupWithTab]);
+
+  const handleSplitDown = useCallback(() => {
+    if (!focusedGroup || !activeTab) return;
+    splitGroupWithTab(focusedGroup.id, "bottom", activeTab.id);
+  }, [activeTab, focusedGroup, splitGroupWithTab]);
+
   if (!vaultPath) {
     return (
       <VaultSplash
@@ -356,6 +371,9 @@ function RouteComponent() {
         onCloseTabsToRight={handleCloseTabsToRight}
         onTogglePinActiveTab={handleTogglePinActiveTab}
         onSplitRight={handleSplitRight}
+        onSplitLeft={handleSplitLeft}
+        onSplitTop={handleSplitUp}
+        onSplitBottom={handleSplitDown}
         hasActiveTab={Boolean(activeTab)}
       />
       <AppActivityBar />

@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { useCommandStore } from "@workspace/editor";
 import type React from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -19,6 +19,9 @@ export interface AppCommandsProps {
   onCloseTabsToRight?: () => void;
   onTogglePinActiveTab?: () => void;
   onSplitRight?: () => void;
+  onSplitLeft?: () => void;
+  onSplitTop?: () => void;
+  onSplitBottom?: () => void;
   hasActiveTab?: boolean;
 }
 
@@ -33,39 +36,13 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
   onCloseTabsToRight,
   onTogglePinActiveTab,
   onSplitRight,
+  onSplitLeft,
+  onSplitTop,
+  onSplitBottom,
   hasActiveTab = false,
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
-
-  const onCreateNoteRef = useRef(onCreateNote);
-  const onDeleteNoteRef = useRef(onDeleteNote);
-  const onCloseActiveTabRef = useRef(onCloseActiveTab);
-  const onCloseOtherTabsRef = useRef(onCloseOtherTabs);
-  const onCloseTabsToRightRef = useRef(onCloseTabsToRight);
-  const onTogglePinActiveTabRef = useRef(onTogglePinActiveTab);
-  const onSplitRightRef = useRef(onSplitRight);
-  const hasActiveTabRef = useRef(hasActiveTab);
-
-  useEffect(() => {
-    onCreateNoteRef.current = onCreateNote;
-    onDeleteNoteRef.current = onDeleteNote;
-    onCloseActiveTabRef.current = onCloseActiveTab;
-    onCloseOtherTabsRef.current = onCloseOtherTabs;
-    onCloseTabsToRightRef.current = onCloseTabsToRight;
-    onTogglePinActiveTabRef.current = onTogglePinActiveTab;
-    onSplitRightRef.current = onSplitRight;
-    hasActiveTabRef.current = hasActiveTab;
-  }, [
-    hasActiveTab,
-    onCloseActiveTab,
-    onCloseOtherTabs,
-    onCloseTabsToRight,
-    onCreateNote,
-    onDeleteNote,
-    onSplitRight,
-    onTogglePinActiveTab,
-  ]);
 
   const commands = useMemo(
     () => [
@@ -76,7 +53,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         icon: <IconFilePlus size={16} />,
         hotkeys: ["Ctrl+N"],
         callback: () => {
-          if (onCreateNoteRef.current) onCreateNoteRef.current();
+          if (onCreateNote) onCreateNote();
           else console.log("Create new file command executed");
         },
       },
@@ -86,7 +63,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         category: "File",
         icon: <IconTrash size={16} />,
         callback: () => {
-          if (onDeleteNoteRef.current) onDeleteNoteRef.current();
+          if (onDeleteNote) onDeleteNote();
           else console.log("Delete file command executed");
         },
       },
@@ -105,9 +82,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         category: "Tabs",
         icon: <IconX size={16} />,
         hotkeys: ["Ctrl+W"],
-        checkCallback: () => hasActiveTabRef.current,
+        checkCallback: () => hasActiveTab,
         callback: () => {
-          if (onCloseActiveTabRef.current) onCloseActiveTabRef.current();
+          if (onCloseActiveTab) onCloseActiveTab();
         },
       },
       {
@@ -115,9 +92,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         name: "Close Other Tabs",
         category: "Tabs",
         icon: <IconRectangleVertical size={16} />,
-        checkCallback: () => hasActiveTabRef.current,
+        checkCallback: () => hasActiveTab,
         callback: () => {
-          if (onCloseOtherTabsRef.current) onCloseOtherTabsRef.current();
+          if (onCloseOtherTabs) onCloseOtherTabs();
         },
       },
       {
@@ -125,9 +102,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         name: "Close Tabs to the Right",
         category: "Tabs",
         icon: <IconRectangleVertical size={16} />,
-        checkCallback: () => hasActiveTabRef.current,
+        checkCallback: () => hasActiveTab,
         callback: () => {
-          if (onCloseTabsToRightRef.current) onCloseTabsToRightRef.current();
+          if (onCloseTabsToRight) onCloseTabsToRight();
         },
       },
       {
@@ -135,9 +112,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         name: "Pin/Unpin Current Tab",
         category: "Tabs",
         icon: <IconPinned size={16} />,
-        checkCallback: () => hasActiveTabRef.current,
+        checkCallback: () => hasActiveTab,
         callback: () => {
-          if (onTogglePinActiveTabRef.current) onTogglePinActiveTabRef.current();
+          if (onTogglePinActiveTab) onTogglePinActiveTab();
         },
       },
       {
@@ -145,13 +122,55 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         name: "Split Right and Move Tab",
         category: "Tabs",
         icon: <IconLayoutBoardSplit size={16} />,
-        checkCallback: () => hasActiveTabRef.current,
+        checkCallback: () => hasActiveTab,
         callback: () => {
-          if (onSplitRightRef.current) onSplitRightRef.current();
+          if (onSplitRight) onSplitRight();
+        },
+      },
+      {
+        id: "tabs:split-left",
+        name: "Split Left and Move Tab",
+        category: "Tabs",
+        icon: <IconLayoutBoardSplit size={16} />,
+        checkCallback: () => hasActiveTab,
+        callback: () => {
+          if (onSplitLeft) onSplitLeft();
+        },
+      },
+      {
+        id: "tabs:split-up",
+        name: "Split Up and Move Tab",
+        category: "Tabs",
+        icon: <IconLayoutBoardSplit size={16} />,
+        checkCallback: () => hasActiveTab,
+        callback: () => {
+          if (onSplitTop) onSplitTop();
+        },
+      },
+      {
+        id: "tabs:split-down",
+        name: "Split Down and Move Tab",
+        category: "Tabs",
+        icon: <IconLayoutBoardSplit size={16} />,
+        checkCallback: () => hasActiveTab,
+        callback: () => {
+          if (onSplitBottom) onSplitBottom();
         },
       },
     ],
-    [],
+    [
+      hasActiveTab,
+      onCloseActiveTab,
+      onCloseOtherTabs,
+      onCloseTabsToRight,
+      onCreateNote,
+      onDeleteNote,
+      onSplitBottom,
+      onSplitLeft,
+      onSplitRight,
+      onSplitTop,
+      onTogglePinActiveTab,
+    ],
   );
 
   useEffect(() => {

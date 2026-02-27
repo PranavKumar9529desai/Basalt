@@ -138,8 +138,9 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
                             onDiscard={editor.discardAndReload}
                         />
                     )}
-                    <div
-                        className="flex-1 min-h-0 overflow-hidden"
+                    <button
+                        type="button"
+                        className="flex-1 min-h-0 overflow-hidden bg-transparent p-0 text-left border-0"
                         onMouseDown={handlePanePointerDown}
                     >
                         <Editor
@@ -154,7 +155,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
                                 console.log("Searching for:", query);
                             }}
                         />
-                    </div>
+                    </button>
                 </>
             ) : (
                 <InactiveGroupPane
