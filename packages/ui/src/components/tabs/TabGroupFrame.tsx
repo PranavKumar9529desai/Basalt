@@ -1,9 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, ReactNode } from "react";
-import {
-  TabSplitDropZone,
-  type TabSplitDirection,
-} from "./TabSplitDropZone";
+import { type TabSplitDirection, TabSplitDropZone } from "./TabSplitDropZone";
 
 export interface TabGroupFrameProps {
   tabsBar: ReactNode;

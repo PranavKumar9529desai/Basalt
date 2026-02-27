@@ -43,7 +43,7 @@ Deliver per-pane editor support so Basalt renders an independent editor instance
    - Notes:
      - Workspace snapshots now include a `paneFocus` block (`focusedPaneId`) in addition to the existing `focusedGroupId`, and hydration prefers the stored pane focus so reloading the layout restores the previously active pane.
      - `PaneInstance` now calls `onActivateGroup` when the editor pane is clicked so the focused pane updates before command palette actions or splits run.
-     - Tab drag split-target drops now skip creating a new split whenever the source group only had the dragged tab, leaving the destination pane as a single group (the old split collapses when emptied).
+     - Tab drag split-target drops now inspect the drop axis and only create a new split when the target pane isn’t already under that axis, preventing nested splits (top → top, left → left) and collapsing the source pane when it becomes empty.
    - SOP: After these flows pass manual verification, run `bun run lint` and `bunx tsc --noEmit`.
 
 5. **Performance & Rust delegation**
