@@ -118,7 +118,7 @@ export function WorkspaceTabs({
                         }
                     />
                 }
-                className="h-full border-0"
+                className="flex-1 min-h-0 border-0"
             >
                 {isFocused ? (
                     <>
@@ -130,7 +130,7 @@ export function WorkspaceTabs({
                         )}
                         <div className="flex-1 min-h-0 overflow-hidden">
                             <Editor
-                                className="h-full"
+                                className="flex-1 min-h-0"
                                 value={editor.content}
                                 onChange={(value) => {
                                     if (groupActiveTab) {
@@ -219,7 +219,7 @@ export function WorkspaceTabs({
                                     ? child.groupId
                                     : `${child.axis}-${index}`
                             }
-                            className={`flex-1 min-h-0 min-w-0 h-full w-full ${
+                            className={`flex flex-1 min-h-0 min-w-0 ${
                                 isRow ? "min-w-0" : "w-full"
                             } ${borderClass}`}
                         >

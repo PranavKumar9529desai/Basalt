@@ -102,10 +102,11 @@ export function EditorComponent({
           ref={editorRef}
           value={content}
           height="100%"
+          maxHeight="100%"
           basicSetup={BASIC_SETUP}
           extensions={allExtensions}
           onChange={handleChange}
-          className="h-full"
+          className="flex h-full min-h-0 flex-col"
         />
       </div>
     </div>

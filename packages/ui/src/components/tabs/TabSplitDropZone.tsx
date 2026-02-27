@@ -64,7 +64,6 @@ export function TabSplitDropZone({
     <div
       aria-hidden="true"
       data-direction={direction}
-      data-tab-split-zone="true"
       className={cn(
         "pointer-events-auto absolute border border-[var(--sat-layout-border)] bg-[var(--sat-surface-3)]/60 transition-all duration-150 ease-out",
         active &&
@@ -79,15 +78,6 @@ export function TabSplitDropZone({
       onDragOver={(event) => onDragOver?.(direction, event)}
       onDragLeave={(event) => onDragLeave?.(direction, event)}
       onDrop={(event) => onDrop?.(direction, event)}
-      onWheel={(event) => {
-        if (import.meta.env.DEV) {
-          console.debug("[tab-split-zone] wheel intercepted", {
-            direction,
-            active: Boolean(active),
-            defaultPrevented: event.defaultPrevented,
-          });
-        }
-      }}
     />
   );
 }

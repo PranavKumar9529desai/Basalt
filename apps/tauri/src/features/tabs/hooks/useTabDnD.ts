@@ -18,17 +18,10 @@ export function useTabDnD() {
   const [splitTarget, setSplitTarget] = useState<SplitTargetState | null>(null);
 
   const clearDragState = useCallback(() => {
-    if (import.meta.env.DEV && (draggedTabRef.current || isDraggingTab || splitTarget)) {
-      console.debug("[tab-dnd] clearDragState", {
-        dragged: draggedTabRef.current,
-        isDraggingTab,
-        splitTarget,
-      });
-    }
     draggedTabRef.current = null;
     setSplitTarget(null);
     setIsDraggingTab(false);
-  }, [isDraggingTab, splitTarget]);
+  }, []);
 
   useEffect(() => {
     // Fallback cleanup: browser DnD can occasionally miss React dragend handlers.
@@ -46,9 +39,6 @@ export function useTabDnD() {
     (groupId: TabGroupId, tabId: string, event: DragEvent<HTMLElement>) => {
       draggedTabRef.current = { tabId, fromGroupId: groupId };
       setIsDraggingTab(true);
-      if (import.meta.env.DEV) {
-        console.debug("[tab-dnd] dragStart", { groupId, tabId });
-      }
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", tabId);
     },
@@ -183,15 +173,6 @@ export function useTabDnD() {
         },
         [clearDragState],
     );
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.debug("[tab-dnd] state", {
-      isDraggingTab,
-      splitTarget,
-      dragged: draggedTabRef.current,
-    });
-  }, [isDraggingTab, splitTarget]);
 
   const getSplitTargetDirection = useCallback(
     (groupId: TabGroupId): SplitDirection | null =>

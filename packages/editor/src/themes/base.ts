@@ -5,6 +5,7 @@ import { tags as t } from "@lezer/highlight";
 const baseTheme = EditorView.theme({
   "&": {
     height: "100%",
+    maxHeight: "100%",
     minHeight: "0",
     display: "flex",
     flexDirection: "column",
@@ -17,6 +18,7 @@ const baseTheme = EditorView.theme({
     flex: "1 1 auto",
     minHeight: "0",
     height: "100%",
+    maxHeight: "100%",
     overflow: "auto",
     padding: "24px 32px",
   },

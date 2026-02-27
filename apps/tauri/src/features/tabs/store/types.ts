@@ -10,6 +10,7 @@ import type {
 } from "../types";
 
 export type { TabGroupModel };
+export type { TabGroupId };
 
 export interface CloseTabOptions {
     force?: boolean;

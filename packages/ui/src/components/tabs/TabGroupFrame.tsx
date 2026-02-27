@@ -40,12 +40,12 @@ export function TabGroupFrame({
   return (
     <section
       className={cn(
-        "relative flex h-full min-h-0 flex-col border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]",
+        "relative flex flex-1 min-h-0 min-w-0 flex-col border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]",
         className,
       )}
     >
       {tabsBar}
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
         {showSplitTargets ? (
           <div className="pointer-events-none absolute inset-0 z-20">
