@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { AppActivityBar } from "../app-shell/AppActivityBar";
 import { AppSidebar } from "../app-shell/AppSidebar";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
 import { AppCommands } from "../commands/app-commands";
+import { useEditorSessionsStore } from "../features/editor/store";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
@@ -105,11 +106,20 @@ function RouteComponent() {
 
   useTabPersistence({ workspace: boot.workspace });
 
-  const focusedGroup = tabs.groups[tabs.focusedGroupId];
-  const activeTab =
-    focusedGroup?.activeTabId != null
-      ? (tabs.tabs[focusedGroup.activeTabId] ?? null)
-      : null;
+  const focusedSessionSelected = useEditorSessionsStore(
+    (state) => state.sessions[tabs.focusedGroupId]?.selected ?? null,
+  );
+  const focusedSessionTab = useMemo(() => {
+    const path = focusedSessionSelected?.path;
+    if (!path) return null;
+    const tabId = `tab:${path}`;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tabId)) {
+        return tabs.tabs[tabId] ?? null;
+      }
+    }
+    return null;
+  }, [focusedSessionSelected?.path, tabs.groups, tabs.tabs]);
 
   const mutations = useVaultMutations();
   const selection = useVaultSelection();
@@ -120,16 +130,20 @@ function RouteComponent() {
     visibleNodes,
     vaultPath,
     editor: {
-      selected: activeTab
-        ? { name: activeTab.title, path: activeTab.path }
-        : null,
+      selected: focusedSessionSelected,
       loadNote: (note) => {
         const tabId = openInPreview({ path: note.path, title: note.name });
         setTabTitle(tabId, note.name);
       },
       closeNote: () => {
-        if (!focusedGroup || !activeTab) return;
-        closeTab(focusedGroup.id, activeTab.id, { force: true });
+        const tab = focusedSessionTab;
+        if (!tab) return;
+        for (const group of Object.values(tabs.groups)) {
+          if (group.tabIds.includes(tab.id)) {
+            closeTab(group.id, tab.id, { force: true });
+            break;
+          }
+        }
       },
     },
     mutations,
@@ -189,44 +203,87 @@ function RouteComponent() {
   }, [controller, mutations.pendingDeletePaths]);
 
   const handleCloseActiveTab = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    closeTab(focusedGroup.id, activeTab.id, { force: true });
-  }, [activeTab, closeTab, focusedGroup]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        closeTab(group.id, tab.id, { force: true });
+        break;
+      }
+    }
+  }, [closeTab, focusedSessionTab, tabs.groups]);
 
   const handleCloseOtherTabs = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    closeOtherTabs(focusedGroup.id, activeTab.id);
-  }, [activeTab, closeOtherTabs, focusedGroup]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        closeOtherTabs(group.id, tab.id);
+        break;
+      }
+    }
+  }, [closeOtherTabs, focusedSessionTab, tabs.groups]);
 
   const handleCloseTabsToRight = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    closeTabsToRight(focusedGroup.id, activeTab.id);
-  }, [activeTab, closeTabsToRight, focusedGroup]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        closeTabsToRight(group.id, tab.id);
+        break;
+      }
+    }
+  }, [closeTabsToRight, focusedSessionTab, tabs.groups]);
 
   const handleTogglePinActiveTab = useCallback(() => {
-    if (!activeTab) return;
-    togglePinTab(activeTab.id);
-  }, [activeTab, togglePinTab]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    togglePinTab(tab.id);
+  }, [focusedSessionTab, togglePinTab]);
 
   const handleSplitRight = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    splitGroupWithTab(focusedGroup.id, "right", activeTab.id);
-  }, [activeTab, focusedGroup, splitGroupWithTab]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        splitGroupWithTab(group.id, "right", tab.id);
+        break;
+      }
+    }
+  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
   const handleSplitLeft = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    splitGroupWithTab(focusedGroup.id, "left", activeTab.id);
-  }, [activeTab, focusedGroup, splitGroupWithTab]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        splitGroupWithTab(group.id, "left", tab.id);
+        break;
+      }
+    }
+  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
   const handleSplitUp = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    splitGroupWithTab(focusedGroup.id, "top", activeTab.id);
-  }, [activeTab, focusedGroup, splitGroupWithTab]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        splitGroupWithTab(group.id, "top", tab.id);
+        break;
+      }
+    }
+  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
   const handleSplitDown = useCallback(() => {
-    if (!focusedGroup || !activeTab) return;
-    splitGroupWithTab(focusedGroup.id, "bottom", activeTab.id);
-  }, [activeTab, focusedGroup, splitGroupWithTab]);
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    for (const group of Object.values(tabs.groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        splitGroupWithTab(group.id, "bottom", tab.id);
+        break;
+      }
+    }
+  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
   if (!vaultPath) {
     return (
@@ -254,7 +311,7 @@ function RouteComponent() {
         onSplitLeft={handleSplitLeft}
         onSplitTop={handleSplitUp}
         onSplitBottom={handleSplitDown}
-        hasActiveTab={Boolean(activeTab)}
+        hasActiveTab={Boolean(focusedSessionTab)}
       />
       <AppActivityBar />
 

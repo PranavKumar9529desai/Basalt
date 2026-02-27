@@ -1,5 +1,5 @@
 import type { FileNode } from "@workspace/ui/components/file-tree";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { FlatTreeNode } from "../types";
 import type { UseVaultClipboardReturn } from "./useVaultClipboard";
 import type { UseVaultContextMenuReturn } from "./useVaultContextMenu";
@@ -71,6 +71,7 @@ export function useVaultFileTreeController({
   onFileOpen,
 }: UseVaultFileTreeControllerOptions): UseVaultFileTreeControllerReturn {
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
+  const lastFileClickRef = useRef<{ path: string; atMs: number } | null>(null);
 
   const selectedNode = useMemo(
     () => treeNodes.find((n) => n.path === editor.selected?.path),
@@ -326,9 +327,16 @@ export function useVaultFileTreeController({
         },
         visibleNodes,
       );
-      const clickDetail =
-        "detail" in e && typeof e.detail === "number" ? e.detail : 1;
-      const mode: "preview" | "pinned" = clickDetail >= 2 ? "pinned" : "preview";
+      const now = Date.now();
+      const previous = lastFileClickRef.current;
+      const isRapidSecondClick =
+        previous !== null &&
+        previous.path === node.path &&
+        now - previous.atMs <= 320;
+      lastFileClickRef.current = { path: node.path, atMs: now };
+      const mode: "preview" | "pinned" = isRapidSecondClick
+        ? "pinned"
+        : "preview";
 
       if (onFileOpen) {
         onFileOpen(node, mode);

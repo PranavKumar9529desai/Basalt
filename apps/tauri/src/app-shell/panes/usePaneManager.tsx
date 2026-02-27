@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
 import { Editor } from "../../features/editor";
 import { useEditor } from "../../features/editor/hooks/useEditor";
+import { useEditorSessionsStore } from "../../features/editor/store";
 import {
     ConflictBanner,
     InactiveGroupPane,
@@ -49,6 +50,34 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
 
     const editor = useEditor({ findNote });
     const lastLoadedPathRef = useRef<string | null>(null);
+    const ensureSession = useEditorSessionsStore((state) => state.ensureSession);
+    const updateSession = useEditorSessionsStore((state) => state.updateSession);
+    const removeSession = useEditorSessionsStore((state) => state.removeSession);
+
+    useEffect(() => {
+        ensureSession(group.id);
+        return () => {
+            removeSession(group.id);
+        };
+    }, [ensureSession, group.id, removeSession]);
+
+    useEffect(() => {
+        updateSession(group.id, {
+            selected: editor.selected,
+            content: editor.content,
+            backlinks: editor.backlinks,
+            saveStatus: editor.saveStatus,
+            status: editor.status,
+        });
+    }, [
+        editor.backlinks,
+        editor.content,
+        editor.saveStatus,
+        editor.selected,
+        editor.status,
+        group.id,
+        updateSession,
+    ]);
 
     useEffect(() => {
         if (!activeTab) {
