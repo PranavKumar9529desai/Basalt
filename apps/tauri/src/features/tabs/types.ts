@@ -59,6 +59,10 @@ export interface SerializedTabGroup {
   previewTabId: TabId | null;
 }
 
+export interface PaneFocusSnapshot {
+  focusedPaneId: TabGroupId | null;
+}
+
 export interface TabsWorkspaceSnapshot {
   version: 1;
   focusedGroupId: TabGroupId | null;
@@ -66,4 +70,5 @@ export interface TabsWorkspaceSnapshot {
   groups: SerializedTabGroup[];
   tabs: SerializedTab[];
   layout?: TabLayoutNode;
+  paneFocus?: PaneFocusSnapshot;
 }

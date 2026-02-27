@@ -13,6 +13,7 @@ import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
 import { useTabsStore } from "../features/tabs/store";
 import type { TabGroupId } from "../features/tabs/types";
+import { usePaneManager } from "../app-shell/panes/usePaneManager";
 import { FileTree } from "../features/vault/components/FileTree";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
@@ -86,6 +87,7 @@ function RouteComponent() {
   );
 
   const editor = useEditor({ findNote });
+  const { renderGroupPane } = usePaneManager({ findNote });
   const tabs = useTabs();
   const syncSeqRef = useRef(0);
   const pendingLoadPathRef = useRef<string | null>(null);
@@ -380,10 +382,10 @@ function RouteComponent() {
 
       <WorkspaceTabs
         editor={editor}
-        activeTab={activeTab}
         handleTabSelect={handleTabSelect}
         handleTabClose={handleTabClose}
         handleTabPinToggle={handleTabPinToggle}
+        renderGroupPane={renderGroupPane}
       />
 
       <FileTreeContextMenu

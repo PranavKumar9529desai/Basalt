@@ -1,6 +1,7 @@
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
 import { Button } from "@workspace/ui/components/ui/button";
 import { Editor } from "../../editor";
+import type { TabGroupModel } from "../types";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabs } from "../hooks/useTabs";
 import type { ReactNode } from "react";
@@ -20,18 +21,40 @@ interface InactiveGroupPaneProps {
 
 export interface WorkspaceTabsProps {
     editor: UseEditorReturn;
-    activeTab: TabModel | null;
     handleTabSelect: (groupId: TabGroupId, tabId: string) => void;
     handleTabClose: (groupId: TabGroupId, tabId: string) => void;
     handleTabPinToggle: (tabId: string) => void;
+    renderGroupPane?: (context: WorkspaceTabsGroupRenderContext) => ReactNode;
+}
+
+export interface WorkspaceTabsGroupRenderContext {
+    groupId: TabGroupId;
+    group: TabGroupModel;
+    groupTabs: {
+        id: string;
+        title: string;
+        isActive: boolean;
+        isDirty: boolean;
+        isPinned: boolean;
+        isPreview: boolean;
+        canClose: boolean;
+    }[];
+    activeTab: TabModel | null;
+    isFocused: boolean;
+    tabDnD: ReturnType<typeof useTabDnD>;
+    markTabDirty: (tabId: string, isDirty: boolean) => void;
+    onActivateGroup: () => void;
+    onSelectTab: (tabId: string) => void;
+    onCloseTab: (tabId: string) => void;
+    onPinToggle: (tabId: string) => void;
 }
 
 export function WorkspaceTabs({
     editor,
-    activeTab,
     handleTabSelect,
     handleTabClose,
     handleTabPinToggle,
+    renderGroupPane,
 }: WorkspaceTabsProps) {
     const tabs = useTabs();
     const tabDnD = useTabDnD();
@@ -40,59 +63,51 @@ export function WorkspaceTabs({
     const rootNode: TabLayoutNode =
         layoutRoot ?? { type: "group", groupId: fallbackGroupId };
 
-    const renderGroupPane = (groupId: TabGroupId) => {
-        const group = tabs.groups[groupId];
-        if (!group) {
-            return null;
-        }
-
-        const isFocused = group.id === tabs.focusedGroupId;
-        const groupActiveTab =
-            group.activeTabId != null ? (tabs.tabs[group.activeTabId] ?? null) : null;
-        const groupTabs = group.tabIds
-            .map((tabId) => tabs.tabs[tabId])
-            .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
-            .map((tab) => ({
-                id: tab.id,
-                title: tab.title,
-                isActive: group.activeTabId === tab.id,
-                isDirty: tab.isDirty,
-                isPinned: tab.isPinned,
-                isPreview: tab.isPreview,
-                canClose: true,
-            }));
+    const renderDefaultGroupPane = (context: WorkspaceTabsGroupRenderContext) => {
+        const {
+            group,
+            groupTabs,
+            isFocused,
+            activeTab: groupActiveTab,
+            tabDnD: contextTabDnD,
+            markTabDirty: contextMarkTabDirty,
+            onActivateGroup,
+            onSelectTab,
+            onCloseTab,
+            onPinToggle,
+        } = context;
 
         return (
             <TabGroupFrame
                 key={group.id}
-                showSplitTargets={tabDnD.isDraggingTab}
-                activeSplitTarget={tabDnD.getSplitTargetDirection(group.id)}
+                showSplitTargets={contextTabDnD.isDraggingTab}
+                activeSplitTarget={contextTabDnD.getSplitTargetDirection(group.id)}
                 onSplitTargetDragEnter={(direction, event) =>
-                    tabDnD.handleSplitTargetDragEnter(group.id, direction, event)
+                    contextTabDnD.handleSplitTargetDragEnter(group.id, direction, event)
                 }
                 onSplitTargetDragOver={(direction, event) =>
-                    tabDnD.handleSplitTargetDragOver(group.id, direction, event)
+                    contextTabDnD.handleSplitTargetDragOver(group.id, direction, event)
                 }
                 onSplitTargetDragLeave={(direction) =>
-                    tabDnD.handleSplitTargetDragLeave(group.id, direction)
+                    contextTabDnD.handleSplitTargetDragLeave(group.id, direction)
                 }
                 onSplitTargetDrop={(direction, event) =>
-                    tabDnD.handleSplitTargetDrop(group.id, direction, event)
+                    contextTabDnD.handleSplitTargetDrop(group.id, direction, event)
                 }
                 tabsBar={
                     <TabsBar
                         tabs={groupTabs}
-                        onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
-                        onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
-                        onPinToggle={handleTabPinToggle}
+                        onSelectTab={onSelectTab}
+                        onCloseTab={onCloseTab}
+                        onPinToggle={onPinToggle}
                         onTabDragStart={(tabId, event) =>
-                            tabDnD.handleTabDragStart(group.id, tabId, event)
+                            contextTabDnD.handleTabDragStart(group.id, tabId, event)
                         }
-                        onTabDragOver={(_, event) => tabDnD.handleTabDragOver(event)}
+                        onTabDragOver={(_, event) => contextTabDnD.handleTabDragOver(event)}
                         onTabDrop={(tabId, event) =>
-                            tabDnD.handleTabDropOnTab(group.id, tabId, event)
+                            contextTabDnD.handleTabDropOnTab(group.id, tabId, event)
                         }
-                        onTabDragEnd={(_, event) => tabDnD.handleTabDragEnd(event)}
+                        onTabDragEnd={(_, event) => contextTabDnD.handleTabDragEnd(event)}
                         rightSlot={
                             isFocused ? (
                                 <SaveIndicator status={editor.saveStatus} />
@@ -115,8 +130,8 @@ export function WorkspaceTabs({
                                 className="h-full"
                                 value={editor.content}
                                 onChange={(value) => {
-                                    if (activeTab) {
-                                        tabs.markTabDirty(activeTab.id, true);
+                                    if (groupActiveTab) {
+                                        contextMarkTabDirty(groupActiveTab.id, true);
                                     }
                                     editor.handleChange(value);
                                 }}
@@ -133,16 +148,55 @@ export function WorkspaceTabs({
                 ) : (
                     <InactiveGroupPane
                         activeTitle={groupActiveTab?.title ?? null}
-                        onActivate={() => tabs.setFocusedGroup(group.id)}
+                        onActivate={onActivateGroup}
                     />
                 )}
             </TabGroupFrame>
         );
     };
 
+    const renderPaneForGroup = (context: WorkspaceTabsGroupRenderContext): ReactNode => {
+        if (renderGroupPane) {
+            return renderGroupPane(context);
+        }
+        return renderDefaultGroupPane(context);
+    };
+
     const renderLayoutNode = (node: TabLayoutNode): ReactNode => {
         if (node.type === "group") {
-            return renderGroupPane(node.groupId);
+            const group = tabs.groups[node.groupId];
+            if (!group) {
+                return null;
+            }
+
+            const groupActiveTab =
+                group.activeTabId != null ? (tabs.tabs[group.activeTabId] ?? null) : null;
+            const groupTabs = group.tabIds
+                .map((tabId) => tabs.tabs[tabId])
+                .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
+                .map((tab) => ({
+                    id: tab.id,
+                    title: tab.title,
+                    isActive: group.activeTabId === tab.id,
+                    isDirty: tab.isDirty,
+                    isPinned: tab.isPinned,
+                    isPreview: tab.isPreview,
+                    canClose: true,
+                }));
+            const context: WorkspaceTabsGroupRenderContext = {
+                groupId: group.id,
+                group,
+                groupTabs,
+                activeTab: groupActiveTab,
+                isFocused: group.id === tabs.focusedGroupId,
+                tabDnD,
+                markTabDirty: tabs.markTabDirty,
+                onActivateGroup: () => tabs.setFocusedGroup(group.id),
+                onSelectTab: (tabId) => handleTabSelect(group.id, tabId),
+                onCloseTab: (tabId) => handleTabClose(group.id, tabId),
+                onPinToggle: (tabId) => handleTabPinToggle(tabId),
+            };
+            return renderPaneForGroup(context);
         }
 
         const isRow = node.axis === "row";
@@ -157,11 +211,11 @@ export function WorkspaceTabs({
                         : "";
                     return (
                         <div
-                        key={
-                            child.type === "group"
-                                ? child.groupId
-                                : `${child.axis}-${index}`
-                        }
+                            key={
+                                child.type === "group"
+                                    ? child.groupId
+                                    : `${child.axis}-${index}`
+                            }
                             className={`flex-1 min-h-0 min-w-0 h-full w-full ${
                                 isRow ? "min-w-0" : "w-full"
                             } ${borderClass}`}

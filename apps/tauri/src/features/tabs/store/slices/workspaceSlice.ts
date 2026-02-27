@@ -23,6 +23,9 @@ export const createWorkspaceSlice: StateCreator<
             focusedGroupId: state.focusedGroupId ?? null,
             groupOrder: [...state.groupOrder],
             layout: state.layoutRoot,
+            paneFocus: {
+                focusedPaneId: state.focusedGroupId ?? null,
+            },
             groups: state.groupOrder
                 .map((groupId) => state.groups[groupId])
                 .filter((group): group is TabGroupModel => Boolean(group))
@@ -73,11 +76,18 @@ export const createWorkspaceSlice: StateCreator<
             normalized.groupOrder,
         );
 
+        const desiredFocusedGroupId =
+            snapshot.paneFocus?.focusedPaneId ?? snapshot.focusedGroupId;
+        const finalFocusedGroupId =
+            desiredFocusedGroupId && normalized.groups[desiredFocusedGroupId]
+                ? desiredFocusedGroupId
+                : normalized.focusedGroupId;
+
         set({
             tabs,
             groups: normalized.groups,
             groupOrder: normalized.groupOrder,
-            focusedGroupId: normalized.focusedGroupId,
+            focusedGroupId: finalFocusedGroupId,
             layoutRoot: normalizedLayout,
         });
     },

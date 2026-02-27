@@ -120,40 +120,47 @@ export function useTabDnD() {
     [],
   );
 
-  const handleSplitTargetDrop = useCallback(
-    (groupId: TabGroupId, direction: SplitDirection, event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const dragged = draggedTabRef.current;
-      if (!dragged) {
-        clearDragState();
-        return;
-      }
+    const handleSplitTargetDrop = useCallback(
+        (groupId: TabGroupId, direction: SplitDirection, event: DragEvent<HTMLDivElement>) => {
+            event.preventDefault();
+            const dragged = draggedTabRef.current;
+            if (!dragged) {
+                clearDragState();
+                return;
+            }
 
-      const state = useTabsStore.getState();
-      const sourceGroup = state.groups[dragged.fromGroupId];
-      const targetGroup = state.groups[groupId];
-      if (!sourceGroup || !targetGroup) {
-        clearDragState();
-        return;
-      }
+            const state = useTabsStore.getState();
+            const sourceGroup = state.groups[dragged.fromGroupId];
+            const targetGroup = state.groups[groupId];
+            if (!sourceGroup || !targetGroup) {
+                clearDragState();
+                return;
+            }
 
-      if (dragged.fromGroupId !== groupId) {
-        state.moveTabBetweenGroups({
-          fromGroupId: dragged.fromGroupId,
-          toGroupId: groupId,
-          tabId: dragged.tabId,
-          toIndex: targetGroup.tabIds.length,
-        });
-      }
+            const sourceIsSingleTab = sourceGroup.tabIds.length === 1;
 
-      const newGroupId = state.splitGroupWithTab(groupId, direction, dragged.tabId);
-      state.setFocusedGroup(newGroupId);
-      state.activateTab(newGroupId, dragged.tabId);
+            if (dragged.fromGroupId !== groupId) {
+                state.moveTabBetweenGroups({
+                    fromGroupId: dragged.fromGroupId,
+                    toGroupId: groupId,
+                    tabId: dragged.tabId,
+                    toIndex: targetGroup.tabIds.length,
+                });
+            }
 
-      clearDragState();
-    },
-    [clearDragState],
-  );
+            if (dragged.fromGroupId === groupId || !sourceIsSingleTab) {
+                const newGroupId = state.splitGroupWithTab(groupId, direction, dragged.tabId);
+                state.setFocusedGroup(newGroupId);
+                state.activateTab(newGroupId, dragged.tabId);
+            } else {
+                state.setFocusedGroup(groupId);
+                state.activateTab(groupId, dragged.tabId);
+            }
+
+            clearDragState();
+        },
+        [clearDragState],
+    );
 
   const getSplitTargetDirection = useCallback(
     (groupId: TabGroupId): SplitDirection | null =>
