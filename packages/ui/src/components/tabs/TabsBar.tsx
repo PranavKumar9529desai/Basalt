@@ -127,14 +127,14 @@ export function TabsBar({
       role="tablist"
       aria-label="Open tabs"
       className={cn(
-        "relative flex h-10 items-end gap-1 bg-[var(--sat-surface-2)] px-2 pt-1",
+        "relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 pt-1",
         className,
       )}
     >
       {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
       <div className="relative h-full flex-1 min-w-0 overflow-visible">
         <ScrollArea className="h-full flex-1" viewportRef={viewportRef}>
-          <div className="flex h-full min-w-max items-end gap-1 pr-2">
+          <div className="flex h-full min-w-max items-end gap-0 pr-2">
             {tabs.map((tab) => (
               <TabItem
                 key={tab.id}
@@ -158,7 +158,7 @@ export function TabsBar({
             <span
               key={`sep-${idx}-${x}`}
               aria-hidden="true"
-              className="absolute top-[46%] h-4 w-px -translate-y-1/2 bg-[var(--sat-text-muted)]/55"
+              className="absolute top-[46%] h-4 w-px -translate-y-1/2 bg-[var(--sat-layout-divider,var(--sat-layout-border))]"
               style={{ left: `${x}px` }}
             />
           ))}

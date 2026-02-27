@@ -46,9 +46,9 @@ export function TabItem({
       data-active={tab.isActive ? "true" : "false"}
       data-preview={tab.isPreview ? "true" : "false"}
       className={cn(
-        "group/item relative flex items-center gap-1 rounded-t-md border border-b-0 px-1.5 py-1 transition-colors",
+        "group/item relative flex items-center gap-1 rounded-t-lg border border-b-0 px-1.5 py-1 transition-colors",
         tab.isActive
-          ? "z-10 border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]"
+          ? "z-20 border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] before:content-[''] before:absolute before:-bottom-px before:-left-4 before:h-4 before:w-4 before:rounded-br-xl before:shadow-[4px_0_0_0_var(--sat-surface-1)] before:z-20 after:content-[''] after:absolute after:-bottom-px after:-right-4 after:h-4 after:w-4 after:rounded-bl-xl after:shadow-[-4px_0_0_0_var(--sat-surface-1)] after:z-20"
           : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]/70",
         className,
       )}

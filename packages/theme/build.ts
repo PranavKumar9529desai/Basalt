@@ -7,6 +7,10 @@ const TOKENS_DIR = path.resolve(import.meta.dirname);
 const THEME_DIR = path.resolve(TOKENS_DIR, "themes");
 const STYLES_DIR = path.resolve(TOKENS_DIR, "src/generated");
 const OUTPUT_CSS = path.join(STYLES_DIR, "tokens.css");
+const OUTPUT_UI_GLOBALS = path.resolve(
+  TOKENS_DIR,
+  "../ui/src/styles/globals.css",
+);
 const OUTPUT_TYPES = path.join(TOKENS_DIR, "src/types.ts");
 const MANIFEST_TS = path.resolve(TOKENS_DIR, "themes/manifest.ts");
 
@@ -163,6 +167,7 @@ function generateCss(baseMap: Dict, themes: ThemeBuild[]): string {
   lines.push("}");
 
   for (const theme of themes) {
+    if (Object.keys(theme.overrides).length === 0) continue;
     const selector = `[data-theme="${theme.meta.id}"]`;
     lines.push("");
     lines.push(`${selector} {`);
@@ -215,6 +220,7 @@ function main() {
   const themes = loadThemes(baseMap);
   const css = generateCss(baseMap, themes);
   writeFileSync(OUTPUT_CSS, css);
+  writeFileSync(OUTPUT_UI_GLOBALS, css);
   writeFileSync(OUTPUT_TYPES, generateTypes(baseMap));
   const manifest = generateManifest(themes, "dark");
   writeFileSync(MANIFEST_TS, manifest);

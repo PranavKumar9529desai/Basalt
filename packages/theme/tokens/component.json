@@ -4,6 +4,7 @@
     "surfaceRaised": "{surface.2}",
     "surfaceCard": "{surface.3}",
     "border": "{border.default}",
+    "divider": "color-mix(in srgb, var(--sat-text-muted) 48%, var(--sat-layout-border))",
     "shadowSm": "{shadow.sm}",
     "shadowMd": "{shadow.md}",
     "shadowLg": "{shadow.lg}",

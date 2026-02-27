@@ -38,12 +38,8 @@
   --sat-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --sat-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
   --sat-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
-  --sat-font-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  --sat-font-mono:
-    JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  --sat-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sat-font-mono: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --sat-surface-1: #0f172a;
   --sat-surface-2: #111827;
   --sat-surface-3: #0b1220;
@@ -62,6 +58,7 @@
   --sat-layout-surface-raised: #111827;
   --sat-layout-surface-card: #0b1220;
   --sat-layout-border: #1f2937;
+  --sat-layout-divider: color-mix(in srgb, var(--sat-text-muted) 48%, var(--sat-layout-border));
   --sat-layout-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --sat-layout-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
   --sat-layout-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -169,9 +166,6 @@
   --sat-editor-popover-active-text: #f5e0dc;
   --sat-editor-task-accent: #a6e3a1;
   --sat-editor-heading7: #cdd6f4;
-}
-
-[data-theme="dark"] {
 }
 
 [data-theme="dracula"] {

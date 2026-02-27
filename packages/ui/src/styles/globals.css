@@ -38,12 +38,8 @@
   --sat-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --sat-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
   --sat-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
-  --sat-font-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  --sat-font-mono:
-    JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  --sat-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sat-font-mono: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --sat-surface-1: #0f172a;
   --sat-surface-2: #111827;
   --sat-surface-3: #0b1220;
@@ -62,6 +58,7 @@
   --sat-layout-surface-raised: #111827;
   --sat-layout-surface-card: #0b1220;
   --sat-layout-border: #1f2937;
+  --sat-layout-divider: color-mix(in srgb, var(--sat-text-muted) 48%, var(--sat-layout-border));
   --sat-layout-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --sat-layout-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
   --sat-layout-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -105,100 +102,14 @@
   --secondary-foreground: var(--sat-text-primary);
   --muted: var(--sat-surface-3);
   --muted-foreground: var(--sat-text-muted);
-  --accent: var(--sat-surface-3);
-  --accent-foreground: var(--sat-text-primary);
+  --accent: var(--sat-editor-popover-active-bg);
+  --accent-foreground: var(--sat-editor-popover-active-text);
   --destructive: var(--sat-state-danger);
   --destructive-foreground: var(--sat-text-inverse);
   --border: var(--sat-layout-border);
   --input: var(--sat-layout-border);
   --ring: var(--sat-control-focus-ring);
   --radius: var(--sat-layout-radius-md);
-}
-
-/* Dark mode specific overrides can go here */
-
-[data-theme="light"] {
-  --sat-surface-1: #f8fafc;
-  --sat-surface-2: #eef2f6;
-  --sat-surface-3: #e2e8f0;
-  --sat-text-primary: #0f172a;
-  --sat-text-muted: #475569;
-  --sat-text-inverse: #ffffff;
-  --sat-accent-primary: #2563eb;
-  --sat-accent-strong: #1d4ed8;
-  --sat-layout-border: #cbd5e1;
-  --sat-editor-background: #ffffff;
-  --sat-editor-inline-bg: #f1f5f9;
-  --sat-editor-blockquote-border: #cbd5e1;
-  --sat-editor-blockquote-text: #0f172a;
-  --sat-editor-code-bg: #f8fafc;
-  --sat-editor-code-muted: #64748b;
-  --sat-editor-code-hover-bg: #e2e8f0;
-  --sat-editor-code-hover-text: #0f172a;
-  --sat-editor-popover-bg: #ffffff;
-  --sat-editor-popover-border: #cbd5e1;
-  --sat-editor-popover-text: #0f172a;
-  --sat-editor-popover-muted: #475569;
-  --sat-editor-popover-active-bg: #dbeafe;
-  --sat-editor-popover-active-text: #1d4ed8;
-  --sat-editor-task-accent: #16a34a;
-  --sat-editor-heading7: #1f2937;
-}
-
-[data-theme="solarized-light"] {
-  --sat-surface-1: #fdf6e3;
-  --sat-surface-2: #eee8d5;
-  --sat-surface-3: #e0dbc4;
-  --sat-text-primary: #586e75;
-  --sat-text-muted: #657b83;
-  --sat-text-inverse: #002b36;
-  --sat-accent-primary: #2aa198;
-  --sat-accent-strong: #268bd2;
-  --sat-layout-border: #d3cbb8;
-  --sat-editor-background: #fdf6e3;
-  --sat-editor-inline-bg: #eee8d5;
-  --sat-editor-blockquote-border: #d3cbb8;
-  --sat-editor-blockquote-text: #073642;
-  --sat-editor-code-bg: #f5eeda;
-  --sat-editor-code-muted: #657b83;
-  --sat-editor-code-hover-bg: #e9e2cf;
-  --sat-editor-code-hover-text: #073642;
-  --sat-editor-popover-bg: #fdf6e3;
-  --sat-editor-popover-border: #d3cbb8;
-  --sat-editor-popover-text: #073642;
-  --sat-editor-popover-muted: #586e75;
-  --sat-editor-popover-active-bg: #e6dfcb;
-  --sat-editor-popover-active-text: #2aa198;
-  --sat-editor-task-accent: #859900;
-  --sat-editor-heading7: #073642;
-}
-
-[data-theme="solarized-dark"] {
-  --sat-surface-1: #002b36;
-  --sat-surface-2: #073642;
-  --sat-surface-3: #0f3944;
-  --sat-text-primary: #93a1a1;
-  --sat-text-muted: #839496;
-  --sat-text-inverse: #fdf6e3;
-  --sat-accent-primary: #b58900;
-  --sat-accent-strong: #cb4b16;
-  --sat-layout-border: #0f3944;
-  --sat-editor-background: #002b36;
-  --sat-editor-inline-bg: #073642;
-  --sat-editor-blockquote-border: #0f3944;
-  --sat-editor-blockquote-text: #fdf6e3;
-  --sat-editor-code-bg: #073642;
-  --sat-editor-code-muted: #93a1a1;
-  --sat-editor-code-hover-bg: #0f3944;
-  --sat-editor-code-hover-text: #fdf6e3;
-  --sat-editor-popover-bg: #003844;
-  --sat-editor-popover-border: #0f3944;
-  --sat-editor-popover-text: #fdf6e3;
-  --sat-editor-popover-muted: #93a1a1;
-  --sat-editor-popover-active-bg: #0f3944;
-  --sat-editor-popover-active-text: #b58900;
-  --sat-editor-task-accent: #859900;
-  --sat-editor-heading7: #93a1a1;
 }
 
 [data-theme="catppuccin-latte"] {
@@ -283,4 +194,88 @@
   --sat-editor-popover-active-text: #ff79c6;
   --sat-editor-task-accent: #50fa7b;
   --sat-editor-heading7: #f8f8f2;
+}
+
+[data-theme="light"] {
+  --sat-surface-1: #f8fafc;
+  --sat-surface-2: #eef2f6;
+  --sat-surface-3: #e2e8f0;
+  --sat-text-primary: #0f172a;
+  --sat-text-muted: #475569;
+  --sat-text-inverse: #ffffff;
+  --sat-accent-primary: #2563eb;
+  --sat-accent-strong: #1d4ed8;
+  --sat-layout-border: #cbd5e1;
+  --sat-editor-background: #ffffff;
+  --sat-editor-inline-bg: #f1f5f9;
+  --sat-editor-blockquote-border: #cbd5e1;
+  --sat-editor-blockquote-text: #0f172a;
+  --sat-editor-code-bg: #f8fafc;
+  --sat-editor-code-muted: #64748b;
+  --sat-editor-code-hover-bg: #e2e8f0;
+  --sat-editor-code-hover-text: #0f172a;
+  --sat-editor-popover-bg: #ffffff;
+  --sat-editor-popover-border: #cbd5e1;
+  --sat-editor-popover-text: #0f172a;
+  --sat-editor-popover-muted: #475569;
+  --sat-editor-popover-active-bg: #dbeafe;
+  --sat-editor-popover-active-text: #1d4ed8;
+  --sat-editor-task-accent: #16a34a;
+  --sat-editor-heading7: #1f2937;
+}
+
+[data-theme="solarized-dark"] {
+  --sat-surface-1: #002b36;
+  --sat-surface-2: #073642;
+  --sat-surface-3: #0f3944;
+  --sat-text-primary: #93a1a1;
+  --sat-text-muted: #839496;
+  --sat-text-inverse: #fdf6e3;
+  --sat-accent-primary: #b58900;
+  --sat-accent-strong: #cb4b16;
+  --sat-layout-border: #0f3944;
+  --sat-editor-background: #002b36;
+  --sat-editor-inline-bg: #073642;
+  --sat-editor-blockquote-border: #0f3944;
+  --sat-editor-blockquote-text: #fdf6e3;
+  --sat-editor-code-bg: #073642;
+  --sat-editor-code-muted: #93a1a1;
+  --sat-editor-code-hover-bg: #0f3944;
+  --sat-editor-code-hover-text: #fdf6e3;
+  --sat-editor-popover-bg: #003844;
+  --sat-editor-popover-border: #0f3944;
+  --sat-editor-popover-text: #fdf6e3;
+  --sat-editor-popover-muted: #93a1a1;
+  --sat-editor-popover-active-bg: #0f3944;
+  --sat-editor-popover-active-text: #b58900;
+  --sat-editor-task-accent: #859900;
+  --sat-editor-heading7: #93a1a1;
+}
+
+[data-theme="solarized-light"] {
+  --sat-surface-1: #fdf6e3;
+  --sat-surface-2: #eee8d5;
+  --sat-surface-3: #e0dbc4;
+  --sat-text-primary: #586e75;
+  --sat-text-muted: #657b83;
+  --sat-text-inverse: #002b36;
+  --sat-accent-primary: #2aa198;
+  --sat-accent-strong: #268bd2;
+  --sat-layout-border: #d3cbb8;
+  --sat-editor-background: #fdf6e3;
+  --sat-editor-inline-bg: #eee8d5;
+  --sat-editor-blockquote-border: #d3cbb8;
+  --sat-editor-blockquote-text: #073642;
+  --sat-editor-code-bg: #f5eeda;
+  --sat-editor-code-muted: #657b83;
+  --sat-editor-code-hover-bg: #e9e2cf;
+  --sat-editor-code-hover-text: #073642;
+  --sat-editor-popover-bg: #fdf6e3;
+  --sat-editor-popover-border: #d3cbb8;
+  --sat-editor-popover-text: #073642;
+  --sat-editor-popover-muted: #586e75;
+  --sat-editor-popover-active-bg: #e6dfcb;
+  --sat-editor-popover-active-text: #2aa198;
+  --sat-editor-task-accent: #859900;
+  --sat-editor-heading7: #073642;
 }
