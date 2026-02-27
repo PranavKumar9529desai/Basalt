@@ -76,7 +76,7 @@ export function TabItem({
         <div
           data-disabled={tab.disabled ? "true" : undefined}
           className={cn(
-            "pointer-events-none flex h-7 min-w-[170px] max-w-[300px] flex-1 items-center justify-start gap-1 rounded-sm border border-transparent px-2 transition-colors",
+            "flex h-7 min-w-[170px] max-w-[300px] flex-1 items-center justify-start gap-1 rounded-sm border border-transparent px-2 transition-colors",
             tab.isActive
               ? "text-[var(--sat-text-primary)]"
               : "text-[var(--sat-text-secondary)] opacity-85 hover:opacity-100",

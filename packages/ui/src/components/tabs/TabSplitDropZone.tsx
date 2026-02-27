@@ -30,8 +30,8 @@ export function TabSplitDropZone({
         "pointer-events-auto absolute rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-3)]/60 transition-colors",
         active &&
           "border-[var(--sat-accent-primary)] bg-[color-mix(in_srgb,var(--sat-accent-primary)_22%,transparent)]",
-        direction === "left" && "inset-y-2 left-2 w-12",
-        direction === "right" && "inset-y-2 right-2 w-12",
+        direction === "left" && "top-12 bottom-12 left-2 w-12",
+        direction === "right" && "top-12 bottom-12 right-2 w-12",
         direction === "top" && "inset-x-2 top-2 h-10",
         direction === "bottom" && "inset-x-2 bottom-2 h-10",
         className,
@@ -43,4 +43,3 @@ export function TabSplitDropZone({
     />
   );
 }
-

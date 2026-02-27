@@ -48,44 +48,45 @@ export function TabGroupFrame({
       )}
     >
       {tabsBar}
-      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
-
-      {showSplitTargets ? (
-        <div className="pointer-events-none absolute inset-0 z-20">
-          <TabSplitDropZone
-            direction="left"
-            active={activeSplitTarget === "left"}
-            onDragEnter={onSplitTargetDragEnter}
-            onDragOver={onSplitTargetDragOver}
-            onDragLeave={onSplitTargetDragLeave}
-            onDrop={onSplitTargetDrop}
-          />
-          <TabSplitDropZone
-            direction="right"
-            active={activeSplitTarget === "right"}
-            onDragEnter={onSplitTargetDragEnter}
-            onDragOver={onSplitTargetDragOver}
-            onDragLeave={onSplitTargetDragLeave}
-            onDrop={onSplitTargetDrop}
-          />
-          <TabSplitDropZone
-            direction="top"
-            active={activeSplitTarget === "top"}
-            onDragEnter={onSplitTargetDragEnter}
-            onDragOver={onSplitTargetDragOver}
-            onDragLeave={onSplitTargetDragLeave}
-            onDrop={onSplitTargetDrop}
-          />
-          <TabSplitDropZone
-            direction="bottom"
-            active={activeSplitTarget === "bottom"}
-            onDragEnter={onSplitTargetDragEnter}
-            onDragOver={onSplitTargetDragOver}
-            onDragLeave={onSplitTargetDragLeave}
-            onDrop={onSplitTargetDrop}
-          />
-        </div>
-      ) : null}
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        {children}
+        {showSplitTargets ? (
+          <div className="pointer-events-none absolute inset-0 z-20">
+            <TabSplitDropZone
+              direction="left"
+              active={activeSplitTarget === "left"}
+              onDragEnter={onSplitTargetDragEnter}
+              onDragOver={onSplitTargetDragOver}
+              onDragLeave={onSplitTargetDragLeave}
+              onDrop={onSplitTargetDrop}
+            />
+            <TabSplitDropZone
+              direction="right"
+              active={activeSplitTarget === "right"}
+              onDragEnter={onSplitTargetDragEnter}
+              onDragOver={onSplitTargetDragOver}
+              onDragLeave={onSplitTargetDragLeave}
+              onDrop={onSplitTargetDrop}
+            />
+            <TabSplitDropZone
+              direction="top"
+              active={activeSplitTarget === "top"}
+              onDragEnter={onSplitTargetDragEnter}
+              onDragOver={onSplitTargetDragOver}
+              onDragLeave={onSplitTargetDragLeave}
+              onDrop={onSplitTargetDrop}
+            />
+            <TabSplitDropZone
+              direction="bottom"
+              active={activeSplitTarget === "bottom"}
+              onDragEnter={onSplitTargetDragEnter}
+              onDragOver={onSplitTargetDragOver}
+              onDragLeave={onSplitTargetDragLeave}
+              onDrop={onSplitTargetDrop}
+            />
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
