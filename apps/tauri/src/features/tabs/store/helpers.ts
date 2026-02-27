@@ -1,6 +1,6 @@
 import type { TabGroupId, TabGroupModel, TabId, TabModel } from "../types";
-
-export const ROOT_GROUP_ID = "group-root";
+import { ROOT_GROUP_ID } from "../constants";
+import { createGroupNode } from "./layout";
 
 export function nowMs() {
     return Date.now();
@@ -104,5 +104,6 @@ export function buildInitialState() {
         } as Record<TabGroupId, TabGroupModel>,
         groupOrder: [ROOT_GROUP_ID] as TabGroupId[],
         focusedGroupId: ROOT_GROUP_ID as TabGroupId,
+        layoutRoot: createGroupNode(ROOT_GROUP_ID),
     };
 }

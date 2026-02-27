@@ -1,6 +1,11 @@
 import type { StateCreator } from "zustand";
 import { makeGroupId, removeTabFromGroup } from "../helpers";
-import type { TabsState } from "../types";
+import type { TabGroupId, TabGroupModel, TabsState } from "../types";
+import {
+    normalizeLayoutRoot,
+    removeGroupFromLayoutNode,
+    splitLayoutNode,
+} from "../layout";
 
 export interface GroupSlice {
     setFocusedGroup: TabsState["setFocusedGroup"];
@@ -34,14 +39,16 @@ export const createGroupSlice: StateCreator<TabsState, [], [], GroupSlice> = (
             const nextSource = { ...source };
             removeTabFromGroup(nextSource, targetTabId);
 
-            const nextGroups: Record<string, any> = {
+                const nextGroups: Record<TabGroupId, TabGroupModel> = {
                 ...state.groups,
                 [groupId]: nextSource,
                 [newGroupId]: {
                     id: newGroupId,
                     tabIds: [targetTabId],
                     activeTabId: targetTabId,
-                    previewTabId: state.tabs[targetTabId]?.isPreview ? targetTabId : null,
+                    previewTabId: state.tabs[targetTabId]?.isPreview
+                        ? targetTabId
+                        : null,
                 },
             };
 
@@ -53,12 +60,29 @@ export const createGroupSlice: StateCreator<TabsState, [], [], GroupSlice> = (
                     : sourceIndex + 1;
             nextOrder.splice(insertIndex, 0, newGroupId);
 
+            const layoutAfterSplit = splitLayoutNode(
+                state.layoutRoot,
+                groupId,
+                newGroupId,
+                direction,
+            );
+
             if (nextSource.tabIds.length === 0 && nextOrder.length > 1) {
                 const { [groupId]: _, ...rest } = nextGroups;
+                const filteredOrder = nextOrder.filter((id) => id !== groupId);
+                const layoutAfterRemoval = removeGroupFromLayoutNode(
+                    layoutAfterSplit,
+                    groupId,
+                );
                 return {
                     groups: rest,
-                    groupOrder: nextOrder.filter((id) => id !== groupId),
+                    groupOrder: filteredOrder,
                     focusedGroupId: newGroupId,
+                    layoutRoot: normalizeLayoutRoot(
+                        layoutAfterRemoval,
+                        rest,
+                        filteredOrder,
+                    ),
                 };
             }
 
@@ -66,6 +90,11 @@ export const createGroupSlice: StateCreator<TabsState, [], [], GroupSlice> = (
                 groups: nextGroups,
                 groupOrder: nextOrder,
                 focusedGroupId: newGroupId,
+                layoutRoot: normalizeLayoutRoot(
+                    layoutAfterSplit,
+                    nextGroups,
+                    nextOrder,
+                ),
             };
         });
 
@@ -88,22 +117,33 @@ export const createGroupSlice: StateCreator<TabsState, [], [], GroupSlice> = (
             }
 
             const { [groupId]: _removed, ...nextGroups } = state.groups;
+            const updatedGroups = {
+                ...nextGroups,
+                [fallbackGroupId]: {
+                    ...fallbackGroup,
+                    activeTabId:
+                        fallbackGroup.activeTabId ?? fallbackGroup.tabIds[0] ?? null,
+                },
+            };
+
+            const layoutAfterRemoval = removeGroupFromLayoutNode(
+                state.layoutRoot,
+                groupId,
+            );
 
             return {
                 tabs: nextTabs,
-                groups: {
-                    ...nextGroups,
-                    [fallbackGroupId]: {
-                        ...fallbackGroup,
-                        activeTabId:
-                            fallbackGroup.activeTabId ?? fallbackGroup.tabIds[0] ?? null,
-                    },
-                },
+                groups: updatedGroups,
                 groupOrder: remainingOrder,
                 focusedGroupId:
                     state.focusedGroupId === groupId
                         ? fallbackGroupId
                         : state.focusedGroupId,
+                layoutRoot: normalizeLayoutRoot(
+                    layoutAfterRemoval,
+                    updatedGroups,
+                    remainingOrder,
+                ),
             };
         });
     },

@@ -3,6 +3,21 @@ export type TabGroupId = string;
 
 export type SplitDirection = "left" | "right" | "top" | "bottom";
 
+export type TabLayoutAxis = "row" | "column";
+
+export interface TabLayoutGroupNode {
+  type: "group";
+  groupId: TabGroupId;
+}
+
+export interface TabLayoutSplitNode {
+  type: "split";
+  axis: TabLayoutAxis;
+  children: TabLayoutNode[];
+}
+
+export type TabLayoutNode = TabLayoutGroupNode | TabLayoutSplitNode;
+
 export interface OpenableTabInput {
   path: string;
   title?: string;
@@ -50,5 +65,5 @@ export interface TabsWorkspaceSnapshot {
   groupOrder: TabGroupId[];
   groups: SerializedTabGroup[];
   tabs: SerializedTab[];
+  layout?: TabLayoutNode;
 }
-

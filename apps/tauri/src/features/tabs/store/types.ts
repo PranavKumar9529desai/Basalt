@@ -4,6 +4,7 @@ import type {
     TabGroupId,
     TabGroupModel,
     TabId,
+    TabLayoutNode,
     TabModel,
     TabsWorkspaceSnapshot,
 } from "../types";
@@ -31,6 +32,7 @@ export interface TabsState {
     groups: Record<TabGroupId, TabGroupModel>;
     groupOrder: TabGroupId[];
     focusedGroupId: TabGroupId;
+    layoutRoot: TabLayoutNode;
 
     openInPreview: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;
     openPinned: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;

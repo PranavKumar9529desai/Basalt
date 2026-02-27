@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import { ensureAtLeastOneGroup, removeTabFromGroup } from "../helpers";
+import { normalizeLayoutRoot, removeGroupFromLayoutNode } from "../layout";
 import type { TabsState } from "../types";
 
 export interface MoveSlice {
@@ -80,6 +81,11 @@ export const createMoveSlice: StateCreator<TabsState, [], [], MoveSlice> = (
                 nextGroupOrder = nextGroupOrder.filter((id) => id !== fromGroupId);
             }
 
+            const layoutAfterRemoval =
+                nextFrom.tabIds.length === 0 && nextGroupOrder.length > 1
+                    ? removeGroupFromLayoutNode(state.layoutRoot, fromGroupId)
+                    : state.layoutRoot;
+
             const normalized = ensureAtLeastOneGroup(
                 nextGroups,
                 nextGroupOrder,
@@ -90,6 +96,11 @@ export const createMoveSlice: StateCreator<TabsState, [], [], MoveSlice> = (
                 groups: normalized.groups,
                 groupOrder: normalized.groupOrder,
                 focusedGroupId: normalized.focusedGroupId,
+                layoutRoot: normalizeLayoutRoot(
+                    layoutAfterRemoval,
+                    normalized.groups,
+                    normalized.groupOrder,
+                ),
             };
         });
     },

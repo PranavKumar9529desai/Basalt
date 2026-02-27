@@ -3,7 +3,9 @@ import { Button } from "@workspace/ui/components/ui/button";
 import { Editor } from "../../editor";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabs } from "../hooks/useTabs";
-import type { TabGroupId } from "../types";
+import type { ReactNode } from "react";
+import type { TabGroupId, TabLayoutNode, TabModel } from "../types";
+import type { UseEditorReturn } from "../../editor/hooks/useEditor";
 import { SaveIndicator } from "../../vault/components/SaveIndicator";
 
 interface ConflictBannerProps {
@@ -17,8 +19,8 @@ interface InactiveGroupPaneProps {
 }
 
 export interface WorkspaceTabsProps {
-    editor: any;
-    activeTab: any;
+    editor: UseEditorReturn;
+    activeTab: TabModel | null;
     handleTabSelect: (groupId: TabGroupId, tabId: string) => void;
     handleTabClose: (groupId: TabGroupId, tabId: string) => void;
     handleTabPinToggle: (tabId: string) => void;
@@ -33,112 +35,149 @@ export function WorkspaceTabs({
 }: WorkspaceTabsProps) {
     const tabs = useTabs();
     const tabDnD = useTabDnD();
+    const layoutRoot = tabs.layoutRoot;
+    const fallbackGroupId = tabs.focusedGroupId ?? tabs.groupOrder[0] ?? "";
+    const rootNode: TabLayoutNode =
+        layoutRoot ?? { type: "group", groupId: fallbackGroupId };
 
-    return (
-        <div className="flex flex-1 min-h-0 bg-[var(--sat-surface-1)]">
-            <div className="flex h-full w-full min-h-0">
-                {tabs.orderedGroups.map((group, index) => {
-                    const isFocused = group.id === tabs.focusedGroupId;
-                    const groupActiveTab =
-                        group.activeTabId != null
-                            ? (tabs.tabs[group.activeTabId] ?? null)
-                            : null;
-                    const groupTabs = group.tabIds
-                        .map((tabId) => tabs.tabs[tabId])
-                        .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
-                        .map((tab) => ({
-                            id: tab.id,
-                            title: tab.title,
-                            isActive: group.activeTabId === tab.id,
-                            isDirty: tab.isDirty,
-                            isPinned: tab.isPinned,
-                            isPreview: tab.isPreview,
-                            canClose: true,
-                        }));
+    const renderGroupPane = (groupId: TabGroupId) => {
+        const group = tabs.groups[groupId];
+        if (!group) {
+            return null;
+        }
 
+        const isFocused = group.id === tabs.focusedGroupId;
+        const groupActiveTab =
+            group.activeTabId != null ? (tabs.tabs[group.activeTabId] ?? null) : null;
+        const groupTabs = group.tabIds
+            .map((tabId) => tabs.tabs[tabId])
+            .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
+            .map((tab) => ({
+                id: tab.id,
+                title: tab.title,
+                isActive: group.activeTabId === tab.id,
+                isDirty: tab.isDirty,
+                isPinned: tab.isPinned,
+                isPreview: tab.isPreview,
+                canClose: true,
+            }));
+
+        return (
+            <TabGroupFrame
+                key={group.id}
+                showSplitTargets={tabDnD.isDraggingTab}
+                activeSplitTarget={tabDnD.getSplitTargetDirection(group.id)}
+                onSplitTargetDragEnter={(direction, event) =>
+                    tabDnD.handleSplitTargetDragEnter(group.id, direction, event)
+                }
+                onSplitTargetDragOver={(direction, event) =>
+                    tabDnD.handleSplitTargetDragOver(group.id, direction, event)
+                }
+                onSplitTargetDragLeave={(direction) =>
+                    tabDnD.handleSplitTargetDragLeave(group.id, direction)
+                }
+                onSplitTargetDrop={(direction, event) =>
+                    tabDnD.handleSplitTargetDrop(group.id, direction, event)
+                }
+                tabsBar={
+                    <TabsBar
+                        tabs={groupTabs}
+                        onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
+                        onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
+                        onPinToggle={handleTabPinToggle}
+                        onTabDragStart={(tabId, event) =>
+                            tabDnD.handleTabDragStart(group.id, tabId, event)
+                        }
+                        onTabDragOver={(_, event) => tabDnD.handleTabDragOver(event)}
+                        onTabDrop={(tabId, event) =>
+                            tabDnD.handleTabDropOnTab(group.id, tabId, event)
+                        }
+                        onTabDragEnd={(_, event) => tabDnD.handleTabDragEnd(event)}
+                        rightSlot={
+                            isFocused ? (
+                                <SaveIndicator status={editor.saveStatus} />
+                            ) : undefined
+                        }
+                    />
+                }
+                className="h-full border-0"
+            >
+                {isFocused ? (
+                    <>
+                        {editor.saveStatus === "conflict" && (
+                            <ConflictBanner
+                                onKeepMine={editor.performSave}
+                                onDiscard={editor.discardAndReload}
+                            />
+                        )}
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                            <Editor
+                                className="h-full"
+                                value={editor.content}
+                                onChange={(value) => {
+                                    if (activeTab) {
+                                        tabs.markTabDirty(activeTab.id, true);
+                                    }
+                                    editor.handleChange(value);
+                                }}
+                                initialContent=""
+                                onFetchLinks={editor.onFetchLinks}
+                                onFetchTags={editor.onFetchTags}
+                                onOpenLink={editor.handleOpenLink}
+                                onSearch={(query) => {
+                                    console.log("Searching for:", query);
+                                }}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <InactiveGroupPane
+                        activeTitle={groupActiveTab?.title ?? null}
+                        onActivate={() => tabs.setFocusedGroup(group.id)}
+                    />
+                )}
+            </TabGroupFrame>
+        );
+    };
+
+    const renderLayoutNode = (node: TabLayoutNode): ReactNode => {
+        if (node.type === "group") {
+            return renderGroupPane(node.groupId);
+        }
+
+        const isRow = node.axis === "row";
+        return (
+            <div
+                className={`flex flex-1 min-h-0 w-full ${isRow ? "flex-row" : "flex-col"}`}
+            >
+                {node.children.map((child, index) => {
+                    const hasBorder = index > 0;
+                    const borderClass = hasBorder
+                        ? `${isRow ? "border-l" : "border-t"} border-[var(--sat-layout-border)]`
+                        : "";
                     return (
                         <div
-                            key={group.id}
-                            className={`flex-1 min-w-0 ${index > 0 ? "border-l border-[var(--sat-layout-border)]" : ""}`}
+                        key={
+                            child.type === "group"
+                                ? child.groupId
+                                : `${child.axis}-${index}`
+                        }
+                            className={`flex-1 min-h-0 min-w-0 h-full w-full ${
+                                isRow ? "min-w-0" : "w-full"
+                            } ${borderClass}`}
                         >
-                            <TabGroupFrame
-                                showSplitTargets={tabDnD.isDraggingTab}
-                                activeSplitTarget={tabDnD.getSplitTargetDirection(group.id)}
-                                onSplitTargetDragEnter={(direction, event) =>
-                                    tabDnD.handleSplitTargetDragEnter(group.id, direction, event)
-                                }
-                                onSplitTargetDragOver={(direction, event) =>
-                                    tabDnD.handleSplitTargetDragOver(group.id, direction, event)
-                                }
-                                onSplitTargetDragLeave={(direction) =>
-                                    tabDnD.handleSplitTargetDragLeave(group.id, direction)
-                                }
-                                onSplitTargetDrop={(direction, event) =>
-                                    tabDnD.handleSplitTargetDrop(group.id, direction, event)
-                                }
-                                tabsBar={
-                                    <TabsBar
-                                        tabs={groupTabs}
-                                        onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
-                                        onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
-                                        onPinToggle={handleTabPinToggle}
-                                        onTabDragStart={(tabId, event) =>
-                                            tabDnD.handleTabDragStart(group.id, tabId, event)
-                                        }
-                                        onTabDragOver={(_, event) =>
-                                            tabDnD.handleTabDragOver(event)
-                                        }
-                                        onTabDrop={(tabId, event) =>
-                                            tabDnD.handleTabDropOnTab(group.id, tabId, event)
-                                        }
-                                        onTabDragEnd={(_, event) => tabDnD.handleTabDragEnd(event)}
-                                        rightSlot={
-                                            isFocused ? (
-                                                <SaveIndicator status={editor.saveStatus} />
-                                            ) : undefined
-                                        }
-                                    />
-                                }
-                                className="h-full border-0"
-                            >
-                                {isFocused ? (
-                                    <>
-                                        {editor.saveStatus === "conflict" && (
-                                            <ConflictBanner
-                                                onKeepMine={editor.performSave}
-                                                onDiscard={editor.discardAndReload}
-                                            />
-                                        )}
-                                        <div className="flex-1 min-h-0 overflow-hidden">
-                                            <Editor
-                                                className="h-full"
-                                                value={editor.content}
-                                                onChange={(value) => {
-                                                    if (activeTab) {
-                                                        tabs.markTabDirty(activeTab.id, true);
-                                                    }
-                                                    editor.handleChange(value);
-                                                }}
-                                                initialContent=""
-                                                onFetchLinks={editor.onFetchLinks}
-                                                onFetchTags={editor.onFetchTags}
-                                                onOpenLink={editor.handleOpenLink}
-                                                onSearch={(query) => {
-                                                    console.log("Searching for:", query);
-                                                }}
-                                            />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <InactiveGroupPane
-                                        activeTitle={groupActiveTab?.title ?? null}
-                                        onActivate={() => tabs.setFocusedGroup(group.id)}
-                                    />
-                                )}
-                            </TabGroupFrame>
+                            {renderLayoutNode(child)}
                         </div>
                     );
                 })}
+            </div>
+        );
+    };
+
+    return (
+        <div className="flex flex-1 min-h-0 bg-[var(--sat-surface-1)]">
+            <div className="flex flex-1 min-h-0 w-full min-w-0">
+                {renderLayoutNode(rootNode)}
             </div>
         </div>
     );

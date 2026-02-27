@@ -8,6 +8,7 @@ import {
     removeTabFromGroup,
     titleFromPath,
 } from "../helpers";
+import { normalizeLayoutRoot, removeGroupFromLayoutNode } from "../layout";
 import type { TabsState } from "../types";
 
 export interface OpenCloseSlice {
@@ -194,11 +195,20 @@ export const createOpenCloseSlice: StateCreator<TabsState, [], [], OpenCloseSlic
                 nextFocusedGroupId,
             );
 
+            const layoutAfterRemoval =
+                nextGroup.tabIds.length === 0 && nextGroupOrder.length > 1
+                    ? removeGroupFromLayoutNode(state.layoutRoot, groupId)
+                    : state.layoutRoot;
             return {
                 tabs: nextTabs,
                 groups: normalized.groups,
                 groupOrder: normalized.groupOrder,
                 focusedGroupId: normalized.focusedGroupId,
+                layoutRoot: normalizeLayoutRoot(
+                    layoutAfterRemoval,
+                    normalized.groups,
+                    normalized.groupOrder,
+                ),
             };
         });
     },

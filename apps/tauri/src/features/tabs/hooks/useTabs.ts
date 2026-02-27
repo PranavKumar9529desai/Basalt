@@ -6,6 +6,7 @@ export function useTabs() {
   const tabs = useTabsStore((state) => state.tabs);
   const groups = useTabsStore((state) => state.groups);
   const groupOrder = useTabsStore((state) => state.groupOrder);
+  const layoutRoot = useTabsStore((state) => state.layoutRoot);
   const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
   const openInPreview = useTabsStore((state) => state.openInPreview);
   const openPinned = useTabsStore((state) => state.openPinned);
@@ -71,5 +72,6 @@ export function useTabs() {
     toWorkspaceSnapshot,
     hydrateFromWorkspaceSnapshot,
     reset,
+    layoutRoot,
   };
 }

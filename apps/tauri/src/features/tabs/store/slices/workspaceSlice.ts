@@ -1,5 +1,7 @@
 import type { StateCreator } from "zustand";
 import { buildInitialState, ensureAtLeastOneGroup } from "../helpers";
+import { normalizeLayoutRoot, createGroupNode } from "../layout";
+import { ROOT_GROUP_ID } from "../../constants";
 import type { TabGroupModel, TabsState } from "../types";
 
 export interface WorkspaceSlice {
@@ -20,6 +22,7 @@ export const createWorkspaceSlice: StateCreator<
             version: 1,
             focusedGroupId: state.focusedGroupId ?? null,
             groupOrder: [...state.groupOrder],
+            layout: state.layoutRoot,
             groups: state.groupOrder
                 .map((groupId) => state.groups[groupId])
                 .filter((group): group is TabGroupModel => Boolean(group))
@@ -62,11 +65,20 @@ export const createWorkspaceSlice: StateCreator<
             snapshot.focusedGroupId,
         );
 
+        const fallbackGroupId = normalized.groupOrder[0] ?? ROOT_GROUP_ID;
+        const layoutCandidate = snapshot.layout ?? createGroupNode(fallbackGroupId);
+        const normalizedLayout = normalizeLayoutRoot(
+            layoutCandidate,
+            normalized.groups,
+            normalized.groupOrder,
+        );
+
         set({
             tabs,
             groups: normalized.groups,
             groupOrder: normalized.groupOrder,
             focusedGroupId: normalized.focusedGroupId,
+            layoutRoot: normalizedLayout,
         });
     },
 
