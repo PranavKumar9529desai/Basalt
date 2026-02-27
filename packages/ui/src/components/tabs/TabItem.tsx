@@ -1,11 +1,17 @@
-import { IconPinned, IconX } from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/ui/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent } from "react";
 import type { TabItemData } from "./types";
 
 export interface TabItemProps {
   tab: TabItemData;
+  elementRef?: (el: HTMLDivElement | null) => void;
   onSelect?: (tabId: string) => void;
   onClose?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
@@ -19,9 +25,9 @@ export interface TabItemProps {
 
 export function TabItem({
   tab,
+  elementRef,
   onSelect,
   onClose,
-  onPinToggle,
   onContextMenu,
   onDragStart,
   onDragOver,
@@ -33,16 +39,17 @@ export function TabItem({
 
   return (
     <div
+      ref={elementRef}
       role="tab"
       tabIndex={tab.disabled ? -1 : 0}
       aria-selected={tab.isActive}
       data-active={tab.isActive ? "true" : "false"}
       data-preview={tab.isPreview ? "true" : "false"}
       className={cn(
-        "group/item flex items-center gap-1 rounded-md border px-1 py-1 transition-colors",
+        "group/item relative flex items-center gap-1 rounded-t-md border border-b-0 px-1.5 py-1 transition-colors",
         tab.isActive
-          ? "border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]"
-          : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]",
+          ? "z-10 border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]"
+          : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]/70",
         className,
       )}
       onContextMenu={(event) => onContextMenu?.(tab.id, event)}
@@ -59,8 +66,10 @@ export function TabItem({
         disabled={tab.disabled}
         draggable={!tab.disabled}
         className={cn(
-          "h-7 max-w-[220px] flex-1 justify-start gap-1 rounded-sm border border-transparent px-2 text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-2)]",
-          !tab.isActive && "text-[var(--sat-text-secondary)]",
+          "h-7 min-w-[170px] max-w-[300px] flex-1 justify-start gap-1 rounded-sm border border-transparent px-2 hover:bg-[var(--sat-surface-2)]",
+          tab.isActive
+            ? "text-[var(--sat-text-primary)]"
+            : "text-[var(--sat-text-secondary)] opacity-85 hover:opacity-100",
           tab.isPreview && "italic",
         )}
         onDragStart={(event) => onDragStart?.(tab.id, event)}
@@ -70,7 +79,16 @@ export function TabItem({
         onClick={() => onSelect?.(tab.id)}
       >
         {tab.icon}
-        <span className="truncate text-xs">{tab.title}</span>
+        <Tooltip>
+          <TooltipTrigger
+            render={<span className="truncate text-xs max-w-[180px]" />}
+          >
+            {tab.title}
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="">
+            <span>{tab.title}</span>
+          </TooltipContent>
+        </Tooltip>
         {tab.isDirty ? (
           <span
             aria-hidden="true"
@@ -79,22 +97,7 @@ export function TabItem({
         ) : null}
       </Button>
 
-      {tab.isPinned ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          draggable={false}
-          className="text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]"
-          onClick={() => onPinToggle?.(tab.id)}
-          aria-label="Unpin tab"
-          title="Unpin tab"
-        >
-          <IconPinned size={12} />
-        </Button>
-      ) : null}
-
-      {canClose ? (
+      {canClose && tab.isActive ? (
         <Button
           type="button"
           variant="ghost"

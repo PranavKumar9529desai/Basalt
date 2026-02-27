@@ -40,7 +40,11 @@ interface TabsState {
   pinTab: (tabId: TabId) => void;
   unpinTab: (tabId: TabId) => void;
   togglePinTab: (tabId: TabId) => void;
-  closeTab: (groupId: TabGroupId, tabId: TabId, options?: CloseTabOptions) => void;
+  closeTab: (
+    groupId: TabGroupId,
+    tabId: TabId,
+    options?: CloseTabOptions,
+  ) => void;
   closeOtherTabs: (groupId: TabGroupId, tabId: TabId) => void;
   closeTabsToRight: (groupId: TabGroupId, tabId: TabId) => void;
   moveTabWithinGroup: (
@@ -116,7 +120,8 @@ function removeTabFromGroup(group: TabGroupModel, tabId: TabId) {
   }
 
   if (group.activeTabId === tabId) {
-    const next = group.tabIds.length > 0 ? group.tabIds[group.tabIds.length - 1] : null;
+    const next =
+      group.tabIds.length > 0 ? group.tabIds[group.tabIds.length - 1] : null;
     group.activeTabId = next;
   }
 }
@@ -143,7 +148,11 @@ function ensureAtLeastOneGroup(
     };
   }
 
-  return { groups: nextGroups, groupOrder: nextOrder, focusedGroupId: fallbackId };
+  return {
+    groups: nextGroups,
+    groupOrder: nextOrder,
+    focusedGroupId: fallbackId,
+  };
 }
 
 function buildInitialState() {
@@ -364,7 +373,8 @@ export const useTabsStore = create<TabsState>((set, get) => ({
           ...state.groups,
           [groupId]: {
             ...group,
-            previewTabId: group.previewTabId === tabId ? null : group.previewTabId,
+            previewTabId:
+              group.previewTabId === tabId ? null : group.previewTabId,
           },
         },
       };
@@ -665,12 +675,15 @@ export const useTabsStore = create<TabsState>((set, get) => ({
           ...nextGroups,
           [fallbackGroupId]: {
             ...fallbackGroup,
-            activeTabId: fallbackGroup.activeTabId ?? fallbackGroup.tabIds[0] ?? null,
+            activeTabId:
+              fallbackGroup.activeTabId ?? fallbackGroup.tabIds[0] ?? null,
           },
         },
         groupOrder: remainingOrder,
         focusedGroupId:
-          state.focusedGroupId === groupId ? fallbackGroupId : state.focusedGroupId,
+          state.focusedGroupId === groupId
+            ? fallbackGroupId
+            : state.focusedGroupId,
       };
     });
   },
@@ -703,13 +716,20 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       groups[group.id] = {
         id: group.id,
         tabIds: group.tabIds.filter((tabId) => Boolean(tabs[tabId])),
-        activeTabId: group.activeTabId && tabs[group.activeTabId] ? group.activeTabId : null,
+        activeTabId:
+          group.activeTabId && tabs[group.activeTabId]
+            ? group.activeTabId
+            : null,
         previewTabId:
-          group.previewTabId && tabs[group.previewTabId] ? group.previewTabId : null,
+          group.previewTabId && tabs[group.previewTabId]
+            ? group.previewTabId
+            : null,
       };
     }
 
-    const uniqueOrder = snapshot.groupOrder.filter((groupId) => Boolean(groups[groupId]));
+    const uniqueOrder = snapshot.groupOrder.filter((groupId) =>
+      Boolean(groups[groupId]),
+    );
     const normalized = ensureAtLeastOneGroup(
       groups,
       uniqueOrder,
