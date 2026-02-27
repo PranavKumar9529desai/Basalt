@@ -55,6 +55,10 @@ export function TabItem({
       onContextMenu={(event) => onContextMenu?.(tab.id, event)}
       draggable={!tab.disabled}
       onDragStart={(event) => onDragStart?.(tab.id, event)}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        onDragOver?.(tab.id, event);
+      }}
       onDragOver={(event) => onDragOver?.(tab.id, event)}
       onDrop={(event) => onDrop?.(tab.id, event)}
       onDragEnd={(event) => onDragEnd?.(tab.id, event)}
@@ -64,7 +68,6 @@ export function TabItem({
         variant="ghost"
         size="sm"
         disabled={tab.disabled}
-        draggable={!tab.disabled}
         className={cn(
           "h-7 min-w-[170px] max-w-[300px] flex-1 justify-start gap-1 rounded-sm border border-transparent px-2 hover:bg-[var(--sat-surface-2)]",
           tab.isActive
@@ -72,10 +75,6 @@ export function TabItem({
             : "text-[var(--sat-text-secondary)] opacity-85 hover:opacity-100",
           tab.isPreview && "italic",
         )}
-        onDragStart={(event) => onDragStart?.(tab.id, event)}
-        onDragOver={(event) => onDragOver?.(tab.id, event)}
-        onDrop={(event) => onDrop?.(tab.id, event)}
-        onDragEnd={(event) => onDragEnd?.(tab.id, event)}
         onClick={() => onSelect?.(tab.id)}
       >
         {tab.icon}

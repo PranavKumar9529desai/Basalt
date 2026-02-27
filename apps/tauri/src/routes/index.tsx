@@ -130,19 +130,6 @@ function RouteComponent() {
       ? (tabs.tabs[focusedGroup.activeTabId] ?? null)
       : null;
 
-  const syncActiveTabToEditor = useCallback(() => {
-    const state = useTabsStore.getState();
-    const group = state.groups[state.focusedGroupId];
-    const tab = group?.activeTabId ? state.tabs[group.activeTabId] : null;
-    if (!tab) {
-      editor.closeNote();
-      return;
-    }
-    if (editor.selected?.path !== tab.path) {
-      void editor.loadNote({ name: tab.title, path: tab.path });
-    }
-  }, [editor]);
-
   const mutations = useVaultMutations();
   const selection = useVaultSelection();
   const clipboard = useVaultClipboard();
@@ -307,9 +294,8 @@ function RouteComponent() {
   const handleTabClose = useCallback(
     (groupId: TabGroupId, tabId: string) => {
       closeTab(groupId, tabId, { force: true });
-      syncActiveTabToEditor();
     },
-    [closeTab, syncActiveTabToEditor],
+    [closeTab],
   );
 
   const handleTabPinToggle = useCallback(
@@ -333,26 +319,22 @@ function RouteComponent() {
         }
       }
     }
-    syncActiveTabToEditor();
-  }, [controller, mutations.pendingDeletePaths, syncActiveTabToEditor]);
+  }, [controller, mutations.pendingDeletePaths]);
 
   const handleCloseActiveTab = useCallback(() => {
     if (!focusedGroup || !activeTab) return;
     closeTab(focusedGroup.id, activeTab.id, { force: true });
-    syncActiveTabToEditor();
-  }, [activeTab, closeTab, focusedGroup, syncActiveTabToEditor]);
+  }, [activeTab, closeTab, focusedGroup]);
 
   const handleCloseOtherTabs = useCallback(() => {
     if (!focusedGroup || !activeTab) return;
     closeOtherTabs(focusedGroup.id, activeTab.id);
-    syncActiveTabToEditor();
-  }, [activeTab, closeOtherTabs, focusedGroup, syncActiveTabToEditor]);
+  }, [activeTab, closeOtherTabs, focusedGroup]);
 
   const handleCloseTabsToRight = useCallback(() => {
     if (!focusedGroup || !activeTab) return;
     closeTabsToRight(focusedGroup.id, activeTab.id);
-    syncActiveTabToEditor();
-  }, [activeTab, closeTabsToRight, focusedGroup, syncActiveTabToEditor]);
+  }, [activeTab, closeTabsToRight, focusedGroup]);
 
   const handleTogglePinActiveTab = useCallback(() => {
     if (!activeTab) return;
@@ -362,8 +344,7 @@ function RouteComponent() {
   const handleSplitRight = useCallback(() => {
     if (!focusedGroup || !activeTab) return;
     splitGroupWithTab(focusedGroup.id, "right", activeTab.id);
-    syncActiveTabToEditor();
-  }, [activeTab, focusedGroup, splitGroupWithTab, syncActiveTabToEditor]);
+  }, [activeTab, focusedGroup, splitGroupWithTab]);
 
   if (!vaultPath) {
     return (
