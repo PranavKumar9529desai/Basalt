@@ -65,7 +65,10 @@ export function TabItem({
               event.preventDefault();
               onDragOver?.(tab.id, event);
             }}
-            onDragOver={(event) => onDragOver?.(tab.id, event)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              onDragOver?.(tab.id, event);
+            }}
             onDrop={(event) => onDrop?.(tab.id, event)}
             onDragEnd={(event) => onDragEnd?.(tab.id, event)}
             onKeyDown={(event) => {

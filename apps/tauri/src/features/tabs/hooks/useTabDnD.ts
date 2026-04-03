@@ -50,13 +50,26 @@ export function useTabDnD() {
   }, []);
 
   useEffect(() => {
-    // Fallback cleanup for drops that land outside any valid drop target.
-    // We deliberately do NOT listen to "dragend" here because on macOS WebKit,
-    // dragend fires before drop, which would clear the ref before the drop handler runs.
     const handleWindowDrop = () => clearDragState();
+    const handleWindowDragOver = (e: globalThis.DragEvent) => {
+      console.log("[WINDOW] dragover target:", (e.target as Element)?.tagName, (e.target as Element)?.className?.toString().slice(0, 60));
+    };
+    const handleWindowDragEnter = (e: globalThis.DragEvent) => {
+      console.log("[WINDOW] dragenter target:", (e.target as Element)?.tagName, (e.target as Element)?.className?.toString().slice(0, 60));
+    };
+    const handleWindowDragEnd = () => {
+      console.log("[WINDOW] dragend");
+      clearDragState();
+    };
     window.addEventListener("drop", handleWindowDrop);
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("dragenter", handleWindowDragEnter);
+    window.addEventListener("dragend", handleWindowDragEnd);
     return () => {
       window.removeEventListener("drop", handleWindowDrop);
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("dragenter", handleWindowDragEnter);
+      window.removeEventListener("dragend", handleWindowDragEnd);
     };
   }, [clearDragState]);
 

@@ -17,7 +17,7 @@ Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms
 |---|---|
 | Three-layer architecture | ✅ Established |
 | Tab system (Phases 0–4) | ✅ Complete |
-| Per-pane editor (PaneManager) | ✅ Steps 1–4 done, Step 5 (Rust delegation) pending |
+| Per-pane editor (PaneManager) | ✅ Complete — see [ADR-006](docs/adr/006-pane-manager-per-pane-editor.md) |
 | Theming (`--sat-*` tokens) | ✅ Established |
 | Command palette | ✅ Working |
 | File tree / sidebar | 🔄 In progress |
