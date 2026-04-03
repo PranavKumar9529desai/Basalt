@@ -2,6 +2,30 @@ import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, ReactNode } from "react";
 import { type TabSplitDirection, TabSplitDropZone } from "./TabSplitDropZone";
 
+/**
+ * Computes which split zone the cursor is in based on distance to each edge.
+ * The closest edge wins; if no edge is within edgePx the result is "center".
+ */
+function getDropDirection(
+  clientX: number,
+  clientY: number,
+  rect: DOMRect,
+): TabSplitDirection {
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const dLeft = x;
+  const dRight = rect.width - x;
+  const dTop = y;
+  const dBottom = rect.height - y;
+  const min = Math.min(dLeft, dRight, dTop, dBottom);
+  const edgePx = 80;
+  if (min > edgePx) return "center";
+  if (min === dLeft) return "left";
+  if (min === dRight) return "right";
+  if (min === dTop) return "top";
+  return "bottom";
+}
+
 export interface TabGroupFrameProps {
   tabsBar: ReactNode;
   children: ReactNode;
@@ -32,7 +56,6 @@ export function TabGroupFrame({
   className,
   showSplitTargets = false,
   activeSplitTarget = null,
-  onSplitTargetDragEnter,
   onSplitTargetDragOver,
   onSplitTargetDragLeave,
   onSplitTargetDrop,
@@ -43,74 +66,59 @@ export function TabGroupFrame({
         "relative flex flex-1 min-h-0 min-w-0 flex-col border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]",
         className,
       )}
-      onDragOver={() => console.log("[SECTION] dragover")}
-      onDragEnter={() => console.log("[SECTION] dragenter")}
+      onDragOver={(e) => {
+        // Always call preventDefault so WKWebView registers this section as a
+        // drop target. In WKWebView, dataTransfer.types is empty for same-page
+        // drags during dragover, so we cannot filter by type here — if we don't
+        // call preventDefault unconditionally, WKWebView stops sending drag events.
+        e.preventDefault();
+        console.log("[SECTION] dragover", { showSplitTargets, types: [...e.dataTransfer.types] });
+        if (!showSplitTargets) return;
+        const dir = getDropDirection(
+          e.clientX,
+          e.clientY,
+          e.currentTarget.getBoundingClientRect(),
+        );
+        console.log("[SECTION] computed dir →", dir);
+        onSplitTargetDragOver?.(dir, e as unknown as DragEvent<HTMLDivElement>);
+      }}
+      onDrop={(e) => {
+        console.log("[SECTION] drop", { showSplitTargets });
+        e.preventDefault();
+        if (!showSplitTargets) return;
+        const dir = getDropDirection(
+          e.clientX,
+          e.clientY,
+          e.currentTarget.getBoundingClientRect(),
+        );
+        console.log("[SECTION] drop dir →", dir);
+        onSplitTargetDrop?.(dir, e as unknown as DragEvent<HTMLDivElement>);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        console.log("[SECTION] dragleave — exited pane");
+        onSplitTargetDragLeave?.(
+          "center",
+          e as unknown as DragEvent<HTMLDivElement>,
+        );
+      }}
     >
       {tabsBar}
       <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
-        {/*
-          Always in the DOM — WebKit (Tauri) snapshots drop targets at dragstart.
-          If the overlay is conditionally mounted AFTER dragstart fires, WebKit
-          never registers it as a valid drop target and no drag events reach it.
-          We hide it visually when inactive and guard handlers so it has no effect
-          during non-tab drags (e.g. file drops, text selection drags).
-        */}
+        {/* Visual-only overlay — pointer-events-none so normal editor interaction
+            is never blocked. Zone highlights update via activeSplitTarget prop. */}
         <div
           className={cn(
-            "absolute inset-0 z-10",
-            !showSplitTargets && "pointer-events-none opacity-0",
+            "pointer-events-none absolute inset-0 z-10",
+            !showSplitTargets && "opacity-0",
           )}
-          onDragOver={(e) => {
-            if (!showSplitTargets) return;
-            console.log("[INTERCEPTOR] dragover");
-            e.preventDefault();
-          }}
-          onDrop={(e) => {
-            if (!showSplitTargets) return;
-            e.preventDefault();
-          }}
         >
-          <TabSplitDropZone
-            direction="center"
-            active={activeSplitTarget === "center"}
-            onDragEnter={showSplitTargets ? onSplitTargetDragEnter : undefined}
-            onDragOver={showSplitTargets ? onSplitTargetDragOver : undefined}
-            onDragLeave={showSplitTargets ? onSplitTargetDragLeave : undefined}
-            onDrop={showSplitTargets ? onSplitTargetDrop : undefined}
-          />
-          <TabSplitDropZone
-            direction="left"
-            active={activeSplitTarget === "left"}
-            onDragEnter={showSplitTargets ? onSplitTargetDragEnter : undefined}
-            onDragOver={showSplitTargets ? onSplitTargetDragOver : undefined}
-            onDragLeave={showSplitTargets ? onSplitTargetDragLeave : undefined}
-            onDrop={showSplitTargets ? onSplitTargetDrop : undefined}
-          />
-          <TabSplitDropZone
-            direction="right"
-            active={activeSplitTarget === "right"}
-            onDragEnter={showSplitTargets ? onSplitTargetDragEnter : undefined}
-            onDragOver={showSplitTargets ? onSplitTargetDragOver : undefined}
-            onDragLeave={showSplitTargets ? onSplitTargetDragLeave : undefined}
-            onDrop={showSplitTargets ? onSplitTargetDrop : undefined}
-          />
-          <TabSplitDropZone
-            direction="top"
-            active={activeSplitTarget === "top"}
-            onDragEnter={showSplitTargets ? onSplitTargetDragEnter : undefined}
-            onDragOver={showSplitTargets ? onSplitTargetDragOver : undefined}
-            onDragLeave={showSplitTargets ? onSplitTargetDragLeave : undefined}
-            onDrop={showSplitTargets ? onSplitTargetDrop : undefined}
-          />
-          <TabSplitDropZone
-            direction="bottom"
-            active={activeSplitTarget === "bottom"}
-            onDragEnter={showSplitTargets ? onSplitTargetDragEnter : undefined}
-            onDragOver={showSplitTargets ? onSplitTargetDragOver : undefined}
-            onDragLeave={showSplitTargets ? onSplitTargetDragLeave : undefined}
-            onDrop={showSplitTargets ? onSplitTargetDrop : undefined}
-          />
+          <TabSplitDropZone direction="center" active={activeSplitTarget === "center"} />
+          <TabSplitDropZone direction="left" active={activeSplitTarget === "left"} />
+          <TabSplitDropZone direction="right" active={activeSplitTarget === "right"} />
+          <TabSplitDropZone direction="top" active={activeSplitTarget === "top"} />
+          <TabSplitDropZone direction="bottom" active={activeSplitTarget === "bottom"} />
         </div>
       </div>
     </section>

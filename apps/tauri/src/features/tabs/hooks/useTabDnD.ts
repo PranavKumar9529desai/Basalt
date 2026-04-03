@@ -51,31 +51,18 @@ export function useTabDnD() {
 
   useEffect(() => {
     const handleWindowDrop = () => clearDragState();
-    const handleWindowDragOver = (e: globalThis.DragEvent) => {
-      console.log("[WINDOW] dragover target:", (e.target as Element)?.tagName, (e.target as Element)?.className?.toString().slice(0, 60));
-    };
-    const handleWindowDragEnter = (e: globalThis.DragEvent) => {
-      console.log("[WINDOW] dragenter target:", (e.target as Element)?.tagName, (e.target as Element)?.className?.toString().slice(0, 60));
-    };
-    const handleWindowDragEnd = () => {
-      console.log("[WINDOW] dragend");
-      clearDragState();
-    };
+    const handleWindowDragEnd = () => clearDragState();
     window.addEventListener("drop", handleWindowDrop);
-    window.addEventListener("dragover", handleWindowDragOver);
-    window.addEventListener("dragenter", handleWindowDragEnter);
     window.addEventListener("dragend", handleWindowDragEnd);
     return () => {
       window.removeEventListener("drop", handleWindowDrop);
-      window.removeEventListener("dragover", handleWindowDragOver);
-      window.removeEventListener("dragenter", handleWindowDragEnter);
       window.removeEventListener("dragend", handleWindowDragEnd);
     };
   }, [clearDragState]);
 
   const handleTabDragStart = useCallback(
     (groupId: TabGroupId, tabId: string, event: DragEvent<HTMLElement>) => {
-      console.log("[DND] dragstart fired", { tabId, groupId });
+      console.log("[DND] dragstart", { tabId, groupId });
       const dragData: DraggedTabState = { tabId, fromGroupId: groupId };
       draggedTabRef.current = dragData;
       setIsDraggingTab(true);
@@ -180,13 +167,10 @@ export function useTabDnD() {
   );
 
   const handleSplitTargetDragLeave = useCallback(
-    (groupId: TabGroupId, direction: DropDirection) => {
+    (groupId: TabGroupId, _direction: DropDirection) => {
       setSplitTarget((prev) => {
-        if (!prev) return prev;
-        if (prev.groupId === groupId && prev.direction === direction) {
-          return null;
-        }
-        return prev;
+        if (!prev || prev.groupId !== groupId) return prev;
+        return null;
       });
     },
     [],
@@ -199,7 +183,9 @@ export function useTabDnD() {
       event: DragEvent<HTMLDivElement>,
     ) => {
       event.preventDefault();
+      console.log("[DND] handleSplitTargetDrop", { groupId, direction });
       const dragged = readDraggedTab(draggedTabRef, event);
+      console.log("[DND] dragged tab:", dragged);
       if (!dragged) {
         clearDragState();
         return;
@@ -209,6 +195,7 @@ export function useTabDnD() {
       const sourceGroup = state.groups[dragged.fromGroupId];
       const targetGroup = state.groups[groupId];
       if (!sourceGroup || !targetGroup) {
+        console.log("[DND] groups not found");
         clearDragState();
         return;
       }
