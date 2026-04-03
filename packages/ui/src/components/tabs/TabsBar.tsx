@@ -229,7 +229,7 @@ export function TabsBar({
       {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
       <div className="relative h-full flex-1 min-w-0 overflow-visible">
         <ScrollArea className="h-full flex-1" viewportRef={viewportRef}>
-          <div className="flex h-full min-w-max items-end gap-0 pr-2">
+          <div className="flex h-full min-w-max items-end gap-0">
             {tabs.map((tab) => (
               <TabItem
                 key={tab.id}
@@ -248,6 +248,37 @@ export function TabsBar({
                 }
               />
             ))}
+            {/* Explicit end drop zone — directly registers as a WKWebView drop
+                target via onDragOver+preventDefault, so drops past the last tab
+                are captured reliably without relying on event bubbling. */}
+            {tabs.length > 0 && (
+              <div
+                aria-hidden="true"
+                className="h-full w-20 shrink-0"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  const last = tabs[tabs.length - 1];
+                  if (!last) return;
+                  if (
+                    dropIndicatorRef.current?.tabId === last.id &&
+                    dropIndicatorRef.current.edge === "right"
+                  ) return;
+                  setDropIndicatorBoth({ tabId: last.id, edge: "right" });
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const last = tabs[tabs.length - 1];
+                  if (!last) return;
+                  setDropIndicatorBoth(null);
+                  onTabDrop?.(
+                    last.id,
+                    e as unknown as DragEvent<HTMLElement>,
+                    "right",
+                  );
+                }}
+              />
+            )}
           </div>
         </ScrollArea>
 
