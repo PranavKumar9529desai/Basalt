@@ -20,6 +20,7 @@ export interface TabItemProps {
   onDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  showDropIndicator?: "left" | "right";
   className?: string;
 }
 
@@ -33,6 +34,7 @@ export function TabItem({
   onDragOver,
   onDrop,
   onDragEnd,
+  showDropIndicator,
   className,
 }: TabItemProps) {
   const canClose = tab.canClose ?? true;
@@ -84,6 +86,18 @@ export function TabItem({
           />
         }
       >
+        {showDropIndicator === "left" && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-[var(--sat-accent-primary)] z-30"
+          />
+        )}
+        {showDropIndicator === "right" && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-0 top-1 bottom-1 w-0.5 rounded-full bg-[var(--sat-accent-primary)] z-30"
+          />
+        )}
         <div
           data-disabled={tab.disabled ? "true" : undefined}
           className={cn(

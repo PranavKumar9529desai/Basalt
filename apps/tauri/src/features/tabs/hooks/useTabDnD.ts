@@ -87,6 +87,7 @@ export function useTabDnD() {
       groupId: TabGroupId,
       targetTabId: string,
       event: DragEvent<HTMLElement>,
+      edge: "left" | "right" = "left",
     ) => {
       event.preventDefault();
       const dragged = readDraggedTab(draggedTabRef, event);
@@ -105,9 +106,18 @@ export function useTabDnD() {
 
       if (dragged.fromGroupId === groupId) {
         const fromIndex = sourceGroup.tabIds.indexOf(dragged.tabId);
-        const toIndex = targetGroup.tabIds.indexOf(targetTabId);
-        if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-          state.moveTabWithinGroup(groupId, fromIndex, toIndex);
+        const targetIndex = targetGroup.tabIds.indexOf(targetTabId);
+        if (fromIndex === -1 || targetIndex === -1) {
+          clearDragState();
+          return;
+        }
+        // Convert edge + targetIndex into a raw insertion position in the
+        // original array, then adjust for the splice-removal offset.
+        const insertionIndex = targetIndex + (edge === "right" ? 1 : 0);
+        const adjustedToIndex =
+          fromIndex < insertionIndex ? insertionIndex - 1 : insertionIndex;
+        if (fromIndex !== adjustedToIndex) {
+          state.moveTabWithinGroup(groupId, fromIndex, adjustedToIndex);
           state.activateTab(groupId, dragged.tabId);
         }
       } else {

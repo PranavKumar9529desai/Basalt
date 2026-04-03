@@ -77,7 +77,8 @@ export function TabGroupFrame({
   };
 
   return (
-    <section
+    // biome-ignore lint/a11y/noStaticElementInteractions: intentional DnD drop target
+    <div
       className={cn(
         "relative flex flex-1 min-h-0 min-w-0 flex-col border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]",
         className,
@@ -140,6 +141,6 @@ export function TabGroupFrame({
           )}
         />
       </div>
-    </section>
+    </div>
   );
 }

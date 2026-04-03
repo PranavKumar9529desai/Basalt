@@ -109,8 +109,8 @@ export function WorkspaceTabs({
               contextTabDnD.handleTabDragStart(group.id, tabId, event)
             }
             onTabDragOver={(_, event) => contextTabDnD.handleTabDragOver(event)}
-            onTabDrop={(tabId, event) =>
-              contextTabDnD.handleTabDropOnTab(group.id, tabId, event)
+            onTabDrop={(tabId, event, edge) =>
+              contextTabDnD.handleTabDropOnTab(group.id, tabId, event, edge)
             }
             onTabDragEnd={(_, event) => contextTabDnD.handleTabDragEnd(event)}
             rightSlot={

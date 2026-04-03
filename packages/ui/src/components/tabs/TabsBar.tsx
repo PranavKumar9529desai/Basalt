@@ -21,7 +21,7 @@ export interface TabsBarProps {
   onTabContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
   onTabDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onTabDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
-  onTabDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
+  onTabDrop?: (tabId: string, event: DragEvent<HTMLElement>, edge: "left" | "right") => void;
   onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
@@ -128,6 +128,48 @@ export function TabsBar({
     };
   }, [recalcChrome]);
 
+  const [dropIndicator, setDropIndicator] = useState<{
+    tabId: string;
+    edge: "left" | "right";
+  } | null>(null);
+  // Ref mirrors state so the drop handler always reads the latest edge without
+  // a stale-closure issue.
+  const dropEdgeRef = useRef<"left" | "right">("left");
+
+  const handleInternalDragOver = useCallback(
+    (tabId: string, event: DragEvent<HTMLElement>) => {
+      const el = tabRefs.current.get(tabId);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const edge: "left" | "right" =
+          event.clientX < (rect.left + rect.right) / 2 ? "left" : "right";
+        dropEdgeRef.current = edge;
+        setDropIndicator((prev) =>
+          prev?.tabId === tabId && prev.edge === edge ? prev : { tabId, edge },
+        );
+      }
+      onTabDragOver?.(tabId, event);
+    },
+    [onTabDragOver],
+  );
+
+  const handleInternalDrop = useCallback(
+    (tabId: string, event: DragEvent<HTMLElement>) => {
+      const edge = dropEdgeRef.current;
+      setDropIndicator(null);
+      onTabDrop?.(tabId, event, edge);
+    },
+    [onTabDrop],
+  );
+
+  const handleInternalDragEnd = useCallback(
+    (tabId: string, event: DragEvent<HTMLElement>) => {
+      setDropIndicator(null);
+      onTabDragEnd?.(tabId, event);
+    },
+    [onTabDragEnd],
+  );
+
   return (
     <div
       role="tablist"
@@ -136,6 +178,11 @@ export function TabsBar({
         "relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 pt-1",
         className,
       )}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDropIndicator(null);
+        }
+      }}
     >
       {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
       <div className="relative h-full flex-1 min-w-0 overflow-visible">
@@ -151,9 +198,12 @@ export function TabsBar({
                 onPinToggle={onPinToggle}
                 onContextMenu={onTabContextMenu}
                 onDragStart={onTabDragStart}
-                onDragOver={onTabDragOver}
-                onDrop={onTabDrop}
-                onDragEnd={onTabDragEnd}
+                onDragOver={handleInternalDragOver}
+                onDrop={handleInternalDrop}
+                onDragEnd={handleInternalDragEnd}
+                showDropIndicator={
+                  dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined
+                }
               />
             ))}
           </div>
