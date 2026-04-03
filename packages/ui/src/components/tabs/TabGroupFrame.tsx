@@ -1,11 +1,19 @@
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, ReactNode } from "react";
-import { type TabSplitDirection, TabSplitDropZone } from "./TabSplitDropZone";
+import type { TabSplitDirection } from "./TabSplitDropZone";
 
-/**
- * Computes which split zone the cursor is in based on distance to each edge.
- * The closest edge wins; if no edge is within edgePx the result is "center".
- */
+/** Returns Tailwind geometry classes for the split preview overlay. */
+function getSplitPreviewClass(direction: TabSplitDirection | null): string {
+  switch (direction) {
+    case "left":   return "inset-y-0 left-0 w-1/2 rounded-r-md";
+    case "right":  return "inset-y-0 right-0 w-1/2 rounded-l-md";
+    case "top":    return "inset-x-0 top-0 h-1/2 rounded-b-md";
+    case "bottom": return "inset-x-0 bottom-0 h-1/2 rounded-t-md";
+    case "center": return "inset-0 rounded-md";
+    default:       return "inset-0";
+  }
+}
+
 function getDropDirection(
   clientX: number,
   clientY: number,
@@ -106,20 +114,17 @@ export function TabGroupFrame({
       {tabsBar}
       <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
-        {/* Visual-only overlay — pointer-events-none so normal editor interaction
-            is never blocked. Zone highlights update via activeSplitTarget prop. */}
+        {/* Single split-preview overlay. Geometry snaps to the hovered direction;
+            opacity fades in/out so there are no jarring strip indicators. */}
         <div
           className={cn(
-            "pointer-events-none absolute inset-0 z-10",
-            !showSplitTargets && "opacity-0",
+            "pointer-events-none absolute z-10 transition-opacity duration-150",
+            "border border-[var(--sat-accent-primary)]",
+            "bg-[color-mix(in_srgb,var(--sat-accent-primary)_18%,transparent)]",
+            (!showSplitTargets || !activeSplitTarget) ? "opacity-0" : "opacity-100",
+            getSplitPreviewClass(activeSplitTarget),
           )}
-        >
-          <TabSplitDropZone direction="center" active={activeSplitTarget === "center"} />
-          <TabSplitDropZone direction="left" active={activeSplitTarget === "left"} />
-          <TabSplitDropZone direction="right" active={activeSplitTarget === "right"} />
-          <TabSplitDropZone direction="top" active={activeSplitTarget === "top"} />
-          <TabSplitDropZone direction="bottom" active={activeSplitTarget === "bottom"} />
-        </div>
+        />
       </div>
     </section>
   );
