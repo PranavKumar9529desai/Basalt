@@ -318,15 +318,39 @@ export function TabsBar({
 
           {chrome.activeLeft !== null && chrome.activeWidth > 0 ? (
             <>
+              {/*
+                Chrome-style inverted corner nubs.
+                Technique: place a circle element outside the tab corner, paint the
+                tab's background color as a box-shadow in all directions, then clip
+                to a single quarter-circle using clip-path: inset().
+                The -6px bleed in the clip-path closes the hairline gap at the
+                junction between the nub and the tab's side border.
+              */}
+              {/* Bottom-left inverted corner */}
               <span
                 aria-hidden="true"
-                className="absolute bottom-0 h-2 w-2 rounded-br-full bg-[var(--sat-surface-1)]"
-                style={{ left: chrome.activeLeft - 8 }}
+                className="absolute bottom-0 pointer-events-none"
+                style={{
+                  left: chrome.activeLeft - 12,
+                  width: 12,
+                  height: 12,
+                  borderRadius: "100%",
+                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  clipPath: "inset(50% -6px 0 50%)",
+                }}
               />
+              {/* Bottom-right inverted corner */}
               <span
                 aria-hidden="true"
-                className="absolute bottom-0 h-2 w-2 rounded-bl-full bg-[var(--sat-surface-1)]"
-                style={{ left: chrome.activeLeft + chrome.activeWidth }}
+                className="absolute bottom-0 pointer-events-none"
+                style={{
+                  left: chrome.activeLeft + chrome.activeWidth,
+                  width: 12,
+                  height: 12,
+                  borderRadius: "100%",
+                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  clipPath: "inset(50% 50% 0 -6px)",
+                }}
               />
             </>
           ) : null}
