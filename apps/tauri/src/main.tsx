@@ -9,8 +9,6 @@ import { ThemeProvider } from "./app-shell/ThemeProvider";
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
 
-console.log("🟢 BASALT STARTED - console.log is working");
-
 // Create a new router instance
 const router = createRouter({ routeTree });
 

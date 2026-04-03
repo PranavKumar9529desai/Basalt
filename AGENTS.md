@@ -1,225 +1,135 @@
 # Basalt — Agent Rules
 
-> These rules are mandatory for ALL AI agents working on this codebase.
-> Violating any rule marked 🚫 is a hard error — stop and fix it.
+> Mandatory for ALL AI agents (Claude, Codex, Gemini, etc.).  
+> Violating any rule marked 🚫 is a hard error — stop and fix it.  
+> Rationale for each rule lives in `docs/adr/`.
 
 ---
 
-## 1. Three-Layer Architecture
+## 1. Three-Layer Architecture — [ADR-001](docs/adr/001-three-layer-architecture.md)
 
 Every UI feature MUST be split across exactly three layers:
 
-| Layer | Location | Responsibility | Knows about Tauri? |
-|-------|----------|---------------|---------------------|
-| **Primitives** | `packages/ui/` | Visual components. Props in, DOM out. | 🚫 NEVER |
+| Layer | Location | Responsibility | Tauri? |
+|---|---|---|---|
+| **Primitives** | `packages/ui/` | Visual components. Props in, DOM out. | 🚫 Never |
 | **Features** | `apps/tauri/src/features/` | State, hooks, business logic, IPC | ✅ Yes |
-| **Shell** | `apps/tauri/src/app-shell/` | Layout composition. Thin glue only | ✅ Yes |
+| **Shell** | `apps/tauri/src/app-shell/` | Layout composition. Thin glue only. | ✅ Yes |
 
-### The litmus test
-> "Can this component render in an empty `index.html` with zero backend?"
-> - **Yes** → `packages/ui/`
-> - **No** → `apps/tauri/src/features/`
+**Litmus test:** Can this render in an empty `index.html` with zero backend?
+- Yes → `packages/ui/`
+- No → `apps/tauri/src/features/`
 
 ---
 
-## 2. Component Rules (packages/ui)
+## 2. Component Rules — [ADR-003](docs/adr/003-shadcn-radix-over-raw-html.md)
 
-### 🚫 ALWAYS prefer shadcn/Radix over raw Tailwind markup
-Whenever a shadcn/ui component exists for what you need, **USE IT**.
-Do NOT hand-write raw `<div>` / `<button>` with Tailwind classes when a
-shadcn primitive already covers it — this includes buttons, inputs, dialogs,
-dropdowns, scroll areas, separators, cards, tooltips, popovers, modals, etc.
+### 🚫 Always prefer shadcn/Radix over raw Tailwind markup
 
-Only write a raw Tailwind element when NO shadcn component exists for it
-(e.g., a custom graph canvas or a unique layout container).
+Use shadcn/ui components for: buttons, inputs, dialogs, dropdowns, scroll areas, separators, cards, tooltips, popovers, modals, context menus.  
+Only write raw HTML+Tailwind when no shadcn component covers the need.
 
 ```tsx
-// ❌ WRONG — raw Tailwind button
-<button className="px-4 py-2 bg-blue-600 rounded text-white hover:bg-blue-700">
-  Save
-</button>
+// ❌ WRONG
+<button className="px-4 py-2 bg-[var(--sat-accent-primary)] rounded">Save</button>
+<div className="overflow-y-auto h-full">{children}</div>
 
-// ✅ CORRECT — shadcn Button component
+// ✅ CORRECT
 import { Button } from "@workspace/ui/components/ui/button";
 <Button variant="default">Save</Button>
 
-// ❌ WRONG — raw Tailwind scroll container
-<div className="overflow-y-auto h-full">{children}</div>
-
-// ✅ CORRECT — shadcn ScrollArea
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 <ScrollArea className="h-full">{children}</ScrollArea>
-
-// ❌ WRONG — raw custom dropdown
-function Dropdown({ items }) {
-  const [open, setOpen] = useState(false);
-  return <div className="dropdown">{/* hand-rolled logic */}</div>;
-}
-
-// ✅ CORRECT — built on Radix primitives
-import { DropdownMenu } from "@radix-ui/react-dropdown-menu";
-function MyMenu({ items }) {
-  return <DropdownMenu.Root>{/* compose Radix primitives */}</DropdownMenu.Root>;
-}
 ```
 
 ### 🚫 UI components MUST be dumb (stateless/presentational)
-Components in `packages/ui/` receive data and callbacks via props.
-They MUST NOT:
-- Call `invoke()` or any Tauri API
-- Fetch data
-- Manage business state
-- Import from `apps/tauri/`
-- Import from `@tauri-apps/*`
 
-They MAY contain:
-- Internal UI state only (hover, open/close, animation state)
-- Refs for DOM measurement
-- Event handlers that call prop callbacks
+Components in `packages/ui/` MUST NOT: call `invoke()`, fetch data, manage business state, import from `apps/tauri/`, import from `@tauri-apps/*`.
 
-```tsx
-// ❌ WRONG — UI component fetching data
-function FileTree() {
-  const files = await invoke("get_vault_tree");  // 🚫 NO
-  return <ul>{files.map(...)}</ul>;
-}
+They MAY contain: internal UI state (hover, open/close), refs for DOM measurement, event handlers that call prop callbacks.
 
-// ✅ CORRECT — dumb component, data comes via props
-function FileTree({ nodes, onFileClick }: FileTreeProps) {
-  return <ul>{nodes.map(n => <li onClick={() => onFileClick(n)}>{n.name}</li>)}</ul>;
-}
-```
-
-### Folder structure for components
-Group related components into feature folders, not flat files:
+### Folder structure
 
 ```
 packages/ui/src/components/
-├── ui/                    # Atomic shadcn primitives (button, input, dialog, etc.)
-│   ├── button.tsx
-│   ├── dialog.tsx
-│   └── scroll-area.tsx
-│
-├── tabs/                  # Feature-scoped component group
-│   ├── TabBar.tsx
-│   ├── TabItem.tsx
-│   └── index.ts           # Re-exports all public components
-│
-├── sidebar/               # Another feature group
-│   ├── SidebarRoot.tsx
-│   ├── SidebarPanel.tsx
-│   └── index.ts
-│
-└── CommandPalette.tsx      # Standalone components are fine as single files
+├── ui/           # Atomic shadcn primitives (do not manually edit)
+├── tabs/         # Feature group — index.ts re-exports required
+├── sidebar/      # Feature group — index.ts re-exports required
+└── CommandPalette.tsx  # Standalone fine as single file
 ```
 
-**Rules:**
-- `ui/` subfolder = shadcn-generated atomic primitives (do not manually edit)
-- Feature folders (e.g., `tabs/`, `sidebar/`) = composed components built FROM `ui/` primitives
-- Every feature folder MUST have an `index.ts` that re-exports the public API
-- One component per file. File name = component name (PascalCase)
+One component per file. Filename = component name (PascalCase). Every feature folder needs `index.ts`.
 
 ---
 
-## 3. Feature Rules (apps/tauri/src/features/)
-
-Each feature is a self-contained folder:
+## 3. Feature Rules
 
 ```
 features/
 └── tabs/
-    ├── types.ts           # TypeScript types and interfaces
-    ├── store.ts           # State management (useReducer / zustand)
+    ├── types.ts
+    ├── store/         # Zustand slices
     ├── hooks/
-    │   ├── useTabs.ts     # Primary hook — the feature's public API
-    │   └── useTabDnD.ts   # Secondary hooks for specific concerns
-    ├── components/        # Feature-specific components (optional, only if needed)
-    │   └── TabContextMenu.tsx
-    └── index.ts           # Re-exports
+    │   ├── useTabs.ts       # Primary hook — feature's public API
+    │   └── useTabDnD.ts     # Secondary hooks for specific concerns
+    └── index.ts             # Re-exports
 ```
 
-**Rules:**
-- Features MUST NOT import from other features directly. Communicate through the shell layer.
-- Every feature exposes its API via hooks (e.g., `useTabs()` returns `{ tabs, openTab, closeTab }`).
-- State updates use `useReducer` or a lightweight store. No prop drilling.
+- Features MUST NOT import from other features directly. Cross-feature wiring goes through shell.
+- Every feature exposes its API via hooks.
+- State: Zustand (see [ADR-005](docs/adr/005-zustand-feature-state.md)). No prop drilling.
 
 ---
 
-## 4. Navigation Model
+## 4. Navigation Model — [ADR-004](docs/adr/004-state-driven-navigation.md)
 
-This is a **desktop workspace app**, NOT a web page app.
+Desktop workspace app — navigation is **state-driven**, not URL-driven.
 
-- **Routes** are used ONLY for fundamentally different application modes:
-  - `/` → Main workspace (sidebar + tabs + editor)
-  - `/onboarding` → Vault picker / first-run experience
-- **Within the workspace**, navigation is state-driven (tabs, panels), NOT URL-driven.
-- NEVER create a route for something that should be a tab or panel (graph view,
-  settings, backlinks — these are all tabs or sidebar panels, not routes).
+Routes exist ONLY for top-level app modes:
+- `/` → Main workspace
+- `/onboarding` → First-run experience
+
+🚫 NEVER create a route for something that should be a tab or panel (graph view, settings, backlinks).
 
 ---
 
-## 5. Styling Rules
-
-- Use **Tailwind CSS** utility classes for layout/spacing.
-- Use **`cn()`** utility (from `@workspace/ui/lib/utils`) for conditional class merging.
-- Prefer CSS transitions/animations over JS animation libraries.
-- No inline `style={{}}` except for dynamic values (e.g., virtualizer offsets).
+## 5. Styling — [ADR-002](docs/adr/002-sat-css-theme-tokens.md)
 
 ### 🚫 ALWAYS use `--sat-*` theme variables for ALL colors
-Every color in the app MUST come from a `--sat-*` CSS custom property.
-Never hard-code hex values, Tailwind color classes (`bg-blue-600`), or
-rgb/hsl values. This ensures themes work correctly across the entire app.
 
 ```tsx
-// ❌ WRONG — hard-coded colors
+// ❌ WRONG
 <div className="bg-blue-600 text-white border-gray-700">
-<div className="bg-[#1e293b] text-[#f8fafc]">
+<div className="bg-[#1e293b]">
 <div style={{ backgroundColor: '#0f172a' }}>
 
-// ✅ CORRECT — --sat-* theme variables
+// ✅ CORRECT
 <div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] border-[var(--sat-layout-border)]">
-
-// ✅ ALSO CORRECT — using inside component styles
-<Button className="bg-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-hover)]">
 ```
 
-The `--sat-*` token families:
-- `--sat-surface-*` — background layers (1, 2, 3)
-- `--sat-text-*` — text colors (primary, secondary, muted, inverse)
-- `--sat-accent-*` — brand/action colors (primary, hover)
-- `--sat-layout-*` — structural elements (border, divider)
-- `--sat-state-*` — semantic states (danger, warning, success)
-- `--sat-editor-*` — editor-specific tokens (background, cursor, selection)
+Token families: `--sat-surface-*`, `--sat-text-*`, `--sat-accent-*`, `--sat-layout-*`, `--sat-state-*`, `--sat-editor-*`
+
+Tailwind is allowed for layout/spacing only (`flex`, `gap-2`, `p-4`, `grid`, `w-full`).
 
 ---
 
-## 6. Performance Rules
+## 6. Performance — [ADR-007](docs/adr/007-typescript-rust-responsibilities.md)
 
-- Heavy compute (parsing, search, indexing) → **Rust** (crates/).
-- UI rendering → **React** with proper memoization.
-- Long lists → **always virtualize** (`@tanstack/react-virtual`).
-- Batch Tauri `invoke()` calls. Never make N serial calls when 1 batched call works.
-- Lazy-load non-critical panels with `React.lazy()` + `Suspense`.
-
----
-
-## 7. Theming
-
-- All theme values come from `--sat-*` CSS custom properties.
-- Components MUST use these variables, never raw colors.
-- Theme definitions live in `packages/ui/src/styles/` and `packages/ui/theme/`.
-- See `docs/theming-architecture.md` for full details.
+- Heavy compute (parsing, search, indexing) → **Rust** (`crates/`)
+- Long lists → always virtualize (`@tanstack/react-virtual`)
+- Batch `invoke()` calls — never N serial calls when 1 batched call works
+- Lazy-load non-critical panels with `React.lazy()` + `Suspense`
 
 ---
 
-## Quick Reference: Where does it go?
+## Quick Reference: Where Does It Go?
 
 | I need to... | Put it in... |
 |---|---|
-| Create a visual component (button, tab, panel) | `packages/ui/src/components/` |
-| Add a shadcn primitive (dialog, popover) | `packages/ui/src/components/ui/` |
-| Add tab open/close/reorder logic | `apps/tauri/src/features/tabs/` |
+| Create a visual component | `packages/ui/src/components/` |
+| Add a shadcn primitive | `packages/ui/src/components/ui/` |
+| Add tab/pane business logic | `apps/tauri/src/features/tabs/` |
 | Wire sidebar + tabs + editor together | `apps/tauri/src/app-shell/` |
 | Add a Tauri command handler | `apps/tauri/src-tauri/src/lib.rs` |
 | Add markdown parsing logic | `crates/basalt_core/` |
-| Add file system operations | `crates/basalt_fs/` |
+| Add filesystem operations | `crates/basalt_fs/` |

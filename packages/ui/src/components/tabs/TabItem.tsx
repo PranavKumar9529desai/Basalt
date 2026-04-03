@@ -57,7 +57,10 @@ export function TabItem({
             )}
             onContextMenu={(event) => onContextMenu?.(tab.id, event)}
             draggable={!tab.disabled}
-            onDragStart={(event) => onDragStart?.(tab.id, event)}
+            onDragStart={(event) => {
+              console.log("[TAB ITEM] onDragStart fired", tab.id);
+              onDragStart?.(tab.id, event);
+            }}
             onDragEnter={(event) => {
               event.preventDefault();
               onDragOver?.(tab.id, event);

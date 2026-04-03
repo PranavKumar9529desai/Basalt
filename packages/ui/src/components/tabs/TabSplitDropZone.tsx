@@ -1,7 +1,7 @@
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent } from "react";
 
-export type TabSplitDirection = "left" | "right" | "top" | "bottom";
+export type TabSplitDirection = "left" | "right" | "top" | "bottom" | "center";
 
 export interface TabSplitDropZoneProps {
   direction: TabSplitDirection;
@@ -41,14 +41,18 @@ export function TabSplitDropZone({
         ? "inset-y-0 right-0 w-1/2"
         : direction === "top"
           ? "inset-x-0 top-0 h-1/2"
-          : "inset-x-0 bottom-0 h-1/2"
+          : direction === "bottom"
+            ? "inset-x-0 bottom-0 h-1/2"
+            : "inset-0"
     : direction === "left"
-      ? "top-12 bottom-12 left-2 w-12"
+      ? "top-8 bottom-8 left-0 w-16"
       : direction === "right"
-        ? "top-12 bottom-12 right-2 w-12"
+        ? "top-8 bottom-8 right-0 w-16"
         : direction === "top"
-          ? "inset-x-2 top-2 h-10"
-          : "inset-x-2 bottom-2 h-10";
+          ? "inset-x-8 top-0 h-14"
+          : direction === "bottom"
+            ? "inset-x-8 bottom-0 h-14"
+            : "inset-16";
 
   const roundingClass = active
     ? direction === "left"
@@ -82,10 +86,7 @@ export function TabSplitDropZone({
         console.log("[ZONE] dragover", direction);
         onDragOver?.(direction, event);
       }}
-      onDragLeave={(event) => {
-        console.log("[ZONE] dragleave", direction);
-        onDragLeave?.(direction, event);
-      }}
+      onDragLeave={(event) => onDragLeave?.(direction, event)}
       onDrop={(event) => {
         console.log("[ZONE] drop", direction);
         onDrop?.(direction, event);

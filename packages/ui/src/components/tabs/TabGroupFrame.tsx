@@ -48,7 +48,25 @@ export function TabGroupFrame({
       <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
         {showSplitTargets ? (
-          <div className="absolute inset-0 z-20">
+          <div
+            className="absolute inset-0 z-10"
+            onDragOver={(e) => {
+              console.log("[INTERCEPTOR] dragover");
+              e.preventDefault();
+            }}
+            onDrop={(e) => {
+              console.log("[INTERCEPTOR] drop (missed all zones)");
+              e.preventDefault();
+            }}
+          >
+            <TabSplitDropZone
+              direction="center"
+              active={activeSplitTarget === "center"}
+              onDragEnter={onSplitTargetDragEnter}
+              onDragOver={onSplitTargetDragOver}
+              onDragLeave={onSplitTargetDragLeave}
+              onDrop={onSplitTargetDrop}
+            />
             <TabSplitDropZone
               direction="left"
               active={activeSplitTarget === "left"}

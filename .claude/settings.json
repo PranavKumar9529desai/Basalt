@@ -1,0 +1,19 @@
+{
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); [[ \"$f\" == */docs/adr/*.md ]] && bash scripts/sync-adr-index.sh 2>/dev/null || true",
+            "statusMessage": "Syncing ADR index in CLAUDE.md..."
+          }
+        ]
+      }
+    ]
+  }
+}

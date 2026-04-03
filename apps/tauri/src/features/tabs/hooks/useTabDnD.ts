@@ -8,6 +8,9 @@ import {
 import { useTabsStore } from "../store";
 import type { SplitDirection, TabGroupId } from "../types";
 
+// "center" means merge tab into the target group without splitting.
+type DropDirection = SplitDirection | "center";
+
 interface DraggedTabState {
   tabId: string;
   fromGroupId: TabGroupId;
@@ -15,7 +18,7 @@ interface DraggedTabState {
 
 interface SplitTargetState {
   groupId: TabGroupId;
-  direction: SplitDirection;
+  direction: DropDirection;
 }
 
 // Read drag state from the ref first, then fall back to dataTransfer.
@@ -59,6 +62,7 @@ export function useTabDnD() {
 
   const handleTabDragStart = useCallback(
     (groupId: TabGroupId, tabId: string, event: DragEvent<HTMLElement>) => {
+      console.log("[DND] dragstart fired", { tabId, groupId });
       const dragData: DraggedTabState = { tabId, fromGroupId: groupId };
       draggedTabRef.current = dragData;
       setIsDraggingTab(true);
@@ -133,7 +137,7 @@ export function useTabDnD() {
   const handleSplitTargetDragEnter = useCallback(
     (
       groupId: TabGroupId,
-      direction: SplitDirection,
+      direction: DropDirection,
       event: DragEvent<HTMLDivElement>,
     ) => {
       event.preventDefault();
@@ -146,7 +150,7 @@ export function useTabDnD() {
   const handleSplitTargetDragOver = useCallback(
     (
       groupId: TabGroupId,
-      direction: SplitDirection,
+      direction: DropDirection,
       event: DragEvent<HTMLDivElement>,
     ) => {
       event.preventDefault();
@@ -163,7 +167,7 @@ export function useTabDnD() {
   );
 
   const handleSplitTargetDragLeave = useCallback(
-    (groupId: TabGroupId, direction: SplitDirection) => {
+    (groupId: TabGroupId, direction: DropDirection) => {
       setSplitTarget((prev) => {
         if (!prev) return prev;
         if (prev.groupId === groupId && prev.direction === direction) {
@@ -178,17 +182,11 @@ export function useTabDnD() {
   const handleSplitTargetDrop = useCallback(
     (
       groupId: TabGroupId,
-      direction: SplitDirection,
+      direction: DropDirection,
       event: DragEvent<HTMLDivElement>,
     ) => {
-      console.log("[DROP DEBUG]", {
-        groupId,
-        direction,
-        hasDataTransfer: !!event.dataTransfer.types.length,
-      });
       event.preventDefault();
       const dragged = readDraggedTab(draggedTabRef, event);
-      console.log("[DROP DEBUG] dragged state:", dragged);
       if (!dragged) {
         clearDragState();
         return;
@@ -198,18 +196,27 @@ export function useTabDnD() {
       const sourceGroup = state.groups[dragged.fromGroupId];
       const targetGroup = state.groups[groupId];
       if (!sourceGroup || !targetGroup) {
-        console.log("[DROP DEBUG] groups missing", {
-          sourceGroup: !!sourceGroup,
-          targetGroup: !!targetGroup,
-        });
         clearDragState();
         return;
       }
 
-      console.log("[DROP DEBUG] executing split", {
-        fromGroupId: dragged.fromGroupId,
-        toGroupId: groupId,
-      });
+      if (direction === "center") {
+        // Merge tab into the target group without creating a new split.
+        if (dragged.fromGroupId !== groupId) {
+          state.moveTabBetweenGroups({
+            fromGroupId: dragged.fromGroupId,
+            toGroupId: groupId,
+            tabId: dragged.tabId,
+          });
+        }
+        state.setFocusedGroup(groupId);
+        state.activateTab(groupId, dragged.tabId);
+        clearDragState();
+        return;
+      }
+
+      // For directional splits: ensure the tab is in the target group first,
+      // then split it out into a new pane.
       if (dragged.fromGroupId !== groupId) {
         state.moveTabBetweenGroups({
           fromGroupId: dragged.fromGroupId,
@@ -224,7 +231,6 @@ export function useTabDnD() {
         direction,
         dragged.tabId,
       );
-      console.log("[DROP DEBUG] split complete", { newGroupId });
       state.setFocusedGroup(newGroupId);
       state.activateTab(newGroupId, dragged.tabId);
 
@@ -234,7 +240,7 @@ export function useTabDnD() {
   );
 
   const getSplitTargetDirection = useCallback(
-    (groupId: TabGroupId): SplitDirection | null =>
+    (groupId: TabGroupId): DropDirection | null =>
       splitTarget?.groupId === groupId ? splitTarget.direction : null,
     [splitTarget],
   );
