@@ -1,8 +1,5 @@
 import { create } from "zustand";
-import type {
-  EditorPaneId,
-  EditorSessionSnapshot,
-} from "./types";
+import type { EditorPaneId, EditorSessionSnapshot } from "./types";
 
 interface EditorSessionsState {
   sessions: Record<EditorPaneId, EditorSessionSnapshot>;

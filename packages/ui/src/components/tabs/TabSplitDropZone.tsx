@@ -74,10 +74,22 @@ export function TabSplitDropZone({
         geometryClass,
         className,
       )}
-      onDragEnter={(event) => onDragEnter?.(direction, event)}
-      onDragOver={(event) => onDragOver?.(direction, event)}
-      onDragLeave={(event) => onDragLeave?.(direction, event)}
-      onDrop={(event) => onDrop?.(direction, event)}
+      onDragEnter={(event) => {
+        console.log("[ZONE] dragenter", direction);
+        onDragEnter?.(direction, event);
+      }}
+      onDragOver={(event) => {
+        console.log("[ZONE] dragover", direction);
+        onDragOver?.(direction, event);
+      }}
+      onDragLeave={(event) => {
+        console.log("[ZONE] dragleave", direction);
+        onDragLeave?.(direction, event);
+      }}
+      onDrop={(event) => {
+        console.log("[ZONE] drop", direction);
+        onDrop?.(direction, event);
+      }}
     />
   );
 }

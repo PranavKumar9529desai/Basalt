@@ -144,5 +144,9 @@ export function useTabIO({ maxCacheEntries = 32 }: UseTabIOOptions = {}) {
   };
 }
 
-export type { CachedTabContent, OpenFileResult, SaveFileInput, UseTabIOOptions };
-
+export type {
+  CachedTabContent,
+  OpenFileResult,
+  SaveFileInput,
+  UseTabIOOptions,
+};

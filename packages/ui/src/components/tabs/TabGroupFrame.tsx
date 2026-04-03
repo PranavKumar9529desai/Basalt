@@ -48,7 +48,7 @@ export function TabGroupFrame({
       <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
         {showSplitTargets ? (
-          <div className="pointer-events-none absolute inset-0 z-20">
+          <div className="absolute inset-0 z-20">
             <TabSplitDropZone
               direction="left"
               active={activeSplitTarget === "left"}

@@ -25,7 +25,9 @@ export function useTabPersistence({
   const hydrateFromWorkspaceSnapshot = useTabsStore(
     (state) => state.hydrateFromWorkspaceSnapshot,
   );
-  const toWorkspaceSnapshot = useTabsStore((state) => state.toWorkspaceSnapshot);
+  const toWorkspaceSnapshot = useTabsStore(
+    (state) => state.toWorkspaceSnapshot,
+  );
   const tabs = useTabsStore((state) => state.tabs);
   const groups = useTabsStore((state) => state.groups);
   const groupOrder = useTabsStore((state) => state.groupOrder);

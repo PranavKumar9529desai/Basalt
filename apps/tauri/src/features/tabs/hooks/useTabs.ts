@@ -21,10 +21,14 @@ export function useTabs() {
   const closeOtherTabs = useTabsStore((state) => state.closeOtherTabs);
   const closeTabsToRight = useTabsStore((state) => state.closeTabsToRight);
   const moveTabWithinGroup = useTabsStore((state) => state.moveTabWithinGroup);
-  const moveTabBetweenGroups = useTabsStore((state) => state.moveTabBetweenGroups);
+  const moveTabBetweenGroups = useTabsStore(
+    (state) => state.moveTabBetweenGroups,
+  );
   const splitGroupWithTab = useTabsStore((state) => state.splitGroupWithTab);
   const removeGroup = useTabsStore((state) => state.removeGroup);
-  const toWorkspaceSnapshot = useTabsStore((state) => state.toWorkspaceSnapshot);
+  const toWorkspaceSnapshot = useTabsStore(
+    (state) => state.toWorkspaceSnapshot,
+  );
   const hydrateFromWorkspaceSnapshot = useTabsStore(
     (state) => state.hydrateFromWorkspaceSnapshot,
   );
@@ -34,14 +38,18 @@ export function useTabs() {
     () =>
       groupOrder
         .map((groupId) => groups[groupId])
-        .filter((group): group is NonNullable<(typeof groups)[TabGroupId]> => Boolean(group)),
+        .filter((group): group is NonNullable<(typeof groups)[TabGroupId]> =>
+          Boolean(group),
+        ),
     [groups, groupOrder],
   );
 
   const activeTabsByGroup = useMemo(() => {
     const map: Record<TabGroupId, TabModel | null> = {};
     for (const group of orderedGroups) {
-      map[group.id] = group.activeTabId ? tabs[group.activeTabId] ?? null : null;
+      map[group.id] = group.activeTabId
+        ? (tabs[group.activeTabId] ?? null)
+        : null;
     }
     return map;
   }, [orderedGroups, tabs]);

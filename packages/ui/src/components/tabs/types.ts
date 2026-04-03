@@ -11,4 +11,3 @@ export interface TabItemData {
   canClose?: boolean;
   disabled?: boolean;
 }
-

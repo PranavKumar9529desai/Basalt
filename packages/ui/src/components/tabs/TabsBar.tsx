@@ -2,7 +2,14 @@ import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 import { Separator } from "@workspace/ui/components/ui/separator";
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
 
@@ -86,8 +93,7 @@ export function TabsBar({
 
       const currentRect = currentEl.getBoundingClientRect();
       const nextRect = nextEl.getBoundingClientRect();
-      const midX =
-        ((currentRect.right + nextRect.left) / 2) - viewportRect.left;
+      const midX = (currentRect.right + nextRect.left) / 2 - viewportRect.left;
       separatorXs.push(midX);
     }
 
@@ -164,13 +170,27 @@ export function TabsBar({
           ))}
 
           {chrome.activeLeft !== null && chrome.activeWidth > 0 ? (
-            null
+            <>
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 h-2 w-2 rounded-br-full bg-[var(--sat-surface-1)]"
+                style={{ left: chrome.activeLeft - 8 }}
+              />
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 h-2 w-2 rounded-bl-full bg-[var(--sat-surface-1)]"
+                style={{ left: chrome.activeLeft + chrome.activeWidth }}
+              />
+            </>
           ) : null}
         </div>
       </div>
       {rightSlot ? (
         <>
-          <Separator orientation="vertical" className="h-5 bg-[var(--sat-layout-divider)]" />
+          <Separator
+            orientation="vertical"
+            className="h-5 bg-[var(--sat-layout-divider)]"
+          />
           <div className="shrink-0">{rightSlot}</div>
         </>
       ) : null}
