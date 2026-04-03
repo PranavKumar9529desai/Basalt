@@ -320,38 +320,36 @@ export function TabsBar({
             <>
               {/*
                 Chrome-style inverted corner nubs.
-
-                Technique: place a tab-bar-colored square INSIDE the tab's bottom
-                corner with ONE rounded corner facing inward. The rounded corner
-                "bites" into the tab background, making the tab bar color appear as
-                a concave curve — exactly the Chrome/browser tab shape.
-
-                The nub radius (8px) matches the tab's rounded-t-lg top radius.
-                The nub sits at the outer edge of the tab (activeLeft / activeLeft +
-                activeWidth) so the arc center lands right at the tab's corner.
+                Technique: place a circle element outside the tab corner, paint the
+                tab's background color as a box-shadow in all directions, then clip
+                to a single quarter-circle using clip-path: inset().
+                The -6px bleed in the clip-path closes the hairline gap at the
+                junction between the nub and the tab's side border.
               */}
-              {/* Bottom-left: tab bar bg with top-right radius → concave curve at lower-left */}
+              {/* Bottom-left inverted corner */}
               <span
                 aria-hidden="true"
                 className="absolute bottom-0 pointer-events-none"
                 style={{
-                  left: chrome.activeLeft,
-                  width: 8,
-                  height: 8,
-                  backgroundColor: "var(--sat-surface-2)",
-                  borderTopRightRadius: 8,
+                  left: chrome.activeLeft - 12,
+                  width: 12,
+                  height: 12,
+                  borderRadius: "100%",
+                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  clipPath: "inset(50% -6px 0 50%)",
                 }}
               />
-              {/* Bottom-right: tab bar bg with top-left radius → concave curve at lower-right */}
+              {/* Bottom-right inverted corner */}
               <span
                 aria-hidden="true"
                 className="absolute bottom-0 pointer-events-none"
                 style={{
-                  left: chrome.activeLeft + chrome.activeWidth - 8,
-                  width: 8,
-                  height: 8,
-                  backgroundColor: "var(--sat-surface-2)",
-                  borderTopLeftRadius: 8,
+                  left: chrome.activeLeft + chrome.activeWidth,
+                  width: 12,
+                  height: 12,
+                  borderRadius: "100%",
+                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  clipPath: "inset(50% 50% 0 -6px)",
                 }}
               />
             </>
