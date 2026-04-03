@@ -1,5 +1,5 @@
 import { cn } from "@workspace/ui/lib/utils";
-import type { DragEvent, ReactNode } from "react";
+import { useRef, type DragEvent, type ReactNode } from "react";
 import type { TabSplitDirection } from "./TabSplitDropZone";
 
 /** Returns Tailwind geometry classes for the split preview overlay. */
@@ -68,6 +68,14 @@ export function TabGroupFrame({
   onSplitTargetDragLeave,
   onSplitTargetDrop,
 }: TabGroupFrameProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  /** Returns true if the cursor is inside the editor area (below the tab bar). */
+  const isInEditorArea = (clientY: number): boolean => {
+    if (!editorRef.current) return true;
+    return clientY >= editorRef.current.getBoundingClientRect().top;
+  };
+
   return (
     <section
       className={cn(
@@ -82,6 +90,11 @@ export function TabGroupFrame({
         e.preventDefault();
         console.log("[SECTION] dragover", { showSplitTargets, types: [...e.dataTransfer.types] });
         if (!showSplitTargets) return;
+        if (!isInEditorArea(e.clientY)) {
+          // Cursor is in the tab bar — reorder mode, hide split overlay.
+          onSplitTargetDragLeave?.("center", e as unknown as DragEvent<HTMLDivElement>);
+          return;
+        }
         const dir = getDropDirection(
           e.clientX,
           e.clientY,
@@ -94,6 +107,7 @@ export function TabGroupFrame({
         console.log("[SECTION] drop", { showSplitTargets });
         e.preventDefault();
         if (!showSplitTargets) return;
+        if (!isInEditorArea(e.clientY)) return;
         const dir = getDropDirection(
           e.clientX,
           e.clientY,
@@ -112,7 +126,7 @@ export function TabGroupFrame({
       }}
     >
       {tabsBar}
-      <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      <div ref={editorRef} className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
         {/* Single split-preview overlay. Geometry snaps to the hovered direction;
             opacity fades in/out so there are no jarring strip indicators. */}
