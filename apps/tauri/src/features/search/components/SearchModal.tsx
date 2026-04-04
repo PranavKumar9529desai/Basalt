@@ -11,7 +11,9 @@ function SnippetPreview({ snippet }: { snippet: Snippet }) {
   const parts: React.ReactNode[] = [];
   let cursor = 0;
 
-  for (const h of snippet.highlights) {
+  const sorted = [...snippet.highlights].sort((a, b) => a.start - b.start);
+
+  for (const h of sorted) {
     if (h.start > cursor) {
       parts.push(
         <span key={`t-${cursor}`}>{snippet.text.slice(cursor, h.start)}</span>,
@@ -98,6 +100,13 @@ export function SearchModal({ onOpen }: SearchModalProps) {
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isSearchOpen]);
+
+  // Clean up pending debounce on unmount to avoid stale IPC calls.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

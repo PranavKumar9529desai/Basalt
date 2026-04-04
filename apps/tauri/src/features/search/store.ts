@@ -41,7 +41,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   searchSelectedIndex: 0,
 
   openSearch: () =>
-    set({ isSearchOpen: true, searchQuery: "", searchResults: [], searchSelectedIndex: 0 }),
+    set({ isSearchOpen: true, searchQuery: "", searchResults: [], searchSelectedIndex: 0, isSearchLoading: false }),
   closeSearch: () => set({ isSearchOpen: false }),
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -66,6 +66,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
 
   searchSelectNext: () => {
     const { searchSelectedIndex, searchResults } = get();
+    if (searchResults.length === 0) return;
     set({ searchSelectedIndex: Math.min(searchSelectedIndex + 1, searchResults.length - 1) });
   },
   searchSelectPrev: () => {
@@ -103,6 +104,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
 
   switcherSelectNext: () => {
     const { switcherSelectedIndex, switcherResults } = get();
+    if (switcherResults.length === 0) return;
     set({ switcherSelectedIndex: Math.min(switcherSelectedIndex + 1, switcherResults.length - 1) });
   },
   switcherSelectPrev: () => {
