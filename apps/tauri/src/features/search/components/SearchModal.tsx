@@ -63,8 +63,8 @@ function ResultRow({
       variant="ghost"
       tabIndex={-1}
       className={[
-        "w-full flex-col items-start gap-1 px-4 py-3 h-auto rounded-none border-l-2",
-        isSelected ? "bg-muted border-primary" : "border-transparent",
+        "w-full flex-col items-start gap-1 px-4 py-3 h-auto rounded-none",
+        isSelected ? "bg-accent" : "",
       ].join(" ")}
       onClick={onClick}
     >

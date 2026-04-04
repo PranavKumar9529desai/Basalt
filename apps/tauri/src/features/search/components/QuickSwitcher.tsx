@@ -31,7 +31,7 @@ function ResultRow({
       tabIndex={-1}
       className={[
         "w-full justify-start gap-3 px-4 py-2 h-auto rounded-none",
-        isSelected ? "bg-muted text-foreground" : "",
+        isSelected ? "bg-accent" : "",
       ].join(" ")}
       onClick={onClick}
     >

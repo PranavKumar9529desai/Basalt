@@ -28,7 +28,7 @@ export function PaletteShell({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "p-0 overflow-hidden shadow-2xl border-none ring-0 focus:ring-0 bg-popover top-[15vh] translate-y-0",
+          "p-0 overflow-hidden border-none shadow-none bg-popover top-[15vh] translate-y-0",
           maxWidth,
         )}
         showCloseButton={false}
@@ -110,7 +110,7 @@ export function PaletteShellFooter({
   hints = DEFAULT_HINTS,
 }: PaletteShellFooterProps) {
   return (
-    <div className="flex justify-center items-center gap-6 px-4 py-2.5 border-t border-border/10 bg-muted/5 w-full">
+    <div className="flex justify-center items-center gap-6 px-4 py-2.5 bg-muted/5 w-full">
       {hints.map((h) => (
         <div
           key={h.label}
