@@ -30,7 +30,7 @@ function ResultRow({
       variant="ghost"
       tabIndex={-1}
       className={[
-        "w-full justify-start gap-3 px-4 py-2 h-auto rounded-none",
+        "w-full justify-start gap-3 px-4 py-2 h-auto rounded-md",
         isSelected ? "bg-accent" : "",
       ].join(" ")}
       onClick={onClick}
@@ -114,7 +114,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         placeholder="Open file…"
       />
 
-      <div className="max-h-[450px] overflow-y-auto py-1">
+      <div className="max-h-[320px] overflow-y-auto py-1 px-2">
         {switcherResults.length === 0 && switcherQuery ? (
           <p className="px-4 py-3 text-sm text-muted-foreground">No files found</p>
         ) : (

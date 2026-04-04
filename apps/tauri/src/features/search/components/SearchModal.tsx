@@ -63,7 +63,7 @@ function ResultRow({
       variant="ghost"
       tabIndex={-1}
       className={[
-        "w-full flex-col items-start gap-1 px-4 py-3 h-auto rounded-none",
+        "w-full flex-col items-start gap-1 px-4 py-3 h-auto rounded-md",
         isSelected ? "bg-accent" : "",
       ].join(" ")}
       onClick={onClick}
@@ -160,7 +160,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
         isLoading={isSearchLoading}
       />
 
-      <div className="max-h-[450px] overflow-y-auto">
+      <div className="max-h-[450px] overflow-y-auto px-2">
         {searchResults.length === 0 && searchQuery && !isSearchLoading ? (
           <p className="px-4 py-4 text-sm text-muted-foreground">No results found</p>
         ) : (
