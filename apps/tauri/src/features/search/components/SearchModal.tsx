@@ -149,7 +149,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     <PaletteShell
       open={isSearchOpen}
       onOpenChange={(o: boolean) => { if (!o) closeSearch(); }}
-      maxWidth="sm:max-w-[640px]"
+      maxWidth="sm:max-w-[650px]"
     >
       <PaletteShellInput
         inputRef={inputRef}
@@ -160,7 +160,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
         isLoading={isSearchLoading}
       />
 
-      <div className="max-h-[420px] overflow-y-auto">
+      <div className="max-h-[450px] overflow-y-auto">
         {searchResults.length === 0 && searchQuery && !isSearchLoading ? (
           <p className="px-4 py-4 text-sm text-muted-foreground">No results found</p>
         ) : (

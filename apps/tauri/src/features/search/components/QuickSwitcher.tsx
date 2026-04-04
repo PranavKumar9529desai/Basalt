@@ -104,7 +104,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     <PaletteShell
       open={isSwitcherOpen}
       onOpenChange={(o: boolean) => { if (!o) closeSwitcher(); }}
-      maxWidth="sm:max-w-[560px]"
+      maxWidth="sm:max-w-[650px]"
     >
       <PaletteShellInput
         inputRef={inputRef}
@@ -114,7 +114,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         placeholder="Open file…"
       />
 
-      <div className="max-h-[320px] overflow-y-auto py-1">
+      <div className="max-h-[450px] overflow-y-auto py-1">
         {switcherResults.length === 0 && switcherQuery ? (
           <p className="px-4 py-3 text-sm text-muted-foreground">No files found</p>
         ) : (
