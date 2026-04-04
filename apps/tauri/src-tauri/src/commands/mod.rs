@@ -6,8 +6,8 @@ pub mod vault;
 
 pub use boot::{boot, set_vault};
 pub use files::{
-    autocomplete_links, autocomplete_tags, create_folder, create_note, delete_file, delete_paths,
-    get_backlinks, move_paths, open_file, save_file,
+    autocomplete_links, autocomplete_tags, create_folder, create_note, create_untitled_note,
+    delete_file, delete_paths, get_backlinks, move_paths, open_file, save_file,
 };
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
 pub use search::{search_content, search_files};

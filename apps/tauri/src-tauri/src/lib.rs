@@ -8,10 +8,10 @@ mod workspace;
 pub use app_state::AppState;
 
 use commands::{
-    autocomplete_links, autocomplete_tags, boot, create_folder, create_note, delete_file,
-    delete_paths, get_backlinks, get_settings, get_vault_tree, get_workspace, move_paths,
-    open_file, open_vault_dialog, reindex_vault, save_file, search_content, search_files,
-    set_setting, set_vault, set_workspace_key,
+    autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note,
+    delete_file, delete_paths, get_backlinks, get_settings, get_vault_tree, get_workspace,
+    move_paths, open_file, open_vault_dialog, reindex_vault, save_file, search_content,
+    search_files, set_setting, set_vault, set_workspace_key,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,6 +36,7 @@ pub fn run() {
             get_workspace,
             set_workspace_key,
             create_note,
+            create_untitled_note,
             create_folder,
             delete_file,
             delete_paths,
