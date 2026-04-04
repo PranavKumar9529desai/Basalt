@@ -46,12 +46,6 @@
   --sat-font-mono:
     JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
-  --sat-editor-h1-letter-spacing: -0.03em;
-  --sat-editor-h2-letter-spacing: -0.02em;
-  --sat-editor-h3-letter-spacing: -0.01em;
-  --sat-editor-h4-letter-spacing: 0;
-  --sat-editor-h5-letter-spacing: 0;
-  --sat-editor-h6-letter-spacing: 0;
   --sat-surface-1: #0f172a;
   --sat-surface-2: #111827;
   --sat-surface-3: #0b1220;
@@ -89,6 +83,12 @@
   --sat-editor-heading5: #94a3b8;
   --sat-editor-heading6: #94a3b8;
   --sat-editor-heading7: #cbd5e1;
+  --sat-editor-h1-letter-spacing: -0.03em;
+  --sat-editor-h2-letter-spacing: -0.02em;
+  --sat-editor-h3-letter-spacing: -0.01em;
+  --sat-editor-h4-letter-spacing: 0;
+  --sat-editor-h5-letter-spacing: 0;
+  --sat-editor-h6-letter-spacing: 0;
   --sat-editor-accent: #a78bfa;
   --sat-editor-inline-bg: #0b1220;
   --sat-editor-blockquote-border: #334155;
