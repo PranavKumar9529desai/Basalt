@@ -20,15 +20,23 @@ const baseTheme = EditorView.theme({
     minHeight: "0",
     height: "100%",
     maxHeight: "100%",
-    overflow: "auto",
+    overflowY: "auto",
+    overflowX: "visible",
     padding: "24px 32px",
     fontFamily: "var(--sat-font-sans)",
+    // border: "2px solid red",
+    display: "flex",
+    justifyContent: "center",
   },
   ".cm-content": {
     fontFamily: "inherit",
+    // border: "2px solid blue",
+    width: "100%",
+    maxWidth: "50rem",
   },
   ".cm-line": {
     lineHeight: "1.6",
+    
   },
   "&.cm-focused": {
     outline: "none",

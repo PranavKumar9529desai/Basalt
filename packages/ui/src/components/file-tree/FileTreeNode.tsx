@@ -6,7 +6,7 @@ import type { FileNode } from "./types";
 const INDENT_PX = 16;
 
 /** Fixed row height — must match the virtualizer's estimateSize. */
-export const TREE_ROW_HEIGHT = 26;
+export const TREE_ROW_HEIGHT = 24;
 
 function ChevronRight({ className }: { className?: string }) {
   return (
@@ -29,8 +29,7 @@ function ChevronRight({ className }: { className?: string }) {
   );
 }
 
-// Clean bold folder icon
-function FolderIcon({ isOpen }: { isOpen: boolean }) {
+function FolderIcon() {
   return (
     <svg
       width="14"
@@ -40,21 +39,12 @@ function FolderIcon({ isOpen }: { isOpen: boolean }) {
       aria-hidden="true"
       className="shrink-0"
     >
-      {isOpen ? (
-        <path
-          d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5.5H13.5A1 1 0 0 1 14.5 6.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z"
-          stroke="var(--sat-accent-primary)"
-          strokeWidth="1.2"
-          fill="var(--sat-surface-2)"
-        />
-      ) : (
-        <path
-          d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5.5H13.5A1 1 0 0 1 14.5 6.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z"
-          stroke="var(--sat-text-muted)"
-          strokeWidth="1.2"
-          fill="none"
-        />
-      )}
+      <path
+        d="M1.5 4.5A1 1 0 0 1 2.5 3.5H6L7.5 5.5H13.5A1 1 0 0 1 14.5 6.5V12.5A1 1 0 0 1 13.5 13.5H2.5A1 1 0 0 1 1.5 12.5V4.5Z"
+        stroke="var(--sat-text-muted)"
+        strokeWidth="1.2"
+        fill="none"
+      />
     </svg>
   );
 }
@@ -64,23 +54,23 @@ function FileIcon() {
     <svg
       width="13"
       height="13"
-      viewBox="0 0 16 16"
+      viewBox="0 0 14 14"
       fill="none"
       aria-hidden="true"
       className="shrink-0"
     >
-      <path
-        d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"
+      <rect
+        x="2"
+        y="1"
+        width="10"
+        height="12"
+        rx="1.5"
         stroke="var(--sat-text-muted)"
-        strokeWidth="1.2"
-        fill="none"
+        strokeWidth="1.0"
       />
-      <path
-        d="M9.5 1.5V5.5H13.5"
-        stroke="var(--sat-text-muted)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
+      <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="var(--sat-text-muted)" strokeWidth="0.75" strokeLinecap="round" />
+      <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="var(--sat-text-muted)" strokeWidth="0.75" strokeLinecap="round" />
+      <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="var(--sat-text-muted)" strokeWidth="0.75" strokeLinecap="round" />
     </svg>
   );
 }
@@ -182,6 +172,10 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   const isEditing = node.isEditing ?? false;
   const paddingLeft = node.depth * INDENT_PX + 6;
 
+  const displayName = !node.isFolder && node.name.endsWith('.md')
+    ? node.name.slice(0, -3)
+    : node.name;
+
   const handleClick = (e: React.UIEvent) => {
     if (isEditing) return; // Don't navigate while editing
     e.stopPropagation();
@@ -204,7 +198,12 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   return (
     <div
       style={{ ...style, height: TREE_ROW_HEIGHT }}
-      className="px-2"
+      className={cn(
+        "pr-2 border-l-2",
+        isSelected
+          ? "pl-[6px] border-[var(--sat-accent-primary)]"
+          : "pl-2 border-transparent",
+      )}
     ><div
       className={cn(
         "group flex items-center w-full h-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
@@ -214,8 +213,8 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         isEditing
           ? "bg-[var(--sat-surface-2)]"
           : isSelected
-            ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_15%,transparent)] text-[var(--sat-text-primary)]"
-            : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
+            ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_10%,transparent)] text-[var(--sat-text-primary)]"
+            : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
         node.isCut ? "opacity-60" : "",
       )}
       role="treeitem"
@@ -240,7 +239,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         {Array.from({ length: node.depth }).map((_, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 w-px bg-[var(--sat-layout-border)] opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-0 bottom-0 w-px bg-[var(--sat-layout-border)] opacity-30"
             style={{ left: `${(i * INDENT_PX) + 4 + INDENT_PX / 2}px` }}
           />
         ))}
@@ -260,7 +259,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
 
       {/* Icon */}
       <span className="mr-1.5 flex items-center shrink-0">
-        {isFolder ? <FolderIcon isOpen={isOpen} /> : <FileIcon />}
+        {isFolder ? <FolderIcon /> : <FileIcon />}
       </span>
 
       {/* Label or inline edit input */}
@@ -277,7 +276,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
             isSelected ? "font-medium" : "font-normal",
           )}
         >
-          {node.name}
+          {displayName}
         </span>
       )}
     </div></div>
