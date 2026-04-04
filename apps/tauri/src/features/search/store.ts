@@ -1,0 +1,112 @@
+import { invoke } from "@tauri-apps/api/core";
+import { create } from "zustand";
+
+import type { ContentResult, FileResult } from "./types";
+
+interface SearchStore {
+  // ── Full-text modal (⌘F) ─────────────────────────────────────────────────
+  isSearchOpen: boolean;
+  searchQuery: string;
+  searchResults: ContentResult[];
+  isSearchLoading: boolean;
+  searchSelectedIndex: number;
+
+  openSearch: () => void;
+  closeSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  runSearch: (query: string) => Promise<void>;
+  searchSelectNext: () => void;
+  searchSelectPrev: () => void;
+
+  // ── Quick switcher (⌘O) ──────────────────────────────────────────────────
+  isSwitcherOpen: boolean;
+  switcherQuery: string;
+  switcherResults: FileResult[];
+  switcherSelectedIndex: number;
+
+  openSwitcher: () => void;
+  closeSwitcher: () => void;
+  setSwitcherQuery: (query: string) => void;
+  runSwitcher: (query: string) => Promise<void>;
+  switcherSelectNext: () => void;
+  switcherSelectPrev: () => void;
+}
+
+export const useSearchStore = create<SearchStore>()((set, get) => ({
+  // ── Search modal state ───────────────────────────────────────────────────
+  isSearchOpen: false,
+  searchQuery: "",
+  searchResults: [],
+  isSearchLoading: false,
+  searchSelectedIndex: 0,
+
+  openSearch: () =>
+    set({ isSearchOpen: true, searchQuery: "", searchResults: [], searchSelectedIndex: 0 }),
+  closeSearch: () => set({ isSearchOpen: false }),
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
+
+  runSearch: async (query) => {
+    if (!query.trim()) {
+      set({ searchResults: [], isSearchLoading: false });
+      return;
+    }
+    set({ isSearchLoading: true });
+    try {
+      const results = await invoke<ContentResult[]>("search_content", {
+        query,
+        limit: 20,
+      });
+      set({ searchResults: results, isSearchLoading: false, searchSelectedIndex: 0 });
+    } catch (err) {
+      console.error("[search] search_content error:", err);
+      set({ isSearchLoading: false });
+    }
+  },
+
+  searchSelectNext: () => {
+    const { searchSelectedIndex, searchResults } = get();
+    set({ searchSelectedIndex: Math.min(searchSelectedIndex + 1, searchResults.length - 1) });
+  },
+  searchSelectPrev: () => {
+    const { searchSelectedIndex } = get();
+    set({ searchSelectedIndex: Math.max(searchSelectedIndex - 1, 0) });
+  },
+
+  // ── Switcher state ───────────────────────────────────────────────────────
+  isSwitcherOpen: false,
+  switcherQuery: "",
+  switcherResults: [],
+  switcherSelectedIndex: 0,
+
+  openSwitcher: () =>
+    set({ isSwitcherOpen: true, switcherQuery: "", switcherResults: [], switcherSelectedIndex: 0 }),
+  closeSwitcher: () => set({ isSwitcherOpen: false }),
+
+  setSwitcherQuery: (query) => set({ switcherQuery: query }),
+
+  runSwitcher: async (query) => {
+    if (!query.trim()) {
+      set({ switcherResults: [] });
+      return;
+    }
+    try {
+      const results = await invoke<FileResult[]>("search_files", {
+        query,
+        limit: 10,
+      });
+      set({ switcherResults: results, switcherSelectedIndex: 0 });
+    } catch (err) {
+      console.error("[search] search_files error:", err);
+    }
+  },
+
+  switcherSelectNext: () => {
+    const { switcherSelectedIndex, switcherResults } = get();
+    set({ switcherSelectedIndex: Math.min(switcherSelectedIndex + 1, switcherResults.length - 1) });
+  },
+  switcherSelectPrev: () => {
+    const { switcherSelectedIndex } = get();
+    set({ switcherSelectedIndex: Math.max(switcherSelectedIndex - 1, 0) });
+  },
+}));
