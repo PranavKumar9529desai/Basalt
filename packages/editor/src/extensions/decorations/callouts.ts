@@ -159,7 +159,7 @@ export function handleCalloutNode(
   const title = match[3] ?? "";
   const canonical = CALLOUT_ALIASES[rawType.toLowerCase()] ?? "note";
 
-  const hasCursor = ctx.headPos >= node.from && ctx.headPos <= node.to;
+  const hasCursor = ctx.headPos >= firstLine.from && ctx.headPos <= firstLine.to;
   const endLine = doc.lineAt(node.to);
 
   for (let ln = firstLine.number; ln <= endLine.number; ln++) {
