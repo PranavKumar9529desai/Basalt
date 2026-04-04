@@ -225,14 +225,33 @@ pub fn create_untitled_note(
         .last_vault
         .ok_or_else(|| "no vault configured".to_string())?;
 
-    let vault_path = Path::new(&vault_path_str);
+    let vault_root = Path::new(&vault_path_str)
+        .canonicalize()
+        .map_err(|e| format!("invalid vault path: {e}"))?;
 
     let parent_dir = match parent.as_deref() {
-        Some(rel) if !rel.is_empty() => vault_path.join(rel),
-        _ => vault_path.to_path_buf(),
+        Some(rel) if !rel.is_empty() => {
+            let candidate = vault_root.join(rel);
+            // Reject traversal attempts: canonicalize only if the dir exists,
+            // otherwise check that no component is "..".
+            if candidate.exists() {
+                let canonical = candidate
+                    .canonicalize()
+                    .map_err(|e| format!("invalid parent path: {e}"))?;
+                ensure_inside_vault(&canonical, &vault_root)?;
+                canonical
+            } else {
+                // Dir doesn't exist yet (will be created). Reject ".." components.
+                if rel.split('/').any(|c| c == "..") {
+                    return Err("parent path must not contain '..'".to_string());
+                }
+                candidate
+            }
+        }
+        _ => vault_root.clone(),
     };
 
-    for i in 0u8..=99 {
+    for i in 0u32..=99 {
         let name = if i == 0 {
             "Untitled".to_string()
         } else {
@@ -648,7 +667,7 @@ mod tests {
     fn test_untitled_name_sequence() {
         // Verify the name generation logic in isolation.
         // "Untitled" is index 0, "Untitled 1" is index 1, etc.
-        let name_for = |i: u8| -> String {
+        let name_for = |i: u32| -> String {
             if i == 0 {
                 "Untitled".to_string()
             } else {
