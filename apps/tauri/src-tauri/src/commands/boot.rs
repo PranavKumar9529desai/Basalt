@@ -67,17 +67,17 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
         use basalt_search::SearchState;
 
         let index_dir = search_index_dir(&app, &vault_path);
-        let vault_guard = state
-            .vault
-            .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-        match SearchState::open_or_create(&index_dir, &vault_guard) {
-            Ok(search_state) => {
-                if let Ok(mut s) = state.search.write() {
-                    *s = Some(search_state);
+        if let Ok(vault_guard) = state.vault.read() {
+            match SearchState::open_or_create(&index_dir, &vault_guard) {
+                Ok(search_state) => {
+                    if let Ok(mut s) = state.search.write() {
+                        *s = Some(search_state);
+                    }
                 }
+                Err(e) => eprintln!("[boot] search index failed: {e}"),
             }
-            Err(e) => eprintln!("[boot] search index failed: {e}"),
+        } else {
+            eprintln!("[boot] vault lock poisoned; skipping search init");
         }
     }
 
@@ -133,17 +133,17 @@ pub fn set_vault(
         use basalt_search::SearchState;
 
         let index_dir = search_index_dir(&app, &vault_path);
-        let vault_guard = state
-            .vault
-            .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-        match SearchState::open_or_create(&index_dir, &vault_guard) {
-            Ok(search_state) => {
-                if let Ok(mut s) = state.search.write() {
-                    *s = Some(search_state);
+        if let Ok(vault_guard) = state.vault.read() {
+            match SearchState::open_or_create(&index_dir, &vault_guard) {
+                Ok(search_state) => {
+                    if let Ok(mut s) = state.search.write() {
+                        *s = Some(search_state);
+                    }
                 }
+                Err(e) => eprintln!("[set_vault] search index failed: {e}"),
             }
-            Err(e) => eprintln!("[set_vault] search index failed: {e}"),
+        } else {
+            eprintln!("[set_vault] vault lock poisoned; skipping search init");
         }
     }
 
