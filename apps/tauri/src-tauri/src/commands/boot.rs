@@ -61,6 +61,26 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
 
     start_watcher(&state, &vault_path, &app)?;
 
+    // Initialise the search index (non-fatal — vault still works if this fails).
+    {
+        use crate::cache::search_index_dir;
+        use basalt_search::SearchState;
+
+        let index_dir = search_index_dir(&app, &vault_path);
+        let vault_guard = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        match SearchState::open_or_create(&index_dir, &vault_guard) {
+            Ok(search_state) => {
+                if let Ok(mut s) = state.search.write() {
+                    *s = Some(search_state);
+                }
+            }
+            Err(e) => eprintln!("[boot] search index failed: {e}"),
+        }
+    }
+
     let tree = {
         let vault = state
             .vault
@@ -106,6 +126,26 @@ pub fn set_vault(
 
     // (Re-)start the watcher.
     start_watcher(&state, &vault_path, &app)?;
+
+    // Initialise the search index (non-fatal — vault still works if this fails).
+    {
+        use crate::cache::search_index_dir;
+        use basalt_search::SearchState;
+
+        let index_dir = search_index_dir(&app, &vault_path);
+        let vault_guard = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        match SearchState::open_or_create(&index_dir, &vault_guard) {
+            Ok(search_state) => {
+                if let Ok(mut s) = state.search.write() {
+                    *s = Some(search_state);
+                }
+            }
+            Err(e) => eprintln!("[set_vault] search index failed: {e}"),
+        }
+    }
 
     let tree = {
         let vault = state
