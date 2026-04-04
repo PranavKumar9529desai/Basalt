@@ -38,16 +38,21 @@ export function SettingsNav() {
         <CommandEmpty className="py-4 text-center text-xs italic text-muted-foreground">
           No settings found.
         </CommandEmpty>
-        {GROUPS.map((group) => {
+        {GROUPS.map((group, i) => {
           const groupSections = sections.filter((s) => s.group === group);
           return (
             <CommandGroup
               key={group}
               heading={GROUP_LABELS[group]}
-              className="[&_[cmdk-group-heading]]:px-1 [&_[cmdk-group-heading]]:pt-4 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+              className={cn(
+                "[&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground",
+                i === 0
+                  ? "[&_[cmdk-group-heading]]:pt-2"
+                  : "[&_[cmdk-group-heading]]:pt-6",
+              )}
             >
               {groupSections.length === 0 && GROUP_EMPTY[group] ? (
-                <p className="px-1 py-1 text-xs italic text-muted-foreground">
+                <p className="px-3 py-1 text-xs italic text-muted-foreground">
                   {GROUP_EMPTY[group]}
                 </p>
               ) : (
@@ -57,7 +62,7 @@ export function SettingsNav() {
                     value={section.label}
                     onSelect={() => setActiveSection(section.id)}
                     className={cn(
-                      "cursor-pointer rounded-md px-2 py-1.5 text-sm text-muted-foreground",
+                      "cursor-pointer rounded-md px-3 py-1.5 text-sm text-muted-foreground",
                       "aria-selected:bg-accent aria-selected:text-accent-foreground",
                       "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
                       activeSection === section.id
