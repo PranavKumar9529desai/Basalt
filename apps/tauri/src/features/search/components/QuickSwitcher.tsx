@@ -13,10 +13,12 @@ function ResultRow({
   result,
   isSelected,
   onClick,
+  rowRef,
 }: {
   result: FileResult;
   isSelected: boolean;
   onClick: () => void;
+  rowRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parts = result.path.split("/");
   const name = parts.pop() ?? result.path;
@@ -24,7 +26,9 @@ function ResultRow({
 
   return (
     <Button
+      ref={rowRef}
       variant="ghost"
+      tabIndex={-1}
       className={[
         "w-full justify-start gap-3 px-4 py-2 h-auto rounded-none",
         isSelected ? "bg-muted text-foreground" : "",
@@ -60,6 +64,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
   } = useSearchStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedRowRef = useRef<HTMLButtonElement>(null);
 
   // Focus input when modal opens.
   useEffect(() => {
@@ -67,6 +72,11 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isSwitcherOpen]);
+
+  // Scroll selected row into view without stealing focus from input.
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [switcherSelectedIndex]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,6 +124,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
               result={r}
               isSelected={i === switcherSelectedIndex}
               onClick={() => { onOpen(r.path); closeSwitcher(); }}
+              rowRef={i === switcherSelectedIndex ? selectedRowRef : undefined}
             />
           ))
         )}

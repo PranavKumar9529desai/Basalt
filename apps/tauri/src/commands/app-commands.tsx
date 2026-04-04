@@ -1,7 +1,9 @@
 import {
   IconFilePlus,
+  IconFileSearch,
   IconPinned,
   IconPlus,
+  IconSearch,
   IconTrash,
   IconX,
   IconLayoutBoardSplit,
@@ -165,6 +167,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         id: "search:open",
         name: "Search Vault",
         category: "Search",
+        icon: <IconSearch size={16} />,
         hotkeys: ["Ctrl+F", "Meta+F"],
         callback: openSearch,
       },
@@ -172,6 +175,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         id: "switcher:open",
         name: "Quick Open File",
         category: "Search",
+        icon: <IconFileSearch size={16} />,
         hotkeys: ["Ctrl+O", "Meta+O"],
         callback: openSwitcher,
       },
@@ -203,6 +207,24 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       });
     };
   }, [commands, register, unregister]);
+
+  // Global hotkeys for search and quick switcher. These must be registered at
+  // the window level (capture phase) so they fire before CodeMirror can
+  // consume them via its own keymap.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        openSearch();
+      } else if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        openSwitcher();
+      }
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true });
+  }, [openSearch, openSwitcher]);
 
   return null;
 };

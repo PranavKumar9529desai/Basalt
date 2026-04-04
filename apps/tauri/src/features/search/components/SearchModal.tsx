@@ -47,17 +47,21 @@ function ResultRow({
   result,
   isSelected,
   onClick,
+  rowRef,
 }: {
   result: ContentResult;
   isSelected: boolean;
   onClick: () => void;
+  rowRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parts = result.path.split("/");
   const dir = parts.slice(0, -1).join("/");
 
   return (
     <Button
+      ref={rowRef}
       variant="ghost"
+      tabIndex={-1}
       className={[
         "w-full flex-col items-start gap-1 px-4 py-3 h-auto rounded-none border-l-2",
         isSelected ? "bg-muted border-primary" : "border-transparent",
@@ -97,12 +101,18 @@ export function SearchModal({ onOpen }: SearchModalProps) {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedRowRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isSearchOpen) {
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isSearchOpen]);
+
+  // Scroll selected row into view without stealing focus from input.
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [searchSelectedIndex]);
 
   // Clean up pending debounce on unmount to avoid stale IPC calls.
   useEffect(() => {
@@ -160,6 +170,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
               result={r}
               isSelected={i === searchSelectedIndex}
               onClick={() => { onOpen(r.path); closeSearch(); }}
+              rowRef={i === searchSelectedIndex ? selectedRowRef : undefined}
             />
           ))
         )}
