@@ -1,15 +1,13 @@
 import { Button } from "@workspace/ui/components/ui/button";
-import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
-import { Input } from "@workspace/ui/components/ui/input";
+import {
+  PaletteShell,
+  PaletteShellInput,
+  PaletteShellFooter,
+} from "@workspace/ui/components/palette-shell";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useSearchStore } from "../store";
 import type { FileResult } from "../types";
-
-interface QuickSwitcherProps {
-  /** Called when the user confirms a result. Receives the absolute file path. */
-  onOpen: (path: string) => void;
-}
 
 function ResultRow({
   result,
@@ -41,6 +39,11 @@ function ResultRow({
       )}
     </Button>
   );
+}
+
+interface QuickSwitcherProps {
+  /** Called when the user confirms a result. Receives the absolute file path. */
+  onOpen: (path: string) => void;
 }
 
 export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
@@ -88,47 +91,35 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
   );
 
   return (
-    <Dialog open={isSwitcherOpen} onOpenChange={(o) => { if (!o) closeSwitcher(); }}>
-      <DialogContent
-        className="p-0 overflow-hidden shadow-2xl sm:max-w-[560px] border-none ring-0 focus:ring-0 bg-popover top-[15vh] translate-y-0"
-        showCloseButton={false}
-      >
-        {/* Input */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <span className="text-muted-foreground text-base">⌕</span>
-          <Input
-            ref={inputRef}
-            value={switcherQuery}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Open file…"
-            className="border-0 shadow-none focus-visible:ring-0 h-auto py-0 bg-transparent"
-          />
-        </div>
+    <PaletteShell
+      open={isSwitcherOpen}
+      onOpenChange={(o: boolean) => { if (!o) closeSwitcher(); }}
+      maxWidth="sm:max-w-[560px]"
+    >
+      <PaletteShellInput
+        inputRef={inputRef}
+        value={switcherQuery}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Open file…"
+      />
 
-        {/* Results */}
-        <div className="max-h-[320px] overflow-y-auto py-1">
-          {switcherResults.length === 0 && switcherQuery ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground">No files found</p>
-          ) : (
-            switcherResults.map((r, i) => (
-              <ResultRow
-                key={r.path}
-                result={r}
-                isSelected={i === switcherSelectedIndex}
-                onClick={() => { onOpen(r.path); closeSwitcher(); }}
-              />
-            ))
-          )}
-        </div>
+      <div className="max-h-[320px] overflow-y-auto py-1">
+        {switcherResults.length === 0 && switcherQuery ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">No files found</p>
+        ) : (
+          switcherResults.map((r, i) => (
+            <ResultRow
+              key={r.path}
+              result={r}
+              isSelected={i === switcherSelectedIndex}
+              onClick={() => { onOpen(r.path); closeSwitcher(); }}
+            />
+          ))
+        )}
+      </div>
 
-        {/* Footer hints */}
-        <div className="px-4 py-2 flex mx-auto gap-4 text-[10px] text-muted-foreground">
-          <span>↑↓ navigate</span>
-          <span>↵ open</span>
-          <span>esc close</span>
-        </div>
-      </DialogContent>
-    </Dialog>
+      <PaletteShellFooter />
+    </PaletteShell>
   );
 }
