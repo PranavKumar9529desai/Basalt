@@ -45,6 +45,7 @@ pub fn start_watcher(
                                     .collect::<Vec<_>>()
                                     .join(" ");
                                 let _ = search.update_document(&path_str, &content, &tags);
+                                let _ = search.commit();
                             }
                         } else {
                             let _ = search.remove_document(&path_str);

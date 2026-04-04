@@ -6,7 +6,7 @@ use anyhow::Result;
 use basalt_fs::Vault;
 
 use crate::nucleo_scorer::NucleoScorer;
-use crate::tantivy_index::{extract_snippets, TantivyIndex};
+use crate::tantivy::{extract_snippets, TantivyIndex};
 use crate::types::{ContentResult, FileResult};
 
 /// Top-level search engine for Basalt.

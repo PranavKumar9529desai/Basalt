@@ -53,14 +53,37 @@ These are two distinct tools with different engines, optimal for their respectiv
 
 Four fields indexed per note:
 
-| Field | Type | Stored | Indexed | Notes |
+| Field | Type | Tokenizer | Stored | Notes |
 |---|---|---|---|---|
-| `path` | TEXT | Yes | Yes | Relative vault path, used for opening the note |
-| `title` | TEXT | Yes | Yes | Filename stem, boosted 3× in ranking |
-| `body` | TEXT | No | Yes | Full note content (stored=false keeps index small) |
-| `tags` | TEXT | Yes | Yes | Space-separated tags from frontmatter + inline `#tag` |
+| `path` | TEXT | `STRING` (raw) | Yes | Exact-match deletion key |
+| `title` | TEXT | `en_stem` | Yes | BM25 relevance; prefix matching at query time |
+| `body` | TEXT | `en_stem` | No | BM25 full-word relevance; stored=false keeps index small |
+| `tags` | TEXT | `en_stem` | Yes | Space-separated tags from frontmatter + inline `#tag` |
 
-Positions stored for `title` and `body` (required for phrase queries and match highlighting).
+#### Tokenizer Strategy
+
+All content fields use `en_stem` (English stemming). Prefix matching for search-as-you-type is handled at **query time** via `FuzzyTermQuery::new_prefix`, not at index time via edge-ngram.
+
+**Why FuzzyTermQuery::new_prefix instead of edge-ngram?**
+
+`FuzzyTermQuery::new_prefix(term, 0, true)` uses tantivy's FST (finite state transducer) term dictionary to find all indexed tokens that start with the query prefix in O(prefix length) time. "packag" finds "package", "packages", "packaging" — no expensive scan, no index size blowup.
+
+Edge-ngram was evaluated and rejected:
+- On `body`, it multiplies index size by 5–10× across thousands of notes (every word "running" → ["r","ru","run","runn","runni","runnin","running"])
+- Two-tokenizer setups (ngram at index time, exact at query time) require separate `QueryParser` instances or manual `Term` construction anyway — equal complexity with worse index size
+- `FuzzyTermQuery::new_prefix` is tantivy's documented approach for search-as-you-type; it requires no schema changes
+
+**Query construction (per word in query):**
+```
+word → lowercase
+  → FuzzyTermQuery::new_prefix(title_term, 0, true) × 3.0 boost (BoostQuery)
+  → FuzzyTermQuery::new_prefix(body_term, 0, true)
+  → FuzzyTermQuery::new_prefix(tags_term, 0, true)
+  → OR across fields (BooleanQuery::Should)
+→ AND across words (BooleanQuery::Must)
+```
+
+Title gets 3× score boost so filename matches rank above body matches of the same word.
 
 ### Index Persistence
 
