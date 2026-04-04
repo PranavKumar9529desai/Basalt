@@ -9,6 +9,7 @@ basalt_fs   = { path = "../basalt_fs" }
 tantivy     = "0.22"
 nucleo-matcher = "0.3"
 aho-corasick   = "1.1"
+anyhow      = "1"
 serde       = { version = "1", features = ["derive"] }
 thiserror   = "2"
 
