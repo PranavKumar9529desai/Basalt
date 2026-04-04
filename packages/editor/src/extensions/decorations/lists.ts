@@ -15,7 +15,7 @@ export const LISTS_THEME = EditorView.baseTheme({
   ".cm-live-list-depth-2": { paddingLeft: "3rem" },
   ".cm-live-list-depth-3": { paddingLeft: "4.5rem" },
   ".cm-list-bullet-widget": {
-    color: "var(--sat-list-bullet-color, #6366f1)",
+    color: "var(--sat-list-bullet-color, #64748b)",
     display: "inline-block",
     width: "1.2em",
     marginLeft: "-1.2em",

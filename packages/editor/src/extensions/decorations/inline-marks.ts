@@ -31,12 +31,14 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
     opacity: "0.6",
   },
   ".cm-live-tag": {
+    display: "inline-block",
     backgroundColor: "var(--sat-tag-bg, rgba(99,102,241,0.15))",
     color: "var(--sat-tag-color, #818cf8)",
-    borderRadius: "var(--sat-tag-border-radius, 999px)",
-    padding: "0.1rem 0.5rem",
-    fontSize: "0.82em",
+    borderRadius: "9999px",
+    padding: "0.15rem 0.65rem",
+    fontSize: "0.8em",
     fontWeight: "500",
+    lineHeight: "1.4",
   },
   ".cm-live-strong": {
     fontWeight: "700",
