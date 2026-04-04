@@ -205,19 +205,21 @@ pub fn extract_snippets(body: &str, query_terms: &[&str], max: usize) -> Vec<Sni
         if snippets.len() >= max {
             break;
         }
+        // Snap ctx_start back to the nearest char boundary at or before the
+        // desired offset — walking forward from a safe point avoids any panic.
         let ctx_start = m.start().saturating_sub(60);
-        let ctx_start = body
-            .char_indices()
+        let ctx_start = (0..=ctx_start)
             .rev()
-            .find(|(i, _)| *i <= ctx_start)
-            .map(|(i, _)| i)
+            .find(|&i| body.is_char_boundary(i))
             .unwrap_or(0);
-        let ctx_end = (m.end() + 60).min(body.len());
-        let ctx_end = body[..ctx_end]
-            .char_indices()
-            .last()
-            .map(|(i, c)| i + c.len_utf8())
-            .unwrap_or(ctx_end);
+
+        // Snap ctx_end forward to the nearest char boundary at or after the
+        // desired offset. Doing this with is_char_boundary avoids slicing at
+        // a non-boundary (the original body[..ctx_end] slice was the panic site).
+        let ctx_end_raw = (m.end() + 60).min(body.len());
+        let ctx_end = (ctx_end_raw..=body.len())
+            .find(|&i| body.is_char_boundary(i))
+            .unwrap_or(body.len());
 
         if seen.iter().any(|(s, e)| ctx_start < *e && *s < ctx_end) {
             continue;
