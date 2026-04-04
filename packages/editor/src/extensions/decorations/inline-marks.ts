@@ -4,8 +4,7 @@ import type { DecorationCollector } from "./types";
 
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    fontFamily: "var(--sat-font-mono)",
     backgroundColor: "var(--sat-editor-inline-bg, #111827)",
     borderRadius: "4px",
     padding: "0.1rem 0.3rem",

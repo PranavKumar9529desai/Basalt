@@ -11,8 +11,9 @@ const baseTheme = EditorView.theme({
     flexDirection: "column",
     backgroundColor: "transparent",
     fontSize: "16px",
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    fontFamily: "var(--sat-font-sans)",
+    fontOpticalSizing: "auto",
+    fontFeatureSettings: '"cv01", "ss01"',
   },
   ".cm-scroller": {
     flex: "1 1 auto",
