@@ -10,6 +10,7 @@
     "./components/tabs": "./src/components/tabs/index.ts",
     "./components/input-dialog": "./src/components/input-dialog/index.ts",
     "./components/confirm-dialog": "./src/components/confirm-dialog/index.ts",
+    "./components/palette-shell": "./src/components/palette-shell/index.ts",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
     "./hooks/*": "./src/hooks/*.ts"
