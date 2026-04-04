@@ -45,7 +45,7 @@ export function SettingsNav() {
               key={group}
               heading={GROUP_LABELS[group]}
               className={cn(
-                "[&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground",
+                "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group-heading]]:text-muted-foreground",
                 i === 0
                   ? "[&_[cmdk-group-heading]]:pt-2"
                   : "[&_[cmdk-group-heading]]:pt-6",
