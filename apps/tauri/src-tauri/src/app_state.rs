@@ -1,12 +1,14 @@
 use std::sync::{Arc, RwLock};
 
 use basalt_fs::{watcher::VaultWatcher, Vault};
+use basalt_search::SearchState;
 
-/// Global application state shared across commands.
-/// Holds the in-memory vault index and the active filesystem watcher.
+/// Global application state shared across Tauri commands.
 pub struct AppState {
     pub vault: Arc<RwLock<Vault>>,
     pub watcher: RwLock<Option<VaultWatcher>>,
+    /// `None` until the vault is loaded and the search index is ready.
+    pub search: Arc<RwLock<Option<SearchState>>>,
 }
 
 impl Default for AppState {
@@ -14,6 +16,7 @@ impl Default for AppState {
         Self {
             vault: Arc::new(RwLock::new(Vault::new())),
             watcher: RwLock::new(None),
+            search: Arc::new(RwLock::new(None)),
         }
     }
 }

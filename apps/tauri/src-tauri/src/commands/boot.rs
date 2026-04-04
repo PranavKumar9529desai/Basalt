@@ -57,7 +57,7 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
         });
     }
 
-    let (status, note_count) = load_or_index_vault(&vault_path, &state, &app)?;
+    let (status, note_count, known_mtimes) = load_or_index_vault(&vault_path, &state, &app)?;
 
     start_watcher(&state, &vault_path, &app)?;
 
@@ -68,7 +68,7 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
 
         let index_dir = search_index_dir(&app, &vault_path);
         if let Ok(vault_guard) = state.vault.read() {
-            match SearchState::open_or_create(&index_dir, &vault_guard) {
+            match SearchState::open_or_create(&index_dir, &vault_guard, &known_mtimes) {
                 Ok(search_state) => {
                     if let Ok(mut s) = state.search.write() {
                         *s = Some(search_state);
@@ -134,7 +134,9 @@ pub fn set_vault(
 
         let index_dir = search_index_dir(&app, &vault_path);
         if let Ok(vault_guard) = state.vault.read() {
-            match SearchState::open_or_create(&index_dir, &vault_guard) {
+            // set_vault always does a full re-index, so no prior mtimes to compare.
+            let empty_mtimes = std::collections::HashMap::new();
+            match SearchState::open_or_create(&index_dir, &vault_guard, &empty_mtimes) {
                 Ok(search_state) => {
                     if let Ok(mut s) = state.search.write() {
                         *s = Some(search_state);

@@ -134,7 +134,10 @@ export function SearchModal({ onOpen }: SearchModalProps) {
 
   return (
     <Dialog open={isSearchOpen} onOpenChange={(o) => { if (!o) closeSearch(); }}>
-      <DialogContent className="p-0 gap-0 overflow-hidden max-w-[640px] w-full">
+      <DialogContent
+        className="p-0 overflow-hidden shadow-2xl sm:max-w-[640px] border-none ring-0 focus:ring-0 bg-popover top-[15vh] translate-y-0"
+        showCloseButton={false}
+      >
         {/* Input row */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
           <span className="text-muted-foreground text-base">⌕</span>

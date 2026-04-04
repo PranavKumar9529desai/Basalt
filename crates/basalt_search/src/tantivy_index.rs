@@ -136,6 +136,12 @@ impl TantivyIndex {
         Ok(())
     }
 
+    /// Number of non-deleted documents currently visible to the reader.
+    /// Returns 0 on a freshly created index.
+    pub fn doc_count(&self) -> u64 {
+        self.reader.searcher().num_docs()
+    }
+
     /// BM25 full-text search. Returns up to `limit` results ranked by relevance.
     /// Snippets are populated separately by `SearchState` using the raw note body.
     pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<ContentResult>> {

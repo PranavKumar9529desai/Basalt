@@ -89,7 +89,10 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
 
   return (
     <Dialog open={isSwitcherOpen} onOpenChange={(o) => { if (!o) closeSwitcher(); }}>
-      <DialogContent className="p-0 gap-0 overflow-hidden max-w-[560px] w-full">
+      <DialogContent
+        className="p-0 overflow-hidden shadow-2xl sm:max-w-[560px] border-none ring-0 focus:ring-0 bg-popover top-[15vh] translate-y-0"
+        showCloseButton={false}
+      >
         {/* Input */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
           <span className="text-muted-foreground text-base">⌕</span>
@@ -120,7 +123,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         </div>
 
         {/* Footer hints */}
-        <div className="px-4 py-2 border-t border-border flex gap-4 text-[10px] text-muted-foreground">
+        <div className="px-4 py-2 flex mx-auto gap-4 text-[10px] text-muted-foreground">
           <span>↑↓ navigate</span>
           <span>↵ open</span>
           <span>esc close</span>
