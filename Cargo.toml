@@ -1,10 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/basalt_core",
-    "crates/basalt_fs",
-    "crates/basalt_wasm",
-    "crates/basalt_search",
     "crates/basalt-types",
     "crates/basalt-parser",
     "crates/basalt-graph",
