@@ -36,6 +36,22 @@ const CALLOUT_ICONS: Record<string, string> = {
 
 const CALLOUT_RE = /^>\s*\[!([a-zA-Z]+)\]([+-]?)(?:\s+(.*))?$/;
 
+const CALLOUT_COLORS: Record<string, { border: string; bg: string; icon: string }> = {
+  note:     { border: "var(--sat-callout-note-border, #3b82f6)",     bg: "var(--sat-callout-note-bg, rgba(59,130,246,0.08))",     icon: "var(--sat-callout-note-icon, #3b82f6)" },
+  abstract: { border: "var(--sat-callout-abstract-border, #06b6d4)", bg: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.08))",  icon: "var(--sat-callout-abstract-icon, #06b6d4)" },
+  info:     { border: "var(--sat-callout-info-border, #3b82f6)",     bg: "var(--sat-callout-info-bg, rgba(59,130,246,0.08))",     icon: "var(--sat-callout-info-icon, #3b82f6)" },
+  todo:     { border: "var(--sat-callout-todo-border, #3b82f6)",     bg: "var(--sat-callout-todo-bg, rgba(59,130,246,0.08))",     icon: "var(--sat-callout-todo-icon, #3b82f6)" },
+  tip:      { border: "var(--sat-callout-tip-border, #0ea5e9)",      bg: "var(--sat-callout-tip-bg, rgba(14,165,233,0.08))",      icon: "var(--sat-callout-tip-icon, #0ea5e9)" },
+  success:  { border: "var(--sat-callout-success-border, #22c55e)",  bg: "var(--sat-callout-success-bg, rgba(34,197,94,0.08))",   icon: "var(--sat-callout-success-icon, #22c55e)" },
+  question: { border: "var(--sat-callout-question-border, #eab308)", bg: "var(--sat-callout-question-bg, rgba(234,179,8,0.08))",  icon: "var(--sat-callout-question-icon, #eab308)" },
+  warning:  { border: "var(--sat-callout-warning-border, #f97316)",  bg: "var(--sat-callout-warning-bg, rgba(249,115,22,0.08))",  icon: "var(--sat-callout-warning-icon, #f97316)" },
+  failure:  { border: "var(--sat-callout-failure-border, #ef4444)",  bg: "var(--sat-callout-failure-bg, rgba(239,68,68,0.08))",   icon: "var(--sat-callout-failure-icon, #ef4444)" },
+  danger:   { border: "var(--sat-callout-danger-border, #ef4444)",   bg: "var(--sat-callout-danger-bg, rgba(239,68,68,0.08))",    icon: "var(--sat-callout-danger-icon, #ef4444)" },
+  bug:      { border: "var(--sat-callout-bug-border, #ef4444)",      bg: "var(--sat-callout-bug-bg, rgba(239,68,68,0.08))",       icon: "var(--sat-callout-bug-icon, #ef4444)" },
+  example:  { border: "var(--sat-callout-example-border, #a855f7)",  bg: "var(--sat-callout-example-bg, rgba(168,85,247,0.08))",  icon: "var(--sat-callout-example-icon, #a855f7)" },
+  quote:    { border: "var(--sat-callout-quote-border, #94a3b8)",    bg: "var(--sat-callout-quote-bg, rgba(148,163,184,0.08))",   icon: "var(--sat-callout-quote-icon, #94a3b8)" },
+};
+
 export const CALLOUTS_THEME = EditorView.baseTheme({
   ".cm-live-callout": {
     paddingLeft: "1rem",
@@ -95,9 +111,13 @@ export class CalloutHeaderWidget extends WidgetType {
   toDOM() {
     const canonical = CALLOUT_ALIASES[this.type.toLowerCase()] ?? "note";
     const icon = CALLOUT_ICONS[canonical] ?? CALLOUT_ICONS.note;
+    const colors = CALLOUT_COLORS[canonical] ?? CALLOUT_COLORS.note;
 
     const header = document.createElement("div");
     header.className = "cm-callout-header";
+    header.style.backgroundColor = colors.bg;
+    header.style.borderLeft = `3px solid ${colors.border}`;
+    header.style.color = colors.icon;
 
     header.innerHTML = icon;
 

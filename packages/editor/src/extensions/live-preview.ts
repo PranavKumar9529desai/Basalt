@@ -23,7 +23,31 @@ import {
   type DecorationSet,
   EditorView,
   ViewPlugin,
+  WidgetType,
 } from "@codemirror/view";
+
+// ---------------------------------------------------------------------------
+// Horizontal Rule widget
+// ---------------------------------------------------------------------------
+
+class HorizontalRuleWidget extends WidgetType {
+  eq() { return true; }
+  toDOM() {
+    const hr = document.createElement("hr");
+    hr.className = "cm-live-hr";
+    return hr;
+  }
+  ignoreEvent() { return true; }
+}
+
+const HR_THEME = EditorView.baseTheme({
+  ".cm-live-hr": {
+    border: "none",
+    borderTop: "2px solid var(--sat-editor-blockquote-border, #334155)",
+    margin: "0.5rem 0",
+    display: "block",
+  },
+});
 import {
   BLOCKQUOTES_THEME,
   handleBlockquoteNode,
@@ -75,6 +99,7 @@ export const LIVE_PREVIEW_THEME = [
   LISTS_THEME,
   TABLES_THEME,
   FRONTMATTER_THEME,
+  HR_THEME,
 ];
 
 // ---------------------------------------------------------------------------
@@ -169,6 +194,15 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
 
       if (handleFrontmatterNode(node, ctx, collector)) {
         frontmatterFound = true;
+      }
+
+      // Horizontal rule: replace with <hr> widget when cursor is off the line
+      if (node.type.name === "HorizontalRule") {
+        const line = ctx.view.state.doc.lineAt(node.from);
+        const onActiveLine = ctx.activeLine?.number === line.number;
+        if (!onActiveLine) {
+          collector.addReplace(line.from, line.to, new HorizontalRuleWidget(), true);
+        }
       }
     },
   });

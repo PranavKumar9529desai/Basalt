@@ -37,6 +37,12 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
     padding: "0.05rem 0.3rem",
     fontSize: "0.85em",
   },
+  ".cm-live-strong": {
+    fontWeight: "700",
+  },
+  ".cm-live-em": {
+    fontStyle: "italic",
+  },
 });
 
 /**
@@ -67,6 +73,16 @@ export function handleInlineNode(
   if (name === "Strikethrough") {
     collector.addMark(node.from, node.to, "cm-live-strikethrough");
     return true;
+  }
+
+  if (name === "StrongEmphasis") {
+    collector.addMark(node.from, node.to, "cm-live-strong");
+    return false; // descend so EmphasisMark children get hidden
+  }
+
+  if (name === "Emphasis") {
+    collector.addMark(node.from, node.to, "cm-live-em");
+    return false; // descend so EmphasisMark children get hidden
   }
 
   return false;
