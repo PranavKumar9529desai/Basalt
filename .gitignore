@@ -6,3 +6,4 @@ node_modules/
 apps/tauri/.tmp/.f896fdffefef933b-00000000.hm
 .claude/settings.local.json
 .superpowers/
+.worktrees/
