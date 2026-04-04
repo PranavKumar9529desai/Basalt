@@ -51,6 +51,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [006-pane-manager-per-pane-editor](docs/adr/006-pane-manager-per-pane-editor.md) | ADR-006: PaneManager — One Editor Instance Per Visible Pane |
 | [007-typescript-rust-responsibilities](docs/adr/007-typescript-rust-responsibilities.md) | ADR-007: TypeScript vs Rust Responsibility Split |
 | [008-native-search-architecture](docs/adr/008-native-search-architecture.md) | ADR-008: Native Search Architecture — Tantivy + Nucleo |
+| [009-rust-crate-restructure](docs/adr/009-rust-crate-restructure.md) | ADR-009: Rust Crate Restructure — Hyphenated Names, Single Responsibility |
 <!-- ADR_INDEX_END -->
 
 ## How to Work on This Project
@@ -77,5 +78,9 @@ Use `superpowers:systematic-debugging` before proposing fixes.
 | `packages/ui/src/components/tabs/` | Dumb tab UI primitives |
 | `packages/ui/src/styles/` | `--sat-*` token definitions |
 | `packages/ui/theme/` | Theme manifests |
-| `crates/basalt_core/` | Rust: Markdown parsing, NoteGraph, metadata |
-| `crates/basalt_fs/` | Rust: Vault indexing, filesystem watcher |
+| `crates/basalt-types/` | Rust: shared types (Document, MarkdownNode, FileMetadata, search results) |
+| `crates/basalt-parser/` | Rust: Markdown parsing, frontmatter extraction, UTF-16 mapping |
+| `crates/basalt-graph/` | Rust: StringArena, NoteGraph, fuzzy search |
+| `crates/basalt-vault/` | Rust: Vault indexing, file watching, caching, tree building |
+| `crates/basalt-search/` | Rust: Full-text search (Tantivy BM25) + fuzzy file matching (Nucleo) |
+| `crates/basalt-wasm/` | Rust: WASM bindings for JavaScript/TypeScript |
