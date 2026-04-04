@@ -2,7 +2,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
-const BULLET_GLYPHS = ["•", "◦", "▪"];
+const BULLET_GLYPHS = ["•", "•", "•"];
 
 export const LISTS_THEME = EditorView.baseTheme({
   ".cm-live-list-bullet": {
