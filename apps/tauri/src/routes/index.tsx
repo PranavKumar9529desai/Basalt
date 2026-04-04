@@ -8,6 +8,7 @@ import { AppSidebar } from "../app-shell/AppSidebar";
 import { ThemeSelect } from "../app-shell/ThemeSelect";
 import { AppCommands } from "../commands/app-commands";
 import { useEditorSessionsStore } from "../features/editor/store";
+import { QuickSwitcher, SearchModal } from "../features/search";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
@@ -285,6 +286,18 @@ function RouteComponent() {
     }
   }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
+  const handleSearchOpen = useCallback(
+    (path: string) => {
+      // Re-use the same open flow as clicking a file in the tree.
+      const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
+      if (node) {
+        const tabId = openInPreview({ path: node.path, title: node.name });
+        setTabTitle(tabId, node.name);
+      }
+    },
+    [treeNodes, openInPreview, setTabTitle],
+  );
+
   if (!vaultPath) {
     return (
       <VaultSplash
@@ -376,6 +389,9 @@ function RouteComponent() {
         onConfirm={handleConfirmDeleteWithTabs}
         isLoading={mutations.isLoading}
       />
+
+      <SearchModal onOpen={handleSearchOpen} />
+      <QuickSwitcher onOpen={handleSearchOpen} />
     </div>
   );
 }

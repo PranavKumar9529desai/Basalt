@@ -10,6 +10,7 @@ import {
 import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
+import { useSearchStore } from "../features/search";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -43,6 +44,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
+
+  const openSearch   = useSearchStore((s) => s.openSearch);
+  const openSwitcher = useSearchStore((s) => s.openSwitcher);
 
   const commands = useMemo(
     () => [
@@ -157,6 +161,20 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
           if (onSplitBottom) onSplitBottom();
         },
       },
+      {
+        id: "search:open",
+        name: "Search Vault",
+        category: "Search",
+        hotkeys: ["Ctrl+F", "Meta+F"],
+        callback: openSearch,
+      },
+      {
+        id: "switcher:open",
+        name: "Quick Open File",
+        category: "Search",
+        hotkeys: ["Ctrl+O", "Meta+O"],
+        callback: openSwitcher,
+      },
     ],
     [
       hasActiveTab,
@@ -170,6 +188,8 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       onSplitRight,
       onSplitTop,
       onTogglePinActiveTab,
+      openSearch,
+      openSwitcher,
     ],
   );
 
