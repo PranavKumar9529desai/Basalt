@@ -1,5 +1,6 @@
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
+use std::collections::HashSet;
 
 use crate::types::FileResult;
 
@@ -10,6 +11,8 @@ pub struct NucleoScorer {
     matcher: Matcher,
     /// Each item is (absolute_path, title) — title is the filename stem.
     items: Vec<(String, String)>,
+    /// O(1) membership check for deduplication.
+    path_set: HashSet<String>,
 }
 
 /// Extract the filename stem from an absolute path.
@@ -27,15 +30,17 @@ impl NucleoScorer {
     /// Titles are derived automatically as the filename stem.
     pub fn new(paths: Vec<String>) -> Self {
         let items = paths
-            .into_iter()
+            .iter()
             .map(|p| {
                 let title = stem_from_path(&p);
-                (p, title)
+                (p.clone(), title)
             })
             .collect();
+        let path_set: HashSet<String> = paths.into_iter().collect();
         Self {
             matcher: Matcher::new(Config::DEFAULT),
             items,
+            path_set,
         }
     }
 
@@ -62,6 +67,9 @@ impl NucleoScorer {
 
         for (idx, (_, title)) in self.items.iter().enumerate() {
             let haystack = Utf32Str::new(title.as_str(), &mut char_buf);
+            // Score against the title stem (not the full path) — gives cleaner
+            // fuzzy scores for short queries and matches user mental model of
+            // "find file by name, not by directory". Directory context shown in UI.
             if let Some(s) = pattern.score(haystack, &mut self.matcher) {
                 scored.push((s, idx));
             }
@@ -83,17 +91,26 @@ impl NucleoScorer {
             .collect()
     }
 
-    /// Add a new path (title derived from stem). No-op if path already present.
-    pub fn add_item(&mut self, path: String, _title: String) {
-        if !self.items.iter().any(|(p, _)| p == &path) {
-            let title = stem_from_path(&path);
-            self.items.push((path, title));
+    /// Add a new path with provided title (falls back to stem if title is empty).
+    /// No-op if path already present.
+    pub fn add_item(&mut self, path: String, title: String) {
+        if self.path_set.contains(&path) {
+            return;
         }
+        let resolved = if title.is_empty() {
+            stem_from_path(&path)
+        } else {
+            title
+        };
+        self.path_set.insert(path.clone());
+        self.items.push((path, resolved));
     }
 
     /// Remove a path. No-op if not present.
     pub fn remove_item(&mut self, path: &str) {
-        self.items.retain(|(p, _)| p != path);
+        if self.path_set.remove(path) {
+            self.items.retain(|(p, _)| p != path);
+        }
     }
 }
 
@@ -132,5 +149,13 @@ mod tests {
         scorer.remove_item("/b.md");
         let results = scorer.search("b", 5);
         assert!(!results.iter().any(|r| r.path == "/b.md"));
+    }
+
+    #[test]
+    fn test_add_item_uses_provided_title() {
+        let mut scorer = NucleoScorer::new(vec![]);
+        scorer.add_item("/vault/my-note.md".to_string(), "Custom Title".to_string());
+        let results = scorer.search("custom", 5);
+        assert!(results.iter().any(|r| r.title == "Custom Title"));
     }
 }
