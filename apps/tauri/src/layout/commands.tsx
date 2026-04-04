@@ -28,9 +28,6 @@ export interface AppCommandsProps {
   hasActiveTab?: boolean;
 }
 
-/**
- * Global commands for the Basalt application.
- */
 export const AppCommands: React.FC<AppCommandsProps> = ({
   onCreateNote,
   onDeleteNote,
@@ -208,9 +205,6 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
     };
   }, [commands, register, unregister]);
 
-  // Global hotkeys for search and quick switcher. These must be registered at
-  // the window level (capture phase) so they fire before CodeMirror can
-  // consume them via its own keymap.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;

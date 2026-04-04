@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client";
 import "./App.css";
 import "../../../packages/ui/src/styles/globals.css";
 import "../../../packages/ui/src/styles/editor.css";
-import { ThemeProvider } from "./app-shell/ThemeProvider";
+import { ThemeProvider } from "./layout/ThemeProvider";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
