@@ -292,7 +292,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         <ThemeSelect />
       </div>
       <AppCommands
-        onCreateNote={controller.startNoteInline}
+        onCreateNote={controller.createNoteInstant}
         onDeleteNote={controller.handleDeleteFromCommands}
         onCloseActiveTab={handleCloseActiveTab}
         onCloseOtherTabs={handleCloseOtherTabs}
@@ -308,7 +308,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
       <Sidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
-        onCreateNote={controller.startNoteInline}
+        onCreateNote={controller.createNoteInstant}
         onCreateFolder={controller.startFolderInline}
       >
         <FileTree
