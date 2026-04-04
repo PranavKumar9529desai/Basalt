@@ -22,7 +22,6 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
 }) => {
   const [themeId, setThemeId] = useState<ThemeId>(defaultThemeId);
 
-  // On mount, hydrate from storage or prefers-color-scheme
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as ThemeId | null;
     if (stored && themes.some((t) => t.id === stored)) {
@@ -36,7 +35,6 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
       }
     }
 
-    // Check Rust for the "true" source of truth after mount to ensure sync with dot-config
     invoke<Record<string, unknown>>("get_settings")
       .then((settings) => {
         const backendTheme = settings.theme as ThemeId;
@@ -53,12 +51,10 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
       });
   }, []);
 
-  // Apply data-theme attribute and persist to both localStorage and Rust backend
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", themeId);
     window.localStorage.setItem(STORAGE_KEY, themeId);
 
-    // Persist to Rust backend config for long-term consistency and portability
     invoke("set_setting", { key: "theme", value: themeId }).catch((err) => {
       console.error("Failed to persist theme to backend:", err);
     });
