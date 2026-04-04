@@ -18,6 +18,7 @@ use crate::types::{ContentResult, Highlight, Snippet};
 pub struct TantivyIndex {
     index: Index,
     writer: IndexWriter,
+    reader: tantivy::IndexReader,
     path_field: tantivy::schema::Field,
     title_field: tantivy::schema::Field,
     body_field: tantivy::schema::Field,
@@ -67,13 +68,30 @@ impl TantivyIndex {
         let mmap_dir =
             MmapDirectory::open(dir).with_context(|| "opening mmap directory")?;
 
-        let index = Index::open_or_create(mmap_dir, schema)?;
+        let mut index = Index::open_or_create(mmap_dir, schema.clone())?;
+
+        // Schema mismatch detection: if the on-disk schema differs from the current
+        // build_schema(), wipe the directory and recreate from scratch.
+        let current_schema = index.schema();
+        if current_schema != schema {
+            std::fs::remove_dir_all(dir)
+                .with_context(|| format!("removing stale index at {}", dir.display()))?;
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("recreating index dir {}", dir.display()))?;
+            index = Index::create_in_dir(dir, schema)?;
+        }
+
+        let reader = index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
+            .try_into()?;
 
         let writer = index.writer(50_000_000)?; // 50 MB heap
 
         Ok(Self {
             index,
             writer,
+            reader,
             path_field,
             title_field,
             body_field,
@@ -100,7 +118,6 @@ impl TantivyIndex {
             self.tags_field  => tags,
         ))?;
 
-        self.writer.commit()?;
         Ok(())
     }
 
@@ -108,19 +125,21 @@ impl TantivyIndex {
     pub fn remove_document(&mut self, path: &str) -> Result<()> {
         let path_term = tantivy::Term::from_field_text(self.path_field, path);
         self.writer.delete_term(path_term);
+        Ok(())
+    }
+
+    /// Flush pending adds/deletes to the index so they become visible to searchers.
+    /// Call once after a batch of `update_document`/`remove_document` calls.
+    pub fn commit(&mut self) -> Result<()> {
         self.writer.commit()?;
+        self.reader.reload()?;
         Ok(())
     }
 
     /// BM25 full-text search. Returns up to `limit` results ranked by relevance.
     /// Snippets are populated separately by `SearchState` using the raw note body.
     pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<ContentResult>> {
-        let reader = self
-            .index
-            .reader_builder()
-            .reload_policy(ReloadPolicy::OnCommitWithDelay)
-            .try_into()?;
-        let searcher = reader.searcher();
+        let searcher = self.reader.searcher();
 
         let query_parser = QueryParser::for_index(
             &self.index,
@@ -184,8 +203,7 @@ pub fn extract_snippets(body: &str, query_terms: &[&str], max: usize) -> Vec<Sni
         let ctx_start = body
             .char_indices()
             .rev()
-            .skip_while(|(i, _)| *i > ctx_start)
-            .next()
+            .find(|(i, _)| *i <= ctx_start)
             .map(|(i, _)| i)
             .unwrap_or(0);
         let ctx_end = (m.end() + 60).min(body.len());
@@ -226,6 +244,7 @@ mod tests {
         let mut idx = TantivyIndex::open_or_create(dir.path()).unwrap();
         idx.update_document("/vault/hello.md", "hello", "Hello World", "")
             .unwrap();
+        idx.commit().unwrap();
         let results = idx.search("hello", 10).unwrap();
         assert!(!results.is_empty(), "expected at least one result");
         assert_eq!(results[0].path, "/vault/hello.md");
@@ -237,7 +256,9 @@ mod tests {
         let mut idx = TantivyIndex::open_or_create(dir.path()).unwrap();
         idx.update_document("/vault/a.md", "alpha", "Alpha note body", "")
             .unwrap();
+        idx.commit().unwrap();
         idx.remove_document("/vault/a.md").unwrap();
+        idx.commit().unwrap();
         let results = idx.search("alpha", 10).unwrap();
         assert!(results.is_empty(), "removed doc should not appear in results");
     }
