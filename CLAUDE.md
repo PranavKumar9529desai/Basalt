@@ -11,7 +11,7 @@
 Basalt is an Obsidian-class desktop Markdown workspace — Tauri (Rust) backend, React frontend.  
 Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms search on 5k notes).
 
-## Current State (as of 2026-04-04)
+## Current State (as of 2026-04-05)
 
 | Area | Status |
 |---|---|
@@ -21,6 +21,8 @@ Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms
 | Theming (`--sat-*` tokens) | ✅ Established |
 | Command palette | ✅ Working |
 | File tree / sidebar | 🔄 In progress |
+| Note creation (Obsidian-style instant) | ✅ Complete — see [ADR-010](docs/adr/010-obsidian-style-note-creation.md) |
+| Editor inline title (rename via title bar) | ⏳ Not started — see ADR-010 Further Work |
 | Search (⌘F + ⌘O, tantivy + nucleo) | ✅ Complete — see [ADR-008](docs/adr/008-native-search-architecture.md) |
 | NoteGraph / backlinks | ⏳ Not started |
 | Rust acceleration (batched IPC) | ⏳ Phase 5 pending |
@@ -52,6 +54,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [007-typescript-rust-responsibilities](docs/adr/007-typescript-rust-responsibilities.md) | ADR-007: TypeScript vs Rust Responsibility Split |
 | [008-native-search-architecture](docs/adr/008-native-search-architecture.md) | ADR-008: Native Search Architecture — Tantivy + Nucleo |
 | [009-rust-crate-restructure](docs/adr/009-rust-crate-restructure.md) | ADR-009: Rust Crate Restructure — Hyphenated Names, Single Responsibility |
+| [010-obsidian-style-note-creation](docs/adr/010-obsidian-style-note-creation.md) | ADR-010: Obsidian-Style Instant Note Creation |
 <!-- ADR_INDEX_END -->
 
 ## How to Work on This Project
