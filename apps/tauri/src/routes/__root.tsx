@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { EditorCommandPalette } from "../features/editor/components/command-palette";
-import { StatusBar } from "../app-shell/StatusBar";
+import { StatusBar } from "../layout/StatusBar";
 import { TooltipProvider } from "@workspace/ui/components/ui/tooltip";
 
 export const Route = createRootRoute({

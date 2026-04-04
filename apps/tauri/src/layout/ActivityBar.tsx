@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ActivityBar } from "@workspace/ui/components/activity-bar";
+import { ActivityBar as ActivityBarUI } from "@workspace/ui/components/activity-bar";
 import { IconFolder, IconSearch, IconSettings } from "@tabler/icons-react";
 
-export function AppActivityBar() {
+export function ActivityBar() {
   const [activeId, setActiveId] = useState<string>("explorer");
 
   const topItems = [
@@ -27,7 +27,7 @@ export function AppActivityBar() {
   ];
 
   return (
-    <ActivityBar
+    <ActivityBarUI
       topItems={topItems}
       bottomItems={bottomItems}
       activeId={activeId}

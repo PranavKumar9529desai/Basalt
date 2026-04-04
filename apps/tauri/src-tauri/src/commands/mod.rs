@@ -1,5 +1,6 @@
 pub mod boot;
 pub mod files;
+pub mod search;
 pub mod settings;
 pub mod vault;
 
@@ -9,4 +10,5 @@ pub use files::{
     get_backlinks, move_paths, open_file, save_file,
 };
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
+pub use search::{search_content, search_files};
 pub use vault::{get_vault_tree, open_vault_dialog, reindex_vault};

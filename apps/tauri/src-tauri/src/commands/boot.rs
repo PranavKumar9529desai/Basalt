@@ -57,9 +57,29 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
         });
     }
 
-    let (status, note_count) = load_or_index_vault(&vault_path, &state, &app)?;
+    let (status, note_count, known_mtimes) = load_or_index_vault(&vault_path, &state, &app)?;
 
     start_watcher(&state, &vault_path, &app)?;
+
+    // Initialise the search index (non-fatal — vault still works if this fails).
+    {
+        use crate::cache::search_index_dir;
+        use basalt_search::SearchState;
+
+        let index_dir = search_index_dir(&app, &vault_path);
+        if let Ok(vault_guard) = state.vault.read() {
+            match SearchState::open_or_create(&index_dir, &vault_guard, &known_mtimes) {
+                Ok(search_state) => {
+                    if let Ok(mut s) = state.search.write() {
+                        *s = Some(search_state);
+                    }
+                }
+                Err(e) => eprintln!("[boot] search index failed: {e}"),
+            }
+        } else {
+            eprintln!("[boot] vault lock poisoned; skipping search init");
+        }
+    }
 
     let tree = {
         let vault = state
@@ -106,6 +126,28 @@ pub fn set_vault(
 
     // (Re-)start the watcher.
     start_watcher(&state, &vault_path, &app)?;
+
+    // Initialise the search index (non-fatal — vault still works if this fails).
+    {
+        use crate::cache::search_index_dir;
+        use basalt_search::SearchState;
+
+        let index_dir = search_index_dir(&app, &vault_path);
+        if let Ok(vault_guard) = state.vault.read() {
+            // set_vault always does a full re-index, so no prior mtimes to compare.
+            let empty_mtimes = std::collections::HashMap::new();
+            match SearchState::open_or_create(&index_dir, &vault_guard, &empty_mtimes) {
+                Ok(search_state) => {
+                    if let Ok(mut s) = state.search.write() {
+                        *s = Some(search_state);
+                    }
+                }
+                Err(e) => eprintln!("[set_vault] search index failed: {e}"),
+            }
+        } else {
+            eprintln!("[set_vault] vault lock poisoned; skipping search init");
+        }
+    }
 
     let tree = {
         let vault = state

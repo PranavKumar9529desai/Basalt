@@ -5,3 +5,5 @@ node_modules/
 .cococinde_code_mcp_server.log
 apps/tauri/.tmp/.f896fdffefef933b-00000000.hm
 .claude/settings.local.json
+.superpowers/
+.worktrees/

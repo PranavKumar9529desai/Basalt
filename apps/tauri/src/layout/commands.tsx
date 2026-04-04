@@ -1,7 +1,9 @@
 import {
   IconFilePlus,
+  IconFileSearch,
   IconPinned,
   IconPlus,
+  IconSearch,
   IconTrash,
   IconX,
   IconLayoutBoardSplit,
@@ -10,6 +12,7 @@ import {
 import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
+import { useSearchStore } from "../features/search";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -25,9 +28,6 @@ export interface AppCommandsProps {
   hasActiveTab?: boolean;
 }
 
-/**
- * Global commands for the Basalt application.
- */
 export const AppCommands: React.FC<AppCommandsProps> = ({
   onCreateNote,
   onDeleteNote,
@@ -43,6 +43,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
+
+  const openSearch   = useSearchStore((s) => s.openSearch);
+  const openSwitcher = useSearchStore((s) => s.openSwitcher);
 
   const commands = useMemo(
     () => [
@@ -157,6 +160,22 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
           if (onSplitBottom) onSplitBottom();
         },
       },
+      {
+        id: "search:open",
+        name: "Search Vault",
+        category: "Search",
+        icon: <IconSearch size={16} />,
+        hotkeys: ["Ctrl+F", "Meta+F"],
+        callback: openSearch,
+      },
+      {
+        id: "switcher:open",
+        name: "Quick Open File",
+        category: "Search",
+        icon: <IconFileSearch size={16} />,
+        hotkeys: ["Ctrl+O", "Meta+O"],
+        callback: openSwitcher,
+      },
     ],
     [
       hasActiveTab,
@@ -170,6 +189,8 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       onSplitRight,
       onSplitTop,
       onTogglePinActiveTab,
+      openSearch,
+      openSwitcher,
     ],
   );
 
@@ -183,6 +204,21 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       });
     };
   }, [commands, register, unregister]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        openSearch();
+      } else if (e.key === "o" || e.key === "O") {
+        e.preventDefault();
+        openSwitcher();
+      }
+    };
+    window.addEventListener("keydown", handler, { capture: true });
+    return () => window.removeEventListener("keydown", handler, { capture: true });
+  }, [openSearch, openSwitcher]);
 
   return null;
 };

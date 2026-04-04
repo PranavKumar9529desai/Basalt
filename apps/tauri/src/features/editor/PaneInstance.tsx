@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef } from "react";
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
-import { Editor } from "../../features/editor";
-import { useEditor } from "../../features/editor/hooks/useEditor";
-import { useEditorSessionsStore } from "../../features/editor/store";
+import { Editor } from ".";
+import { useEditor } from "./hooks/useEditor";
+import { useEditorSessionsStore } from "./store";
 import {
   ConflictBanner,
   InactiveGroupPane,
   type WorkspaceTabsGroupRenderContext,
-} from "../../features/tabs/components/WorkspaceTabs";
-import { SaveIndicator } from "../../features/vault/components/SaveIndicator";
-import type { FlatTreeNode } from "../../features/vault/types";
+} from "../tabs/components/WorkspaceTabs";
+import { SaveIndicator } from "../vault/components/SaveIndicator";
+import type { FlatTreeNode } from "../vault/types";
 
 export interface PaneManagerOptions {
   findNote: (name: string) => FlatTreeNode | undefined;

@@ -34,6 +34,8 @@ const BASIC_SETUP = {
   lineNumbers: false,
   foldGutter: false,
   highlightActiveLine: false,
+  // Disable CM's built-in search panel so ⌘F reaches our global handler.
+  searchKeymap: false,
 };
 
 export function EditorComponent({

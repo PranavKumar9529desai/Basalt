@@ -12,23 +12,21 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { type ReactNode, useRef, useCallback } from "react";
 
-interface AppSidebarProps {
+interface SidebarProps {
   children: ReactNode;
-  /** Initial sidebar width from .basalt/workspace.json (Tier 3). */
   defaultWidth?: number;
   onCreateNote: () => void;
   onCreateFolder: () => void;
 }
 
-export function AppSidebar({
+export function Sidebar({
   children,
   defaultWidth,
   onCreateNote,
   onCreateFolder,
-}: AppSidebarProps) {
+}: SidebarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounce-save sidebar width to .basalt/workspace.json (Tier 3)
   const handleWidthChange = useCallback((width: number) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
