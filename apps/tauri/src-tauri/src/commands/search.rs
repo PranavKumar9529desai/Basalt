@@ -1,4 +1,4 @@
-use basalt_search::{ContentResult, FileResult};
+use basalt_types::{ContentResult, FileResult};
 use tauri::State;
 
 use crate::app_state::AppState;

@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use basalt_fs::{watcher::VaultWatcher, Vault};
+use basalt_vault::{watcher::VaultWatcher, Vault};
 use basalt_search::SearchState;
 
 /// Global application state shared across Tauri commands.

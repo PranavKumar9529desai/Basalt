@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use basalt_fs::build_flat_tree;
+use basalt_vault::build_flat_tree;
 use serde::Serialize;
 use tauri::State;
 
@@ -20,7 +20,7 @@ pub struct BootResult {
     pub status: String,
     /// Pre-built, pre-sorted flat tree — ready for the sidebar to render.
     /// Empty when `status == "no_vault"`.
-    pub tree: Vec<basalt_fs::FlatTreeNode>,
+    pub tree: Vec<basalt_vault::FlatTreeNode>,
     /// Persisted settings from config.json (Tier 1: global)
     pub settings: std::collections::HashMap<String, serde_json::Value>,
     /// Per-vault workspace state from .basalt/workspace.json (Tier 3: vault-local)
