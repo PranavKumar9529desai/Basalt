@@ -16,7 +16,7 @@ export function SettingsModal() {
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) close(); }}>
       <DialogContent
         showCloseButton={false}
-        className="fixed inset-0 top-0 left-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none border-0 p-0 bg-[--sat-bg-primary]"
+        className="fixed inset-0 top-0 left-0 flex h-screen w-screen max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none border-0 p-0 bg-[--sat-surface-1]"
       >
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <div className="flex h-full">
