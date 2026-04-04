@@ -8,6 +8,7 @@ import { AppCommands } from "./commands";
 import { useEditorSessionsStore } from "../features/editor/store";
 import { usePaneManager } from "../features/editor/PaneInstance";
 import { QuickSwitcher, SearchModal } from "../features/search";
+import { SettingsModal } from "../features/settings";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
@@ -369,6 +370,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
       <SearchModal onOpen={handleSearchOpen} />
       <QuickSwitcher onOpen={handleSearchOpen} />
+      <SettingsModal />
     </div>
   );
 }

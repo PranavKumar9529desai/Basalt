@@ -4,6 +4,7 @@ import {
   IconPinned,
   IconPlus,
   IconSearch,
+  IconSettings,
   IconTrash,
   IconX,
   IconLayoutBoardSplit,
@@ -13,6 +14,7 @@ import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
 import { useSearchStore } from "../features/search";
+import { useSettingsStore } from "../features/settings";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -46,6 +48,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
 
   const openSearch   = useSearchStore((s) => s.openSearch);
   const openSwitcher = useSearchStore((s) => s.openSwitcher);
+  const openSettings = useSettingsStore((s) => s.open);
 
   const commands = useMemo(
     () => [
@@ -176,6 +179,14 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
         hotkeys: ["Ctrl+O", "Meta+O"],
         callback: openSwitcher,
       },
+      {
+        id: "app:open-settings",
+        name: "Open Settings",
+        category: "App",
+        icon: <IconSettings size={16} />,
+        hotkeys: ["Ctrl+,", "Meta+,"],
+        callback: openSettings,
+      },
     ],
     [
       hasActiveTab,
@@ -190,6 +201,7 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       onSplitTop,
       onTogglePinActiveTab,
       openSearch,
+      openSettings,
       openSwitcher,
     ],
   );
@@ -214,11 +226,14 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       } else if (e.key === "o" || e.key === "O") {
         e.preventDefault();
         openSwitcher();
+      } else if (e.key === ",") {
+        e.preventDefault();
+        openSettings();
       }
     };
     window.addEventListener("keydown", handler, { capture: true });
     return () => window.removeEventListener("keydown", handler, { capture: true });
-  }, [openSearch, openSwitcher]);
+  }, [openSearch, openSettings, openSwitcher]);
 
   return null;
 };

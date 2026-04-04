@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ActivityBar as ActivityBarUI } from "@workspace/ui/components/activity-bar";
 import { IconFolder, IconSearch, IconSettings } from "@tabler/icons-react";
+import { useSettingsStore } from "../features/settings";
 
 export function ActivityBar() {
   const [activeId, setActiveId] = useState<string>("explorer");
+  const openSettings = useSettingsStore((s) => s.open);
 
   const topItems = [
     {
@@ -31,7 +33,10 @@ export function ActivityBar() {
       topItems={topItems}
       bottomItems={bottomItems}
       activeId={activeId}
-      onItemClick={setActiveId}
+      onItemClick={(id) => {
+        setActiveId(id);
+        if (id === "settings") openSettings();
+      }}
     />
   );
 }
