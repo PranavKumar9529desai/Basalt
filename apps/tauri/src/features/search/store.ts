@@ -44,7 +44,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     set({ isSearchOpen: true, searchQuery: "", searchResults: [], searchSelectedIndex: 0, isSearchLoading: false }),
   closeSearch: () => set({ isSearchOpen: false }),
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchQuery: (query) => set({ searchQuery: query, searchSelectedIndex: 0 }),
 
   runSearch: async (query) => {
     if (!query.trim()) {
@@ -57,7 +57,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         query,
         limit: 20,
       });
-      set({ searchResults: results, isSearchLoading: false, searchSelectedIndex: 0 });
+      set({ searchResults: results, isSearchLoading: false });
     } catch (err) {
       console.error("[search] search_content error:", err);
       set({ isSearchLoading: false });
@@ -80,21 +80,22 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   switcherResults: [],
   switcherSelectedIndex: 0,
 
-  openSwitcher: () =>
-    set({ isSwitcherOpen: true, switcherQuery: "", switcherResults: [], switcherSelectedIndex: 0 }),
+  openSwitcher: () => {
+    set({ isSwitcherOpen: true, switcherQuery: "", switcherResults: [], switcherSelectedIndex: 0 });
+    // Pre-load all files immediately so the switcher isn't empty on open.
+    invoke<FileResult[]>("search_files", { query: "", limit: 20 })
+      .then((results) => set({ switcherResults: results }))
+      .catch((err) => console.error("[search] search_files error:", err));
+  },
   closeSwitcher: () => set({ isSwitcherOpen: false }),
 
   setSwitcherQuery: (query) => set({ switcherQuery: query }),
 
   runSwitcher: async (query) => {
-    if (!query.trim()) {
-      set({ switcherResults: [] });
-      return;
-    }
     try {
       const results = await invoke<FileResult[]>("search_files", {
         query,
-        limit: 10,
+        limit: 20,
       });
       set({ switcherResults: results, switcherSelectedIndex: 0 });
     } catch (err) {

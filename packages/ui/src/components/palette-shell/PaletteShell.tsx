@@ -59,8 +59,7 @@ export function PaletteShellInput({
   inputRef,
 }: PaletteShellInputProps) {
   return (
-    <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-      <span className="text-muted-foreground text-base">⌕</span>
+    <div className="flex items-center gap-2 px-4 py-3">
       <Input
         ref={inputRef}
         value={value}
