@@ -33,9 +33,10 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-tag": {
     backgroundColor: "var(--sat-tag-bg, rgba(99,102,241,0.15))",
     color: "var(--sat-tag-color, #818cf8)",
-    borderRadius: "var(--sat-tag-border-radius, 3px)",
-    padding: "0.05rem 0.3rem",
-    fontSize: "0.85em",
+    borderRadius: "var(--sat-tag-border-radius, 999px)",
+    padding: "0.1rem 0.5rem",
+    fontSize: "0.82em",
+    fontWeight: "500",
   },
   ".cm-live-strong": {
     fontWeight: "700",

@@ -18,6 +18,10 @@ export const TASK_CHECKBOX_THEME = EditorView.baseTheme({
     height: "14px",
     accentColor: "var(--sat-editor-task-accent, #22c55e)",
   },
+  ".cm-task-done": {
+    textDecoration: "line-through",
+    opacity: "0.5",
+  },
 });
 
 export class TaskCheckboxWidget extends WidgetType {
@@ -78,6 +82,16 @@ export function buildTaskDecorations(view: EditorView) {
             widget: new TaskCheckboxWidget(node.from, node.to, checked),
           }),
         );
+        if (checked) {
+          const line = view.state.doc.lineAt(node.from);
+          if (node.to < line.to) {
+            builder.add(
+              node.to,
+              line.to,
+              Decoration.mark({ class: "cm-task-done" }),
+            );
+          }
+        }
       },
     });
   }
