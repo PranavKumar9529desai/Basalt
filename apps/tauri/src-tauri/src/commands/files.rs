@@ -212,6 +212,79 @@ pub fn create_note(
     })
 }
 
+/// Create a new note with an auto-generated "Untitled" name.
+/// Tries "Untitled", "Untitled 1", …, "Untitled 99" until a free slot is found.
+#[tauri::command]
+pub fn create_untitled_note(
+    parent: Option<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<CreateNoteResult, String> {
+    let config = load_config(&app);
+    let vault_path_str = config
+        .last_vault
+        .ok_or_else(|| "no vault configured".to_string())?;
+
+    let vault_path = Path::new(&vault_path_str);
+
+    let parent_dir = match parent.as_deref() {
+        Some(rel) if !rel.is_empty() => vault_path.join(rel),
+        _ => vault_path.to_path_buf(),
+    };
+
+    for i in 0u8..=99 {
+        let name = if i == 0 {
+            "Untitled".to_string()
+        } else {
+            format!("Untitled {i}")
+        };
+
+        let file_path = parent_dir.join(format!("{name}.md"));
+        if file_path.exists() {
+            continue;
+        }
+
+        // Create parent directory if needed (e.g. the parent folder was just created).
+        if !parent_dir.exists() {
+            std::fs::create_dir_all(&parent_dir)
+                .map_err(|e| format!("failed to create directory: {e}"))?;
+        }
+
+        let content = String::new();
+        std::fs::write(&file_path, &content)
+            .map_err(|e| format!("failed to write file: {e}"))?;
+
+        let abs_path = file_path
+            .canonicalize()
+            .map_err(|e| format!("canonicalize failed: {e}"))?
+            .to_string_lossy()
+            .to_string();
+
+        {
+            let mut vault = state
+                .vault
+                .write()
+                .map_err(|_| "vault lock poisoned".to_string())?;
+            vault.add_document(&abs_path, &content);
+        }
+
+        let _ = app.emit(
+            "vault://file-changed",
+            FileChangeEvent {
+                path: abs_path.clone(),
+                kind: "created".into(),
+            },
+        );
+
+        return Ok(CreateNoteResult {
+            path: abs_path,
+            name,
+        });
+    }
+
+    Err("too many untitled notes (Untitled through Untitled 99 all exist)".to_string())
+}
+
 #[tauri::command]
 pub fn create_folder(
     name: String,
@@ -569,5 +642,22 @@ mod tests {
 
         let valid_deep = "a".repeat(255);
         assert!(resolve_creation_path(&vault, None, &valid_deep, false).is_ok());
+    }
+
+    #[test]
+    fn test_untitled_name_sequence() {
+        // Verify the name generation logic in isolation.
+        // "Untitled" is index 0, "Untitled 1" is index 1, etc.
+        let name_for = |i: u8| -> String {
+            if i == 0 {
+                "Untitled".to_string()
+            } else {
+                format!("Untitled {i}")
+            }
+        };
+
+        assert_eq!(name_for(0), "Untitled");
+        assert_eq!(name_for(1), "Untitled 1");
+        assert_eq!(name_for(99), "Untitled 99");
     }
 }
