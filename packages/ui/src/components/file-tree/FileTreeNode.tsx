@@ -204,10 +204,13 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
   return (
     <div
       style={{ ...style, height: TREE_ROW_HEIGHT }}
+      className="px-2"
+    ><div
       className={cn(
-        "group flex items-center w-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
+        "group flex items-center w-full h-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
         // Avoid transform transitions causing subpixel antialiasing weirdness on Webkit:
         "transform-gpu transition-colors duration-75",
+        "rounded-[4px]",
         isEditing
           ? "bg-[var(--sat-surface-2)]"
           : isSelected
@@ -277,6 +280,6 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
           {node.name}
         </span>
       )}
-    </div>
+    </div></div>
   );
 };
