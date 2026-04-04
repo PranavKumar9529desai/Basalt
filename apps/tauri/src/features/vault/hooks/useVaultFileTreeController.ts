@@ -33,7 +33,7 @@ export interface UseVaultFileTreeControllerOptions {
 }
 
 export interface UseVaultFileTreeControllerReturn {
-  startNoteInline: () => void;
+  createNoteInstant: () => Promise<void>;
   startFolderInline: () => void;
   cutIds: Set<string>;
   canPasteToMenuTarget: boolean;
@@ -107,11 +107,14 @@ export function useVaultFileTreeController({
     return deriveParentContext(target.node);
   }, [contextMenu.menuState.target, deriveParentContext]);
 
-  const startNoteInline = useCallback(() => {
+  const createNoteInstant = useCallback(async () => {
     const ctx = deriveParentContext();
     if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
-    mutations.createNoteInline(ctx);
-  }, [deriveParentContext, mutations, openFolder]);
+    const result = await mutations.createUntitledNote(ctx.parentRelPath || undefined);
+    if (!result) return;
+    editor.loadNote({ name: result.name, path: result.path });
+    await refreshTree();
+  }, [deriveParentContext, editor, mutations, openFolder, refreshTree]);
 
   const startFolderInline = useCallback(() => {
     const ctx = deriveParentContext();
@@ -230,11 +233,14 @@ export function useVaultFileTreeController({
   const onMenuNewNote = useCallback(() => {
     const ctx = deriveParentContextFromMenuTarget();
     contextMenu.closeMenu();
-    setTimeout(() => {
+    setTimeout(async () => {
       if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
-      mutations.createNoteInline(ctx);
+      const result = await mutations.createUntitledNote(ctx.parentRelPath || undefined);
+      if (!result) return;
+      editor.loadNote({ name: result.name, path: result.path });
+      await refreshTree();
     }, 0);
-  }, [contextMenu, deriveParentContextFromMenuTarget, mutations, openFolder]);
+  }, [contextMenu, deriveParentContextFromMenuTarget, editor, mutations, openFolder, refreshTree]);
 
   const onMenuNewFolder = useCallback(() => {
     const ctx = deriveParentContextFromMenuTarget();
@@ -406,7 +412,7 @@ export function useVaultFileTreeController({
   }, [editor.selected, mutations, selection.selectedIds, treeNodes]);
 
   return {
-    startNoteInline,
+    createNoteInstant,
     startFolderInline,
     cutIds,
     canPasteToMenuTarget,
