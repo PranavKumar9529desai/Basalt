@@ -10,6 +10,8 @@ export const HIDE_MARKS = new Set([
   "EmphasisMark",
   "CodeMark",
   "WikiLinkMark",
+  "HighlightMark",
+  "StrikethroughMark",
 ]);
 
 export const MARK_HIDING_THEME = EditorView.baseTheme({

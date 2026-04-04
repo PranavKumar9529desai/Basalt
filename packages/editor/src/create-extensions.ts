@@ -15,6 +15,7 @@ import {
   SUGGESTIONS_THEME,
 } from "./extensions/suggestions";
 import { TASK_CHECKBOX_THEME, taskListPlugin } from "./extensions/task-list";
+import { highlightExtension } from "./extensions/highlight-grammar";
 import {
   clickableLinksPlugin,
   wikiLinkExtension,
@@ -40,7 +41,7 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     markdown({
       base: markdownLanguage,
       codeLanguages: languages,
-      extensions: [wikiLinkExtension],
+      extensions: [wikiLinkExtension, highlightExtension],
     }),
     ...themeStack,
     TASK_CHECKBOX_THEME,

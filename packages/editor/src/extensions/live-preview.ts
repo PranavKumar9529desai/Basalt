@@ -28,6 +28,7 @@ import {
   BLOCKQUOTES_THEME,
   handleBlockquoteNode,
 } from "./decorations/blockquotes";
+import { CALLOUTS_THEME, handleCalloutNode } from "./decorations/callouts";
 import {
   CODE_BLOCKS_THEME,
   handleCodeBlockNode,
@@ -39,13 +40,21 @@ import {
   handleHeadingNode,
 } from "./decorations/headings";
 import {
+  FRONTMATTER_THEME,
+  handleFrontmatterFallback,
+  handleFrontmatterNode,
+} from "./decorations/frontmatter";
+import {
   handleInlineNode,
+  handleTagsInLine,
   INLINE_MARKS_THEME,
 } from "./decorations/inline-marks";
 import {
   handleMarkHidingNode,
   MARK_HIDING_THEME,
 } from "./decorations/mark-hiding";
+import { handleListNode, LISTS_THEME } from "./decorations/lists";
+import { handleTableNode, TABLES_THEME } from "./decorations/tables";
 import type {
   DecorationCollector,
   DecorationContext,
@@ -60,8 +69,12 @@ export const LIVE_PREVIEW_THEME = [
   HEADINGS_THEME,
   CODE_BLOCKS_THEME,
   BLOCKQUOTES_THEME,
+  CALLOUTS_THEME,
   INLINE_MARKS_THEME,
   MARK_HIDING_THEME,
+  LISTS_THEME,
+  TABLES_THEME,
+  FRONTMATTER_THEME,
 ];
 
 // ---------------------------------------------------------------------------
@@ -125,6 +138,8 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
     ensureSyntaxTree(view.state, view.state.doc.length, 50) ??
     syntaxTree(view.state);
 
+  let frontmatterFound = false;
+
   tree.iterate({
     enter(node) {
       // Code blocks: line classes + header/footer block widgets
@@ -139,10 +154,28 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
       // Heading line classes
       handleHeadingNode(node, ctx, collector);
 
-      // Blockquote line classes
-      handleBlockquoteNode(node, 0, view.state.doc.length, ctx, collector);
+      // Try callout first — if it matches, skip plain blockquote styling
+      if (!handleCalloutNode(node, ctx, collector)) {
+        handleBlockquoteNode(node, 0, view.state.doc.length, ctx, collector);
+      }
+
+      // List item depth classes + bullet/number widgets
+      handleListNode(node, ctx, collector);
+
+      // Table row/delimiter line classes
+      if (handleTableNode(node, ctx, collector)) {
+        return false;
+      }
+
+      if (handleFrontmatterNode(node, ctx, collector)) {
+        frontmatterFound = true;
+      }
     },
   });
+
+  if (!frontmatterFound) {
+    handleFrontmatterFallback(ctx, collector);
+  }
 
   // Heading-7 line classes (post-walk)
   handleHeading7Lines(0, view.state.doc.length, ctx, collector);
@@ -203,6 +236,16 @@ function buildInlineDecorations(view: EditorView): DecorationSet {
         handleMarkHidingNode(node, ctx, collector);
       },
     });
+  }
+
+  // Tag scan: regex pass over visible lines
+  for (const range of view.visibleRanges) {
+    const startLine = view.state.doc.lineAt(range.from);
+    const endLine = view.state.doc.lineAt(range.to);
+    for (let ln = startLine.number; ln <= endLine.number; ln++) {
+      const line = view.state.doc.line(ln);
+      handleTagsInLine(line.from, line.text, ctx.codeBlockRanges, collector);
+    }
   }
 
   return finish();
