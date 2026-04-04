@@ -35,6 +35,8 @@ pub struct ContentResult {
 pub struct FileResult {
     /// Absolute path of the note on disk.
     pub path: String,
+    /// Filename stem (e.g. `"borrow-checker"` from `rust/borrow-checker.md`).
+    pub title: String,
     /// Nucleo alignment score (higher = better match).
     pub score: u32,
 }
