@@ -21,6 +21,7 @@ export interface UseVaultCreateMutationsReturn {
     name: string,
     parent?: string,
   ) => Promise<CreateNoteResult | null>;
+  createUntitledNote: (parent?: string) => Promise<CreateNoteResult | null>;
   createFolder: (name: string, parent?: string) => Promise<string | null>;
   movePaths: (
     sourcePaths: string[],
@@ -91,6 +92,25 @@ export function useVaultCreateMutations(): UseVaultCreateMutationsReturn {
     [],
   );
 
+  const createUntitledNote = useCallback(
+    async (parent?: string): Promise<CreateNoteResult | null> => {
+      setError(null);
+      setIsLoading(true);
+      try {
+        const result = await invoke<CreateNoteResult>("create_untitled_note", {
+          parent: parent ?? null,
+        });
+        return result;
+      } catch (err) {
+        setError(String(err));
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
   const createFolder = useCallback(
     async (name: string, parent?: string): Promise<string | null> => {
       setError(null);
@@ -138,6 +158,7 @@ export function useVaultCreateMutations(): UseVaultCreateMutationsReturn {
     createFolderInline,
     clearGhost,
     createNote,
+    createUntitledNote,
     createFolder,
     movePaths,
     error,
