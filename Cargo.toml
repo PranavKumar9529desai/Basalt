@@ -6,5 +6,6 @@ members = [
     "crates/basalt_wasm",
     "crates/basalt_search",
     "crates/basalt-types",
+    "crates/basalt-parser",
     "apps/tauri/src-tauri",
 ]
