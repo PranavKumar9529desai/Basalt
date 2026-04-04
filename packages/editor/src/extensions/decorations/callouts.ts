@@ -163,6 +163,10 @@ export function handleCalloutNode(
   const endLine = doc.lineAt(node.to);
 
   for (let ln = firstLine.number; ln <= endLine.number; ln++) {
+    // Skip adding a line class to the first line when it will be replaced by
+    // the header widget — CodeMirror cannot have both a Decoration.line and a
+    // block Decoration.replace on the same line position.
+    if (!hasCursor && ln === firstLine.number) continue;
     const line = doc.line(ln);
     collector.addLineClass(line.from, "cm-live-callout");
     collector.addLineClass(line.from, `cm-live-callout-${canonical}`);
