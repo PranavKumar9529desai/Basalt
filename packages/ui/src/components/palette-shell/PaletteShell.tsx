@@ -28,7 +28,7 @@ export function PaletteShell({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "p-0 overflow-hidden border-none shadow-none bg-popover top-[15vh] translate-y-0",
+          "p-0 overflow-hidden border-none shadow-none bg-popover top-[15vh] translate-y-0 ring-1 ring-border",
           maxWidth,
         )}
         showCloseButton={false}
