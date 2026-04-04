@@ -335,7 +335,7 @@ export function TabsBar({
                   width: 12,
                   height: 12,
                   borderRadius: "100%",
-                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  boxShadow: "0 0 0 40px var(--sat-editor-background)",
                   clipPath: "inset(50% -6px 0 50%)",
                 }}
               />
@@ -348,7 +348,7 @@ export function TabsBar({
                   width: 12,
                   height: 12,
                   borderRadius: "100%",
-                  boxShadow: "0 0 0 40px var(--sat-surface-1)",
+                  boxShadow: "0 0 0 40px var(--sat-editor-background)",
                   clipPath: "inset(50% 50% 0 -6px)",
                 }}
               />

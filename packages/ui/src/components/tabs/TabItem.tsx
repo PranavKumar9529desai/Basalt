@@ -53,7 +53,7 @@ export function TabItem({
             className={cn(
               "group/item relative flex items-center gap-1 rounded-t-lg border border-b-0 px-1.5 py-1 transition-colors select-none",
               tab.isActive
-                ? "z-20 border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]"
+                ? "z-20 border-[var(--sat-layout-border)] bg-[var(--sat-editor-background)]"
                 : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]/70",
               className,
             )}
@@ -104,7 +104,7 @@ export function TabItem({
             "flex h-7 min-w-[170px] max-w-[300px] flex-1 items-center justify-start gap-1 rounded-sm border border-transparent px-2 transition-colors",
             tab.isActive
               ? "text-[var(--sat-text-primary)]"
-              : "text-[var(--sat-text-secondary)] opacity-85 hover:opacity-100",
+              : "text-[var(--sat-text-muted)] opacity-85 hover:opacity-100",
             tab.isPreview && "italic",
             tab.disabled && "cursor-not-allowed opacity-50",
           )}
@@ -119,13 +119,16 @@ export function TabItem({
           ) : null}
         </div>
 
-        {canClose && tab.isActive ? (
+        {canClose ? (
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
             draggable={false}
-            className="text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)] z-10"
+            className={cn(
+              "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)] z-10",
+              !tab.isActive && "invisible group-hover/item:visible",
+            )}
             onClick={(event) => {
               event.stopPropagation();
               onClose?.(tab.id);

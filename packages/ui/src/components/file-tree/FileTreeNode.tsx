@@ -210,7 +210,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = ({
         "group flex items-center w-full h-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
         // Avoid transform transitions causing subpixel antialiasing weirdness on Webkit:
         "transform-gpu transition-colors duration-75",
-        "rounded-[4px]",
+        "rounded-md",
         isEditing
           ? "bg-[var(--sat-surface-2)]"
           : isSelected
