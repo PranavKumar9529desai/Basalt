@@ -22,6 +22,7 @@ const baseTheme = EditorView.theme({
     maxHeight: "100%",
     overflow: "auto",
     padding: "24px 32px",
+    fontFamily: "var(--sat-font-sans)",
   },
   ".cm-content": {
     fontFamily: "inherit",

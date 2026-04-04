@@ -14,7 +14,7 @@ export const SUGGESTIONS_THEME = EditorView.baseTheme({
     borderRadius: "6px",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
     padding: "4px",
-    fontFamily: "var(--font-sans, system-ui, sans-serif)",
+    fontFamily: "var(--sat-font-sans, system-ui, sans-serif)",
   },
   ".cm-tooltip-autocomplete > ul": {
     maxHeight: "300px",
