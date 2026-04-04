@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use basalt_fs::path_utils::resolve_creation_path;
+use basalt_vault::path_utils::resolve_creation_path;
 use serde::Serialize;
 use tauri::Emitter;
 use tauri::State;

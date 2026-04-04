@@ -1,0 +1,18 @@
+[package]
+name = "basalt-search"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+basalt-types = { path = "../basalt-types" }
+basalt-graph = { path = "../basalt-graph" }
+basalt-vault = { path = "../basalt-vault" }
+tantivy = "0.22"
+nucleo-matcher = "0.3"
+aho-corasick = "1.1"
+anyhow = "1.0"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3"

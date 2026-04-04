@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use basalt_fs::watcher::VaultWatcher;
+use basalt_vault::watcher::VaultWatcher;
 use serde::Serialize;
 use tauri::Emitter;
 

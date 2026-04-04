@@ -1,0 +1,9 @@
+[package]
+name = "basalt-graph"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+basalt-types = { path = "../basalt-types" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2.0.18"

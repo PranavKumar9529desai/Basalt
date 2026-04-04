@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use basalt_fs::{incremental_reindex, indexer::index_directory, VaultCache};
+use basalt_vault::{incremental_reindex, indexer::index_directory, VaultCache};
 use tauri::Manager;
 
 use crate::app_state::AppState;

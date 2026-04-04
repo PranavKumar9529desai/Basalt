@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use basalt_fs::{build_flat_tree, indexer::index_directory, VaultCache};
+use basalt_vault::{build_flat_tree, indexer::index_directory, VaultCache};
 use serde::Serialize;
 use tauri::State;
 
@@ -47,7 +47,7 @@ pub fn reindex_vault(
 pub fn get_vault_tree(
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<Vec<basalt_fs::FlatTreeNode>, String> {
+) -> Result<Vec<basalt_vault::FlatTreeNode>, String> {
     let config = load_config(&app);
     let vault_path = config
         .last_vault
