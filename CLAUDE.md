@@ -21,7 +21,7 @@ Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms
 | Theming (`--sat-*` tokens) | ✅ Established |
 | Command palette | ✅ Working |
 | File tree / sidebar | 🔄 In progress |
-| Search | ⏳ Not started (after command palette) |
+| Search (⌘F + ⌘O, tantivy + nucleo) | ✅ Complete — see [ADR-008](docs/adr/008-native-search-architecture.md) |
 | NoteGraph / backlinks | ⏳ Not started |
 | Rust acceleration (batched IPC) | ⏳ Phase 5 pending |
 
@@ -50,6 +50,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [005-zustand-feature-state](docs/adr/005-zustand-feature-state.md) | ADR-005: Zustand for Feature State Management |
 | [006-pane-manager-per-pane-editor](docs/adr/006-pane-manager-per-pane-editor.md) | ADR-006: PaneManager — One Editor Instance Per Visible Pane |
 | [007-typescript-rust-responsibilities](docs/adr/007-typescript-rust-responsibilities.md) | ADR-007: TypeScript vs Rust Responsibility Split |
+| [008-native-search-architecture](docs/adr/008-native-search-architecture.md) | ADR-008: Native Search Architecture — Tantivy + Nucleo |
 <!-- ADR_INDEX_END -->
 
 ## How to Work on This Project

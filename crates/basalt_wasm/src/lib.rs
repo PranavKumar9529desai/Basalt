@@ -1,4 +1,4 @@
-use basalt_core::{extract_metadata, fuzzy_match, process_markdown, search_commands};
+use basalt_core::{extract_metadata, process_markdown, search_commands};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
