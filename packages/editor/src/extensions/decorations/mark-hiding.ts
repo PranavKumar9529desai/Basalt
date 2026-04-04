@@ -18,6 +18,12 @@ export const MARK_HIDING_THEME = EditorView.baseTheme({
   ".cm-live-hide": {
     display: "none",
   },
+  ".cm-live-block-mark": {
+    color: "#94a3b8",
+  },
+  ".cm-live-inline-mark": {
+    color: "#94a3b8",
+  },
 });
 
 /**
@@ -42,7 +48,22 @@ export function handleMarkHidingNode(
     ? node.from >= ctx.activeLine.from && node.to <= ctx.activeLine.to
     : false;
 
-  if (onActiveLine) return true; // Don't hide marks on the active line
+  if (onActiveLine) {
+    // Style marks as muted rather than hiding them
+    if (name === "HeaderMark" || name === "QuoteMark") {
+      const docLength = ctx.view.state.doc.length;
+      let markTo = node.to;
+      while (markTo < docLength) {
+        const nextChar = ctx.view.state.doc.sliceString(markTo, markTo + 1);
+        if (nextChar === " ") markTo += 1;
+        else break;
+      }
+      collector.addMark(node.from, markTo, "cm-live-block-mark");
+    } else {
+      collector.addMark(node.from, node.to, "cm-live-inline-mark");
+    }
+    return true;
+  }
 
   const hideFrom = node.from;
   let hideTo = node.to;
