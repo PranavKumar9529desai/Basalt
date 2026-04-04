@@ -21,22 +21,27 @@ export function SettingsModal() {
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Settings"
-      className="fixed inset-0 z-50 flex bg-[var(--sat-surface-1)]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
-      <SettingsNav />
-      <SettingsPanel />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={close}
-        className="absolute right-3 top-3 text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-        aria-label="Close settings"
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        className="relative flex w-[85vw] h-[85vh] overflow-hidden rounded-xl bg-[var(--sat-surface-1)] shadow-2xl"
       >
-        <IconX size={14} />
-      </Button>
+        <SettingsNav />
+        <SettingsPanel />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={close}
+          className="absolute right-3 top-3 text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+          aria-label="Close settings"
+        >
+          <IconX size={14} />
+        </Button>
+      </div>
     </div>
   );
 }
