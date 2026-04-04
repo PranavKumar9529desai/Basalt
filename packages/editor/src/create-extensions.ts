@@ -6,6 +6,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import type { EditorConfig } from "./types";
 
 import { backticksKeymap } from "./extensions/backticks";
+import { yamlFrontmatterExtension } from "./extensions/frontmatter-parser";
 import {
   LIVE_PREVIEW_THEME,
   livePreviewPlugin,
@@ -41,7 +42,7 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     markdown({
       base: markdownLanguage,
       codeLanguages: languages,
-      extensions: [wikiLinkExtension, highlightExtension],
+      extensions: [wikiLinkExtension, highlightExtension, yamlFrontmatterExtension],
     }),
     ...themeStack,
     TASK_CHECKBOX_THEME,

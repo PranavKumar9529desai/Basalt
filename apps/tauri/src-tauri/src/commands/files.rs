@@ -177,10 +177,7 @@ pub fn create_note(
             .map_err(|e| format!("failed to create directory: {e}"))?;
     }
 
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let content = format!(
-        "---\ntype: note\ntopic:\nstatus: inbox\ncreated: {today}\nupdated: {today}\ntags: []\naliases: []\n---\n\n"
-    );
+    let content = String::new();
 
     std::fs::write(&file_path, &content).map_err(|e| format!("failed to write file: {e}"))?;
 
