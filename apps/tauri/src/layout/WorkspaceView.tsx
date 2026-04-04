@@ -1,6 +1,10 @@
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
-import { useCallback, useEffect, useMemo } from "react";
+import {
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+} from "@tabler/icons-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityBar } from "./ActivityBar";
 import { Sidebar } from "./Sidebar";
 import { ThemeSelect } from "./ThemeSelect";
@@ -40,6 +44,7 @@ interface WorkspaceViewProps {
 
 export function WorkspaceView({ boot }: WorkspaceViewProps) {
   const vaultPath = boot.vault_path;
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const {
     treeNodes,
@@ -308,6 +313,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
       <Sidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
+        collapsed={!sidebarOpen}
         onCreateNote={controller.createNoteInstant}
         onCreateFolder={controller.startFolderInline}
       >
@@ -331,6 +337,18 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         handleTabClose={handleTabClose}
         handleTabPinToggle={handleTabPinToggle}
         renderGroupPane={renderGroupPane}
+        tabBarLeftSlot={
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="p-1 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
+            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            {sidebarOpen
+              ? <IconLayoutSidebarLeftCollapse size={20} stroke={1.5} />
+              : <IconLayoutSidebarLeftExpand size={20} stroke={1.5} />}
+          </button>
+        }
       />
 
       <FileTreeContextMenu

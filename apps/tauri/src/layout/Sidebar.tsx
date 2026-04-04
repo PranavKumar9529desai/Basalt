@@ -15,6 +15,7 @@ import { type ReactNode, useRef, useCallback } from "react";
 interface SidebarProps {
   children: ReactNode;
   defaultWidth?: number;
+  collapsed?: boolean;
   onCreateNote: () => void;
   onCreateFolder: () => void;
 }
@@ -22,6 +23,7 @@ interface SidebarProps {
 export function Sidebar({
   children,
   defaultWidth,
+  collapsed,
   onCreateNote,
   onCreateFolder,
 }: SidebarProps) {
@@ -62,7 +64,7 @@ export function Sidebar({
   ];
 
   return (
-    <SidebarPanel defaultWidth={defaultWidth} onWidthChange={handleWidthChange}>
+    <SidebarPanel defaultWidth={defaultWidth} onWidthChange={handleWidthChange} collapsed={collapsed}>
       <SidebarHeader actions={actions} />
       {children}
     </SidebarPanel>

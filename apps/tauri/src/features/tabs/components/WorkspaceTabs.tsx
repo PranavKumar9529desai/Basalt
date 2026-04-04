@@ -25,6 +25,7 @@ export interface WorkspaceTabsProps {
   handleTabClose: (groupId: TabGroupId, tabId: string) => void;
   handleTabPinToggle: (tabId: string) => void;
   renderGroupPane?: (context: WorkspaceTabsGroupRenderContext) => ReactNode;
+  tabBarLeftSlot?: ReactNode;
 }
 
 export interface WorkspaceTabsGroupRenderContext {
@@ -47,6 +48,7 @@ export interface WorkspaceTabsGroupRenderContext {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onPinToggle: (tabId: string) => void;
+  tabBarLeftSlot?: ReactNode;
 }
 
 export function WorkspaceTabs({
@@ -55,6 +57,7 @@ export function WorkspaceTabs({
   handleTabClose,
   handleTabPinToggle,
   renderGroupPane,
+  tabBarLeftSlot,
 }: WorkspaceTabsProps) {
   const tabs = useTabs();
   const tabDnD = useTabDnD();
@@ -113,6 +116,7 @@ export function WorkspaceTabs({
               contextTabDnD.handleTabDropOnTab(group.id, tabId, event, edge)
             }
             onTabDragEnd={(_, event) => contextTabDnD.handleTabDragEnd(event)}
+            leftSlot={isFocused ? tabBarLeftSlot : undefined}
             rightSlot={
               isFocused ? (
                 <SaveIndicator status={editor.saveStatus} />
@@ -192,18 +196,20 @@ export function WorkspaceTabs({
           isPreview: tab.isPreview,
           canClose: true,
         }));
+      const isFocused = group.id === tabs.focusedGroupId;
       const context: WorkspaceTabsGroupRenderContext = {
         groupId: group.id,
         group,
         groupTabs,
         activeTab: groupActiveTab,
-        isFocused: group.id === tabs.focusedGroupId,
+        isFocused,
         tabDnD,
         markTabDirty: tabs.markTabDirty,
         onActivateGroup: () => tabs.setFocusedGroup(group.id),
         onSelectTab: (tabId) => handleTabSelect(group.id, tabId),
         onCloseTab: (tabId) => handleTabClose(group.id, tabId),
         onPinToggle: (tabId) => handleTabPinToggle(tabId),
+        tabBarLeftSlot: isFocused ? tabBarLeftSlot : undefined,
       };
       return renderPaneForGroup(context);
     }

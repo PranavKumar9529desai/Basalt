@@ -15,7 +15,7 @@ export interface SidebarHeaderProps {
 
 export const SidebarHeader: FC<SidebarHeaderProps> = ({ actions }) => {
   return (
-    <div className="flex bg-[var(--sat-surface-2)] items-center h-9 shrink-0 border-b border-[var(--sat-layout-border)] px-2 gap-1">
+    <div className="flex bg-[var(--sat-surface-2)] items-center h-9 shrink-0 border-t border-[var(--sat-layout-border)] px-2 gap-1">
       <div className="flex items-center gap-1 mx-auto">
         {actions.map((action) => (
           <Tooltip key={action.id}>

@@ -46,6 +46,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
     onSelectTab,
     onCloseTab,
     onPinToggle,
+    tabBarLeftSlot,
   } = context;
 
   if (!group) {
@@ -156,6 +157,7 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
             handleTabDropOnTab(group.id, tabId, event)
           }
           onTabDragEnd={(_, event) => handleTabDragEnd(event)}
+          leftSlot={tabBarLeftSlot}
           rightSlot={
             activeTab ? <SaveIndicator status={editor.saveStatus} /> : undefined
           }
@@ -163,35 +165,37 @@ function PaneInstance({ context, findNote }: PaneInstanceProps) {
       }
       className="flex-1 min-h-0 border-0"
     >
-      {activeTab ? (
-        <>
-          {editor.saveStatus === "conflict" && (
-            <ConflictBanner
-              onKeepMine={editor.performSave}
-              onDiscard={editor.discardAndReload}
-            />
+      <div className="flex flex-1 min-h-0 flex-col">
+          {activeTab ? (
+            <>
+              {editor.saveStatus === "conflict" && (
+                <ConflictBanner
+                  onKeepMine={editor.performSave}
+                  onDiscard={editor.discardAndReload}
+                />
+              )}
+              <div
+                className="flex flex-1 flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]"
+                onPointerDownCapture={handlePanePointerDown}
+              >
+                <Editor
+                  className="flex-1 min-h-0"
+                  value={editor.content}
+                  onChange={handleEditorChange}
+                  initialContent=""
+                  onFetchLinks={editor.onFetchLinks}
+                  onFetchTags={editor.onFetchTags}
+                  onOpenLink={editor.handleOpenLink}
+                  onSearch={(query) => {
+                    console.log("Searching for:", query);
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <InactiveGroupPane activeTitle={null} onActivate={onActivateGroup} />
           )}
-          <div
-            className="flex flex-1  flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]"
-            onPointerDownCapture={handlePanePointerDown}
-          >
-            <Editor
-              className="flex-1 min-h-0"
-              value={editor.content}
-              onChange={handleEditorChange}
-              initialContent=""
-              onFetchLinks={editor.onFetchLinks}
-              onFetchTags={editor.onFetchTags}
-              onOpenLink={editor.handleOpenLink}
-              onSearch={(query) => {
-                console.log("Searching for:", query);
-              }}
-            />
-          </div>
-        </>
-      ) : (
-        <InactiveGroupPane activeTitle={null} onActivate={onActivateGroup} />
-      )}
+      </div>
     </TabGroupFrame>
   );
 }
