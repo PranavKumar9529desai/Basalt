@@ -1,5 +1,3 @@
-import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
-import { FileTreeContextMenu } from "@workspace/ui/components/file-tree";
 import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
@@ -11,13 +9,12 @@ import { ThemeSelect } from "./ThemeSelect";
 import { AppCommands } from "./commands";
 import { useEditorSessionsStore } from "../features/editor/store";
 import { usePaneManager } from "../features/editor/PaneInstance";
-import { QuickSwitcher, SearchModal } from "../features/search";
-import { SettingsModal } from "../features/settings";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
 import { useTabsStore } from "../features/tabs/store";
 import { useWorkspaceTabHandlers } from "./useWorkspaceTabHandlers";
+import { WorkspaceOverlays } from "./WorkspaceOverlays";
 import { FileTree } from "../features/vault/components/FileTree";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
@@ -260,44 +257,13 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         }
       />
 
-      <FileTreeContextMenu
-        open={contextMenu.isOpen}
-        anchor={contextMenu.menuState.anchor}
-        targetKind={contextMenu.menuState.target?.kind ?? null}
-        isMultiSelect={controller.isMultiSelectContextMenu}
-        canPaste={controller.canPasteToMenuTarget}
-        onOpenChange={(open) => {
-          if (!open) contextMenu.closeMenu();
-        }}
-        onNewNote={controller.onMenuNewNote}
-        onNewFolder={controller.onMenuNewFolder}
-        onCut={controller.onMenuCut}
-        onPaste={controller.onMenuPaste}
-        onDelete={controller.onMenuDelete}
+      <WorkspaceOverlays
+        contextMenu={contextMenu}
+        mutations={mutations}
+        controller={controller}
+        onConfirmDelete={handleConfirmDeleteWithTabs}
+        onSearchOpen={handleSearchOpen}
       />
-
-      <ConfirmDialog
-        open={mutations.isDeleteConfirmOpen}
-        onOpenChange={mutations.setDeleteConfirmOpen}
-        title={
-          mutations.pendingDeletePaths.length > 1
-            ? "Delete selected items"
-            : "Delete note"
-        }
-        description={
-          mutations.pendingDeletePaths.length > 1
-            ? `Permanently delete ${mutations.pendingDeletePaths.length} selected items? This cannot be undone.`
-            : `Permanently delete "${mutations.pendingDeleteName}"? This cannot be undone.`
-        }
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={handleConfirmDeleteWithTabs}
-        isLoading={mutations.isLoading}
-      />
-
-      <SearchModal onOpen={handleSearchOpen} />
-      <QuickSwitcher onOpen={handleSearchOpen} />
-      <SettingsModal />
     </div>
   );
 }
