@@ -17,7 +17,7 @@ import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
 import { useTabsStore } from "../features/tabs/store";
-import type { TabGroupId } from "../features/tabs/types";
+import { useWorkspaceTabHandlers } from "./useWorkspaceTabHandlers";
 import { FileTree } from "../features/vault/components/FileTree";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
@@ -149,27 +149,19 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     },
   });
 
-  const handleTabSelect = useCallback(
-    (groupId: TabGroupId, tabId: string) => {
-      setFocusedGroup(groupId);
-      activateTab(groupId, tabId);
+  const tabHandlers = useWorkspaceTabHandlers({
+    tabActions: {
+      groups: tabs.groups,
+      activateTab,
+      closeTab,
+      closeOtherTabs,
+      closeTabsToRight,
+      togglePinTab,
+      splitGroupWithTab,
+      setFocusedGroup,
     },
-    [activateTab, setFocusedGroup],
-  );
-
-  const handleTabClose = useCallback(
-    (groupId: TabGroupId, tabId: string) => {
-      closeTab(groupId, tabId, { force: true });
-    },
-    [closeTab],
-  );
-
-  const handleTabPinToggle = useCallback(
-    (tabId: string) => {
-      togglePinTab(tabId);
-    },
-    [togglePinTab],
-  );
+    focusedSessionTab,
+  });
 
   const handleConfirmDeleteWithTabs = useCallback(async () => {
     const deletedPaths = [...mutations.pendingDeletePaths];
@@ -186,89 +178,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
       }
     }
   }, [controller, mutations.pendingDeletePaths]);
-
-  const handleCloseActiveTab = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        closeTab(group.id, tab.id, { force: true });
-        break;
-      }
-    }
-  }, [closeTab, focusedSessionTab, tabs.groups]);
-
-  const handleCloseOtherTabs = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        closeOtherTabs(group.id, tab.id);
-        break;
-      }
-    }
-  }, [closeOtherTabs, focusedSessionTab, tabs.groups]);
-
-  const handleCloseTabsToRight = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        closeTabsToRight(group.id, tab.id);
-        break;
-      }
-    }
-  }, [closeTabsToRight, focusedSessionTab, tabs.groups]);
-
-  const handleTogglePinActiveTab = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    togglePinTab(tab.id);
-  }, [focusedSessionTab, togglePinTab]);
-
-  const handleSplitRight = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        splitGroupWithTab(group.id, "right", tab.id);
-        break;
-      }
-    }
-  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
-
-  const handleSplitLeft = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        splitGroupWithTab(group.id, "left", tab.id);
-        break;
-      }
-    }
-  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
-
-  const handleSplitUp = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        splitGroupWithTab(group.id, "top", tab.id);
-        break;
-      }
-    }
-  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
-
-  const handleSplitDown = useCallback(() => {
-    const tab = focusedSessionTab;
-    if (!tab) return;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        splitGroupWithTab(group.id, "bottom", tab.id);
-        break;
-      }
-    }
-  }, [focusedSessionTab, splitGroupWithTab, tabs.groups]);
 
   const handleSearchOpen = useCallback(
     (path: string) => {
@@ -299,14 +208,14 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
       <AppCommands
         onCreateNote={controller.createNoteInstant}
         onDeleteNote={controller.handleDeleteFromCommands}
-        onCloseActiveTab={handleCloseActiveTab}
-        onCloseOtherTabs={handleCloseOtherTabs}
-        onCloseTabsToRight={handleCloseTabsToRight}
-        onTogglePinActiveTab={handleTogglePinActiveTab}
-        onSplitRight={handleSplitRight}
-        onSplitLeft={handleSplitLeft}
-        onSplitTop={handleSplitUp}
-        onSplitBottom={handleSplitDown}
+        onCloseActiveTab={tabHandlers.handleCloseActiveTab}
+        onCloseOtherTabs={tabHandlers.handleCloseOtherTabs}
+        onCloseTabsToRight={tabHandlers.handleCloseTabsToRight}
+        onTogglePinActiveTab={tabHandlers.handleTogglePinActiveTab}
+        onSplitRight={tabHandlers.handleSplitRight}
+        onSplitLeft={tabHandlers.handleSplitLeft}
+        onSplitTop={tabHandlers.handleSplitUp}
+        onSplitBottom={tabHandlers.handleSplitDown}
         hasActiveTab={Boolean(focusedSessionTab)}
       />
       <ActivityBar />
@@ -333,15 +242,15 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
       </Sidebar>
 
       <WorkspaceTabs
-        handleTabSelect={handleTabSelect}
-        handleTabClose={handleTabClose}
-        handleTabPinToggle={handleTabPinToggle}
+        handleTabSelect={tabHandlers.handleTabSelect}
+        handleTabClose={tabHandlers.handleTabClose}
+        handleTabPinToggle={tabHandlers.handleTabPinToggle}
         renderGroupPane={renderGroupPane}
         tabBarLeftSlot={
           <button
             type="button"
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
+            className="p-1 pb-2 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors "
             title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             {sidebarOpen
