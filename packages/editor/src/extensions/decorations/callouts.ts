@@ -37,7 +37,7 @@ const CALLOUT_ICONS: Record<string, string> = {
 const CALLOUT_RE = /^>\s*\[!([a-zA-Z]+)\]([+-]?)(?:\s+(.*))?$/;
 
 const CALLOUT_COLORS: Record<string, { border: string; bg: string; icon: string }> = {
-  note:     { border: "var(--sat-callout-note-border, #3b82f6)",     bg: "var(--sat-callout-note-bg, rgba(59,130,246,0.18))",     icon: "var(--sat-callout-note-icon, #93c5fd)" },
+  note:     { border: "var(--sat-callout-note-border, #8b5cf6)",     bg: "var(--sat-callout-note-bg, rgba(139,92,246,0.12))",     icon: "var(--sat-callout-note-icon, #a78bfa)" },
   abstract: { border: "var(--sat-callout-abstract-border, #06b6d4)", bg: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.18))",  icon: "var(--sat-callout-abstract-icon, #67e8f9)" },
   info:     { border: "var(--sat-callout-info-border, #3b82f6)",     bg: "var(--sat-callout-info-bg, rgba(59,130,246,0.18))",     icon: "var(--sat-callout-info-icon, #93c5fd)" },
   todo:     { border: "var(--sat-callout-todo-border, #3b82f6)",     bg: "var(--sat-callout-todo-bg, rgba(59,130,246,0.18))",     icon: "var(--sat-callout-todo-icon, #93c5fd)" },
@@ -76,7 +76,7 @@ export const CALLOUTS_THEME = EditorView.baseTheme({
     cursor: "pointer",
     fontSize: "0.75rem",
   },
-  ".cm-line.cm-live-callout-note":     { borderLeft: "3px solid var(--sat-callout-note-border, #3b82f6)",     backgroundColor: "var(--sat-callout-note-bg, rgba(59,130,246,0.12))" },
+  ".cm-line.cm-live-callout-note":     { borderLeft: "3px solid var(--sat-callout-note-border, #8b5cf6)",     backgroundColor: "var(--sat-callout-note-bg, rgba(139,92,246,0.08))" },
   ".cm-line.cm-live-callout-abstract": { borderLeft: "3px solid var(--sat-callout-abstract-border, #06b6d4)", backgroundColor: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.12))" },
   ".cm-line.cm-live-callout-info":     { borderLeft: "3px solid var(--sat-callout-info-border, #3b82f6)",     backgroundColor: "var(--sat-callout-info-bg, rgba(59,130,246,0.12))" },
   ".cm-line.cm-live-callout-todo":     { borderLeft: "3px solid var(--sat-callout-todo-border, #3b82f6)",     backgroundColor: "var(--sat-callout-todo-bg, rgba(59,130,246,0.12))" },
@@ -117,11 +117,15 @@ export class CalloutHeaderWidget extends WidgetType {
     header.className = "cm-callout-header";
     header.style.backgroundColor = colors.bg;
     header.style.borderLeft = `3px solid ${colors.border}`;
-    header.style.color = colors.icon;
 
-    header.innerHTML = icon;
+    const iconWrapper = document.createElement("span");
+    iconWrapper.style.color = colors.icon;
+    iconWrapper.style.display = "flex";
+    iconWrapper.innerHTML = icon;
+    header.appendChild(iconWrapper);
 
     const titleSpan = document.createElement("span");
+    titleSpan.style.color = colors.border;
     titleSpan.textContent =
       this.title || canonical.charAt(0).toUpperCase() + canonical.slice(1);
     header.appendChild(titleSpan);
@@ -147,7 +151,7 @@ export function handleCalloutNode(
   ctx: DecorationContext,
   collector: DecorationCollector,
 ): boolean {
-  if (node.type.name !== "BlockQuote") return false;
+  if (node.type.name !== "Blockquote") return false;
 
   const doc = ctx.view.state.doc;
   const firstLine = doc.lineAt(node.from);

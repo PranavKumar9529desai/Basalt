@@ -21,7 +21,7 @@ export function handleBlockquoteNode(
   ctx: DecorationContext,
   collector: DecorationCollector,
 ): boolean {
-  if (node.type.name !== "BlockQuote") return false;
+  if (node.type.name !== "Blockquote") return false;
 
   const doc = ctx.view.state.doc;
   const startLine = doc.lineAt(Math.max(node.from, rangeFrom));

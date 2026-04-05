@@ -16,6 +16,9 @@ import { useWorkspaceSidebar } from "../hooks/useWorkspaceSidebar";
 import type { BootResult, FlatTreeNode } from "../../vault";
 import type { TabClickOpenBehavior } from "../../tabs";
 
+
+// Tech Debut 
+// i dont know what does
 function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
   if (value === "preview" || value === "pinned" || value === "vscode") {
     return value;
