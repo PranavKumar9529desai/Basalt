@@ -1,17 +1,40 @@
 /**
  * Live Preview Orchestrator
  *
- * Block decorations (Decoration.line, Decoration.replace({block:true})) MUST
- * come from a StateField – ViewPlugin is only allowed to produce inline marks.
+ * ## Decoration types and where they live
+ *
+ * | Type                          | What it does                                      | Where it lives  |
+ * |-------------------------------|---------------------------------------------------|-----------------|
+ * | Decoration.line()             | Adds a CSS class to a whole line element          | StateField only |
+ * | Decoration.replace({ block: false }) | Hides a range and shows a widget inline.   | StateField only |
+ * |                               | The line still exists in the document — cursor    |                 |
+ * |                               | can navigate to it via click or arrow keys.       |                 |
+ * | Decoration.mark()             | Adds a CSS class to an inline text span           | ViewPlugin only |
+ *
+ * ## Why NOT block: true
+ *
+ * Decoration.replace({ block: true }) yanks the replaced range out of normal
+ * line flow and treats it as a floating block between lines. This breaks cursor
+ * navigation: up/down arrows skip the widget entirely and mouse clicks on it do
+ * not map back to any document position. Avoid it — use block: false (default)
+ * and let the widget's own CSS (display: block / flex) control its visual size.
+ *
+ * ## Why StateField vs ViewPlugin
+ *
+ * Decoration.line() and Decoration.replace() must be provided by a StateField
+ * because CodeMirror requires those decoration sets to cover the full document
+ * (not just the visible viewport). ViewPlugins are only allowed to emit
+ * Decoration.mark() (inline marks), which are safe to produce per-viewport.
  *
  * Architecture:
  *   StateField  `livePreviewBlockField`
- *     - Iterates the FULL syntax tree (doc-scoped) on every relevant change.
- *     - Emits: line-class decorations, block replace widgets (code header/footer).
+ *     - Iterates the FULL syntax tree on every relevant change.
+ *     - Emits: Decoration.line() classes, Decoration.replace() widgets
+ *       (HR, callout header, code fence header/footer).
  *
  *   ViewPlugin  `livePreviewInlinePlugin`
  *     - Iterates only visible ranges.
- *     - Emits: mark decorations (inline-code, wikilink, mark-hiding).
+ *     - Emits: Decoration.mark() only (inline-code, wikilink, mark-hiding).
  *
  * Both are exported together as `livePreviewPlugin` (an array of extensions).
  */
