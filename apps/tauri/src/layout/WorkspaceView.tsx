@@ -12,21 +12,15 @@ import { usePaneManager } from "../features/editor/PaneInstance";
 import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
 import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
 import { useTabs } from "../features/tabs/hooks/useTabs";
-import { useTabsStore } from "../features/tabs/store";
 import { useWorkspaceTabHandlers } from "./useWorkspaceTabHandlers";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 import { FileTree } from "../features/vault/components/FileTree";
 import { VaultSplash } from "../features/vault/components/VaultSplash";
 import { useVaultActions } from "../features/vault/hooks/useVaultActions";
-import { useVaultClipboard } from "../features/vault/hooks/useVaultClipboard";
-import { useVaultContextMenu } from "../features/vault/hooks/useVaultContextMenu";
-import { useVaultFileTreeController } from "../features/vault/hooks/useVaultFileTreeController";
-import { useVaultMutations } from "../features/vault/hooks/useVaultMutations";
-import { useVaultSelection } from "../features/vault/hooks/useVaultSelection";
 import { useVaultTree } from "../features/vault/hooks/useVaultTree";
+import { useWorkspaceSidebar } from "./useWorkspaceSidebar";
 import type { BootResult, FlatTreeNode } from "../features/vault/types";
-
-type TabClickOpenBehavior = "preview" | "pinned" | "vscode";
+import type { TabClickOpenBehavior } from "../features/tabs/types";
 
 function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
   if (value === "preview" || value === "pinned" || value === "vscode") {
@@ -103,48 +97,25 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     return null;
   }, [focusedSessionSelected?.path, tabs.groups, tabs.tabs]);
 
-  const mutations = useVaultMutations();
-  const selection = useVaultSelection();
-  const clipboard = useVaultClipboard();
-  const contextMenu = useVaultContextMenu();
-  const controller = useVaultFileTreeController({
-    treeNodes,
-    visibleNodes,
-    vaultPath,
-    editor: {
-      selected: focusedSessionSelected,
-      loadNote: (note) => {
-        const tabId = openInPreview({ path: note.path, title: note.name });
-        setTabTitle(tabId, note.name);
+  const { controller, mutations, contextMenu, selection, handleConfirmDeleteWithTabs } =
+    useWorkspaceSidebar({
+      vaultPath,
+      treeNodes,
+      visibleNodes,
+      openFolder,
+      toggleFolder,
+      refreshTree,
+      editor: {
+        focusedSessionSelected,
+        focusedSessionTab,
+        groups: tabs.groups,
+        openInPreview,
+        openPinned,
+        setTabTitle,
+        closeTab,
+        tabClickOpenBehavior,
       },
-      closeNote: () => {
-        const tab = focusedSessionTab;
-        if (!tab) return;
-        for (const group of Object.values(tabs.groups)) {
-          if (group.tabIds.includes(tab.id)) {
-            closeTab(group.id, tab.id, { force: true });
-            break;
-          }
-        }
-      },
-    },
-    mutations,
-    selection,
-    clipboard,
-    contextMenu,
-    openFolder,
-    toggleFolder,
-    refreshTree,
-    onFileOpen: (node, mode) => {
-      const effectiveMode =
-        tabClickOpenBehavior === "vscode" ? mode : tabClickOpenBehavior;
-      const tabId =
-        effectiveMode === "pinned"
-          ? openPinned({ path: node.path, title: node.name })
-          : openInPreview({ path: node.path, title: node.name });
-      setTabTitle(tabId, node.name);
-    },
-  });
+    });
 
   const tabHandlers = useWorkspaceTabHandlers({
     tabActions: {
@@ -159,22 +130,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     },
     focusedSessionTab,
   });
-
-  const handleConfirmDeleteWithTabs = useCallback(async () => {
-    const deletedPaths = [...mutations.pendingDeletePaths];
-    await controller.handleConfirmDelete();
-
-    const state = useTabsStore.getState();
-    for (const path of deletedPaths) {
-      const tabId = `tab:${path}`;
-      for (const group of Object.values(state.groups)) {
-        if (group.tabIds.includes(tabId)) {
-          state.closeTab(group.id, tabId, { force: true });
-          break;
-        }
-      }
-    }
-  }, [controller, mutations.pendingDeletePaths]);
 
   const handleSearchOpen = useCallback(
     (path: string) => {
