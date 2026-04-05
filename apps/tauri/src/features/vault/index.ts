@@ -26,6 +26,7 @@ export type { UseVaultFileTreeControllerReturn } from "./hooks/useVaultFileTreeC
 export { useVaultFileTreeController } from "./hooks/useVaultFileTreeController";
 export type { UseVaultMutationsReturn } from "./hooks/useVaultMutations";
 export { useVaultMutations } from "./hooks/useVaultMutations";
+export { useVaultSelection } from "./hooks/useVaultSelection";
 export type { UseVaultTreeReturn } from "./hooks/useVaultTree";
 
 export { useVaultTree } from "./hooks/useVaultTree";

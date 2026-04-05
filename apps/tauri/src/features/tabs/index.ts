@@ -3,10 +3,12 @@ export { useTabs } from "./hooks/useTabs";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabIO } from "./hooks/useTabIO";
 export { useTabDnD } from "./hooks/useTabDnD";
+export { WorkspaceTabs } from "./components/WorkspaceTabs";
 
 export type {
   OpenableTabInput,
   SplitDirection,
+  TabClickOpenBehavior,
   TabGroupId,
   TabGroupModel,
   TabId,
