@@ -13,8 +13,8 @@ import {
 import { useCommandStore } from "@workspace/editor";
 import type React from "react";
 import { useEffect, useMemo } from "react";
-import { useSearchStore } from "../features/search";
-import { useSettingsStore } from "../features/settings";
+import { useSearchStore } from "../../search";
+import { useSettingsStore } from "../../settings";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;

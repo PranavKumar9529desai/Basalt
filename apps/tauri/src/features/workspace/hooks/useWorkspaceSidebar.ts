@@ -1,12 +1,14 @@
 import { useCallback } from "react";
-import { useTabsStore } from "../features/tabs/store";
-import { useVaultClipboard } from "../features/vault/hooks/useVaultClipboard";
-import { useVaultContextMenu } from "../features/vault/hooks/useVaultContextMenu";
-import { useVaultFileTreeController } from "../features/vault/hooks/useVaultFileTreeController";
-import { useVaultMutations } from "../features/vault/hooks/useVaultMutations";
-import { useVaultSelection } from "../features/vault/hooks/useVaultSelection";
-import type { TabGroupId, TabGroupModel, TabModel, TabClickOpenBehavior } from "../features/tabs/types";
-import type { FlatTreeNode } from "../features/vault/types";
+import { useTabsStore } from "../../tabs";
+import {
+  useVaultClipboard,
+  useVaultContextMenu,
+  useVaultFileTreeController,
+  useVaultMutations,
+  useVaultSelection,
+} from "../../vault";
+import type { TabGroupId, TabGroupModel, TabModel, TabClickOpenBehavior } from "../../tabs";
+import type { FlatTreeNode } from "../../vault";
 
 interface NoteSelection {
   path: string;

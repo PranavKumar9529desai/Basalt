@@ -3,24 +3,18 @@ import {
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityBar } from "./ActivityBar";
-import { Sidebar } from "./Sidebar";
-import { ThemeSelect } from "./ThemeSelect";
+import { ActivityBar } from "../../../layout/ActivityBar";
+import { Sidebar } from "../../../layout/Sidebar";
+import { ThemeSelect } from "../../../layout/ThemeSelect";
 import { AppCommands } from "./commands";
-import { useEditorSessionsStore } from "../features/editor/store";
-import { usePaneManager } from "../features/editor/PaneInstance";
-import { WorkspaceTabs } from "../features/tabs/components/WorkspaceTabs";
-import { useTabPersistence } from "../features/tabs/hooks/useTabPersistence";
-import { useTabs } from "../features/tabs/hooks/useTabs";
-import { useWorkspaceTabHandlers } from "./useWorkspaceTabHandlers";
+import { useEditorSessionsStore, usePaneManager } from "../../editor";
+import { WorkspaceTabs, useTabPersistence, useTabs } from "../../tabs";
+import { useWorkspaceTabHandlers } from "../hooks/useWorkspaceTabHandlers";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
-import { FileTree } from "../features/vault/components/FileTree";
-import { VaultSplash } from "../features/vault/components/VaultSplash";
-import { useVaultActions } from "../features/vault/hooks/useVaultActions";
-import { useVaultTree } from "../features/vault/hooks/useVaultTree";
-import { useWorkspaceSidebar } from "./useWorkspaceSidebar";
-import type { BootResult, FlatTreeNode } from "../features/vault/types";
-import type { TabClickOpenBehavior } from "../features/tabs/types";
+import { FileTree, VaultSplash, useVaultActions, useVaultTree } from "../../vault";
+import { useWorkspaceSidebar } from "../hooks/useWorkspaceSidebar";
+import type { BootResult, FlatTreeNode } from "../../vault";
+import type { TabClickOpenBehavior } from "../../tabs";
 
 function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
   if (value === "preview" || value === "pinned" || value === "vscode") {

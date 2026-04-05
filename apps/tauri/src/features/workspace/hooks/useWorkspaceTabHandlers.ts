@@ -4,7 +4,7 @@ import type {
   TabGroupModel,
   TabModel,
   SplitDirection,
-} from "../features/tabs/types";
+} from "../../tabs";
 
 interface TabActions {
   groups: Record<TabGroupId, TabGroupModel>;
