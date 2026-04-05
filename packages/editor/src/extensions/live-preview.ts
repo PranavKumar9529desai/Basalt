@@ -43,7 +43,7 @@ class HorizontalRuleWidget extends WidgetType {
 const HR_THEME = EditorView.baseTheme({
   ".cm-live-hr": {
     border: "none",
-    borderTop: "2px solid var(--sat-editor-blockquote-border, #334155)",
+    borderTop: "2px solid var(--sat-editor-hr, #1f2937)",
     margin: "0.5rem 0",
     display: "block",
   },
@@ -201,7 +201,7 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
         const line = ctx.view.state.doc.lineAt(node.from);
         const onActiveLine = ctx.activeLine?.number === line.number;
         if (!onActiveLine) {
-          collector.addReplace(line.from, line.to, new HorizontalRuleWidget(), true);
+          collector.addReplace(line.from, line.to, new HorizontalRuleWidget());
         }
       }
     },

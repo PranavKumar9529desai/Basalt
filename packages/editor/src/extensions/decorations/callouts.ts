@@ -181,7 +181,6 @@ export function handleCalloutNode(
       firstLine.from,
       firstLine.to,
       new CalloutHeaderWidget(rawType, title, fold),
-      true,
     );
   }
 

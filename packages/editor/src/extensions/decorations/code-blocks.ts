@@ -189,7 +189,6 @@ export function handleCodeBlockNode(
         startLine.from,
         startLine.to,
         new CodeHeaderWidget(lang, node.from, node.to),
-        true,
       );
 
       if (endLine.number > startLine.number) {
@@ -197,7 +196,6 @@ export function handleCodeBlockNode(
           endLine.from,
           endLine.to,
           new CodeFooterWidget(),
-          true,
         );
       }
     }
