@@ -4,7 +4,7 @@ import type { DecorationCollector, DecorationContext } from "./types";
 
 export const BLOCKQUOTES_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-blockquote": {
-    borderLeft: "3px solid var(--sat-editor-blockquote-border, #334155)",
+    borderLeft: "2px solid var(--sat-editor-blockquote-border, #a78bfa)",
     paddingLeft: "0.9rem",
     color: "var(--sat-editor-blockquote-text, #cbd5f5)",
   },

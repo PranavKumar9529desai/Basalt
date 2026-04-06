@@ -91,7 +91,8 @@
   --sat-editor-h6-letter-spacing: 0;
   --sat-editor-accent: #a78bfa;
   --sat-editor-inline-bg: #0b1220;
-  --sat-editor-blockquote-border: #334155;
+  --sat-editor-hr: var(--sat-layout-border);
+  --sat-editor-blockquote-border: var(--sat-accent-primary);
   --sat-editor-blockquote-text: #cbd5f5;
   --sat-editor-code-bg: #0b1220;
   --sat-editor-code-muted: #94a3b8;
@@ -140,7 +141,6 @@
   --sat-layout-border: #bcc0cc;
   --sat-editor-background: #eff1f5;
   --sat-editor-inline-bg: #e6e9ef;
-  --sat-editor-blockquote-border: #bcc0cc;
   --sat-editor-blockquote-text: #4c4f69;
   --sat-editor-code-bg: #e6e9ef;
   --sat-editor-code-muted: #6c6f85;
@@ -174,7 +174,6 @@
   --sat-layout-border: #313244;
   --sat-editor-background: #1e1e2e;
   --sat-editor-inline-bg: #181825;
-  --sat-editor-blockquote-border: #313244;
   --sat-editor-blockquote-text: #cdd6f4;
   --sat-editor-code-bg: #181825;
   --sat-editor-code-muted: #a6adc8;
@@ -208,7 +207,6 @@
   --sat-layout-border: #44475a;
   --sat-editor-background: #282a36;
   --sat-editor-inline-bg: #1e1f29;
-  --sat-editor-blockquote-border: #44475a;
   --sat-editor-blockquote-text: #f8f8f2;
   --sat-editor-code-bg: #1e1f29;
   --sat-editor-code-muted: #bd93f9;
@@ -242,7 +240,6 @@
   --sat-layout-border: #cbd5e1;
   --sat-editor-background: #ffffff;
   --sat-editor-inline-bg: #f1f5f9;
-  --sat-editor-blockquote-border: #cbd5e1;
   --sat-editor-blockquote-text: #0f172a;
   --sat-editor-code-bg: #f8fafc;
   --sat-editor-code-muted: #64748b;
@@ -276,7 +273,6 @@
   --sat-layout-border: #0f3944;
   --sat-editor-background: #002b36;
   --sat-editor-inline-bg: #073642;
-  --sat-editor-blockquote-border: #0f3944;
   --sat-editor-blockquote-text: #fdf6e3;
   --sat-editor-code-bg: #073642;
   --sat-editor-code-muted: #93a1a1;
@@ -310,7 +306,6 @@
   --sat-layout-border: #d3cbb8;
   --sat-editor-background: #fdf6e3;
   --sat-editor-inline-bg: #eee8d5;
-  --sat-editor-blockquote-border: #d3cbb8;
   --sat-editor-blockquote-text: #073642;
   --sat-editor-code-bg: #f5eeda;
   --sat-editor-code-muted: #657b83;

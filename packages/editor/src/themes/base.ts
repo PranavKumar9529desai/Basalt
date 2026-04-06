@@ -32,7 +32,7 @@ const baseTheme = EditorView.theme({
     fontFamily: "inherit",
     // border: "2px solid blue",
     width: "100%",
-    maxWidth: "50rem",
+    maxWidth: "45rem",
   },
   ".cm-line": {
     lineHeight: "1.6",
