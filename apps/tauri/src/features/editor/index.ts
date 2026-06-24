@@ -3,4 +3,4 @@ export { EditorCommandPalette } from "./components/command-palette";
 export { useEditorSessionsStore } from "./store";
 export type { EditorPaneId, EditorSessionSnapshot } from "./types";
 export { useEditor } from "./hooks/useEditor";
-export { usePaneManager } from "./PaneInstance";
+export { PaneContent } from "./PaneContent";

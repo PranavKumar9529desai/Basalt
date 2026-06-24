@@ -7,7 +7,7 @@ import { ActivityBar } from "../../../layout/ActivityBar";
 import { Sidebar } from "../../../layout/Sidebar";
 import { ThemeSelect } from "../../../layout/ThemeSelect";
 import { AppCommands } from "./commands";
-import { useEditorSessionsStore, usePaneManager } from "../../editor";
+import { PaneContent, useEditorSessionsStore } from "../../editor";
 import { WorkspaceTabs, useTabPersistence, useTabs } from "../../tabs";
 import { useWorkspaceTabHandlers } from "../hooks/useWorkspaceTabHandlers";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
@@ -59,7 +59,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     [treeNodes],
   );
 
-  const { renderGroupPane } = usePaneManager({ findNote });
   const tabs = useTabs();
   const tabClickOpenBehavior = parseTabClickOpenBehavior(
     boot.settings?.tabClickOpenBehavior,
@@ -194,7 +193,16 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         handleTabSelect={tabHandlers.handleTabSelect}
         handleTabClose={tabHandlers.handleTabClose}
         handleTabPinToggle={tabHandlers.handleTabPinToggle}
-        renderGroupPane={renderGroupPane}
+        renderPane={(ctx) => (
+          <PaneContent
+            groupId={ctx.groupId}
+            activeTab={ctx.activeTab}
+            isFocused={ctx.isFocused}
+            findNote={findNote}
+            markTabDirty={ctx.markTabDirty}
+            onActivateGroup={ctx.onActivateGroup}
+          />
+        )}
         tabBarLeftSlot={
           <button
             type="button"
