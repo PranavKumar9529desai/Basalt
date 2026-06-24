@@ -17,8 +17,38 @@ type ThemeContextValue = {
 const STORAGE_KEY = "basalt.theme";
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
+// --------------------------------------------------------------------------
+// Theme persistence interface — allows injecting a custom backend (or none)
+// without coupling ThemeProvider to Tauri invoke().
+// --------------------------------------------------------------------------
+
+export interface ThemePersistence {
+  load: () => Promise<ThemeId | null>;
+  save: (id: ThemeId) => Promise<void>;
+}
+
+const defaultPersistence: ThemePersistence = {
+  load: async () => {
+    try {
+      const settings = await invoke<Record<string, unknown>>("get_settings");
+      return (settings.theme as ThemeId) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  save: async (id) => {
+    await invoke("set_setting", { key: "theme", value: id });
+  },
+};
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  persistence?: ThemePersistence;
+}
+
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
+  persistence = defaultPersistence,
 }) => {
   const [themeId, setThemeId] = useState<ThemeId>(defaultThemeId);
 
@@ -35,9 +65,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
       }
     }
 
-    invoke<Record<string, unknown>>("get_settings")
-      .then((settings) => {
-        const backendTheme = settings.theme as ThemeId;
+    persistence
+      .load()
+      .then((backendTheme) => {
         if (
           backendTheme &&
           themes.some((t) => t.id === backendTheme) &&
@@ -55,7 +85,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({
     document.documentElement.setAttribute("data-theme", themeId);
     window.localStorage.setItem(STORAGE_KEY, themeId);
 
-    invoke("set_setting", { key: "theme", value: themeId }).catch((err) => {
+    persistence.save(themeId).catch((err) => {
       console.error("Failed to persist theme to backend:", err);
     });
   }, [themeId]);
