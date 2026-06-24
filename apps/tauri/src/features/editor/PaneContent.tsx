@@ -2,7 +2,7 @@ import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 import type { TabModel } from "../tabs/types";
 import type { FlatTreeNode } from "../vault/types";
-import { Editor } from "./components/editor-context-menu";
+import { Editor } from "./components/EditorContextMenu";
 import { useEditor } from "./hooks/useEditor";
 import { useFocusedPaneStore } from "./store";
 

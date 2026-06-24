@@ -14,7 +14,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useEditorCommands } from "../hooks/useEditorCommands";
 
-import { EditorComponent, type EditorProps } from "./editor-component";
+import { EditorComponent, type EditorProps } from "./EditorComponent";
 
 export function Editor({ ...props }: EditorProps) {
   const [view, setView] = useState<ReactCodeMirrorRef["view"] | null>(null);

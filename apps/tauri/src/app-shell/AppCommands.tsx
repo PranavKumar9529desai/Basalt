@@ -13,6 +13,8 @@ import {
 import { useCommandStore } from "@workspace/commands";
 import type React from "react";
 import { useEffect, useMemo } from "react";
+import { useSearchStore } from "../features/search";
+import { useSettingsStore } from "../features/settings";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -43,6 +45,10 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
+
+  const openSearch = useSearchStore((s) => s.openSearch);
+  const openSwitcher = useSearchStore((s) => s.openSwitcher);
+  const openSettings = useSettingsStore((s) => s.open);
 
   const commands = useMemo(
     () => [
@@ -194,6 +200,9 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       onSplitRight,
       onSplitTop,
       onTogglePinActiveTab,
+      openSearch,
+      openSwitcher,
+      openSettings,
     ],
   );
 

@@ -21,7 +21,7 @@ import {
 } from "../features/vault";
 import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
-import { AppCommands } from "./commands";
+import { AppCommands } from "./AppCommands";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
 // Tech Debut
