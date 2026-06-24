@@ -1,62 +1,18 @@
 import { create } from "zustand";
-import type { EditorPaneId, EditorSessionSnapshot } from "./types";
 
-interface EditorSessionsState {
-  sessions: Record<EditorPaneId, EditorSessionSnapshot>;
-  ensureSession: (paneId: EditorPaneId) => void;
-  updateSession: (
-    paneId: EditorPaneId,
-    patch: Partial<Omit<EditorSessionSnapshot, "paneId">>,
-  ) => void;
-  removeSession: (paneId: EditorPaneId) => void;
-  reset: () => void;
+// ---------------------------------------------------------------------------
+// Minimal focused-pane selection state.
+// Only tracks what pane is currently focused + what note it has open.
+// No more syncing content/backlinks/saveStatus on every keystroke.
+// ---------------------------------------------------------------------------
+
+export interface FocusedPaneState {
+  /** The note (path + name) that the focused pane has loaded. */
+  focusedPaneSelected: { path: string; name: string } | null;
+  setFocusedPaneSelected: (note: { path: string; name: string } | null) => void;
 }
 
-function createDefaultSession(paneId: EditorPaneId): EditorSessionSnapshot {
-  return {
-    paneId,
-    selected: null,
-    content: "",
-    backlinks: [],
-    saveStatus: "saved",
-    status: null,
-  };
-}
-
-export const useEditorSessionsStore = create<EditorSessionsState>()((set) => ({
-  sessions: {},
-  ensureSession: (paneId) =>
-    set((state) => {
-      if (state.sessions[paneId]) {
-        return state;
-      }
-      return {
-        sessions: {
-          ...state.sessions,
-          [paneId]: createDefaultSession(paneId),
-        },
-      };
-    }),
-  updateSession: (paneId, patch) =>
-    set((state) => {
-      const prev = state.sessions[paneId] ?? createDefaultSession(paneId);
-      return {
-        sessions: {
-          ...state.sessions,
-          [paneId]: {
-            ...prev,
-            ...patch,
-          },
-        },
-      };
-    }),
-  removeSession: (paneId) =>
-    set((state) => {
-      if (!state.sessions[paneId]) {
-        return state;
-      }
-      const { [paneId]: _, ...rest } = state.sessions;
-      return { sessions: rest };
-    }),
-  reset: () => set({ sessions: {} }),
+export const useFocusedPaneStore = create<FocusedPaneState>()((set) => ({
+  focusedPaneSelected: null,
+  setFocusedPaneSelected: (note) => set({ focusedPaneSelected: note }),
 }));

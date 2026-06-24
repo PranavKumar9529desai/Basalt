@@ -6,18 +6,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityBar } from "../../../layout/ActivityBar";
 import { Sidebar } from "../../../layout/Sidebar";
 import { ThemeSelect } from "../../../layout/ThemeSelect";
-import { AppCommands } from "./commands";
-import { PaneContent, useEditorSessionsStore } from "../../editor";
-import { WorkspaceTabs, useTabPersistence, useTabs } from "../../tabs";
-import { useWorkspaceTabHandlers } from "../hooks/useWorkspaceTabHandlers";
-import { WorkspaceOverlays } from "./WorkspaceOverlays";
-import { FileTree, VaultSplash, useVaultActions, useVaultTree } from "../../vault";
-import { useWorkspaceSidebar } from "../hooks/useWorkspaceSidebar";
-import type { BootResult, FlatTreeNode } from "../../vault";
+import { PaneContent, useFocusedPaneStore } from "../../editor";
 import type { TabClickOpenBehavior } from "../../tabs";
+import { useTabPersistence, useTabs, WorkspaceTabs } from "../../tabs";
+import type { BootResult, FlatTreeNode } from "../../vault";
+import {
+  FileTree,
+  useVaultActions,
+  useVaultTree,
+  VaultSplash,
+} from "../../vault";
+import { useWorkspaceSidebar } from "../hooks/useWorkspaceSidebar";
+import { useWorkspaceTabHandlers } from "../hooks/useWorkspaceTabHandlers";
+import { AppCommands } from "./commands";
+import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
-
-// Tech Debut 
+// Tech Debut
 // i dont know what does
 function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
   if (value === "preview" || value === "pinned" || value === "vscode") {
@@ -78,8 +82,8 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   useTabPersistence({ workspace: boot.workspace });
 
-  const focusedSessionSelected = useEditorSessionsStore(
-    (state) => state.sessions[tabs.focusedGroupId]?.selected ?? null,
+  const focusedSessionSelected = useFocusedPaneStore(
+    (state) => state.focusedPaneSelected,
   );
   const focusedSessionTab = useMemo(() => {
     const path = focusedSessionSelected?.path;
@@ -93,25 +97,30 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     return null;
   }, [focusedSessionSelected?.path, tabs.groups, tabs.tabs]);
 
-  const { controller, mutations, contextMenu, selection, handleConfirmDeleteWithTabs } =
-    useWorkspaceSidebar({
-      vaultPath,
-      treeNodes,
-      visibleNodes,
-      openFolder,
-      toggleFolder,
-      refreshTree,
-      editor: {
-        focusedSessionSelected,
-        focusedSessionTab,
-        groups: tabs.groups,
-        openInPreview,
-        openPinned,
-        setTabTitle,
-        closeTab,
-        tabClickOpenBehavior,
-      },
-    });
+  const {
+    controller,
+    mutations,
+    contextMenu,
+    selection,
+    handleConfirmDeleteWithTabs,
+  } = useWorkspaceSidebar({
+    vaultPath,
+    treeNodes,
+    visibleNodes,
+    openFolder,
+    toggleFolder,
+    refreshTree,
+    editor: {
+      focusedSessionSelected,
+      focusedSessionTab,
+      groups: tabs.groups,
+      openInPreview,
+      openPinned,
+      setTabTitle,
+      closeTab,
+      tabClickOpenBehavior,
+    },
+  });
 
   const tabHandlers = useWorkspaceTabHandlers({
     tabActions: {
@@ -195,7 +204,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         handleTabPinToggle={tabHandlers.handleTabPinToggle}
         renderPane={(ctx) => (
           <PaneContent
-            groupId={ctx.groupId}
             activeTab={ctx.activeTab}
             isFocused={ctx.isFocused}
             findNote={findNote}
@@ -210,9 +218,11 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
             className="p-1 pb-2 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors "
             title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
-            {sidebarOpen
-              ? <IconLayoutSidebarLeftCollapse size={20} stroke={1.5} />
-              : <IconLayoutSidebarLeftExpand size={20} stroke={1.5} />}
+            {sidebarOpen ? (
+              <IconLayoutSidebarLeftCollapse size={20} stroke={1.5} />
+            ) : (
+              <IconLayoutSidebarLeftExpand size={20} stroke={1.5} />
+            )}
           </button>
         }
       />

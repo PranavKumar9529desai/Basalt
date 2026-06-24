@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
+import { useCallback, useEffect, useRef } from "react";
+import type { TabModel } from "../tabs/types";
+import type { FlatTreeNode } from "../vault/types";
 import { Editor } from "./components/editor-context-menu";
 import { useEditor } from "./hooks/useEditor";
-import type { FlatTreeNode } from "../vault/types";
-import type { TabGroupId, TabModel } from "../tabs/types";
+import { useFocusedPaneStore } from "./store";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface PaneContentProps {
-  groupId: TabGroupId;
   activeTab: TabModel | null;
   isFocused: boolean;
   findNote: (name: string) => FlatTreeNode | undefined;
@@ -115,7 +115,6 @@ function SaveIndicator({ status }: { status: string }) {
 // ---------------------------------------------------------------------------
 
 export function PaneContent({
-  groupId,
   activeTab,
   isFocused,
   findNote,
@@ -124,6 +123,27 @@ export function PaneContent({
 }: PaneContentProps) {
   const editor = useEditor({ findNote });
   const lastLoadedPathRef = useRef<string | null>(null);
+  const setFocusedPaneSelected = useFocusedPaneStore(
+    (s) => s.setFocusedPaneSelected,
+  );
+
+  // Sync focused pane selection only when this pane is focused.
+  // Previously this synced *all* editor state on every keystroke.
+  useEffect(() => {
+    if (isFocused && editor.selected) {
+      setFocusedPaneSelected({
+        path: editor.selected.path,
+        name: editor.selected.name,
+      });
+    } else if (isFocused && !editor.selected) {
+      setFocusedPaneSelected(null);
+    }
+  }, [
+    isFocused,
+    editor.selected?.path,
+    editor.selected?.name,
+    setFocusedPaneSelected,
+  ]);
 
   // Load note when active tab changes
   useEffect(() => {
@@ -181,6 +201,7 @@ export function PaneContent({
         onPointerDownCapture={handlePanePointerDown}
       >
         <div className="flex flex-1 flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
+          <SaveIndicator status={editor.saveStatus} />
           <Editor
             className="flex-1 min-h-0"
             value={editor.content}
