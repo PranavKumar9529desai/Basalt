@@ -49,6 +49,7 @@ export function EditorComponent({
   onFetchLinks,
   onFetchTags,
   onOpenLink,
+  onViewReady,
   themeExtensions,
   includeDefaultTheme = true,
   extensions = [],
