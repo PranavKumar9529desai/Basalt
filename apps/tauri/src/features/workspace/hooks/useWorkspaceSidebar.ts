@@ -1,14 +1,13 @@
 import { useCallback } from "react";
+import type {
+  TabClickOpenBehavior,
+  TabGroupId,
+  TabGroupModel,
+  TabModel,
+} from "../../tabs";
 import { useTabsStore } from "../../tabs";
-import {
-  useVaultClipboard,
-  useVaultContextMenu,
-  useVaultFileTreeController,
-  useVaultMutations,
-  useVaultSelection,
-} from "../../vault";
-import type { TabGroupId, TabGroupModel, TabModel, TabClickOpenBehavior } from "../../tabs";
 import type { FlatTreeNode } from "../../vault";
+import { useVaultController, useVaultMutations } from "../../vault";
 
 interface NoteSelection {
   path: string;
@@ -22,7 +21,11 @@ interface EditorInterface {
   openInPreview: (opts: { path: string; title: string }) => string;
   openPinned: (opts: { path: string; title: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
-  closeTab: (groupId: TabGroupId, tabId: string, opts: { force: boolean }) => void;
+  closeTab: (
+    groupId: TabGroupId,
+    tabId: string,
+    opts: { force: boolean },
+  ) => void;
   tabClickOpenBehavior: TabClickOpenBehavior;
 }
 
@@ -46,20 +49,23 @@ export function useWorkspaceSidebar({
   editor,
 }: Props) {
   const mutations = useVaultMutations();
-  const selection = useVaultSelection();
-  const clipboard = useVaultClipboard();
-  const contextMenu = useVaultContextMenu();
 
-  const controller = useVaultFileTreeController({
+  const controller = useVaultController({
     treeNodes,
     visibleNodes,
     vaultPath,
     editor: {
       selected: editor.focusedSessionSelected
-        ? { name: editor.focusedSessionSelected.name, path: editor.focusedSessionSelected.path }
+        ? {
+            name: editor.focusedSessionSelected.name,
+            path: editor.focusedSessionSelected.path,
+          }
         : null,
       loadNote: (note) => {
-        const tabId = editor.openInPreview({ path: note.path, title: note.name });
+        const tabId = editor.openInPreview({
+          path: note.path,
+          title: note.name,
+        });
         editor.setTabTitle(tabId, note.name);
       },
       closeNote: () => {
@@ -74,15 +80,14 @@ export function useWorkspaceSidebar({
       },
     },
     mutations,
-    selection,
-    clipboard,
-    contextMenu,
     openFolder,
     toggleFolder,
     refreshTree,
     onFileOpen: (node, mode) => {
       const effectiveMode =
-        editor.tabClickOpenBehavior === "vscode" ? mode : editor.tabClickOpenBehavior;
+        editor.tabClickOpenBehavior === "vscode"
+          ? mode
+          : editor.tabClickOpenBehavior;
       const tabId =
         effectiveMode === "pinned"
           ? editor.openPinned({ path: node.path, title: node.name })
@@ -110,8 +115,8 @@ export function useWorkspaceSidebar({
   return {
     controller,
     mutations,
-    contextMenu,
-    selection,
+    contextMenu: controller.contextMenu,
+    selection: controller.selection,
     handleConfirmDeleteWithTabs,
   };
 }
