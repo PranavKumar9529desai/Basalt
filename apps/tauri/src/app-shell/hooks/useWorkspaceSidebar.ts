@@ -4,10 +4,10 @@ import type {
   TabGroupId,
   TabGroupModel,
   TabModel,
-} from "../../tabs";
-import { useTabsStore } from "../../tabs";
-import type { FlatTreeNode } from "../../vault";
-import { useVaultController, useVaultMutations } from "../../vault";
+} from "../../features/tabs";
+import { useTabsStore } from "../../features/tabs";
+import type { FlatTreeNode } from "../../features/vault";
+import { useVaultController, useVaultMutations } from "../../features/vault";
 
 interface NoteSelection {
   path: string;

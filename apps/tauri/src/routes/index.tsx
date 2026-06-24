@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { WorkspaceView } from "../layout";
 import type { BootResult } from "../features/vault";
+import { WorkspaceView } from "../app-shell";
 
 interface LoaderData {
   boot: BootResult;

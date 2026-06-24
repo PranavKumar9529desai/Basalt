@@ -1,16 +1,16 @@
 import {
-  IconFilePlus,
-  IconFolderPlus,
   IconArrowsSort,
   IconChevronUp,
+  IconFilePlus,
+  IconFolderPlus,
 } from "@tabler/icons-react";
-import {
-  SidebarPanel,
-  SidebarHeader,
-  type SidebarAction,
-} from "@workspace/ui/components/sidebar";
 import { invoke } from "@tauri-apps/api/core";
-import { type ReactNode, useRef, useCallback } from "react";
+import {
+  type SidebarAction,
+  SidebarHeader,
+  SidebarPanel,
+} from "@workspace/ui/components/sidebar";
+import { type ReactNode, useCallback, useRef } from "react";
 
 interface SidebarProps {
   children: ReactNode;
@@ -64,7 +64,11 @@ export function Sidebar({
   ];
 
   return (
-    <SidebarPanel defaultWidth={defaultWidth} onWidthChange={handleWidthChange} collapsed={collapsed}>
+    <SidebarPanel
+      defaultWidth={defaultWidth}
+      onWidthChange={handleWidthChange}
+      collapsed={collapsed}
+    >
       <SidebarHeader actions={actions} />
       {children}
     </SidebarPanel>

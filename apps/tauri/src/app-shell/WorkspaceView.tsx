@@ -3,24 +3,24 @@ import {
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityBar } from "../../../layout/ActivityBar";
-import { Sidebar } from "../../../layout/Sidebar";
-import { ThemeSelect } from "../../../layout/ThemeSelect";
-import { PaneContent, useFocusedPaneStore } from "../../editor";
-import { useKeyboardShortcuts } from "../../../app-shell/hooks/useKeyboardShortcuts";
-import { useSearchStore } from "../../search";
-import { useSettingsStore } from "../../settings";
-import type { TabClickOpenBehavior } from "../../tabs";
-import { useTabPersistence, useTabs, WorkspaceTabs } from "../../tabs";
-import type { BootResult, FlatTreeNode } from "../../vault";
+import { ActivityBar } from "./ActivityBar";
+import { Sidebar } from "./Sidebar";
+import { ThemeSelect } from "./ThemeSelect";
+import { PaneContent, useFocusedPaneStore } from "../features/editor";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useSearchStore } from "../features/search";
+import { useSettingsStore } from "../features/settings";
+import type { TabClickOpenBehavior } from "../features/tabs";
+import { useTabPersistence, useTabs, WorkspaceTabs } from "../features/tabs";
+import type { BootResult, FlatTreeNode } from "../features/vault";
 import {
   FileTree,
   useVaultActions,
   useVaultTree,
   VaultSplash,
-} from "../../vault";
-import { useWorkspaceSidebar } from "../hooks/useWorkspaceSidebar";
-import { useWorkspaceTabHandlers } from "../hooks/useWorkspaceTabHandlers";
+} from "../features/vault";
+import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
+import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { AppCommands } from "./commands";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 

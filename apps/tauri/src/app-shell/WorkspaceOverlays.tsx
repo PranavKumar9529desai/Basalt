@@ -3,8 +3,8 @@ import {
   FileTreeContextMenu,
   type FileTreeContextTargetKind,
 } from "@workspace/ui/components/file-tree";
-import { QuickSwitcher, SearchModal } from "../../search";
-import { SettingsModal } from "../../settings";
+import { QuickSwitcher, SearchModal } from "../features/search";
+import { SettingsModal } from "../features/settings";
 
 interface WorkspaceOverlaysProps {
   contextMenu: {

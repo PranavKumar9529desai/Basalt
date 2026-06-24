@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { ActivityBar as ActivityBarUI } from "@workspace/ui/components/activity-bar";
 import { IconFolder, IconSearch, IconSettings } from "@tabler/icons-react";
+import { ActivityBar as ActivityBarUI } from "@workspace/ui/components/activity-bar";
+import { useState } from "react";
 import { useSettingsStore } from "../features/settings";
 
 export function ActivityBar() {

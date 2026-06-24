@@ -1,19 +1,27 @@
 import { useCallback } from "react";
 import type {
+  SplitDirection,
   TabGroupId,
   TabGroupModel,
   TabModel,
-  SplitDirection,
-} from "../../tabs";
+} from "../../features/tabs";
 
 interface TabActions {
   groups: Record<TabGroupId, TabGroupModel>;
   activateTab: (groupId: TabGroupId, tabId: string) => void;
-  closeTab: (groupId: TabGroupId, tabId: string, opts: { force: boolean }) => void;
+  closeTab: (
+    groupId: TabGroupId,
+    tabId: string,
+    opts: { force: boolean },
+  ) => void;
   closeOtherTabs: (groupId: TabGroupId, tabId: string) => void;
   closeTabsToRight: (groupId: TabGroupId, tabId: string) => void;
   togglePinTab: (tabId: string) => void;
-  splitGroupWithTab: (groupId: TabGroupId, direction: SplitDirection, tabId: string) => void;
+  splitGroupWithTab: (
+    groupId: TabGroupId,
+    direction: SplitDirection,
+    tabId: string,
+  ) => void;
   setFocusedGroup: (groupId: TabGroupId) => void;
 }
 
@@ -22,7 +30,10 @@ interface Props {
   focusedSessionTab: TabModel | null;
 }
 
-export function useWorkspaceTabHandlers({ tabActions, focusedSessionTab }: Props) {
+export function useWorkspaceTabHandlers({
+  tabActions,
+  focusedSessionTab,
+}: Props) {
   const {
     groups,
     activateTab,
