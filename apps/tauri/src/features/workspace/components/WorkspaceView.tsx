@@ -7,6 +7,9 @@ import { ActivityBar } from "../../../layout/ActivityBar";
 import { Sidebar } from "../../../layout/Sidebar";
 import { ThemeSelect } from "../../../layout/ThemeSelect";
 import { PaneContent, useFocusedPaneStore } from "../../editor";
+import { useKeyboardShortcuts } from "../../../app-shell/hooks/useKeyboardShortcuts";
+import { useSearchStore } from "../../search";
+import { useSettingsStore } from "../../settings";
 import type { TabClickOpenBehavior } from "../../tabs";
 import { useTabPersistence, useTabs, WorkspaceTabs } from "../../tabs";
 import type { BootResult, FlatTreeNode } from "../../vault";
@@ -81,6 +84,34 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   } = tabs;
 
   useTabPersistence({ workspace: boot.workspace });
+
+  const openSearch = useSearchStore((s) => s.openSearch);
+  const openSwitcher = useSearchStore((s) => s.openSwitcher);
+  const openSettings = useSettingsStore((s) => s.open);
+
+  useKeyboardShortcuts(
+    {
+      search: {
+        key: "f",
+        meta: true,
+        handler: openSearch,
+        preventDefault: true,
+      },
+      "quick-open": {
+        key: "o",
+        meta: true,
+        handler: openSwitcher,
+        preventDefault: true,
+      },
+      settings: {
+        key: ",",
+        meta: true,
+        handler: openSettings,
+        preventDefault: true,
+      },
+    },
+    [openSearch, openSettings, openSwitcher],
+  );
 
   const focusedSessionSelected = useFocusedPaneStore(
     (state) => state.focusedPaneSelected,
