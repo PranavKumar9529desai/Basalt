@@ -1,5 +1,5 @@
 import { cn } from "@workspace/ui/lib/utils";
-import { type FC, useCallback, useEffect, useRef } from "react";
+import { memo, type FC, useCallback, useEffect, useRef } from "react";
 import type { FileNode } from "./types";
 
 /** Pixels of indentation per depth level. */
@@ -157,7 +157,7 @@ interface FileTreeNodeProps {
   style: React.CSSProperties;
 }
 
-export const FileTreeNode: FC<FileTreeNodeProps> = ({
+export const FileTreeNode: FC<FileTreeNodeProps> = memo(({
   node,
   isOpen,
   isSelected,

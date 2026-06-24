@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { FC, ReactNode } from "react";
 import { cn } from "@workspace/ui/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -14,7 +15,7 @@ export interface ActivityBarItemProps extends ActivityBarItemData {
   onClick: (id: string) => void;
 }
 
-export const ActivityBarItem: FC<ActivityBarItemProps> = ({
+export const ActivityBarItem: FC<ActivityBarItemProps> = memo(({
   id,
   icon,
   label,
@@ -53,4 +54,4 @@ export const ActivityBarItem: FC<ActivityBarItemProps> = ({
       </TooltipContent>
     </Tooltip>
   );
-};
+});

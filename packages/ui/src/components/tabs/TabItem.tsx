@@ -24,7 +24,7 @@ export interface TabItemProps {
   className?: string;
 }
 
-export function TabItem({
+export const TabItem = memo(function TabItem({
   tab,
   elementRef,
   onSelect,
@@ -147,4 +147,4 @@ export function TabItem({
       </TooltipContent>
     </Tooltip>
   );
-}
+});
