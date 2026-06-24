@@ -3,16 +3,10 @@ import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 import { Separator } from "@workspace/ui/components/ui/separator";
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
+import { useTabChrome } from "./useTabChrome";
+import { useTabDnD } from "./useTabDnD";
 
 export interface TabsBarProps {
   tabs: TabItemData[];
@@ -22,17 +16,15 @@ export interface TabsBarProps {
   onTabContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
   onTabDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onTabDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
-  onTabDrop?: (tabId: string, event: DragEvent<HTMLElement>, edge: "left" | "right") => void;
+  onTabDrop?: (
+    tabId: string,
+    event: DragEvent<HTMLElement>,
+    edge: "left" | "right",
+  ) => void;
   onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
   className?: string;
-}
-
-interface TabsChromeLayout {
-  activeLeft: number | null;
-  activeWidth: number;
-  separatorXs: number[];
 }
 
 export function TabsBar({
@@ -49,158 +41,25 @@ export function TabsBar({
   rightSlot,
   className,
 }: TabsBarProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [chrome, setChrome] = useState<TabsChromeLayout>({
-    activeLeft: null,
-    activeWidth: 0,
-    separatorXs: [],
-  });
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const {
+    viewportRef,
+    tabRefs,
+    chrome,
+    canScrollLeft,
+    canScrollRight,
+    setTabRef,
+    scrollTabsLeft,
+    scrollTabsRight,
+  } = useTabChrome(tabs);
 
-  const activeTabId = useMemo(
-    () => tabs.find((tab) => tab.isActive)?.id ?? null,
-    [tabs],
-  );
-
-  const setTabRef = useCallback((tabId: string, el: HTMLDivElement | null) => {
-    if (el) {
-      tabRefs.current.set(tabId, el);
-    } else {
-      tabRefs.current.delete(tabId);
-    }
-  }, []);
-
-  const checkScrollEdges = useCallback(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-
-  const recalcChrome = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const viewportRect = viewport.getBoundingClientRect();
-    const activeEl = activeTabId ? tabRefs.current.get(activeTabId) : null;
-
-    const activeLeft = activeEl
-      ? activeEl.getBoundingClientRect().left - viewportRect.left
-      : null;
-    const activeWidth = activeEl ? activeEl.getBoundingClientRect().width : 0;
-
-    const separatorXs: number[] = [];
-    for (let i = 0; i < tabs.length - 1; i += 1) {
-      const current = tabs[i];
-      const next = tabs[i + 1];
-      if (current.isActive || next.isActive) continue;
-
-      const currentEl = tabRefs.current.get(current.id);
-      const nextEl = tabRefs.current.get(next.id);
-      if (!currentEl || !nextEl) continue;
-
-      const currentRect = currentEl.getBoundingClientRect();
-      const nextRect = nextEl.getBoundingClientRect();
-      const midX = (currentRect.right + nextRect.left) / 2 - viewportRect.left;
-      separatorXs.push(midX);
-    }
-
-    setChrome((prev) => {
-      const sameActiveLeft = prev.activeLeft === activeLeft;
-      const sameActiveWidth = prev.activeWidth === activeWidth;
-      const sameSeparators =
-        prev.separatorXs.length === separatorXs.length &&
-        prev.separatorXs.every((value, idx) => value === separatorXs[idx]);
-      if (sameActiveLeft && sameActiveWidth && sameSeparators) {
-        return prev;
-      }
-      return { activeLeft, activeWidth, separatorXs };
-    });
-  }, [activeTabId, tabs]);
-
-  useLayoutEffect(() => {
-    recalcChrome();
-    checkScrollEdges();
-  }, [recalcChrome, checkScrollEdges]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const onScroll = () => { recalcChrome(); checkScrollEdges(); };
-    const onResize = () => { recalcChrome(); checkScrollEdges(); };
-    viewport.addEventListener("scroll", onScroll);
-    window.addEventListener("resize", onResize);
-    return () => {
-      viewport.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [recalcChrome, checkScrollEdges]);
-
-  const [dropIndicator, setDropIndicator] = useState<{
-    tabId: string;
-    edge: "left" | "right";
-  } | null>(null);
-  // Ref mirrors state so handlers always read the latest value synchronously
-  // without stale-closure issues.
-  const dropIndicatorRef = useRef<{ tabId: string; edge: "left" | "right" } | null>(null);
-  const setDropIndicatorBoth = useCallback(
-    (val: { tabId: string; edge: "left" | "right" } | null) => {
-      dropIndicatorRef.current = val;
-      setDropIndicator(val);
-    },
-    [],
-  );
-
-  const handleInternalDragOver = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      const el = tabRefs.current.get(tabId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const edge: "left" | "right" =
-          event.clientX < (rect.left + rect.right) / 2 ? "left" : "right";
-        setDropIndicatorBoth(
-          dropIndicatorRef.current?.tabId === tabId &&
-          dropIndicatorRef.current.edge === edge
-            ? dropIndicatorRef.current
-            : { tabId, edge },
-        );
-      }
-      onTabDragOver?.(tabId, event);
-    },
-    [onTabDragOver, setDropIndicatorBoth],
-  );
-
-  const handleInternalDrop = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      const indicator = dropIndicatorRef.current;
-      setDropIndicatorBoth(null);
-      // Stop propagation so the outer tablist onDrop doesn't also fire.
-      event.stopPropagation();
-      if (indicator) {
-        onTabDrop?.(tabId, event, indicator.edge);
-      }
-    },
-    [onTabDrop, setDropIndicatorBoth],
-  );
-
-  const handleInternalDragEnd = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      setDropIndicatorBoth(null);
-      onTabDragEnd?.(tabId, event);
-    },
-    [onTabDragEnd, setDropIndicatorBoth],
-  );
-
-  const scrollTabsLeft = useCallback(() => {
-    viewportRef.current?.scrollBy({ left: -160, behavior: "smooth" });
-  }, []);
-
-  const scrollTabsRight = useCallback(() => {
-    viewportRef.current?.scrollBy({ left: 160, behavior: "smooth" });
-  }, []);
+  const {
+    dropIndicator,
+    dropIndicatorRef,
+    setDropIndicatorBoth,
+    handleTabDragOver,
+    handleTabDrop,
+    handleTabDragEnd,
+  } = useTabDnD(onTabDragOver, onTabDrop, onTabDragEnd, tabRefs);
 
   return (
     <div
@@ -212,13 +71,15 @@ export function TabsBar({
       )}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
-        // Fires when the user drops in empty space (not on a tab).
-        // Tab-level drops call stopPropagation so they don't reach here.
         e.preventDefault();
         const indicator = dropIndicatorRef.current;
         if (!indicator) return;
         setDropIndicatorBoth(null);
-        onTabDrop?.(indicator.tabId, e as unknown as DragEvent<HTMLElement>, indicator.edge);
+        onTabDrop?.(
+          indicator.tabId,
+          e as unknown as DragEvent<HTMLElement>,
+          indicator.edge,
+        );
       }}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
@@ -240,17 +101,16 @@ export function TabsBar({
                 onPinToggle={onPinToggle}
                 onContextMenu={onTabContextMenu}
                 onDragStart={onTabDragStart}
-                onDragOver={handleInternalDragOver}
-                onDrop={handleInternalDrop}
-                onDragEnd={handleInternalDragEnd}
+                onDragOver={handleTabDragOver}
+                onDrop={handleTabDrop}
+                onDragEnd={handleTabDragEnd}
                 showDropIndicator={
-                  dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined
+                  dropIndicator?.tabId === tab.id
+                    ? dropIndicator.edge
+                    : undefined
                 }
               />
             ))}
-            {/* Explicit end drop zone — directly registers as a WKWebView drop
-                target via onDragOver+preventDefault, so drops past the last tab
-                are captured reliably without relying on event bubbling. */}
             {tabs.length > 0 && (
               <div
                 aria-hidden="true"
@@ -262,7 +122,8 @@ export function TabsBar({
                   if (
                     dropIndicatorRef.current?.tabId === last.id &&
                     dropIndicatorRef.current.edge === "right"
-                  ) return;
+                  )
+                    return;
                   setDropIndicatorBoth({ tabId: last.id, edge: "right" });
                 }}
                 onDrop={(e) => {
@@ -282,7 +143,6 @@ export function TabsBar({
           </div>
         </ScrollArea>
 
-        {/* Left scroll button — shown when content is scrolled right */}
         {canScrollLeft && (
           <button
             type="button"
@@ -294,7 +154,6 @@ export function TabsBar({
           </button>
         )}
 
-        {/* Right scroll button — shown when there is more content to the right */}
         {canScrollRight && (
           <button
             type="button"
@@ -318,15 +177,6 @@ export function TabsBar({
 
           {chrome.activeLeft !== null && chrome.activeWidth > 0 ? (
             <>
-              {/*
-                Chrome-style inverted corner nubs.
-                Technique: place a circle element outside the tab corner, paint the
-                tab's background color as a box-shadow in all directions, then clip
-                to a single quarter-circle using clip-path: inset().
-                The -6px bleed in the clip-path closes the hairline gap at the
-                junction between the nub and the tab's side border.
-              */}
-              {/* Bottom-left inverted corner */}
               <span
                 aria-hidden="true"
                 className="absolute bottom-0 pointer-events-none"
@@ -339,7 +189,6 @@ export function TabsBar({
                   clipPath: "inset(50% -6px 0 50%)",
                 }}
               />
-              {/* Bottom-right inverted corner */}
               <span
                 aria-hidden="true"
                 className="absolute bottom-0 pointer-events-none"

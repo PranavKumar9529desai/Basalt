@@ -1,16 +1,22 @@
 import { cn } from "@workspace/ui/lib/utils";
-import { useRef, type DragEvent, type ReactNode } from "react";
+import { type DragEvent, type ReactNode, useRef } from "react";
 import type { TabSplitDirection } from "./TabSplitDropZone";
 
 /** Returns Tailwind geometry classes for the split preview overlay. */
 function getSplitPreviewClass(direction: TabSplitDirection | null): string {
   switch (direction) {
-    case "left":   return "inset-y-0 left-0 w-1/2 rounded-r-md";
-    case "right":  return "inset-y-0 right-0 w-1/2 rounded-l-md";
-    case "top":    return "inset-x-0 top-0 h-1/2 rounded-b-md";
-    case "bottom": return "inset-x-0 bottom-0 h-1/2 rounded-t-md";
-    case "center": return "inset-0 rounded-md";
-    default:       return "inset-0";
+    case "left":
+      return "inset-y-0 left-0 w-1/2 rounded-r-md";
+    case "right":
+      return "inset-y-0 right-0 w-1/2 rounded-l-md";
+    case "top":
+      return "inset-x-0 top-0 h-1/2 rounded-b-md";
+    case "bottom":
+      return "inset-x-0 bottom-0 h-1/2 rounded-t-md";
+    case "center":
+      return "inset-0 rounded-md";
+    default:
+      return "inset-0";
   }
 }
 
@@ -89,11 +95,17 @@ export function TabGroupFrame({
         // drags during dragover, so we cannot filter by type here — if we don't
         // call preventDefault unconditionally, WKWebView stops sending drag events.
         e.preventDefault();
-        console.log("[SECTION] dragover", { showSplitTargets, types: [...e.dataTransfer.types] });
+        console.log("[SECTION] dragover", {
+          showSplitTargets,
+          types: [...e.dataTransfer.types],
+        });
         if (!showSplitTargets) return;
         if (!isInEditorArea(e.clientY)) {
           // Cursor is in the tab bar — reorder mode, hide split overlay.
-          onSplitTargetDragLeave?.("center", e as unknown as DragEvent<HTMLDivElement>);
+          onSplitTargetDragLeave?.(
+            "center",
+            e as unknown as DragEvent<HTMLDivElement>,
+          );
           return;
         }
         const dir = getDropDirection(
@@ -127,7 +139,10 @@ export function TabGroupFrame({
       }}
     >
       {tabsBar}
-      <div ref={editorRef} className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      <div
+        ref={editorRef}
+        className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden"
+      >
         {children}
         {/* Single split-preview overlay. Geometry snaps to the hovered direction;
             opacity fades in/out so there are no jarring strip indicators. */}
@@ -136,7 +151,9 @@ export function TabGroupFrame({
             "pointer-events-none absolute z-10 transition-opacity duration-150",
             "border border-[var(--sat-accent-primary)]",
             "bg-[color-mix(in_srgb,var(--sat-accent-primary)_18%,transparent)]",
-            (!showSplitTargets || !activeSplitTarget) ? "opacity-0" : "opacity-100",
+            !showSplitTargets || !activeSplitTarget
+              ? "opacity-0"
+              : "opacity-100",
             getSplitPreviewClass(activeSplitTarget),
           )}
         />
