@@ -5,9 +5,9 @@ import type {
   TabGroupModel,
   TabModel,
 } from "../../features/tabs";
+import { useTabsStore } from "../../features/tabs";
 
 interface TabActions {
-  groups: Record<TabGroupId, TabGroupModel>;
   activateTab: (groupId: TabGroupId, tabId: string) => void;
   closeTab: (
     groupId: TabGroupId,
@@ -35,7 +35,6 @@ export function useWorkspaceTabHandlers({
   focusedSessionTab,
 }: Props) {
   const {
-    groups,
     activateTab,
     closeTab,
     closeOtherTabs,
@@ -45,10 +44,14 @@ export function useWorkspaceTabHandlers({
     setFocusedGroup,
   } = tabActions;
 
+  // Read groups from store synchronously — avoids unstable callback refs
+  // that would cascade re-renders on every tab state change.
   const findGroupForTab = useCallback(
     (tabId: string): TabGroupModel | undefined =>
-      Object.values(groups).find((g) => g.tabIds.includes(tabId)),
-    [groups],
+      Object.values(useTabsStore.getState().groups).find((g) =>
+        g.tabIds.includes(tabId),
+      ),
+    [],
   );
 
   const handleTabSelect = useCallback(

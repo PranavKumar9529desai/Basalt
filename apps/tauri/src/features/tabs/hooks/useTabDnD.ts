@@ -2,6 +2,7 @@ import {
   type DragEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -253,16 +254,30 @@ export function useTabDnD() {
     [splitTarget],
   );
 
-  return {
-    isDraggingTab,
-    getSplitTargetDirection,
-    handleTabDragStart,
-    handleTabDragOver,
-    handleTabDropOnTab,
-    handleTabDragEnd,
-    handleSplitTargetDragEnter,
-    handleSplitTargetDragOver,
-    handleSplitTargetDragLeave,
-    handleSplitTargetDrop,
-  };
+  return useMemo(
+    () => ({
+      isDraggingTab,
+      getSplitTargetDirection,
+      handleTabDragStart,
+      handleTabDragOver,
+      handleTabDropOnTab,
+      handleTabDragEnd,
+      handleSplitTargetDragEnter,
+      handleSplitTargetDragOver,
+      handleSplitTargetDragLeave,
+      handleSplitTargetDrop,
+    }),
+    [
+      isDraggingTab,
+      getSplitTargetDirection,
+      handleTabDragStart,
+      handleTabDragOver,
+      handleTabDropOnTab,
+      handleTabDragEnd,
+      handleSplitTargetDragEnter,
+      handleSplitTargetDragOver,
+      handleSplitTargetDragLeave,
+      handleSplitTargetDrop,
+    ],
+  );
 }

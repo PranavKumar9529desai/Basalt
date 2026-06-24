@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
 import { useSearchStore } from "../features/search";
 import { useSettingsStore } from "../features/settings";
-import type { TabClickOpenBehavior } from "../features/tabs";
+import type { PaneRenderContext, TabClickOpenBehavior } from "../features/tabs";
 import { useTabPersistence, useTabs, WorkspaceTabs } from "../features/tabs";
 import type { BootResult, FlatTreeNode } from "../features/vault";
 import {
@@ -15,13 +15,11 @@ import {
   useVaultTree,
   VaultSplash,
 } from "../features/vault";
-import { ActivityBar } from "./ActivityBar";
 import { AppCommands } from "./AppCommands";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { Sidebar } from "./Sidebar";
-import { ThemeSelect } from "./ThemeSelect";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
 // Tech Debut
@@ -144,7 +142,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     editor: {
       focusedSessionSelected,
       focusedSessionTab,
-      groups: tabs.groups,
       openInPreview,
       openPinned,
       setTabTitle,
@@ -155,7 +152,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   const tabHandlers = useWorkspaceTabHandlers({
     tabActions: {
-      groups: tabs.groups,
       activateTab,
       closeTab,
       closeOtherTabs,
@@ -166,6 +162,19 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     },
     focusedSessionTab,
   });
+
+  const renderPane = useCallback(
+    (ctx: PaneRenderContext) => (
+      <PaneContent
+        activeTab={ctx.activeTab}
+        isFocused={ctx.isFocused}
+        findNote={findNote}
+        markTabDirty={ctx.markTabDirty}
+        onActivateGroup={ctx.onActivateGroup}
+      />
+    ),
+    [findNote],
+  );
 
   const handleSearchOpen = useCallback(
     (path: string) => {
@@ -233,15 +242,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         handleTabSelect={tabHandlers.handleTabSelect}
         handleTabClose={tabHandlers.handleTabClose}
         handleTabPinToggle={tabHandlers.handleTabPinToggle}
-        renderPane={(ctx) => (
-          <PaneContent
-            activeTab={ctx.activeTab}
-            isFocused={ctx.isFocused}
-            findNote={findNote}
-            markTabDirty={ctx.markTabDirty}
-            onActivateGroup={ctx.onActivateGroup}
-          />
-        )}
+        renderPane={renderPane}
         tabBarLeftSlot={
           <button
             type="button"

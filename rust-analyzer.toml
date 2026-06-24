@@ -1,0 +1,8 @@
+[cachePriming]
+enable = false
+
+[procMacro]
+enable = false
+
+[server]
+memoryLimit = 2048

@@ -14,6 +14,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -84,6 +85,8 @@ export function TabsBar({
     }
   }, []);
 
+  // ── Recalc chrome + overflow detection ──────────────────────────────────
+
   const recalcChrome = useCallback(() => {
     const tabsEl = tabsRef.current;
     if (!tabsEl) return;
@@ -124,21 +127,35 @@ export function TabsBar({
       return { activeLeft, activeWidth, separatorXs };
     });
 
-    // Detect overflow — if tabs are wider than the container
-    const overflow = tabsEl.scrollWidth > tabsEl.clientWidth + 1;
-    console.log("[TabsBar] overflow check", {
-      scrollWidth: tabsEl.scrollWidth,
-      clientWidth: tabsEl.clientWidth,
-      tabCount: tabs.length,
-      overflow,
-      tabsElExists: !!tabsEl,
-    });
+    // Detect overflow — compare scroll width to client width.
+    // Use Math.ceil to avoid sub-pixel false positives.
+    const overflow = Math.ceil(tabsEl.scrollWidth) > Math.ceil(tabsEl.clientWidth);
     setHasOverflow(overflow);
+
+
   }, [activeTabId, tabs]);
 
+  // Recalc on mount + whenever tabs change
   useLayoutEffect(() => {
     recalcChrome();
   }, [recalcChrome]);
+
+  // ── Recalc on scroll + resize ────────────────────────────────────────────
+
+  useEffect(() => {
+    const tabsEl = tabsRef.current;
+    if (!tabsEl) return;
+
+    const onScrollOrResize = () => recalcChrome();
+    tabsEl.addEventListener("scroll", onScrollOrResize);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      tabsEl.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [recalcChrome]);
+
+  // ── Drag-and-drop indicator state ────────────────────────────────────────
 
   const [dropIndicator, setDropIndicator] = useState<{
     tabId: string;
@@ -195,12 +212,22 @@ export function TabsBar({
     [onTabDragEnd, setDropIndicatorBoth],
   );
 
+  // ── Scroll helpers ───────────────────────────────────────────────────────
+
+  const scrollActiveTabIntoView = useCallback(() => {
+    if (!activeTabId) return;
+    const el = tabRefs.current.get(activeTabId);
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [activeTabId]);
+
+  // ── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div
       role="tablist"
       aria-label="Open tabs"
       className={cn(
-        "relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 pt-1",
+        "relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 pt-1 overflow-hidden",
         className,
       )}
       onDragOver={(e) => e.preventDefault()}
@@ -223,11 +250,11 @@ export function TabsBar({
     >
       {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
 
-      {/* ── Tabs container: native horizontal scroll, no JS tracking ── */}
+      {/* ── Tabs container: native horizontal scroll ── */}
       <div className="relative h-full flex-1 min-w-0">
         <div
           ref={tabsRef}
-          className="flex h-full items-end gap-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-webkit-scrollbar:none]"
+          className="flex h-full items-end gap-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-webkit-scrollbar:none] scroll-smooth"
         >
           {tabs.map((tab) => (
             <TabItem
@@ -286,11 +313,19 @@ export function TabsBar({
           <button
             type="button"
             aria-label="Show all tabs"
-            onClick={() => setDropdownOpen(true)}
-            className="pointer-events-auto absolute right-0 top-0 z-[60] flex h-full items-center bg-red-500/80 hover:bg-red-500 text-white pl-2 pr-2 text-sm font-bold"
+            onClick={() => {
+              setDropdownOpen(true);
+              // Recalc overflow after dropdown closes in case tabs were closed
+            }}
+            className={cn(
+              "pointer-events-auto absolute right-0 top-0 z-[60] flex h-full items-center",
+              "bg-[var(--sat-surface-2)] hover:bg-[var(--sat-surface-3)]",
+              "text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)]",
+              "pl-2 pr-2 text-xs font-medium transition-colors border-l border-[var(--sat-layout-border)]",
+            )}
           >
-            <IconChevronDown size={20} />
-            <span className="ml-1">{tabs.length}</span>
+            <IconChevronDown size={16} stroke={2} />
+            <span className="ml-1 tabular-nums">{tabs.length}</span>
           </button>
         )}
 
@@ -343,13 +378,13 @@ export function TabsBar({
         </>
       ) : null}
 
-      {/* ── All-tabs dropdown (modal command palette) ── */}
+      {/* ── All-tabs dropdown ── */}
       <Dialog open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DialogContent
-          className="p-0 overflow-hidden border-none shadow-none bg-popover sm:max-w-[320px] top-auto translate-y-0 bottom-12 left-auto right-4 ring-1 ring-border"
+          className="p-0 overflow-hidden border shadow-lg bg-[var(--sat-surface-2)] sm:max-w-[320px] top-auto translate-y-0 bottom-12 left-auto right-4"
           showCloseButton={false}
         >
-          <Command>
+          <Command className="bg-transparent">
             <CommandList>
               <CommandGroup>
                 {tabs.map((tab) => (
@@ -358,14 +393,18 @@ export function TabsBar({
                     value={`${tab.title} ${tab.id}`}
                     onSelect={() => {
                       onSelectTab?.(tab.id);
+                      scrollActiveTabIntoView();
                       setDropdownOpen(false);
                     }}
                     className={cn(
                       "cursor-pointer",
-                      tab.isActive && "bg-accent text-accent-foreground",
+                      tab.isActive &&
+                        "bg-[var(--sat-accent-primary)]/10 text-[var(--sat-accent-primary)]",
                     )}
                   >
-                    <span className="truncate flex-1">{tab.title}</span>
+                    <span className="truncate flex-1 text-sm">
+                      {tab.title}
+                    </span>
                     {tab.isDirty && (
                       <span
                         aria-hidden="true"

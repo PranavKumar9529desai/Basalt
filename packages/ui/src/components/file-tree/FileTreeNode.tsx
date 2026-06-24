@@ -1,5 +1,5 @@
 import { cn } from "@workspace/ui/lib/utils";
-import { memo, type FC, useCallback, useEffect, useRef } from "react";
+import { type FC, memo, useCallback, useEffect, useRef } from "react";
 import type { FileNode } from "./types";
 
 /** Pixels of indentation per depth level. */
@@ -181,131 +181,133 @@ interface FileTreeNodeProps {
   style: React.CSSProperties;
 }
 
-export const FileTreeNode: FC<FileTreeNodeProps> = memo(({
-  node,
-  isOpen,
-  isSelected,
-  onFileClick,
-  onFolderToggle,
-  onContextMenu,
-  onCommitEdit,
-  onCancelEdit,
-  style,
-}) => {
-  const isFolder = node.isFolder;
-  const isEditing = node.isEditing ?? false;
-  const paddingLeft = node.depth * INDENT_PX + 6;
+export const FileTreeNode: FC<FileTreeNodeProps> = memo(
+  ({
+    node,
+    isOpen,
+    isSelected,
+    onFileClick,
+    onFolderToggle,
+    onContextMenu,
+    onCommitEdit,
+    onCancelEdit,
+    style,
+  }) => {
+    const isFolder = node.isFolder;
+    const isEditing = node.isEditing ?? false;
+    const paddingLeft = node.depth * INDENT_PX + 6;
 
-  const displayName =
-    !node.isFolder && node.name.endsWith(".md")
-      ? node.name.slice(0, -3)
-      : node.name;
+    const displayName =
+      !node.isFolder && node.name.endsWith(".md")
+        ? node.name.slice(0, -3)
+        : node.name;
 
-  const handleClick = (e: React.UIEvent) => {
-    if (isEditing) return; // Don't navigate while editing
-    e.stopPropagation();
-    if (isFolder) {
-      onFolderToggle(node, e);
-    } else {
-      onFileClick(node, e);
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    if (isEditing) return;
-    if (onContextMenu) {
-      e.preventDefault();
+    const handleClick = (e: React.UIEvent) => {
+      if (isEditing) return; // Don't navigate while editing
       e.stopPropagation();
-      onContextMenu(node, e);
-    }
-  };
+      if (isFolder) {
+        onFolderToggle(node, e);
+      } else {
+        onFileClick(node, e);
+      }
+    };
 
-  return (
-    <div
-      style={{ ...style, height: TREE_ROW_HEIGHT }}
-      className={cn(
-        "pr-2 border-l-2",
-        isSelected
-          ? "pl-[6px] border-[var(--sat-accent-primary)]"
-          : "pl-2 border-transparent",
-      )}
-    >
+    const handleContextMenu = (e: React.MouseEvent) => {
+      if (isEditing) return;
+      if (onContextMenu) {
+        e.preventDefault();
+        e.stopPropagation();
+        onContextMenu(node, e);
+      }
+    };
+
+    return (
       <div
+        style={{ ...style, height: TREE_ROW_HEIGHT }}
         className={cn(
-          "group flex items-center w-full h-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
-          // Avoid transform transitions causing subpixel antialiasing weirdness on Webkit:
-          "transform-gpu transition-colors duration-75",
-          "rounded-md",
-          isEditing
-            ? "bg-[var(--sat-surface-2)]"
-            : isSelected
-              ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_10%,transparent)] text-[var(--sat-text-primary)]"
-              : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
-          node.isCut ? "opacity-60" : "",
+          "pr-2 border-l-2",
+          isSelected
+            ? "pl-[6px] border-[var(--sat-accent-primary)]"
+            : "pl-2 border-transparent",
         )}
-        role="treeitem"
-        aria-selected={isSelected}
-        aria-expanded={isFolder ? isOpen : undefined}
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        onKeyDown={(e) => {
-          if (isEditing) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClick(e);
-          }
-        }}
-        tabIndex={isEditing ? -1 : 0}
       >
-        {/* Indentation guide lines */}
         <div
-          className="relative flex h-full shrink-0"
-          style={{ width: paddingLeft }}
-        >
-          {Array.from({ length: node.depth }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute top-0 bottom-0 w-px bg-[var(--sat-layout-border)] opacity-30"
-              style={{ left: `${(i * INDENT_PX) + 4 + INDENT_PX / 2}px` }}
-            />
-          ))}
-        </div>
-
-        {/* Chevron — only for folders, takes fixed width so files align */}
-        <span className="w-4 flex items-center justify-center shrink-0">
-          {isFolder && (
-            <ChevronRight
-              className={cn(
-                "text-[var(--sat-text-muted)] transition-transform duration-150",
-                isOpen ? "rotate-90" : "",
-              )}
-            />
+          className={cn(
+            "group flex items-center w-full h-full text-left text-[13px] cursor-pointer select-none outline-none font-normal",
+            // Avoid transform transitions causing subpixel antialiasing weirdness on Webkit:
+            "transform-gpu transition-colors duration-75",
+            "rounded-md",
+            isEditing
+              ? "bg-[var(--sat-surface-2)]"
+              : isSelected
+                ? "bg-[color-mix(in_srgb,var(--sat-accent-primary)_10%,transparent)] text-[var(--sat-text-primary)]"
+                : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
+            node.isCut ? "opacity-60" : "",
           )}
-        </span>
-
-        {/* Icon */}
-        <span className="mr-1.5 flex items-center shrink-0">
-          {isFolder ? <FolderIcon /> : <FileIcon />}
-        </span>
-
-        {/* Label or inline edit input */}
-        {isEditing ? (
-          <InlineEditInput
-            node={node}
-            onCommitEdit={onCommitEdit}
-            onCancelEdit={onCancelEdit}
-          />
-        ) : (
-          <span
-            className={cn(
-              "truncate leading-none antialiased",
-              isSelected ? "font-medium" : "font-normal",
-            )}
+          role="treeitem"
+          aria-selected={isSelected}
+          aria-expanded={isFolder ? isOpen : undefined}
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
+          onKeyDown={(e) => {
+            if (isEditing) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClick(e);
+            }
+          }}
+          tabIndex={isEditing ? -1 : 0}
+        >
+          {/* Indentation guide lines */}
+          <div
+            className="relative flex h-full shrink-0"
+            style={{ width: paddingLeft }}
           >
-            {displayName}
+            {Array.from({ length: node.depth }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute top-0 bottom-0 w-px bg-[var(--sat-layout-border)] opacity-30"
+                style={{ left: `${(i * INDENT_PX) + 4 + INDENT_PX / 2}px` }}
+              />
+            ))}
+          </div>
+
+          {/* Chevron — only for folders, takes fixed width so files align */}
+          <span className="w-4 flex items-center justify-center shrink-0">
+            {isFolder && (
+              <ChevronRight
+                className={cn(
+                  "text-[var(--sat-text-muted)] transition-transform duration-150",
+                  isOpen ? "rotate-90" : "",
+                )}
+              />
+            )}
           </span>
-        )}
+
+          {/* Icon */}
+          <span className="mr-1.5 flex items-center shrink-0">
+            {isFolder ? <FolderIcon /> : <FileIcon />}
+          </span>
+
+          {/* Label or inline edit input */}
+          {isEditing ? (
+            <InlineEditInput
+              node={node}
+              onCommitEdit={onCommitEdit}
+              onCancelEdit={onCancelEdit}
+            />
+          ) : (
+            <span
+              className={cn(
+                "truncate leading-none antialiased",
+                isSelected ? "font-medium" : "font-normal",
+              )}
+            >
+              {displayName}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  },
+);

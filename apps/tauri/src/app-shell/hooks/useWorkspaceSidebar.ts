@@ -1,10 +1,5 @@
-import { useCallback } from "react";
-import type {
-  TabClickOpenBehavior,
-  TabGroupId,
-  TabGroupModel,
-  TabModel,
-} from "../../features/tabs";
+import { useCallback, useMemo } from "react";
+import type { TabClickOpenBehavior, TabGroupId, TabModel } from "../../features/tabs";
 import { useTabsStore } from "../../features/tabs";
 import type { FlatTreeNode } from "../../features/vault";
 import { useVaultController, useVaultMutations } from "../../features/vault";
@@ -17,7 +12,6 @@ interface NoteSelection {
 interface EditorInterface {
   focusedSessionSelected: NoteSelection | null;
   focusedSessionTab: TabModel | null;
-  groups: Record<TabGroupId, TabGroupModel>;
   openInPreview: (opts: { path: string; title: string }) => string;
   openPinned: (opts: { path: string; title: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
@@ -50,50 +44,80 @@ export function useWorkspaceSidebar({
 }: Props) {
   const mutations = useVaultMutations();
 
+  // Destructure stable action references so inline callbacks stay stable.
+  const {
+    openInPreview,
+    openPinned,
+    setTabTitle,
+    closeTab,
+    focusedSessionTab,
+    focusedSessionSelected,
+    tabClickOpenBehavior,
+  } = editor;
+
+  // loadNote only depends on stable store actions — never changes.
+  const loadNote = useCallback(
+    (note: { path: string; name: string }) => {
+      const tabId = openInPreview({ path: note.path, title: note.name });
+      setTabTitle(tabId, note.name);
+    },
+    [openInPreview, setTabTitle],
+  );
+
+  // closeNote reads groups from store synchronously to avoid depending on the
+  // unstable `groups` prop.
+  const closeNote = useCallback(() => {
+    const tab = focusedSessionTab;
+    if (!tab) return;
+    const { groups } = useTabsStore.getState();
+    for (const group of Object.values(groups)) {
+      if (group.tabIds.includes(tab.id)) {
+        closeTab(group.id, tab.id, { force: true });
+        break;
+      }
+    }
+  }, [focusedSessionTab, closeTab]);
+
+  // onFileOpen only depends on stable store actions — never changes.
+  const onFileOpen = useCallback(
+    (node: FlatTreeNode, mode: "preview" | "pinned") => {
+      const effectiveMode =
+        tabClickOpenBehavior === "vscode" ? mode : tabClickOpenBehavior;
+      const tabId =
+        effectiveMode === "pinned"
+          ? openPinned({ path: node.path, title: node.name })
+          : openInPreview({ path: node.path, title: node.name });
+      setTabTitle(tabId, node.name);
+    },
+    [tabClickOpenBehavior, openPinned, openInPreview, setTabTitle],
+  );
+
+  // Memoize the editor object so it doesn't cause useVaultController to
+  // recreate its callbacks when the reference changes but the values don't.
+  const vaultControllerEditor = useMemo(
+    () => ({
+      selected: focusedSessionSelected
+        ? {
+            name: focusedSessionSelected.name,
+            path: focusedSessionSelected.path,
+          }
+        : null,
+      loadNote,
+      closeNote,
+    }),
+    [focusedSessionSelected, loadNote, closeNote],
+  );
+
   const controller = useVaultController({
     treeNodes,
     visibleNodes,
     vaultPath,
-    editor: {
-      selected: editor.focusedSessionSelected
-        ? {
-            name: editor.focusedSessionSelected.name,
-            path: editor.focusedSessionSelected.path,
-          }
-        : null,
-      loadNote: (note) => {
-        const tabId = editor.openInPreview({
-          path: note.path,
-          title: note.name,
-        });
-        editor.setTabTitle(tabId, note.name);
-      },
-      closeNote: () => {
-        const tab = editor.focusedSessionTab;
-        if (!tab) return;
-        for (const group of Object.values(editor.groups)) {
-          if (group.tabIds.includes(tab.id)) {
-            editor.closeTab(group.id, tab.id, { force: true });
-            break;
-          }
-        }
-      },
-    },
+    editor: vaultControllerEditor,
     mutations,
     openFolder,
     toggleFolder,
     refreshTree,
-    onFileOpen: (node, mode) => {
-      const effectiveMode =
-        editor.tabClickOpenBehavior === "vscode"
-          ? mode
-          : editor.tabClickOpenBehavior;
-      const tabId =
-        effectiveMode === "pinned"
-          ? editor.openPinned({ path: node.path, title: node.name })
-          : editor.openInPreview({ path: node.path, title: node.name });
-      editor.setTabTitle(tabId, node.name);
-    },
+    onFileOpen,
   });
 
   const handleConfirmDeleteWithTabs = useCallback(async () => {

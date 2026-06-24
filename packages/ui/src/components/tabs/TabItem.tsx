@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@workspace/ui/components/ui/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
-import type { DragEvent, MouseEvent } from "react";
+import { memo, type DragEvent, type MouseEvent } from "react";
 import type { TabItemData } from "./types";
 
 export interface TabItemProps {

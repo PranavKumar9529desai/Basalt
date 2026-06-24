@@ -1,7 +1,7 @@
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
-import { useCallback, useMemo, type ReactNode } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { useTabDnD } from "../hooks/useTabDnD";
-import { useTabs } from "../hooks/useTabs";
+import { useTabsStore } from "../store";
 import type {
   TabGroupId,
   TabLayoutNode,
@@ -35,12 +35,12 @@ export interface WorkspaceTabsProps {
 // ---------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------
-// TabGroupPane — extracted component so hooks are called at top level
+// TabGroupPane — reads from tabs store directly to avoid re-render cascade
+// when tabs in other groups change.
 // --------------------------------------------------------------------------
 
 interface TabGroupPaneProps {
   groupId: TabGroupId;
-  tabs: ReturnType<typeof useTabs>;
   tabDnD: ReturnType<typeof useTabDnD>;
   handleTabSelect: (groupId: TabGroupId, tabId: string) => void;
   handleTabClose: (groupId: TabGroupId, tabId: string) => void;
@@ -52,7 +52,6 @@ interface TabGroupPaneProps {
 
 function TabGroupPane({
   groupId,
-  tabs,
   tabDnD,
   handleTabSelect,
   handleTabClose,
@@ -61,39 +60,50 @@ function TabGroupPane({
   tabBarLeftSlot,
   tabBarRightSlot,
 }: TabGroupPaneProps) {
-  const group = tabs.groups[groupId];
+  // Subscribe to only the data this group needs — avoids re-rendering when
+  // tabs in OTHER groups change.
+  const group = useTabsStore((state) => state.groups[groupId]);
+  const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
+  const setFocusedGroup = useTabsStore((state) => state.setFocusedGroup);
+  const markTabDirty = useTabsStore((state) => state.markTabDirty);
 
-  const groupActiveTab = useMemo(
-    () =>
-      group.activeTabId != null
-        ? (tabs.tabs[group.activeTabId] ?? null)
-        : null,
-    [group.activeTabId, tabs.tabs],
-  );
+  // Bail out early if group was removed (shouldn't happen under normal
+  // operation, but guards against race conditions during split/merge).
+  if (!group) return null;
 
-  const groupTabs = useMemo(
-    () =>
-      group.tabIds
-        .map((tabId) => tabs.tabs[tabId])
-        .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
-        .map((tab) => ({
-          id: tab.id,
-          title: tab.title,
-          isActive: group.activeTabId === tab.id,
-          isDirty: tab.isDirty,
-          isPinned: tab.isPinned,
-          isPreview: tab.isPreview,
-          canClose: true,
-        })),
-    [group.tabIds, group.activeTabId, tabs.tabs],
-  );
-
-  const isFocused = group.id === tabs.focusedGroupId;
+  const isFocused = group.id === focusedGroupId;
 
   const onActivateGroup = useCallback(
-    () => tabs.setFocusedGroup(group.id),
-    [group.id, tabs.setFocusedGroup],
+    () => setFocusedGroup(group.id),
+    [group.id, setFocusedGroup],
   );
+
+  const tabIds = group.tabIds;
+  const activeTabId = group.activeTabId;
+
+  // groupTabs recomputes only when THIS group's tabIds or activeTabId change.
+  const groupTabs = useMemo(() => {
+    const { tabs } = useTabsStore.getState();
+    return tabIds
+      .map((tabId) => tabs[tabId])
+      .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
+      .map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        isActive: activeTabId === tab.id,
+        isDirty: tab.isDirty,
+        isPinned: tab.isPinned,
+        isPreview: tab.isPreview,
+        canClose: true,
+      }));
+  }, [tabIds, activeTabId]);
+
+  // groupActiveTab recomputes only when THIS group's activeTabId changes.
+  const groupActiveTab = useMemo(() => {
+    if (!activeTabId) return null;
+    const { tabs } = useTabsStore.getState();
+    return tabs[activeTabId] ?? null;
+  }, [activeTabId]);
 
   const tabsBar = useMemo(
     () => (
@@ -151,7 +161,7 @@ function TabGroupPane({
         groupId: group.id,
         activeTab: groupActiveTab,
         isFocused,
-        markTabDirty: tabs.markTabDirty,
+        markTabDirty,
         onActivateGroup,
       })}
     </TabGroupFrame>
@@ -182,9 +192,7 @@ function SplitLayoutNode({
         return (
           <div
             key={
-              child.type === "group"
-                ? child.groupId
-                : `${child.axis}-${index}`
+              child.type === "group" ? child.groupId : `${child.axis}-${index}`
             }
             className={`flex flex-1 min-h-0 min-w-0 ${
               isRow ? "min-w-0" : "w-full"
@@ -210,10 +218,12 @@ export function WorkspaceTabs({
   tabBarLeftSlot,
   tabBarRightSlot,
 }: WorkspaceTabsProps) {
-  const tabs = useTabs();
+  const layoutRoot = useTabsStore((state) => state.layoutRoot);
+  const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
+  const groupOrder = useTabsStore((state) => state.groupOrder);
   const tabDnD = useTabDnD();
-  const layoutRoot = tabs.layoutRoot;
-  const fallbackGroupId = tabs.focusedGroupId ?? tabs.groupOrder[0] ?? "";
+
+  const fallbackGroupId = focusedGroupId ?? groupOrder[0] ?? "";
   const rootNode: TabLayoutNode = layoutRoot ?? {
     type: "group",
     groupId: fallbackGroupId,
@@ -226,7 +236,6 @@ export function WorkspaceTabs({
           <TabGroupPane
             key={node.groupId}
             groupId={node.groupId}
-            tabs={tabs}
             tabDnD={tabDnD}
             handleTabSelect={handleTabSelect}
             handleTabClose={handleTabClose}
@@ -246,7 +255,6 @@ export function WorkspaceTabs({
       );
     },
     [
-      tabs,
       tabDnD,
       handleTabSelect,
       handleTabClose,
