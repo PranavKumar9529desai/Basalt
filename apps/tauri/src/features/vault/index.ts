@@ -3,11 +3,6 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type {
-  UseEditorOptions,
-  UseEditorReturn,
-} from "../editor/hooks/useEditor";
-export { useEditor } from "../editor/hooks/useEditor";
 export { BacklinksSidebar } from "./components/BacklinksSidebar";
 export { FileTree } from "./components/FileTree";
 export { SaveIndicator } from "./components/SaveIndicator";
