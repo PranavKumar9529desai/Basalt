@@ -5,10 +5,6 @@ import { useRef } from "react";
 import { FileTreeNode, TREE_ROW_HEIGHT } from "./FileTreeNode";
 import type { FileTreeProps } from "./types";
 
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
-
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-12 px-4 h-full">

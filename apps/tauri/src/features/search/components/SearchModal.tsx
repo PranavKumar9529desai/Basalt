@@ -1,9 +1,9 @@
-import { Button } from "@workspace/ui/components/ui/button";
 import {
   PaletteShell,
-  PaletteShellInput,
   PaletteShellFooter,
+  PaletteShellInput,
 } from "@workspace/ui/components/palette-shell";
+import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useSearchStore } from "../store";
@@ -134,21 +134,41 @@ export function SearchModal({ onOpen }: SearchModalProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") { e.preventDefault(); searchSelectNext(); }
-      if (e.key === "ArrowUp")   { e.preventDefault(); searchSelectPrev(); }
-      if (e.key === "Escape")    { closeSearch(); }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        searchSelectNext();
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        searchSelectPrev();
+      }
+      if (e.key === "Escape") {
+        closeSearch();
+      }
       if (e.key === "Enter") {
         const result = searchResults[searchSelectedIndex];
-        if (result) { onOpen(result.path); closeSearch(); }
+        if (result) {
+          onOpen(result.path);
+          closeSearch();
+        }
       }
     },
-    [searchSelectNext, searchSelectPrev, closeSearch, searchResults, searchSelectedIndex, onOpen],
+    [
+      searchSelectNext,
+      searchSelectPrev,
+      closeSearch,
+      searchResults,
+      searchSelectedIndex,
+      onOpen,
+    ],
   );
 
   return (
     <PaletteShell
       open={isSearchOpen}
-      onOpenChange={(o: boolean) => { if (!o) closeSearch(); }}
+      onOpenChange={(o: boolean) => {
+        if (!o) closeSearch();
+      }}
       maxWidth="sm:max-w-[650px]"
     >
       <PaletteShellInput
@@ -162,14 +182,19 @@ export function SearchModal({ onOpen }: SearchModalProps) {
 
       <div className="max-h-[450px] overflow-y-auto px-2">
         {searchResults.length === 0 && searchQuery && !isSearchLoading ? (
-          <p className="px-4 py-4 text-sm text-muted-foreground">No results found</p>
+          <p className="px-4 py-4 text-sm text-muted-foreground">
+            No results found
+          </p>
         ) : (
           searchResults.map((r, i) => (
             <ResultRow
               key={r.path}
               result={r}
               isSelected={i === searchSelectedIndex}
-              onClick={() => { onOpen(r.path); closeSearch(); }}
+              onClick={() => {
+                onOpen(r.path);
+                closeSearch();
+              }}
               rowRef={i === searchSelectedIndex ? selectedRowRef : undefined}
             />
           ))

@@ -1,3 +1,4 @@
+import { ROOT_GROUP_ID } from "../constants";
 import type {
   SplitDirection,
   TabGroupId,
@@ -5,7 +6,6 @@ import type {
   TabLayoutAxis,
   TabLayoutNode,
 } from "../types";
-import { ROOT_GROUP_ID } from "../constants";
 
 function directionToAxis(direction: SplitDirection): TabLayoutAxis {
   return direction === "left" || direction === "right" ? "row" : "column";

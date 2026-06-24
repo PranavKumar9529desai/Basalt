@@ -17,8 +17,6 @@
     "superpowers@claude-plugins-official": true
   },
   "permissions": {
-    "allow": [
-      "Bash(cargo build:*)"
-    ]
+    "allow": ["Bash(cargo build:*)"]
   }
 }

@@ -1,4 +1,17 @@
 import {
+  IconArrowDown,
+  IconArrowUp,
+  IconCornerDownLeft,
+  IconX,
+} from "@tabler/icons-react";
+import { useCommandState } from "cmdk";
+import React from "react";
+import {
+  PaletteShell,
+  PaletteShellFooter,
+} from "../palette-shell/PaletteShell";
+import { Button } from "../ui/button";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -6,19 +19,6 @@ import {
   CommandItem,
   CommandList,
 } from "../ui/command";
-import { Button } from "../ui/button";
-import {
-  PaletteShell,
-  PaletteShellFooter,
-} from "../palette-shell/PaletteShell";
-import React from "react";
-import { useCommandState } from "cmdk";
-import {
-  IconArrowUp,
-  IconArrowDown,
-  IconCornerDownLeft,
-  IconX,
-} from "@tabler/icons-react";
 
 export interface CommandItemProps {
   id: string;
@@ -63,7 +63,11 @@ export function CommandPalette({
   placeholder,
 }: CommandPaletteProps) {
   return (
-    <PaletteShell open={open} onOpenChange={onOpenChange} maxWidth="sm:max-w-[650px]">
+    <PaletteShell
+      open={open}
+      onOpenChange={onOpenChange}
+      maxWidth="sm:max-w-[650px]"
+    >
       <Command
         className="w-full flex flex-col h-fit bg-transparent border-none p-0"
         label="Command Palette"

@@ -1,4 +1,3 @@
-import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { isInCodeBlock } from "./types";
@@ -16,8 +15,6 @@ export const HEADING_CLASS: Record<string, string> = {
 };
 
 export const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
-
-export const HEADINGS_THEME = EditorView.baseTheme({});
 
 // ---------------------------------------------------------------------------
 // Node Handler (called during shared tree walk)

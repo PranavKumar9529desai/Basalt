@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@workspace/ui/lib/utils";
+import React, { useEffect, useRef, useState } from "react";
 import { ResizeHandle } from "./ResizeHandle";
 
 export interface SidebarPanelProps {

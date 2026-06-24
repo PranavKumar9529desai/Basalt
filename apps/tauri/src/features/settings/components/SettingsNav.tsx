@@ -1,4 +1,3 @@
-import { cn } from "@workspace/ui/lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -7,6 +6,7 @@ import {
   CommandItem,
   CommandList,
 } from "@workspace/ui/components/ui/command";
+import { cn } from "@workspace/ui/lib/utils";
 import { type SettingsGroup, useSettingsStore } from "../store";
 
 const GROUP_LABELS: Record<SettingsGroup, string> = {
@@ -20,7 +20,11 @@ const GROUP_EMPTY: Record<string, string> = {
   "community-plugins": "No community plugins installed",
 };
 
-const GROUPS: SettingsGroup[] = ["options", "core-plugins", "community-plugins"];
+const GROUPS: SettingsGroup[] = [
+  "options",
+  "core-plugins",
+  "community-plugins",
+];
 
 export function SettingsNav() {
   const { sections, activeSection, setActiveSection } = useSettingsStore();

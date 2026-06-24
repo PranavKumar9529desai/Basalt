@@ -1,7 +1,4 @@
-import * as React from "react";
-import { Command as CommandPrimitive } from "cmdk";
-
-import { cn } from "@workspace/ui/lib/utils";
+import { IconCheck } from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@workspace/ui/components/ui/dialog";
-import { IconCheck } from "@tabler/icons-react";
+
+import { cn } from "@workspace/ui/lib/utils";
+import { Command as CommandPrimitive } from "cmdk";
+import * as React from "react";
 
 function Command({
   className,

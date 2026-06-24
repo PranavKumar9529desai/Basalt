@@ -1,9 +1,9 @@
 export {
   PaletteShell,
-  PaletteShellInput,
   PaletteShellFooter,
-  type PaletteShellProps,
-  type PaletteShellInputProps,
-  type PaletteShellFooterProps,
   type PaletteShellFooterHint,
+  type PaletteShellFooterProps,
+  PaletteShellInput,
+  type PaletteShellInputProps,
+  type PaletteShellProps,
 } from "./PaletteShell";

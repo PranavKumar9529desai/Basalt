@@ -3,12 +3,10 @@ import { EditorView } from "@codemirror/view";
 import { defaultHighlightStyleOverride } from "./highlight-override";
 
 const baseTheme = EditorView.theme({
+  // NOTE: `&` (cm-editor) and .cm-scroller heights are managed by
+  // @uiw/react-codemirror's internal theme (height="100%" prop).
+  // We only set styles that are NOT conflicting with that.
   "&": {
-    height: "100%",
-    maxHeight: "100%",
-    minHeight: "0",
-    display: "flex",
-    flexDirection: "column",
     backgroundColor: "transparent",
     fontSize: "16px",
     fontFamily: "var(--sat-font-sans)",
@@ -16,22 +14,19 @@ const baseTheme = EditorView.theme({
     fontFeatureSettings: '"cv01", "ss01"',
   },
   ".cm-scroller": {
-    flex: "1 1 auto",
-    minHeight: "0",
-    height: "100%",
-    maxHeight: "100%",
     overflowY: "auto",
-    overflowX: "visible",
+    overflowX: "hidden",
     padding: "24px 32px",
     fontFamily: "var(--sat-font-sans)",
-    // border: "2px solid red",
-    display: "flex",
-    justifyContent: "center",
+    // No display:flex / justifyContent:center — they cause re-centering
+    // shifts when any width change occurs (scrollbar, resize, tab overflow).
+    // Centering is handled by .cm-content margin: 0 auto (stable).
   },
   ".cm-content": {
     fontFamily: "inherit",
-    // border: "2px solid blue",
-    width: "100%",
+    // Left-aligned, max-width constrained for readability.
+    // No centering — centering caused the content to "shift right" whenever
+    // any width change occurred (scrollbar toggle, resize, tab overflow).
     maxWidth: "45rem",
   },
   ".cm-line": {

@@ -11,6 +11,7 @@ import {
 import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
 import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
 import { CUSTOM_THEME } from "./styling/base";
+import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { yamlFrontmatterExtension } from "./syntax/frontmatter";
 import { highlightExtension } from "./syntax/highlight";
 import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
@@ -42,6 +43,7 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
       ],
     }),
     ...themeStack,
+    codeSyntaxHighlightingExtension(),
     TASK_CHECKBOX_THEME,
     taskListPlugin,
     LIVE_PREVIEW_THEME,

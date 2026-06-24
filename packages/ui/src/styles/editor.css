@@ -137,3 +137,32 @@
 .cm-heading {
   text-decoration: none;
 }
+
+/* ── Syntax highlighting inside code blocks ──────────────────────────── */
+/*
+ * These classes are emitted by the codeSyntaxHighlighting extension.
+ * The colours use --sat-syntax-* variables so they adapt to any theme.
+ * Defaults below are a One Dark Pro inspired palette.
+ */
+
+.cm-line.cm-live-code .sat-syntax-keyword  { color: var(--sat-syntax-keyword, #c678dd); }
+.cm-line.cm-live-code .sat-syntax-string  { color: var(--sat-syntax-string, #98c379); }
+.cm-line.cm-live-code .sat-syntax-number  { color: var(--sat-syntax-number, #d19a66); }
+.cm-line.cm-live-code .sat-syntax-comment  { color: var(--sat-syntax-comment, #5c6370); font-style: italic; }
+.cm-line.cm-live-code .sat-syntax-function { color: var(--sat-syntax-function, #61afef); }
+.cm-line.cm-live-code .sat-syntax-type    { color: var(--sat-syntax-type, #e5c07b); }
+.cm-line.cm-live-code .sat-syntax-variable { color: var(--sat-syntax-variable, #e06c75); }
+.cm-line.cm-live-code .sat-syntax-atom    { color: var(--sat-syntax-atom, #d19a66); }
+.cm-line.cm-live-code .sat-syntax-operator { color: var(--sat-syntax-operator, #abb2bf); }
+.cm-line.cm-live-code .sat-syntax-property { color: var(--sat-syntax-property, #e06c75); }
+.cm-line.cm-live-code .sat-syntax-tag     { color: var(--sat-syntax-tag, #e06c75); }
+.cm-line.cm-live-code .sat-syntax-attribute { color: var(--sat-syntax-attribute, #d19a66); }
+.cm-line.cm-live-code .sat-syntax-punctuation { color: var(--sat-syntax-punctuation, #abb2bf); }
+.cm-line.cm-live-code .sat-syntax-regexp  { color: var(--sat-syntax-regexp, #98c379); }
+.cm-line.cm-live-code .sat-syntax-doc     { color: var(--sat-syntax-doc, #5c6370); font-style: italic; }
+.cm-line.cm-live-code .sat-syntax-macro   { color: var(--sat-syntax-macro, #c678dd); }
+.cm-line.cm-live-code .sat-syntax-meta    { color: var(--sat-syntax-meta, #5c6370); }
+.cm-line.cm-live-code .sat-syntax-link    { color: var(--sat-syntax-link, #61afef); text-decoration: underline; }
+.cm-line.cm-live-code .sat-syntax-changed { color: var(--sat-syntax-changed, #e5c07b); }
+.cm-line.cm-live-code .sat-syntax-deleted { color: var(--sat-syntax-deleted, #e06c75); }
+.cm-line.cm-live-code .sat-syntax-inserted { color: var(--sat-syntax-inserted, #98c379); }

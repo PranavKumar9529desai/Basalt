@@ -1,11 +1,22 @@
-export { useTabsStore } from "./store";
-export { useTabs } from "./hooks/useTabs";
-export { useTabPersistence } from "./hooks/useTabPersistence";
-export { useTabIO } from "./hooks/useTabIO";
-export { useTabDnD } from "./hooks/useTabDnD";
-export { WorkspaceTabs } from "./components/WorkspaceTabs";
 export type { PaneRenderContext } from "./components/WorkspaceTabs";
-
+export { WorkspaceTabs } from "./components/WorkspaceTabs";
+export { useTabDnD } from "./hooks/useTabDnD";
+export type {
+  CachedTabContent,
+  OpenFileResult,
+  SaveFileInput,
+  UseTabIOOptions,
+} from "./hooks/useTabIO";
+export { useTabIO } from "./hooks/useTabIO";
+export { useTabPersistence } from "./hooks/useTabPersistence";
+export { useTabs } from "./hooks/useTabs";
+export type {
+  CloseTabOptions,
+  MoveTabOptions,
+  OpenTabOptions,
+  TabsState,
+} from "./store";
+export { useTabsStore } from "./store";
 export type {
   OpenableTabInput,
   SplitDirection,
@@ -16,15 +27,3 @@ export type {
   TabModel,
   TabsWorkspaceSnapshot,
 } from "./types";
-export type {
-  CloseTabOptions,
-  MoveTabOptions,
-  OpenTabOptions,
-  TabsState,
-} from "./store";
-export type {
-  CachedTabContent,
-  OpenFileResult,
-  SaveFileInput,
-  UseTabIOOptions,
-} from "./hooks/useTabIO";

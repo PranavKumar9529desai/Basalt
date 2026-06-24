@@ -1,12 +1,12 @@
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "../ui/dialog";
-import { Button } from "../ui/button";
 
 export interface ConfirmDialogProps {
   open: boolean;

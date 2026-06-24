@@ -200,7 +200,7 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
 
         if (kind === "deleted") {
           // The open file was removed — surface a status message.
-          setStatus("⚠ The open file was deleted from disk.");
+          setStatus("! The open file was deleted from disk.");
           setSaveStatus("conflict");
           return;
         }
@@ -208,7 +208,7 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
         if (isDirtyRef.current) {
           // We have unsaved edits and the file changed on disk — conflict.
           setSaveStatus("conflict");
-          setStatus("⚠ File changed externally. Save or discard your changes.");
+          setStatus("! File changed externally. Save or discard your changes.");
         } else {
           // No unsaved edits — silently reload from disk.
           try {

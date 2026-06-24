@@ -3,8 +3,8 @@
 // ---------------------------------------------------------------------------
 
 import type { StateCreator } from "zustand";
-import type { TabGroupId, TabGroupModel, TabId } from "../types";
 import { ROOT_GROUP_ID } from "../constants";
+import type { TabGroupId, TabGroupModel, TabId } from "../types";
 import { createGroupNode, normalizeLayoutRoot } from "./layout";
 import type { TabsState } from "./types";
 
@@ -20,7 +20,8 @@ function ensureAtLeastOneGroup(
   }
   const fallbackId = groupOrder[0] ?? ROOT_GROUP_ID;
   const nextGroups = { ...groups };
-  const nextOrder = groupOrder.length > 0 ? [...groupOrder] : [fallbackId as TabGroupId];
+  const nextOrder =
+    groupOrder.length > 0 ? [...groupOrder] : [fallbackId as TabGroupId];
   if (!nextGroups[fallbackId]) {
     nextGroups[fallbackId] = {
       id: fallbackId as TabGroupId,
@@ -33,24 +34,6 @@ function ensureAtLeastOneGroup(
     groups: nextGroups,
     groupOrder: nextOrder as TabGroupId[],
     focusedGroupId: fallbackId as TabGroupId,
-  };
-}
-
-function buildInitialState() {
-  const rootId = ROOT_GROUP_ID as TabGroupId;
-  return {
-    tabs: {} as Record<TabId, import("../types").TabModel>,
-    groups: {
-      [rootId]: {
-        id: rootId,
-        tabIds: [],
-        activeTabId: null,
-        previewTabId: null,
-      },
-    } as Record<TabGroupId, TabGroupModel>,
-    groupOrder: [rootId],
-    focusedGroupId: rootId,
-    layoutRoot: createGroupNode(rootId),
   };
 }
 
@@ -121,7 +104,8 @@ export const createPersistenceSlice: StateCreator<
       snapshot.focusedGroupId as TabGroupId,
     );
 
-    const fallbackGroupId = normalized.groupOrder[0] ?? (ROOT_GROUP_ID as TabGroupId);
+    const fallbackGroupId =
+      normalized.groupOrder[0] ?? (ROOT_GROUP_ID as TabGroupId);
     const layoutCandidate = snapshot.layout ?? createGroupNode(fallbackGroupId);
     const normalizedLayout = normalizeLayoutRoot(
       layoutCandidate,

@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { FC, ReactNode } from "react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export interface SidebarAction {
   id: string;

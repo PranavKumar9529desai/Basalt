@@ -1,9 +1,9 @@
-import { Button } from "@workspace/ui/components/ui/button";
 import {
   PaletteShell,
-  PaletteShellInput,
   PaletteShellFooter,
+  PaletteShellInput,
 } from "@workspace/ui/components/palette-shell";
+import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useSearchStore } from "../store";
@@ -89,21 +89,41 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") { e.preventDefault(); switcherSelectNext(); }
-      if (e.key === "ArrowUp")   { e.preventDefault(); switcherSelectPrev(); }
-      if (e.key === "Escape")    { closeSwitcher(); }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        switcherSelectNext();
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        switcherSelectPrev();
+      }
+      if (e.key === "Escape") {
+        closeSwitcher();
+      }
       if (e.key === "Enter") {
         const result = switcherResults[switcherSelectedIndex];
-        if (result) { onOpen(result.path); closeSwitcher(); }
+        if (result) {
+          onOpen(result.path);
+          closeSwitcher();
+        }
       }
     },
-    [switcherSelectNext, switcherSelectPrev, closeSwitcher, switcherResults, switcherSelectedIndex, onOpen],
+    [
+      switcherSelectNext,
+      switcherSelectPrev,
+      closeSwitcher,
+      switcherResults,
+      switcherSelectedIndex,
+      onOpen,
+    ],
   );
 
   return (
     <PaletteShell
       open={isSwitcherOpen}
-      onOpenChange={(o: boolean) => { if (!o) closeSwitcher(); }}
+      onOpenChange={(o: boolean) => {
+        if (!o) closeSwitcher();
+      }}
       maxWidth="sm:max-w-[650px]"
     >
       <PaletteShellInput
@@ -116,14 +136,19 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
 
       <div className="max-h-[320px] overflow-y-auto py-1 px-2">
         {switcherResults.length === 0 && switcherQuery ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">No files found</p>
+          <p className="px-4 py-3 text-sm text-muted-foreground">
+            No files found
+          </p>
         ) : (
           switcherResults.map((r, i) => (
             <ResultRow
               key={r.path}
               result={r}
               isSelected={i === switcherSelectedIndex}
-              onClick={() => { onOpen(r.path); closeSwitcher(); }}
+              onClick={() => {
+                onOpen(r.path);
+                closeSwitcher();
+              }}
               rowRef={i === switcherSelectedIndex ? selectedRowRef : undefined}
             />
           ))

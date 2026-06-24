@@ -1,14 +1,14 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { useState, useCallback, useEffect, useRef } from "react";
 
 export interface InputDialogProps {
   /** Whether the dialog is open. */

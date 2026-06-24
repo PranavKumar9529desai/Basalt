@@ -5,13 +5,8 @@
 // ---------------------------------------------------------------------------
 
 import type { StateCreator } from "zustand";
-import type {
-  TabGroupId,
-  TabGroupModel,
-  TabId,
-  TabModel,
-} from "../types";
 import { ROOT_GROUP_ID } from "../constants";
+import type { TabGroupId, TabGroupModel, TabId, TabModel } from "../types";
 import {
   createGroupNode,
   normalizeLayoutRoot,
@@ -70,10 +65,7 @@ function findGroupForTab(
   return null;
 }
 
-function removeTabFromGroup(
-  group: TabGroupModel,
-  tabId: TabId,
-): void {
+function removeTabFromGroup(group: TabGroupModel, tabId: TabId): void {
   group.tabIds = group.tabIds.filter((id) => id !== tabId);
   if (group.previewTabId === tabId) group.previewTabId = null;
   if (group.activeTabId === tabId) {
@@ -94,7 +86,8 @@ function ensureAtLeastOneGroup(
   }
   const fallbackId = groupOrder[0] ?? ROOT_GROUP_ID;
   const nextGroups = { ...groups };
-  const nextOrder = groupOrder.length > 0 ? [...groupOrder] : [fallbackId as TabGroupId];
+  const nextOrder =
+    groupOrder.length > 0 ? [...groupOrder] : [fallbackId as TabGroupId];
   if (!nextGroups[fallbackId]) {
     nextGroups[fallbackId] = {
       id: fallbackId as TabGroupId,

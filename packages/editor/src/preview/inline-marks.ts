@@ -1,6 +1,7 @@
 import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
+import { isInCodeBlock } from "./types";
 
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
@@ -90,8 +91,6 @@ export function handleInlineNode(
   return false;
 }
 
-const TAG_RE = /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
-
 /**
  * Scans a single line for #tags and adds cm-live-tag marks.
  * Skips matches inside code blocks. Call from the ViewPlugin pass.
@@ -102,15 +101,15 @@ export function handleTagsInLine(
   codeBlockRanges: { from: number; to: number }[],
   collector: DecorationCollector,
 ): void {
-  TAG_RE.lastIndex = 0;
+  const TAG_RE = /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
   let match: RegExpExecArray | null = TAG_RE.exec(lineText);
 
   while (match !== null) {
     const from = lineFrom + match.index;
     const to = from + match[0].length;
 
-    const inCode = codeBlockRanges.some((r) => from >= r.from && to <= r.to);
-    if (inCode) continue;
+    // Use binary-search-based isInCodeBlock (assumes ranges are sorted)
+    if (isInCodeBlock(from, codeBlockRanges)) continue;
 
     // Must be preceded by whitespace or start of line
     if (match.index > 0 && !/\s/.test(lineText[match.index - 1])) continue;

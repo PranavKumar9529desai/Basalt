@@ -1,5 +1,5 @@
-import type { FC, MouseEvent } from "react";
 import { cn } from "@workspace/ui/lib/utils";
+import type { FC, MouseEvent } from "react";
 
 export interface ResizeHandleProps {
   onMouseDown: (e: MouseEvent) => void;

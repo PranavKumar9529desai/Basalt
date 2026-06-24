@@ -2,6 +2,15 @@ import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
+/** Count trailing spaces after a position on the same line (no sliceString calls). */
+function skipTrailingSpaces(pos: number, view: EditorView): number {
+  const line = view.state.doc.lineAt(pos);
+  const rest = line.text.slice(pos - line.from);
+  const spaces = rest.match(/^ +/);
+  return pos + (spaces ? spaces[0].length : 0);
+}
+
+
 /** Lezer node types whose syntax markers should be hidden on non-active lines */
 export const HIDE_MARKS = new Set([
   "HeaderMark",
@@ -51,13 +60,7 @@ export function handleMarkHidingNode(
   if (onActiveLine) {
     // Style marks as muted rather than hiding them
     if (name === "HeaderMark" || name === "QuoteMark") {
-      const docLength = ctx.view.state.doc.length;
-      let markTo = node.to;
-      while (markTo < docLength) {
-        const nextChar = ctx.view.state.doc.sliceString(markTo, markTo + 1);
-        if (nextChar === " ") markTo += 1;
-        else break;
-      }
+      const markTo = skipTrailingSpaces(node.to, ctx.view);
       collector.addMark(node.from, markTo, "cm-live-block-mark");
     } else {
       collector.addMark(node.from, node.to, "cm-live-inline-mark");
@@ -70,15 +73,7 @@ export function handleMarkHidingNode(
 
   // For HeaderMark (#) and QuoteMark (>), also hide the trailing space
   if (name === "HeaderMark" || name === "QuoteMark") {
-    const docLength = ctx.view.state.doc.length;
-    while (hideTo < docLength) {
-      const nextChar = ctx.view.state.doc.sliceString(hideTo, hideTo + 1);
-      if (nextChar === " ") {
-        hideTo += 1;
-      } else {
-        break;
-      }
-    }
+    hideTo = skipTrailingSpaces(node.to, ctx.view);
   }
 
   collector.addMark(hideFrom, hideTo, "cm-live-hide");

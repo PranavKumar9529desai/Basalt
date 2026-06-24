@@ -3,11 +3,7 @@ import {
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityBar } from "./ActivityBar";
-import { Sidebar } from "./Sidebar";
-import { ThemeSelect } from "./ThemeSelect";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSearchStore } from "../features/search";
 import { useSettingsStore } from "../features/settings";
 import type { TabClickOpenBehavior } from "../features/tabs";
@@ -19,9 +15,13 @@ import {
   useVaultTree,
   VaultSplash,
 } from "../features/vault";
+import { ActivityBar } from "./ActivityBar";
+import { AppCommands } from "./AppCommands";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
-import { AppCommands } from "./AppCommands";
+import { Sidebar } from "./Sidebar";
+import { ThemeSelect } from "./ThemeSelect";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
 // Tech Debut
@@ -190,9 +190,9 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   return (
     <div className="flex flex-1 min-h-0">
-      <div className="absolute top-10 right-10 z-50 size-fit">
-        <ThemeSelect />
-      </div>
+      {/* <div className="absolute top-10 right-10 z-50 size-fit"> */}
+      {/*   <ThemeSelect /> */}
+      {/* </div> */}
       <AppCommands
         onCreateNote={controller.createNoteInstant}
         onDeleteNote={controller.handleDeleteFromCommands}
@@ -206,7 +206,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         onSplitBottom={tabHandlers.handleSplitDown}
         hasActiveTab={Boolean(focusedSessionTab)}
       />
-      <ActivityBar />
+      {/* <ActivityBar /> */}
 
       <Sidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}

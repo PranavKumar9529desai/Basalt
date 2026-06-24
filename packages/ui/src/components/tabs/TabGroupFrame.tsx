@@ -70,6 +70,7 @@ export function TabGroupFrame({
   className,
   showSplitTargets = false,
   activeSplitTarget = null,
+  onSplitTargetDragEnter,
   onSplitTargetDragOver,
   onSplitTargetDragLeave,
   onSplitTargetDrop,
@@ -89,16 +90,27 @@ export function TabGroupFrame({
         "relative flex flex-1 min-h-0 min-w-0 flex-col border border-[var(--sat-layout-border)] bg-[var(--sat-editor-background)]",
         className,
       )}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        if (!showSplitTargets) return;
+        if (!isInEditorArea(e.clientY)) return;
+        const dir = getDropDirection(
+          e.clientX,
+          e.clientY,
+          e.currentTarget.getBoundingClientRect(),
+        );
+        onSplitTargetDragEnter?.(
+          dir,
+          e as unknown as DragEvent<HTMLDivElement>,
+        );
+      }}
       onDragOver={(e) => {
         // Always call preventDefault so WKWebView registers this section as a
         // drop target. In WKWebView, dataTransfer.types is empty for same-page
         // drags during dragover, so we cannot filter by type here — if we don't
         // call preventDefault unconditionally, WKWebView stops sending drag events.
         e.preventDefault();
-        console.log("[SECTION] dragover", {
-          showSplitTargets,
-          types: [...e.dataTransfer.types],
-        });
+
         if (!showSplitTargets) return;
         if (!isInEditorArea(e.clientY)) {
           // Cursor is in the tab bar — reorder mode, hide split overlay.
@@ -113,11 +125,10 @@ export function TabGroupFrame({
           e.clientY,
           e.currentTarget.getBoundingClientRect(),
         );
-        console.log("[SECTION] computed dir →", dir);
+
         onSplitTargetDragOver?.(dir, e as unknown as DragEvent<HTMLDivElement>);
       }}
       onDrop={(e) => {
-        console.log("[SECTION] drop", { showSplitTargets });
         e.preventDefault();
         if (!showSplitTargets) return;
         if (!isInEditorArea(e.clientY)) return;
@@ -126,12 +137,11 @@ export function TabGroupFrame({
           e.clientY,
           e.currentTarget.getBoundingClientRect(),
         );
-        console.log("[SECTION] drop dir →", dir);
         onSplitTargetDrop?.(dir, e as unknown as DragEvent<HTMLDivElement>);
       }}
       onDragLeave={(e) => {
         if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-        console.log("[SECTION] dragleave — exited pane");
+
         onSplitTargetDragLeave?.(
           "center",
           e as unknown as DragEvent<HTMLDivElement>,

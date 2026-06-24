@@ -27,13 +27,37 @@ export interface DecorationCollector {
   ): void;
 }
 
-/** Check if a position falls inside any known code block range */
+/**
+ * Check if a position falls inside any known code block range.
+ *
+ * Assumes ranges are sorted by `from` (ascending). Use `sortCodeBlockRanges`
+ * to ensure ordering if the array was built out of document-order.
+ */
 export function isInCodeBlock(
   pos: number,
   ranges: { from: number; to: number }[],
 ): boolean {
-  for (const r of ranges) {
-    if (pos >= r.from && pos <= r.to) return true;
+  if (ranges.length === 0) return false;
+
+  let lo = 0;
+  let hi = ranges.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    const r = ranges[mid];
+    if (pos < r.from) {
+      hi = mid;
+    } else if (pos > r.to) {
+      lo = mid + 1;
+    } else {
+      return true;
+    }
   }
   return false;
+}
+
+/** Sort an array of `{ from, to }` ranges in-place by `from` (ascending). */
+export function sortCodeBlockRanges(
+  ranges: { from: number; to: number }[],
+): void {
+  ranges.sort((a, b) => a.from - b.from);
 }

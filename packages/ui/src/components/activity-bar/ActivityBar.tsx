@@ -1,6 +1,6 @@
 import type { FC } from "react";
-import { ActivityBarItem } from "./ActivityBarItem";
 import type { ActivityBarItemData } from "./ActivityBarItem";
+import { ActivityBarItem } from "./ActivityBarItem";
 
 export interface ActivityBarProps {
   topItems: ActivityBarItemData[];

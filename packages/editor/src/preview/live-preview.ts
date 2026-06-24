@@ -85,7 +85,6 @@ import {
   handleFrontmatterNode,
 } from "./frontmatter";
 import {
-  HEADINGS_THEME,
   handleHeading7Lines,
   handleHeadingNode,
 } from "./headings";
@@ -98,14 +97,13 @@ import { handleListNode, LISTS_THEME } from "./lists";
 import { handleMarkHidingNode, MARK_HIDING_THEME } from "./mark-hiding";
 import { handleTableNode, TABLES_THEME } from "./tables";
 import type { DecorationCollector, DecorationContext } from "./types";
-import { isInCodeBlock } from "./types";
+import { isInCodeBlock, sortCodeBlockRanges } from "./types";
 
 // ---------------------------------------------------------------------------
 // Composed Theme
 // ---------------------------------------------------------------------------
 
 export const LIVE_PREVIEW_THEME = [
-  HEADINGS_THEME,
   CODE_BLOCKS_THEME,
   BLOCKQUOTES_THEME,
   CALLOUTS_THEME,
@@ -174,9 +172,15 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
 
   // Walk the FULL document so block decorations outside the viewport are
   // still registered (required by CodeMirror for StateField-provided decos).
-  const tree =
-    ensureSyntaxTree(view.state, view.state.doc.length, 50) ??
-    syntaxTree(view.state);
+  const tree = ensureSyntaxTree(
+    view.state,
+    view.state.doc.length,
+    300,
+  );
+  if (!tree) {
+    // Tree not yet ready — skip decorations rather than using a stale partial tree.
+    return Decoration.none;
+  }
 
   let frontmatterFound = false;
 
@@ -266,13 +270,16 @@ function buildInlineDecorations(view: EditorView): DecorationSet {
     },
   });
 
+  // Ensure ranges are sorted (pre-pass is in doc order, but safety-sort for binary search)
+  sortCodeBlockRanges(ctx.codeBlockRanges);
+
   // Second pass: inline marks over visible ranges only
   for (const range of view.visibleRanges) {
     const rangeFrom = range.from;
     const rangeTo = range.to;
 
     const tree =
-      ensureSyntaxTree(view.state, rangeTo, 50) ?? syntaxTree(view.state);
+      ensureSyntaxTree(view.state, rangeTo, 300) ?? syntaxTree(view.state);
 
     tree.iterate({
       from: rangeFrom,
@@ -329,12 +336,11 @@ const livePreviewInlinePlugin = ViewPlugin.fromClass(
 // ---------------------------------------------------------------------------
 
 const blockDecorationUpdater = EditorView.updateListener.of((update) => {
-  if (
-    update.docChanged ||
-    update.selectionSet ||
-    update.viewportChanged ||
-    update.focusChanged
-  ) {
+  // Rebuild block decorations on doc/viewport changes AND cursor moves.
+  // Cursor movement matters because block decorations (code header/footer
+  // widgets, HR widget, callout headers) depend on whether the cursor is
+  // inside or outside each block.
+  if (update.docChanged || update.viewportChanged || update.selectionSet) {
     const newDecos = buildBlockDecorations(update.view);
     update.view.dispatch({
       effects: setBlockDecorations.of(newDecos),

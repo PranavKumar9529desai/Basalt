@@ -26,11 +26,19 @@ export function contextMenuExtension(
     contextmenu: (event, view) => {
       event.preventDefault();
 
-      const { from, to } = view.state.selection.main;
-      const text = view.state.sliceDoc(from, to);
+      let { from, to } = view.state.selection.main;
+      let text = view.state.sliceDoc(from, to);
 
-      // If no selection, we might want to know what word is under the cursor
-      // but for now let's just use the main selection.
+      // If no text is selected, try to detect the word at the cursor position
+      // so the context menu can offer word-level actions (search, format, etc.).
+      if (text.length === 0) {
+        const word = view.state.wordAt(view.state.selection.main.head);
+        if (word) {
+          from = word.from;
+          to = word.to;
+          text = view.state.sliceDoc(from, to);
+        }
+      }
 
       onContextMenu({
         x: event.clientX,

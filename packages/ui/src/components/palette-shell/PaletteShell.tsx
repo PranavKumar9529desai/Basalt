@@ -3,10 +3,10 @@ import {
   IconArrowUp,
   IconCornerDownLeft,
 } from "@tabler/icons-react";
-import { Input } from "@workspace/ui/components/ui/input";
 import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
-import React from "react";
+import { Input } from "@workspace/ui/components/ui/input";
 import { cn } from "@workspace/ui/lib/utils";
+import React from "react";
 
 // ─── PaletteShell ────────────────────────────────────────────────────────────
 
@@ -98,9 +98,7 @@ const DEFAULT_HINTS: PaletteShellFooterHint[] = [
   },
   { icon: <IconCornerDownLeft size={10} />, label: "to open" },
   {
-    icon: (
-      <span className="px-1 py-0.5 rounded text-[9px] uppercase">esc</span>
-    ),
+    icon: <span className="px-1 py-0.5 rounded text-[9px] uppercase">esc</span>,
     label: "to dismiss",
   },
 ];

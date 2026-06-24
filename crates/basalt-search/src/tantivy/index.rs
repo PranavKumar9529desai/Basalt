@@ -25,6 +25,26 @@ pub struct TantivyIndex {
 }
 
 impl TantivyIndex {
+    pub fn new(
+        index: Index,
+        writer: IndexWriter,
+        reader: tantivy::IndexReader,
+        path_field: tantivy::schema::Field,
+        title_field: tantivy::schema::Field,
+        body_field: tantivy::schema::Field,
+        tags_field: tantivy::schema::Field,
+    ) -> Self {
+        Self {
+            index,
+            writer,
+            reader,
+            path_field,
+            title_field,
+            body_field,
+            tags_field,
+        }
+    }
+
     /// Open existing index at `dir` or create a fresh one.
     pub fn open_or_create(dir: &Path) -> Result<Self> {
         std::fs::create_dir_all(dir)
@@ -32,8 +52,7 @@ impl TantivyIndex {
 
         let (schema, path_field, title_field, body_field, tags_field) = build_schema();
 
-        let mmap_dir =
-            MmapDirectory::open(dir).with_context(|| "opening mmap directory")?;
+        let mmap_dir = MmapDirectory::open(dir).with_context(|| "opening mmap directory")?;
 
         let mut index = Index::open_or_create(mmap_dir, schema.clone())?;
 
@@ -212,9 +231,15 @@ mod tests {
         .unwrap();
         idx.commit().unwrap();
         let results = idx.search("packag", 10).unwrap();
-        assert!(!results.is_empty(), "partial word 'packag' should match 'package'");
+        assert!(
+            !results.is_empty(),
+            "partial word 'packag' should match 'package'"
+        );
         let results = idx.search("pack", 10).unwrap();
-        assert!(!results.is_empty(), "partial word 'pack' should match 'package'");
+        assert!(
+            !results.is_empty(),
+            "partial word 'pack' should match 'package'"
+        );
     }
 
     #[test]
@@ -227,6 +252,9 @@ mod tests {
         idx.remove_document("/vault/a.md").unwrap();
         idx.commit().unwrap();
         let results = idx.search("alpha", 10).unwrap();
-        assert!(results.is_empty(), "removed doc should not appear in results");
+        assert!(
+            results.is_empty(),
+            "removed doc should not appear in results"
+        );
     }
 }

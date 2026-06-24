@@ -1,9 +1,9 @@
 import {
+  type DragEvent,
   useCallback,
   useEffect,
   useRef,
   useState,
-  type DragEvent,
 } from "react";
 import { useTabsStore } from "../store";
 import type { SplitDirection, TabGroupId } from "../types";
@@ -62,7 +62,7 @@ export function useTabDnD() {
 
   const handleTabDragStart = useCallback(
     (groupId: TabGroupId, tabId: string, event: DragEvent<HTMLElement>) => {
-      console.log("[DND] dragstart", { tabId, groupId });
+
       const dragData: DraggedTabState = { tabId, fromGroupId: groupId };
       draggedTabRef.current = dragData;
       setIsDraggingTab(true);
@@ -193,9 +193,7 @@ export function useTabDnD() {
       event: DragEvent<HTMLDivElement>,
     ) => {
       event.preventDefault();
-      console.log("[DND] handleSplitTargetDrop", { groupId, direction });
       const dragged = readDraggedTab(draggedTabRef, event);
-      console.log("[DND] dragged tab:", dragged);
       if (!dragged) {
         clearDragState();
         return;
@@ -205,7 +203,7 @@ export function useTabDnD() {
       const sourceGroup = state.groups[dragged.fromGroupId];
       const targetGroup = state.groups[groupId];
       if (!sourceGroup || !targetGroup) {
-        console.log("[DND] groups not found");
+
         clearDragState();
         return;
       }
