@@ -1,5 +1,9 @@
 import type { Config } from "tailwindcss";
 
+// NOTE: This config is consumed by the Tauri app's PostCSS pipeline
+// (apps/tauri/postcss.config.js). The ../../apps content path is how
+// Tailwind discovers class usage in the app. Ideally the app would
+// have its own config extending this one, but for now it's centralized here.
 const config = {
   darkMode: ["class"],
   content: ["./src/**/*.{ts,tsx}", "../../apps/**/*.{ts,tsx}"],
