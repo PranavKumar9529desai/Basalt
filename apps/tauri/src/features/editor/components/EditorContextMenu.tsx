@@ -1,4 +1,4 @@
-import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import type { EditorView } from "@codemirror/view";
 import { useCommandStore } from "@workspace/commands";
 import { type ContextMenuState, contextMenuExtension } from "@workspace/editor";
 import {
@@ -17,7 +17,7 @@ import { useEditorCommands } from "../hooks/useEditorCommands";
 import { EditorComponent, type EditorProps } from "./EditorComponent";
 
 export function Editor({ ...props }: EditorProps) {
-  const [view, setView] = useState<ReactCodeMirrorRef["view"] | null>(null);
+  const [view, setView] = useState<EditorView | null>(null);
   useEditorCommands(view);
 
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
