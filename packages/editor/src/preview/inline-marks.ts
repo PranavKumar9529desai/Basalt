@@ -103,9 +103,9 @@ export function handleTagsInLine(
   collector: DecorationCollector,
 ): void {
   TAG_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
+  let match: RegExpExecArray | null = TAG_RE.exec(lineText);
 
-  while ((match = TAG_RE.exec(lineText)) !== null) {
+  while (match !== null) {
     const from = lineFrom + match.index;
     const to = from + match[0].length;
 
@@ -116,5 +116,7 @@ export function handleTagsInLine(
     if (match.index > 0 && !/\s/.test(lineText[match.index - 1])) continue;
 
     collector.addMark(from, to, "cm-live-tag");
+
+    match = TAG_RE.exec(lineText);
   }
 }

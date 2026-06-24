@@ -192,11 +192,7 @@ export function handleCodeBlockNode(
       );
 
       if (endLine.number > startLine.number) {
-        collector.addReplace(
-          endLine.from,
-          endLine.to,
-          new CodeFooterWidget(),
-        );
+        collector.addReplace(endLine.from, endLine.to, new CodeFooterWidget());
       }
     }
   } else {

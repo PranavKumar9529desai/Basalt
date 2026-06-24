@@ -4,18 +4,32 @@ import type { DecorationCollector, DecorationContext } from "./types";
 
 const CALLOUT_ALIASES: Record<string, string> = {
   note: "note",
-  abstract: "abstract", summary: "abstract", tldr: "abstract",
+  abstract: "abstract",
+  summary: "abstract",
+  tldr: "abstract",
   info: "info",
   todo: "todo",
-  tip: "tip", hint: "tip", important: "tip",
-  success: "success", check: "success", done: "success",
-  question: "question", help: "question", faq: "question",
-  warning: "warning", caution: "warning", attention: "warning",
-  failure: "failure", fail: "failure", missing: "failure",
-  danger: "danger", error: "danger",
+  tip: "tip",
+  hint: "tip",
+  important: "tip",
+  success: "success",
+  check: "success",
+  done: "success",
+  question: "question",
+  help: "question",
+  faq: "question",
+  warning: "warning",
+  caution: "warning",
+  attention: "warning",
+  failure: "failure",
+  fail: "failure",
+  missing: "failure",
+  danger: "danger",
+  error: "danger",
   bug: "bug",
   example: "example",
-  quote: "quote", cite: "quote",
+  quote: "quote",
+  cite: "quote",
 };
 
 const CALLOUT_ICONS: Record<string, string> = {
@@ -36,20 +50,75 @@ const CALLOUT_ICONS: Record<string, string> = {
 
 const CALLOUT_RE = /^>\s*\[!([a-zA-Z]+)\]([+-]?)(?:\s+(.*))?$/;
 
-const CALLOUT_COLORS: Record<string, { border: string; bg: string; icon: string }> = {
-  note:     { border: "var(--sat-callout-note-border, #8b5cf6)",     bg: "var(--sat-callout-note-bg, rgba(139,92,246,0.12))",     icon: "var(--sat-callout-note-icon, #a78bfa)" },
-  abstract: { border: "var(--sat-callout-abstract-border, #06b6d4)", bg: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.18))",  icon: "var(--sat-callout-abstract-icon, #67e8f9)" },
-  info:     { border: "var(--sat-callout-info-border, #3b82f6)",     bg: "var(--sat-callout-info-bg, rgba(59,130,246,0.18))",     icon: "var(--sat-callout-info-icon, #93c5fd)" },
-  todo:     { border: "var(--sat-callout-todo-border, #3b82f6)",     bg: "var(--sat-callout-todo-bg, rgba(59,130,246,0.18))",     icon: "var(--sat-callout-todo-icon, #93c5fd)" },
-  tip:      { border: "var(--sat-callout-tip-border, #0ea5e9)",      bg: "var(--sat-callout-tip-bg, rgba(14,165,233,0.18))",      icon: "var(--sat-callout-tip-icon, #7dd3fc)" },
-  success:  { border: "var(--sat-callout-success-border, #22c55e)",  bg: "var(--sat-callout-success-bg, rgba(34,197,94,0.18))",   icon: "var(--sat-callout-success-icon, #86efac)" },
-  question: { border: "var(--sat-callout-question-border, #eab308)", bg: "var(--sat-callout-question-bg, rgba(234,179,8,0.18))",  icon: "var(--sat-callout-question-icon, #fde047)" },
-  warning:  { border: "var(--sat-callout-warning-border, #f97316)",  bg: "var(--sat-callout-warning-bg, rgba(249,115,22,0.18))",  icon: "var(--sat-callout-warning-icon, #fdba74)" },
-  failure:  { border: "var(--sat-callout-failure-border, #ef4444)",  bg: "var(--sat-callout-failure-bg, rgba(239,68,68,0.18))",   icon: "var(--sat-callout-failure-icon, #fca5a5)" },
-  danger:   { border: "var(--sat-callout-danger-border, #ef4444)",   bg: "var(--sat-callout-danger-bg, rgba(239,68,68,0.18))",    icon: "var(--sat-callout-danger-icon, #fca5a5)" },
-  bug:      { border: "var(--sat-callout-bug-border, #ef4444)",      bg: "var(--sat-callout-bug-bg, rgba(239,68,68,0.18))",       icon: "var(--sat-callout-bug-icon, #fca5a5)" },
-  example:  { border: "var(--sat-callout-example-border, #a855f7)",  bg: "var(--sat-callout-example-bg, rgba(168,85,247,0.18))",  icon: "var(--sat-callout-example-icon, #d8b4fe)" },
-  quote:    { border: "var(--sat-callout-quote-border, #94a3b8)",    bg: "var(--sat-callout-quote-bg, rgba(148,163,184,0.18))",   icon: "var(--sat-callout-quote-icon, #cbd5e1)" },
+const CALLOUT_COLORS: Record<
+  string,
+  { border: string; bg: string; icon: string }
+> = {
+  note: {
+    border: "var(--sat-callout-note-border, #8b5cf6)",
+    bg: "var(--sat-callout-note-bg, rgba(139,92,246,0.12))",
+    icon: "var(--sat-callout-note-icon, #a78bfa)",
+  },
+  abstract: {
+    border: "var(--sat-callout-abstract-border, #06b6d4)",
+    bg: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.18))",
+    icon: "var(--sat-callout-abstract-icon, #67e8f9)",
+  },
+  info: {
+    border: "var(--sat-callout-info-border, #3b82f6)",
+    bg: "var(--sat-callout-info-bg, rgba(59,130,246,0.18))",
+    icon: "var(--sat-callout-info-icon, #93c5fd)",
+  },
+  todo: {
+    border: "var(--sat-callout-todo-border, #3b82f6)",
+    bg: "var(--sat-callout-todo-bg, rgba(59,130,246,0.18))",
+    icon: "var(--sat-callout-todo-icon, #93c5fd)",
+  },
+  tip: {
+    border: "var(--sat-callout-tip-border, #0ea5e9)",
+    bg: "var(--sat-callout-tip-bg, rgba(14,165,233,0.18))",
+    icon: "var(--sat-callout-tip-icon, #7dd3fc)",
+  },
+  success: {
+    border: "var(--sat-callout-success-border, #22c55e)",
+    bg: "var(--sat-callout-success-bg, rgba(34,197,94,0.18))",
+    icon: "var(--sat-callout-success-icon, #86efac)",
+  },
+  question: {
+    border: "var(--sat-callout-question-border, #eab308)",
+    bg: "var(--sat-callout-question-bg, rgba(234,179,8,0.18))",
+    icon: "var(--sat-callout-question-icon, #fde047)",
+  },
+  warning: {
+    border: "var(--sat-callout-warning-border, #f97316)",
+    bg: "var(--sat-callout-warning-bg, rgba(249,115,22,0.18))",
+    icon: "var(--sat-callout-warning-icon, #fdba74)",
+  },
+  failure: {
+    border: "var(--sat-callout-failure-border, #ef4444)",
+    bg: "var(--sat-callout-failure-bg, rgba(239,68,68,0.18))",
+    icon: "var(--sat-callout-failure-icon, #fca5a5)",
+  },
+  danger: {
+    border: "var(--sat-callout-danger-border, #ef4444)",
+    bg: "var(--sat-callout-danger-bg, rgba(239,68,68,0.18))",
+    icon: "var(--sat-callout-danger-icon, #fca5a5)",
+  },
+  bug: {
+    border: "var(--sat-callout-bug-border, #ef4444)",
+    bg: "var(--sat-callout-bug-bg, rgba(239,68,68,0.18))",
+    icon: "var(--sat-callout-bug-icon, #fca5a5)",
+  },
+  example: {
+    border: "var(--sat-callout-example-border, #a855f7)",
+    bg: "var(--sat-callout-example-bg, rgba(168,85,247,0.18))",
+    icon: "var(--sat-callout-example-icon, #d8b4fe)",
+  },
+  quote: {
+    border: "var(--sat-callout-quote-border, #94a3b8)",
+    bg: "var(--sat-callout-quote-bg, rgba(148,163,184,0.18))",
+    icon: "var(--sat-callout-quote-icon, #cbd5e1)",
+  },
 };
 
 export const CALLOUTS_THEME = EditorView.baseTheme({
@@ -76,19 +145,58 @@ export const CALLOUTS_THEME = EditorView.baseTheme({
     cursor: "pointer",
     fontSize: "0.75rem",
   },
-  ".cm-line.cm-live-callout-note":     { borderLeft: "3px solid var(--sat-callout-note-border, #8b5cf6)",     backgroundColor: "var(--sat-callout-note-bg, rgba(139,92,246,0.08))" },
-  ".cm-line.cm-live-callout-abstract": { borderLeft: "3px solid var(--sat-callout-abstract-border, #06b6d4)", backgroundColor: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.12))" },
-  ".cm-line.cm-live-callout-info":     { borderLeft: "3px solid var(--sat-callout-info-border, #3b82f6)",     backgroundColor: "var(--sat-callout-info-bg, rgba(59,130,246,0.12))" },
-  ".cm-line.cm-live-callout-todo":     { borderLeft: "3px solid var(--sat-callout-todo-border, #3b82f6)",     backgroundColor: "var(--sat-callout-todo-bg, rgba(59,130,246,0.12))" },
-  ".cm-line.cm-live-callout-tip":      { borderLeft: "3px solid var(--sat-callout-tip-border, #0ea5e9)",      backgroundColor: "var(--sat-callout-tip-bg, rgba(14,165,233,0.12))" },
-  ".cm-line.cm-live-callout-success":  { borderLeft: "3px solid var(--sat-callout-success-border, #22c55e)",  backgroundColor: "var(--sat-callout-success-bg, rgba(34,197,94,0.12))" },
-  ".cm-line.cm-live-callout-question": { borderLeft: "3px solid var(--sat-callout-question-border, #eab308)", backgroundColor: "var(--sat-callout-question-bg, rgba(234,179,8,0.12))" },
-  ".cm-line.cm-live-callout-warning":  { borderLeft: "3px solid var(--sat-callout-warning-border, #f97316)",  backgroundColor: "var(--sat-callout-warning-bg, rgba(249,115,22,0.12))" },
-  ".cm-line.cm-live-callout-failure":  { borderLeft: "3px solid var(--sat-callout-failure-border, #ef4444)",  backgroundColor: "var(--sat-callout-failure-bg, rgba(239,68,68,0.12))" },
-  ".cm-line.cm-live-callout-danger":   { borderLeft: "3px solid var(--sat-callout-danger-border, #ef4444)",   backgroundColor: "var(--sat-callout-danger-bg, rgba(239,68,68,0.12))" },
-  ".cm-line.cm-live-callout-bug":      { borderLeft: "3px solid var(--sat-callout-bug-border, #ef4444)",      backgroundColor: "var(--sat-callout-bug-bg, rgba(239,68,68,0.12))" },
-  ".cm-line.cm-live-callout-example":  { borderLeft: "3px solid var(--sat-callout-example-border, #a855f7)",  backgroundColor: "var(--sat-callout-example-bg, rgba(168,85,247,0.12))" },
-  ".cm-line.cm-live-callout-quote":    { borderLeft: "3px solid var(--sat-callout-quote-border, #94a3b8)",    backgroundColor: "var(--sat-callout-quote-bg, rgba(148,163,184,0.12))" },
+  ".cm-line.cm-live-callout-note": {
+    borderLeft: "3px solid var(--sat-callout-note-border, #8b5cf6)",
+    backgroundColor: "var(--sat-callout-note-bg, rgba(139,92,246,0.08))",
+  },
+  ".cm-line.cm-live-callout-abstract": {
+    borderLeft: "3px solid var(--sat-callout-abstract-border, #06b6d4)",
+    backgroundColor: "var(--sat-callout-abstract-bg, rgba(6,182,212,0.12))",
+  },
+  ".cm-line.cm-live-callout-info": {
+    borderLeft: "3px solid var(--sat-callout-info-border, #3b82f6)",
+    backgroundColor: "var(--sat-callout-info-bg, rgba(59,130,246,0.12))",
+  },
+  ".cm-line.cm-live-callout-todo": {
+    borderLeft: "3px solid var(--sat-callout-todo-border, #3b82f6)",
+    backgroundColor: "var(--sat-callout-todo-bg, rgba(59,130,246,0.12))",
+  },
+  ".cm-line.cm-live-callout-tip": {
+    borderLeft: "3px solid var(--sat-callout-tip-border, #0ea5e9)",
+    backgroundColor: "var(--sat-callout-tip-bg, rgba(14,165,233,0.12))",
+  },
+  ".cm-line.cm-live-callout-success": {
+    borderLeft: "3px solid var(--sat-callout-success-border, #22c55e)",
+    backgroundColor: "var(--sat-callout-success-bg, rgba(34,197,94,0.12))",
+  },
+  ".cm-line.cm-live-callout-question": {
+    borderLeft: "3px solid var(--sat-callout-question-border, #eab308)",
+    backgroundColor: "var(--sat-callout-question-bg, rgba(234,179,8,0.12))",
+  },
+  ".cm-line.cm-live-callout-warning": {
+    borderLeft: "3px solid var(--sat-callout-warning-border, #f97316)",
+    backgroundColor: "var(--sat-callout-warning-bg, rgba(249,115,22,0.12))",
+  },
+  ".cm-line.cm-live-callout-failure": {
+    borderLeft: "3px solid var(--sat-callout-failure-border, #ef4444)",
+    backgroundColor: "var(--sat-callout-failure-bg, rgba(239,68,68,0.12))",
+  },
+  ".cm-line.cm-live-callout-danger": {
+    borderLeft: "3px solid var(--sat-callout-danger-border, #ef4444)",
+    backgroundColor: "var(--sat-callout-danger-bg, rgba(239,68,68,0.12))",
+  },
+  ".cm-line.cm-live-callout-bug": {
+    borderLeft: "3px solid var(--sat-callout-bug-border, #ef4444)",
+    backgroundColor: "var(--sat-callout-bug-bg, rgba(239,68,68,0.12))",
+  },
+  ".cm-line.cm-live-callout-example": {
+    borderLeft: "3px solid var(--sat-callout-example-border, #a855f7)",
+    backgroundColor: "var(--sat-callout-example-bg, rgba(168,85,247,0.12))",
+  },
+  ".cm-line.cm-live-callout-quote": {
+    borderLeft: "3px solid var(--sat-callout-quote-border, #94a3b8)",
+    backgroundColor: "var(--sat-callout-quote-bg, rgba(148,163,184,0.12))",
+  },
 });
 
 export class CalloutHeaderWidget extends WidgetType {
@@ -163,7 +271,8 @@ export function handleCalloutNode(
   const title = match[3] ?? "";
   const canonical = CALLOUT_ALIASES[rawType.toLowerCase()] ?? "note";
 
-  const hasCursor = ctx.headPos >= firstLine.from && ctx.headPos <= firstLine.to;
+  const hasCursor =
+    ctx.headPos >= firstLine.from && ctx.headPos <= firstLine.to;
   const endLine = doc.lineAt(node.to);
 
   for (let ln = firstLine.number; ln <= endLine.number; ln++) {

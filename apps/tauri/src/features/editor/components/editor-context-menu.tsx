@@ -1,22 +1,25 @@
-import { useCallback, useMemo, useState } from "react";
+import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { useCommandStore } from "@workspace/commands";
+import { type ContextMenuState, contextMenuExtension } from "@workspace/editor";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-  ContextMenuShortcut,
 } from "@workspace/ui/components/ui/context-menu";
-import {
-  useCommandStore,
-  contextMenuExtension,
-  type ContextMenuState,
-} from "@workspace/editor";
+import { useCallback, useMemo, useState } from "react";
+import { useEditorCommands } from "../hooks/useEditorCommands";
+
 import { EditorComponent, type EditorProps } from "./editor-component";
 
 export function Editor({ ...props }: EditorProps) {
+  const [view, setView] = useState<ReactCodeMirrorRef["view"] | null>(null);
+  useEditorCommands(view);
+
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
 
   const execute = useCommandStore((s) => s.execute);
@@ -49,7 +52,11 @@ export function Editor({ ...props }: EditorProps) {
         open={!!menuState}
         onOpenChange={(open) => !open && setMenuState(null)}
       >
-        <EditorComponent {...props} extensions={[cmExtension]} />
+        <EditorComponent
+          {...props}
+          extensions={[cmExtension]}
+          onViewReady={setView}
+        />
 
         {menuState && (
           <ContextMenuContent anchor={menuAnchor}>

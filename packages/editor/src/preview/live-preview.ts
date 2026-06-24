@@ -54,13 +54,17 @@ import {
 // ---------------------------------------------------------------------------
 
 class HorizontalRuleWidget extends WidgetType {
-  eq() { return true; }
+  eq() {
+    return true;
+  }
   toDOM() {
     const hr = document.createElement("hr");
     hr.className = "cm-live-hr";
     return hr;
   }
-  ignoreEvent() { return true; }
+  ignoreEvent() {
+    return true;
+  }
 }
 
 const HR_THEME = EditorView.baseTheme({
@@ -71,42 +75,30 @@ const HR_THEME = EditorView.baseTheme({
     display: "block",
   },
 });
-import {
-  BLOCKQUOTES_THEME,
-  handleBlockquoteNode,
-} from "./decorations/blockquotes";
-import { CALLOUTS_THEME, handleCalloutNode } from "./decorations/callouts";
-import {
-  CODE_BLOCKS_THEME,
-  handleCodeBlockNode,
-} from "./decorations/code-blocks";
-// Handler modules
-import {
-  HEADINGS_THEME,
-  handleHeading7Lines,
-  handleHeadingNode,
-} from "./decorations/headings";
+
+import { BLOCKQUOTES_THEME, handleBlockquoteNode } from "./blockquotes";
+import { CALLOUTS_THEME, handleCalloutNode } from "./callouts";
+import { CODE_BLOCKS_THEME, handleCodeBlockNode } from "./code-blocks";
 import {
   FRONTMATTER_THEME,
   handleFrontmatterFallback,
   handleFrontmatterNode,
-} from "./decorations/frontmatter";
+} from "./frontmatter";
+import {
+  HEADINGS_THEME,
+  handleHeading7Lines,
+  handleHeadingNode,
+} from "./headings";
 import {
   handleInlineNode,
   handleTagsInLine,
   INLINE_MARKS_THEME,
-} from "./decorations/inline-marks";
-import {
-  handleMarkHidingNode,
-  MARK_HIDING_THEME,
-} from "./decorations/mark-hiding";
-import { handleListNode, LISTS_THEME } from "./decorations/lists";
-import { handleTableNode, TABLES_THEME } from "./decorations/tables";
-import type {
-  DecorationCollector,
-  DecorationContext,
-} from "./decorations/types";
-import { isInCodeBlock } from "./decorations/types";
+} from "./inline-marks";
+import { handleListNode, LISTS_THEME } from "./lists";
+import { handleMarkHidingNode, MARK_HIDING_THEME } from "./mark-hiding";
+import { handleTableNode, TABLES_THEME } from "./tables";
+import type { DecorationCollector, DecorationContext } from "./types";
+import { isInCodeBlock } from "./types";
 
 // ---------------------------------------------------------------------------
 // Composed Theme

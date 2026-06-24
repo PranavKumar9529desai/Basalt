@@ -1,6 +1,6 @@
+import { syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
+import { defaultHighlightStyleOverride } from "./highlight-override";
 
 const baseTheme = EditorView.theme({
   "&": {
@@ -36,7 +36,6 @@ const baseTheme = EditorView.theme({
   },
   ".cm-line": {
     lineHeight: "1.6",
-    
   },
   "&.cm-focused": {
     outline: "none",
@@ -45,14 +44,6 @@ const baseTheme = EditorView.theme({
     borderLeft: "2px solid var(--sat-editor-accent, #a78bfa)",
   },
 });
-
-/**
- * Use this to override default syntax highlighting of CodeMirror.
- * For example, preventing default underlines on headings.
- */
-const defaultHighlightStyleOverride = HighlightStyle.define([
-  { tag: t.heading, textDecoration: "none" },
-]);
 
 export const CUSTOM_THEME = [
   baseTheme,

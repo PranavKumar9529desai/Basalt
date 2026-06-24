@@ -1,13 +1,11 @@
 import type { Extension } from "@codemirror/state";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import {
   createEditorExtensions,
-  registerEditorCommands,
   type FetchLinksFn,
   type FetchTagsFn,
 } from "@workspace/editor";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface EditorProps {
   initialContent?: string;
@@ -18,6 +16,11 @@ export interface EditorProps {
   onFetchTags?: FetchTagsFn;
   onOpenLink?: (link: string) => void;
   onSearch?: (query: string) => void;
+  /**
+   * Called when the CodeMirror EditorView becomes available.
+   * Use this in the parent to wire up editor command hooks (useEditorCommands).
+   */
+  onViewReady?: (view: NonNullable<ReactCodeMirrorRef["view"]>) => void;
   /**
    * Optional theme extensions to inject (e.g., CSS-var based themes).
    * They are applied before the built-in defaults so they can override colors.
@@ -78,10 +81,10 @@ export function EditorComponent({
   ]);
 
   useEffect(() => {
-    if (view) {
-      return registerEditorCommands(view);
+    if (view && onViewReady) {
+      onViewReady(view);
     }
-  }, [view]);
+  }, [view, onViewReady]);
 
   const handleChange = useCallback(
     (val: string) => {

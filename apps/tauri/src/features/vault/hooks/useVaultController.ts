@@ -5,9 +5,7 @@
 
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useMemo, useRef, useState } from "react";
-import type {
-  FlatTreeNode,
-} from "../types";
+import type { FlatTreeNode } from "../types";
 import type { UseVaultMutationsReturn } from "./useVaultMutations";
 
 // ---- In-memory clipboard state (was useVaultClipboard) ----
@@ -30,8 +28,7 @@ function useVaultClipboardState() {
     timestamp: null,
   });
 
-  const hasItems =
-    clipboard.operation === "cut" && clipboard.items.length > 0;
+  const hasItems = clipboard.operation === "cut" && clipboard.items.length > 0;
   const setCutItems = useCallback((items: VaultClipboardItem[]) => {
     setClipboard({ operation: "cut", items, timestamp: Date.now() });
   }, []);
@@ -281,9 +278,7 @@ export function useVaultController({
             const lastSlash = node.relPath.lastIndexOf("/");
             return lastSlash === -1 ? "" : node.relPath.slice(0, lastSlash);
           })();
-      const parentDepth = isFolder
-        ? node.depth
-        : Math.max(0, node.depth - 1);
+      const parentDepth = isFolder ? node.depth : Math.max(0, node.depth - 1);
       return { parentRelPath, depth: parentDepth + 1 };
     },
     [focusedNode, selectedNode],
@@ -360,10 +355,7 @@ export function useVaultController({
   );
 
   const handleCommitEdit = useCallback(
-    async (
-      node: FileNode & { parentRelPath?: string },
-      newName: string,
-    ) => {
+    async (node: FileNode & { parentRelPath?: string }, newName: string) => {
       mutations.clearGhost();
       const parsed = parseInlineName(newName, node.parentRelPath);
       if (!parsed) return;
@@ -476,9 +468,7 @@ export function useVaultController({
       selection.selectedIds.size > 1 &&
       selection.selectedIds.has(target.node.path);
     if (shouldUseSelection) {
-      const nodes = treeNodes.filter((n) =>
-        selection.selectedIds.has(n.path),
-      );
+      const nodes = treeNodes.filter((n) => selection.selectedIds.has(n.path));
       if (nodes.length > 0) {
         mutations.requestDeleteMany(
           nodes.map((node) => ({ path: node.path, name: node.name })),
@@ -512,9 +502,7 @@ export function useVaultController({
       const now = Date.now();
       const prev = lastFileClickRef.current;
       const isDoubleClick =
-        prev !== null &&
-        prev.path === node.path &&
-        now - prev.atMs <= 320;
+        prev !== null && prev.path === node.path && now - prev.atMs <= 320;
       lastFileClickRef.current = { path: node.path, atMs: now };
       const mode: "preview" | "pinned" = isDoubleClick ? "pinned" : "preview";
       if (onFileOpen) {
@@ -552,8 +540,7 @@ export function useVaultController({
     (node: FlatTreeNode, e: React.MouseEvent) => {
       setFocusedNode(node);
       const isMultiSelect =
-        selection.selectedIds.size > 1 &&
-        selection.selectedIds.has(node.path);
+        selection.selectedIds.size > 1 && selection.selectedIds.has(node.path);
       if (!selection.selectedIds.has(node.path)) {
         selection.setSelection(new Set([node.path]));
       }
@@ -572,9 +559,7 @@ export function useVaultController({
 
   const handleDeleteFromCommands = useCallback(() => {
     if (selection.selectedIds.size > 0) {
-      const nodes = treeNodes.filter((n) =>
-        selection.selectedIds.has(n.path),
-      );
+      const nodes = treeNodes.filter((n) => selection.selectedIds.has(n.path));
       if (nodes.length > 0) {
         mutations.requestDeleteMany(
           nodes.map((node) => ({ path: node.path, name: node.name })),

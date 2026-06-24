@@ -3,25 +3,18 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import type { Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import type { EditorConfig } from "./types";
-
-import { backticksKeymap } from "./extensions/backticks";
-import { yamlFrontmatterExtension } from "./extensions/frontmatter-parser";
-import {
-  LIVE_PREVIEW_THEME,
-  livePreviewPlugin,
-} from "./extensions/live-preview";
+import { backticksKeymap } from "./input/backticks";
 import {
   createSuggestionsPlugin,
   SUGGESTIONS_THEME,
-} from "./extensions/suggestions";
-import { TASK_CHECKBOX_THEME, taskListPlugin } from "./extensions/task-list";
-import { highlightExtension } from "./extensions/highlight-grammar";
-import {
-  clickableLinksPlugin,
-  wikiLinkExtension,
-} from "./extensions/wiki-links";
-import { CUSTOM_THEME } from "./themes/base";
+} from "./input/suggestions";
+import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
+import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
+import { CUSTOM_THEME } from "./styling/base";
+import { yamlFrontmatterExtension } from "./syntax/frontmatter";
+import { highlightExtension } from "./syntax/highlight";
+import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
+import type { EditorConfig } from "./types";
 
 export function createEditorExtensions(config: EditorConfig): Extension[] {
   const {
@@ -42,7 +35,11 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     markdown({
       base: markdownLanguage,
       codeLanguages: languages,
-      extensions: [wikiLinkExtension, highlightExtension, yamlFrontmatterExtension],
+      extensions: [
+        wikiLinkExtension,
+        highlightExtension,
+        yamlFrontmatterExtension,
+      ],
     }),
     ...themeStack,
     TASK_CHECKBOX_THEME,

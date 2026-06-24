@@ -1,9 +1,6 @@
-import {
-  useCommandStore,
-  type Command,
-} from "@workspace/editor/commands/store";
-import { useState, useEffect, useMemo } from "react";
+import { type Command, useCommandStore } from "@workspace/commands";
 import { CommandPalette } from "@workspace/ui/components/command-palette/CommandPalette";
+import { useEffect, useMemo, useState } from "react";
 
 export function EditorCommandPalette() {
   const commandsObj = useCommandStore((s) => s.commands);

@@ -1,16 +1,5 @@
-import type React from "react";
 import { create } from "zustand";
-
-export interface Command {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: React.ReactNode;
-  category?: string;
-  hotkeys?: string[];
-  callback: () => void | Promise<void>;
-  checkCallback?: () => boolean;
-}
+import type { Command } from "./types";
 
 interface CommandState {
   commands: Record<string, Command>;

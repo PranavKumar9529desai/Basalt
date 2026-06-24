@@ -1,20 +1,18 @@
 import {
   IconFilePlus,
   IconFileSearch,
+  IconLayoutBoardSplit,
   IconPinned,
   IconPlus,
+  IconRectangleVertical,
   IconSearch,
   IconSettings,
   IconTrash,
   IconX,
-  IconLayoutBoardSplit,
-  IconRectangleVertical,
 } from "@tabler/icons-react";
-import { useCommandStore } from "@workspace/editor";
+import { useCommandStore } from "@workspace/commands";
 import type React from "react";
 import { useEffect, useMemo } from "react";
-import { useSearchStore } from "../../search";
-import { useSettingsStore } from "../../settings";
 
 export interface AppCommandsProps {
   onCreateNote?: () => void;
@@ -45,10 +43,6 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
 }) => {
   const register = useCommandStore((s) => s.register);
   const unregister = useCommandStore((s) => s.unregister);
-
-  const openSearch   = useSearchStore((s) => s.openSearch);
-  const openSwitcher = useSearchStore((s) => s.openSwitcher);
-  const openSettings = useSettingsStore((s) => s.open);
 
   const commands = useMemo(
     () => [
@@ -200,9 +194,6 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       onSplitRight,
       onSplitTop,
       onTogglePinActiveTab,
-      openSearch,
-      openSettings,
-      openSwitcher,
     ],
   );
 
@@ -216,24 +207,6 @@ export const AppCommands: React.FC<AppCommandsProps> = ({
       });
     };
   }, [commands, register, unregister]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.key === "f" || e.key === "F") {
-        e.preventDefault();
-        openSearch();
-      } else if (e.key === "o" || e.key === "O") {
-        e.preventDefault();
-        openSwitcher();
-      } else if (e.key === ",") {
-        e.preventDefault();
-        openSettings();
-      }
-    };
-    window.addEventListener("keydown", handler, { capture: true });
-    return () => window.removeEventListener("keydown", handler, { capture: true });
-  }, [openSearch, openSettings, openSwitcher]);
 
   return null;
 };
