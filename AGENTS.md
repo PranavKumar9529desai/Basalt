@@ -7,7 +7,8 @@
 > - [`CONVENTIONS.md`](./CONVENTIONS.md) — Authoritative coding standards (supersedes ADRs where they conflict)
 > - [`PLAN.md`](./PLAN.md) — Active cleanup campaign with parallel worktree tasks
 >
-> Agent task files live in `.agents/tasks/` — if a task references a phase number, find it there.
+> Agent task files live in `.agents/tasks/TEMPLATE.md` — use the template to define new tasks.
+> **Parallel agents:** See [`PLAN.md`](./PLAN.md) for the worktree workflow. Each task gets its own branch + worktree via `scripts/make-worktree.sh`.
 
 ---
 
