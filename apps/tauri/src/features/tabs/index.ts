@@ -10,6 +10,7 @@ export type {
 export { useTabIO } from "./hooks/useTabIO";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabs } from "./hooks/useTabs";
+export { getTabByPath, findGroupForTab, tabIdFromPath } from "./selectors";
 export type {
   CloseTabOptions,
   MoveTabOptions,

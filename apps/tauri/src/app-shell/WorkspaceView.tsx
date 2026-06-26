@@ -2,15 +2,22 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@workspace/ui/components/ui/button";
+import { useCallback, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
 import { useSearchStore } from "../features/search";
 import { useSettingsStore } from "../features/settings";
 import type { PaneRenderContext, TabClickOpenBehavior } from "../features/tabs";
-import { useTabPersistence, useTabs, WorkspaceTabs } from "../features/tabs";
-import type { BootResult, FlatTreeNode } from "../features/vault";
+import {
+  getTabByPath,
+  useTabPersistence,
+  useTabs,
+  WorkspaceTabs,
+} from "../features/tabs";
+import type { BootResult } from "../features/vault";
 import {
   FileTree,
+  findNoteByName,
   useVaultActions,
   useVaultTree,
   VaultSplash,
@@ -22,8 +29,6 @@ import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { Sidebar } from "./Sidebar";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
-// Tech Debut
-// i dont know what does
 function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
   if (value === "preview" || value === "pinned" || value === "vscode") {
     return value;
@@ -46,21 +51,12 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     toggleFolder,
     openFolder,
     refreshTree,
-    setTreeNodes,
   } = useVaultTree(boot.tree);
 
   const vaultActions = useVaultActions();
 
-  useEffect(() => {
-    setTreeNodes(boot.tree);
-  }, [boot.tree, setTreeNodes]);
-
   const findNote = useCallback(
-    (name: string): FlatTreeNode | undefined =>
-      treeNodes.find(
-        (n) =>
-          n.kind === "file" && (n.name === name || n.name === `${name}.md`),
-      ),
+    (name: string) => findNoteByName(treeNodes, name),
     [treeNodes],
   );
 
@@ -68,18 +64,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   const tabClickOpenBehavior = parseTabClickOpenBehavior(
     boot.settings?.tabClickOpenBehavior,
   );
-  const {
-    openInPreview,
-    openPinned,
-    setTabTitle,
-    setFocusedGroup,
-    activateTab,
-    closeTab,
-    closeOtherTabs,
-    closeTabsToRight,
-    togglePinTab,
-    splitGroupWithTab,
-  } = tabs;
 
   useTabPersistence({ workspace: boot.workspace });
 
@@ -114,17 +98,13 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   const focusedSessionSelected = useFocusedPaneStore(
     (state) => state.focusedPaneSelected,
   );
-  const focusedSessionTab = useMemo(() => {
-    const path = focusedSessionSelected?.path;
-    if (!path) return null;
-    const tabId = `tab:${path}`;
-    for (const group of Object.values(tabs.groups)) {
-      if (group.tabIds.includes(tabId)) {
-        return tabs.tabs[tabId] ?? null;
-      }
-    }
-    return null;
-  }, [focusedSessionSelected?.path, tabs.groups, tabs.tabs]);
+  const focusedSessionTab = useMemo(
+    () =>
+      focusedSessionSelected?.path
+        ? getTabByPath(tabs.groups, tabs.tabs, focusedSessionSelected.path)
+        : null,
+    [focusedSessionSelected?.path, tabs.groups, tabs.tabs],
+  );
 
   const {
     controller,
@@ -142,23 +122,23 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     editor: {
       focusedSessionSelected,
       focusedSessionTab,
-      openInPreview,
-      openPinned,
-      setTabTitle,
-      closeTab,
+      openInPreview: tabs.openInPreview,
+      openPinned: tabs.openPinned,
+      setTabTitle: tabs.setTabTitle,
+      closeTab: tabs.closeTab,
       tabClickOpenBehavior,
     },
   });
 
   const tabHandlers = useWorkspaceTabHandlers({
     tabActions: {
-      activateTab,
-      closeTab,
-      closeOtherTabs,
-      closeTabsToRight,
-      togglePinTab,
-      splitGroupWithTab,
-      setFocusedGroup,
+      activateTab: tabs.activateTab,
+      closeTab: tabs.closeTab,
+      closeOtherTabs: tabs.closeOtherTabs,
+      closeTabsToRight: tabs.closeTabsToRight,
+      togglePinTab: tabs.togglePinTab,
+      splitGroupWithTab: tabs.splitGroupWithTab,
+      setFocusedGroup: tabs.setFocusedGroup,
     },
     focusedSessionTab,
   });
@@ -180,11 +160,11 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     (path: string) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
       if (node) {
-        const tabId = openInPreview({ path: node.path, title: node.name });
-        setTabTitle(tabId, node.name);
+        const tabId = tabs.openInPreview({ path: node.path, title: node.name });
+        tabs.setTabTitle(tabId, node.name);
       }
     },
-    [treeNodes, openInPreview, setTabTitle],
+    [treeNodes, tabs.openInPreview, tabs.setTabTitle],
   );
 
   if (!vaultPath) {
@@ -199,9 +179,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* <div className="absolute top-10 right-10 z-50 size-fit"> */}
-      {/*   <ThemeSelect /> */}
-      {/* </div> */}
       <AppCommands
         onCreateNote={controller.createNoteInstant}
         onDeleteNote={controller.handleDeleteFromCommands}
@@ -215,7 +192,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         onSplitBottom={tabHandlers.handleSplitDown}
         hasActiveTab={Boolean(focusedSessionTab)}
       />
-      {/* <ActivityBar /> */}
 
       <Sidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
@@ -244,10 +220,11 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         handleTabPinToggle={tabHandlers.handleTabPinToggle}
         renderPane={renderPane}
         tabBarLeftSlot={
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1 pb-2 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors "
             title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             {sidebarOpen ? (
@@ -255,7 +232,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
             ) : (
               <IconLayoutSidebarLeftExpand size={20} stroke={1.5} />
             )}
-          </button>
+          </Button>
         }
       />
 

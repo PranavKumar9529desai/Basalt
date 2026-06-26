@@ -13,7 +13,7 @@ export { useVaultController } from "./hooks/useVaultController";
 export type { UseVaultMutationsReturn } from "./hooks/useVaultMutations";
 export { useVaultMutations } from "./hooks/useVaultMutations";
 export type { UseVaultTreeReturn } from "./hooks/useVaultTree";
-export { useVaultTree } from "./hooks/useVaultTree";
+export { findNoteByName, useVaultTree } from "./hooks/useVaultTree";
 export type {
   BootResult,
   CreateNoteResult,

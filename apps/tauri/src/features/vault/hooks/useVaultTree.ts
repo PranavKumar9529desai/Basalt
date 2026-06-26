@@ -3,6 +3,20 @@ import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FileChangeEvent, FlatTreeNode } from "../types";
 
+/**
+ * Find a file node by its display name (with or without .md extension).
+ * Searches the flat tree — used by the editor to resolve wikilinks via
+ * filename. Exported as a pure utility so callers don't need the hook.
+ */
+export function findNoteByName(
+  treeNodes: FlatTreeNode[],
+  name: string,
+): FlatTreeNode | undefined {
+  return treeNodes.find(
+    (n) => n.kind === "file" && (n.name === name || n.name === `${name}.md`),
+  );
+}
+
 export interface UseVaultTreeReturn {
   /** The full flat tree as built by Rust — pre-sorted, pre-annotated. */
   treeNodes: FlatTreeNode[];
@@ -57,13 +71,7 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
   const [treeNodes, setTreeNodes] = useState<FlatTreeNode[]>(initialTree);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
-  // Sync when the loader re-runs (e.g. after vault change or reindex).
-  useEffect(() => {
-    setTreeNodes(initialTree);
-  }, [initialTree]);
-
   // ── Visibility derivation ──────────────────────────────────────────────
-  //
   // A node is visible when ALL of its ancestor folders are open.
   // We enforce this invariant on the `openFolders` set itself: when a folder
   // is closed we remove all its descendants from the set.  That means we only

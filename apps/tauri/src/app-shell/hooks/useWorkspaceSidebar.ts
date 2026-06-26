@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type { TabClickOpenBehavior, TabGroupId, TabModel } from "../../features/tabs";
-import { useTabsStore } from "../../features/tabs";
+import {
+  findGroupForTab,
+  tabIdFromPath,
+  useTabsStore,
+} from "../../features/tabs";
 import type { FlatTreeNode } from "../../features/vault";
 import { useVaultController, useVaultMutations } from "../../features/vault";
 
@@ -126,12 +130,10 @@ export function useWorkspaceSidebar({
 
     const state = useTabsStore.getState();
     for (const path of deletedPaths) {
-      const tabId = `tab:${path}`;
-      for (const group of Object.values(state.groups)) {
-        if (group.tabIds.includes(tabId)) {
-          state.closeTab(group.id, tabId, { force: true });
-          break;
-        }
+      const tabId = tabIdFromPath(path);
+      const groupId = findGroupForTab(state.groups, tabId);
+      if (groupId) {
+        state.closeTab(groupId, tabId, { force: true });
       }
     }
   }, [controller.handleConfirmDelete, mutations.pendingDeletePaths]);
