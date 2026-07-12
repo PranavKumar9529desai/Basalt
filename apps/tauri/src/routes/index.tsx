@@ -12,7 +12,6 @@ export const Route = createFileRoute("/")({
     const boot = await invoke<BootResult>("boot");
     return { boot };
   },
-
   pendingComponent: () => (
     <div className="flex flex-col items-center justify-center flex-1 gap-3 text-[var(--sat-text-muted)]">
       <div className="w-5 h-5 border-2 border-[var(--sat-text-muted)] border-t-[var(--sat-accent-primary)] rounded-full animate-spin" />

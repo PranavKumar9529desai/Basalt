@@ -34,6 +34,15 @@ export interface TabsState {
   groupOrder: TabGroupId[];
   focusedGroupId: TabGroupId;
   layoutRoot: TabLayoutNode;
+  /**
+   * Monotonically increasing version counter bumped ONLY on structural
+   * mutations (open, close, move, split, merge, pin, rename).
+   * Ephemeral changes (markTabDirty, activateTab, setFocusedGroup) leave
+   * this untouched — allowing the persistence layer to subscribe to
+   * persistVersion instead of the full `tabs`/`groups` records and avoid
+   * re-rendering on every keystroke.
+   */
+  persistVersion: number;
 
   openInPreview: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;
   openPinned: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;

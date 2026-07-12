@@ -78,42 +78,27 @@ export function useTabIO({ maxCacheEntries = 32 }: UseTabIOOptions = {}) {
     async (paths: string[]): Promise<Record<string, CachedTabContent>> => {
       if (paths.length === 0) return {};
 
-      try {
-        const batched = await invoke<OpenFileResult[]>("open_files", { paths });
-        const output: Record<string, CachedTabContent> = {};
-        for (const file of batched) {
-          const entry: CachedTabContent = {
-            content: file.content,
-            mtimeMs: file.mtimeMs ?? null,
-            lastAccessedAt: Date.now(),
-          };
-          output[file.path] = entry;
-          touchCache(file.path, entry);
-        }
-        return output;
-      } catch {
-        const output: Record<string, CachedTabContent> = {};
-        await Promise.all(
-          paths.map(async (path) => {
-            const file = await loadTabContent(path, true);
-            output[path] = file;
-          }),
-        );
-        return output;
+      const batched = await invoke<OpenFileResult[]>("open_files", { paths });
+      const output: Record<string, CachedTabContent> = {};
+      for (const file of batched) {
+        const entry: CachedTabContent = {
+          content: file.content,
+          mtimeMs: file.mtimeMs ?? null,
+          lastAccessedAt: Date.now(),
+        };
+        output[file.path] = entry;
+        touchCache(file.path, entry);
       }
+      return output;
     },
-    [loadTabContent, touchCache],
+    [touchCache],
   );
 
   const saveTabContent = useCallback(
     async ({ path, content, expectedMtimeMs }: SaveFileInput) => {
-      try {
-        await invoke("save_files", {
-          files: [{ path, content, expectedMtimeMs }],
-        });
-      } catch {
-        await invoke("save_file", { path, content });
-      }
+      await invoke("save_files", {
+        files: [{ path, content, expectedMtimeMs }],
+      });
 
       touchCache(path, {
         content,

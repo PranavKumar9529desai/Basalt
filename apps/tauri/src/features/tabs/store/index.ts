@@ -10,7 +10,12 @@ const rootId = ROOT_GROUP_ID as TabGroupId;
 
 const initial: Pick<
   TabsState,
-  "tabs" | "groups" | "groupOrder" | "focusedGroupId" | "layoutRoot"
+  | "tabs"
+  | "groups"
+  | "groupOrder"
+  | "focusedGroupId"
+  | "layoutRoot"
+  | "persistVersion"
 > = {
   tabs: {} as Record<TabId, TabModel>,
   groups: {
@@ -24,6 +29,7 @@ const initial: Pick<
   groupOrder: [rootId],
   focusedGroupId: rootId,
   layoutRoot: createGroupNode(rootId),
+  persistVersion: 0,
 };
 
 export const useTabsStore = create<TabsState>()((set, get, api) => ({

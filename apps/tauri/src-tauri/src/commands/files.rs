@@ -1,12 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use basalt_vault::path_utils::resolve_creation_path;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tauri::State;
 
 use crate::app_state::AppState;
-use crate::config::load_config;
 use crate::watcher::FileChangeEvent;
 
 fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
@@ -52,8 +51,72 @@ pub fn save_file(
         FileChangeEvent {
             path: abs.to_string_lossy().to_string(),
             kind: "modified".into(),
+            needs_tree_refresh: false,
         },
     );
+
+    Ok(())
+}
+
+/// Read multiple markdown files from disk in a single IPC call.
+/// Returns content + mtime for each file.
+#[tauri::command]
+pub fn open_files(paths: Vec<String>) -> Result<Vec<OpenFileResult>, String> {
+    let mut results = Vec::with_capacity(paths.len());
+    for p in paths {
+        let abs = canonical_md_path(&p).map_err(|e| e.to_string())?;
+        let content = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+        let mtime = std::fs::metadata(&abs)
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        results.push(OpenFileResult {
+            path: abs.to_string_lossy().to_string(),
+            content,
+            mtime_ms: mtime,
+        });
+    }
+    Ok(results)
+}
+
+/// Write multiple markdown files to disk in a single IPC call.
+/// Acquires the vault write lock once for all files.
+#[tauri::command]
+pub fn save_files(
+    files: Vec<SaveFileInput>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let mut abs_paths: Vec<PathBuf> = Vec::new();
+    for file in &files {
+        let abs = canonical_md_path(&file.path).map_err(|e| e.to_string())?;
+        std::fs::write(&abs, &file.content).map_err(|e| e.to_string())?;
+        abs_paths.push(abs);
+    }
+
+    // Single vault lock for all files.
+    let mut vault = state
+        .vault
+        .write()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+    for (file, abs) in files.iter().zip(&abs_paths) {
+        if let Some(path_str) = abs.to_str() {
+            vault.add_document(path_str, &file.content);
+        }
+    }
+    drop(vault);
+
+    for abs in &abs_paths {
+        let _ = app.emit(
+            "vault://file-changed",
+            FileChangeEvent {
+                path: abs.to_string_lossy().to_string(),
+                kind: "modified".into(),
+                needs_tree_refresh: false,
+            },
+        );
+    }
 
     Ok(())
 }
@@ -81,6 +144,20 @@ pub fn get_backlinks(path: String, state: State<AppState>) -> Result<Vec<String>
         .collect();
 
     Ok(results)
+}
+
+#[derive(Serialize)]
+pub struct OpenFileResult {
+    pub path: String,
+    pub content: String,
+    pub mtime_ms: Option<u64>,
+}
+
+#[derive(Deserialize)]
+pub struct SaveFileInput {
+    pub path: String,
+    pub content: String,
+    pub expected_mtime_ms: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -158,9 +235,11 @@ pub fn create_note(
     state: State<AppState>,
     app: tauri::AppHandle,
 ) -> Result<CreateNoteResult, String> {
-    let config = load_config(&app);
-    let vault_path_str = config
-        .last_vault
+    let vault_path_str = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
 
     let vault_path = Path::new(&vault_path_str);
@@ -201,6 +280,7 @@ pub fn create_note(
         FileChangeEvent {
             path: abs_path.clone(),
             kind: "created".into(),
+            needs_tree_refresh: true,
         },
     );
 
@@ -220,9 +300,11 @@ pub fn create_untitled_note(
     state: State<AppState>,
     app: tauri::AppHandle,
 ) -> Result<CreateNoteResult, String> {
-    let config = load_config(&app);
-    let vault_path_str = config
-        .last_vault
+    let vault_path_str = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
 
     let vault_root = Path::new(&vault_path_str)
@@ -292,6 +374,7 @@ pub fn create_untitled_note(
             FileChangeEvent {
                 path: abs_path.clone(),
                 kind: "created".into(),
+                needs_tree_refresh: true,
             },
         );
 
@@ -308,11 +391,14 @@ pub fn create_untitled_note(
 pub fn create_folder(
     name: String,
     parent: Option<String>, // relative folder path inside vault
+    state: State<AppState>,
     app: tauri::AppHandle,
 ) -> Result<String, String> {
-    let config = load_config(&app);
-    let vault_path_str = config
-        .last_vault
+    let vault_path_str = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
 
     let vault_path = Path::new(&vault_path_str);
@@ -337,6 +423,7 @@ pub fn create_folder(
         FileChangeEvent {
             path: folder_path.to_string_lossy().to_string(),
             kind: "created".into(),
+            needs_tree_refresh: true,
         },
     );
 
@@ -348,10 +435,12 @@ pub fn delete_file(path: String, state: State<AppState>, app: tauri::AppHandle) 
     apply_delete_paths(vec![path], state, app)
 }
 
-fn canonical_vault_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let config = load_config(app);
-    let vault_path_str = config
-        .last_vault
+fn canonical_vault_path(state: &AppState) -> Result<PathBuf, String> {
+    let vault_path_str = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
     Path::new(&vault_path_str)
         .canonicalize()
@@ -389,7 +478,7 @@ fn apply_delete_paths(
         return Err("no paths provided".to_string());
     }
 
-    let vault_root = canonical_vault_path(&app)?;
+    let vault_root = canonical_vault_path(&state)?;
 
     let mut canonical: Vec<PathBuf> = Vec::new();
     for raw in raw_paths {
@@ -446,6 +535,7 @@ fn apply_delete_paths(
         FileChangeEvent {
             path: vault_root.to_string_lossy().to_string(),
             kind: "modified".into(),
+            needs_tree_refresh: true,
         },
     );
 
@@ -472,7 +562,7 @@ pub fn move_paths(
         return Err("no source paths provided".to_string());
     }
 
-    let vault_root = canonical_vault_path(&app)?;
+    let vault_root = canonical_vault_path(&state)?;
 
     let destination_path = match destination_rel_path.as_deref() {
         Some(rel) if !rel.is_empty() => vault_root.join(rel),
@@ -527,46 +617,61 @@ pub fn move_paths(
             .map_err(|e| format!("failed to move '{}': {e}", source.display()))?;
     }
 
+    // Pre-read all file content outside the vault write lock.
+    let updates: Vec<(String, String)> = source_pairs
+        .iter()
+        .map(|(src, dst)| {
+            (
+                src.to_string_lossy().to_string(),
+                dst.to_string_lossy().to_string(),
+            )
+        })
+        .collect();
+
+    let mut file_ops: Vec<(String, String, Option<String>)> = Vec::new();
+    for (source_str, destination_str) in &updates {
+        if source_str.ends_with(".md") {
+            let content = std::fs::read_to_string(&destination_str).ok();
+            file_ops.push((source_str.clone(), destination_str.clone(), content));
+        } else {
+            // Read vault under a shared read lock to find folder descendants.
+            let prefix = format!("{source_str}/");
+            let vault = state
+                .vault
+                .read()
+                .map_err(|_| "vault lock poisoned".to_string())?;
+            let pairs: Vec<(String, String)> = vault
+                .graph
+                .metadata_cache
+                .keys()
+                .filter_map(|id| vault.arena.get_string(*id).cloned())
+                .filter(|p| p.starts_with(&prefix))
+                .map(|old_path| {
+                    let suffix = old_path.trim_start_matches(&prefix).to_string();
+                    let new_path = format!("{destination_str}/{suffix}");
+                    (old_path, new_path)
+                })
+                .collect();
+            drop(vault);
+
+            for (old_path, new_path) in pairs {
+                let content = std::fs::read_to_string(&new_path).ok();
+                file_ops.push((old_path, new_path, content));
+            }
+        }
+    }
+
+    // Single vault write lock — no disk I/O inside.
     {
         let mut vault = state
             .vault
             .write()
             .map_err(|_| "vault lock poisoned".to_string())?;
 
-        let updates: Vec<(String, String)> = source_pairs
-            .iter()
-            .map(|(src, dst)| {
-                (
-                    src.to_string_lossy().to_string(),
-                    dst.to_string_lossy().to_string(),
-                )
-            })
-            .collect();
-
-        for (source_str, destination_str) in updates {
-            if source_str.ends_with(".md") {
-                vault.remove_document(&source_str);
-                if let Ok(content) = std::fs::read_to_string(&destination_str) {
-                    vault.add_document(&destination_str, &content);
-                }
-            } else {
-                let prefix = format!("{source_str}/");
-                let descendants: Vec<String> = vault
-                    .graph
-                    .metadata_cache
-                    .keys()
-                    .filter_map(|id| vault.arena.get_string(*id).cloned())
-                    .filter(|p| p.starts_with(&prefix))
-                    .collect();
-
-                for old_path in descendants {
-                    let suffix = old_path.trim_start_matches(&prefix);
-                    let new_path = format!("{destination_str}/{suffix}");
-                    vault.remove_document(&old_path);
-                    if let Ok(content) = std::fs::read_to_string(&new_path) {
-                        vault.add_document(&new_path, &content);
-                    }
-                }
+        for (source_str, destination_str, content) in file_ops {
+            vault.remove_document(&source_str);
+            if let Some(c) = content {
+                vault.add_document(&destination_str, &c);
             }
         }
     }
@@ -576,6 +681,7 @@ pub fn move_paths(
         FileChangeEvent {
             path: destination_path.to_string_lossy().to_string(),
             kind: "modified".into(),
+            needs_tree_refresh: true,
         },
     );
 

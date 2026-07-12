@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": {
+    "rust": {
+      "command": ["rust-analyzer"],
+      "extensions": [".rs"]
+    },
+    "python": {
+      "command": ["pyright", "--stdio"],
+      "extensions": [".py", ".pyi"]
+    }
+  }
+}

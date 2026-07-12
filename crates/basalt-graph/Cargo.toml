@@ -7,3 +7,18 @@ edition = "2021"
 basalt-types = { path = "../basalt-types" }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2.0.18"
+
+[dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+
+[[bench]]
+name = "graph_insert"
+harness = false
+
+[[bench]]
+name = "graph_query"
+harness = false
+
+[[bench]]
+name = "arena_growth"
+harness = false

@@ -6,7 +6,6 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::cache::cache_path;
-use crate::config::load_config;
 
 #[derive(Serialize)]
 pub struct VaultSummary {
@@ -18,9 +17,11 @@ pub fn reindex_vault(
     state: State<AppState>,
     app: tauri::AppHandle,
 ) -> Result<VaultSummary, String> {
-    let config = load_config(&app);
-    let vault_path = config
-        .last_vault
+    let vault_path = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
 
     let vault = index_directory(Path::new(&vault_path));
@@ -29,13 +30,10 @@ pub fn reindex_vault(
     let cache = VaultCache::build(&vault_path, vault);
     let cache_file = cache_path(&app, &vault_path);
     let _ = cache.save(&cache_file);
-
-    if let Some(loaded) = VaultCache::load(&cache_file) {
-        *state
-            .vault
-            .write()
-            .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
-    }
+    *state
+        .vault
+        .write()
+        .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
 
     Ok(VaultSummary { note_count })
 }
@@ -46,11 +44,12 @@ pub fn reindex_vault(
 #[tauri::command]
 pub fn get_vault_tree(
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<Vec<basalt_vault::FlatTreeNode>, String> {
-    let config = load_config(&app);
-    let vault_path = config
-        .last_vault
+    let vault_path = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault path lock poisoned".to_string())?
+        .clone()
         .ok_or_else(|| "no vault configured".to_string())?;
 
     let vault = state

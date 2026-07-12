@@ -54,13 +54,10 @@ pub fn load_or_index_vault(
         // Persist updated cache (rebuild to keep fresh file mtimes).
         let real_cache = VaultCache::build(vault_path, vault);
         let _ = real_cache.save(&cache_file);
-
-        if let Some(loaded) = VaultCache::load(&cache_file) {
-            *state
-                .vault
-                .write()
-                .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
-        }
+        *state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())? = real_cache.vault;
 
         return Ok(("incremental".to_string(), note_count, old_mtimes));
     }
@@ -71,13 +68,10 @@ pub fn load_or_index_vault(
 
     let cache = VaultCache::build(vault_path, vault);
     let _ = cache.save(&cache_file);
-
-    if let Some(loaded) = VaultCache::load(&cache_file) {
-        *state
-            .vault
-            .write()
-            .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
-    }
+    *state
+        .vault
+        .write()
+        .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
 
     // Fresh index — no prior mtimes.
     Ok(("full_index".into(), note_count, std::collections::HashMap::new()))
@@ -94,13 +88,10 @@ pub fn index_and_persist(
     let cache = VaultCache::build(vault_path, vault);
     let cache_file = cache_path(app, vault_path);
     let _ = cache.save(&cache_file);
-
-    if let Some(loaded) = VaultCache::load(&cache_file) {
-        *state
-            .vault
-            .write()
-            .map_err(|_| "vault lock poisoned".to_string())? = loaded.vault;
-    }
+    *state
+        .vault
+        .write()
+        .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
 
     Ok(note_count)
 }

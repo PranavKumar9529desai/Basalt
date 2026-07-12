@@ -31,9 +31,13 @@ pub struct BootResult {
 pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult, String> {
     let config = load_config(&app);
 
-    let vault_path = match config.last_vault.clone() {
+    let vault_path = match config.last_vault {
         Some(p) => p,
         None => {
+            *state
+                .vault_path
+                .write()
+                .map_err(|_| "vault path lock poisoned".to_string())? = None;
             return Ok(BootResult {
                 vault_path: None,
                 note_count: 0,
@@ -44,6 +48,11 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
             })
         }
     };
+
+    *state
+        .vault_path
+        .write()
+        .map_err(|_| "vault path lock poisoned".to_string())? = Some(vault_path.clone());
 
     // Ensure the vault directory still exists.
     if !Path::new(&vault_path).is_dir() {
@@ -62,29 +71,37 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
     start_watcher(&state, &vault_path, &app)?;
 
     // Initialise the search index (non-fatal — vault still works if this fails).
-    //
-    // We hold the search write lock for the entire open_or_create call and set
-    // it to None first. This is critical: tantivy allows only one IndexWriter
-    // per directory. Without this, concurrent boot invocations (e.g. React
-    // StrictMode double-invoking the boot effect in dev) both reach
-    // open_or_create simultaneously and the second one fails with LockBusy.
-    // Holding the write lock serialises them; setting None first drops any
-    // existing IndexWriter so its lockfile is released before we open a new one.
+    // We minimise the search write lock scope: briefly set None to drop the
+    // old IndexWriter and release its tantivy lockfile, build outside the lock,
+    // then briefly acquire again to swap in the new SearchState.
     {
         use crate::cache::search_index_dir;
         use basalt_search::SearchState;
 
         let index_dir = search_index_dir(&app, &vault_path);
-        if let Ok(vault_guard) = state.vault.read() {
-            if let Ok(mut search_guard) = state.search.write() {
-                *search_guard = None; // drop existing IndexWriter + release lockfile
-                match SearchState::open_or_create(&index_dir, &vault_guard, &known_mtimes) {
-                    Ok(search_state) => *search_guard = Some(search_state),
-                    Err(e) => eprintln!("[boot] search index failed: {e}"),
+
+        // 1. Brief write lock: drop old writer + release lockfile.
+        if let Ok(mut search_guard) = state.search.write() {
+            *search_guard = None;
+        }
+
+        // 2. Build SearchState outside the search write lock.
+        let search_state = if let Ok(vault_guard) = state.vault.read() {
+            match SearchState::open_or_create(&index_dir, &vault_guard, &known_mtimes) {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    eprintln!("[boot] search index failed: {e}");
+                    None
                 }
             }
         } else {
             eprintln!("[boot] vault lock poisoned; skipping search init");
+            None
+        };
+
+        // 3. Brief write lock: swap in the new SearchState.
+        if let Ok(mut search_guard) = state.search.write() {
+            *search_guard = search_state;
         }
     }
 
@@ -127,6 +144,11 @@ pub fn set_vault(
 
     let vault_path = root.to_string_lossy().to_string();
 
+    *state
+        .vault_path
+        .write()
+        .map_err(|_| "vault path lock poisoned".to_string())? = Some(vault_path.clone());
+
     let note_count = crate::cache::index_and_persist(&vault_path, &state, &app)?;
 
     update_last_vault(&app, &vault_path);
@@ -135,26 +157,33 @@ pub fn set_vault(
     start_watcher(&state, &vault_path, &app)?;
 
     // Initialise the search index (non-fatal — vault still works if this fails).
-    // Hold search write lock across open_or_create and set to None first to
-    // drop any existing IndexWriter before creating a new one (same reasoning
-    // as in `boot` — prevents LockBusy from concurrent invocations).
+    // Minimise search write lock scope: brief None, build outside, brief swap.
     {
         use crate::cache::search_index_dir;
         use basalt_search::SearchState;
 
         let index_dir = search_index_dir(&app, &vault_path);
-        if let Ok(vault_guard) = state.vault.read() {
-            if let Ok(mut search_guard) = state.search.write() {
-                *search_guard = None; // drop existing IndexWriter + release lockfile
-                // set_vault always does a full re-index, so no prior mtimes to compare.
-                let empty_mtimes = std::collections::HashMap::new();
-                match SearchState::open_or_create(&index_dir, &vault_guard, &empty_mtimes) {
-                    Ok(search_state) => *search_guard = Some(search_state),
-                    Err(e) => eprintln!("[set_vault] search index failed: {e}"),
+
+        if let Ok(mut search_guard) = state.search.write() {
+            *search_guard = None;
+        }
+
+        let empty_mtimes = std::collections::HashMap::new();
+        let search_state = if let Ok(vault_guard) = state.vault.read() {
+            match SearchState::open_or_create(&index_dir, &vault_guard, &empty_mtimes) {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    eprintln!("[set_vault] search index failed: {e}");
+                    None
                 }
             }
         } else {
             eprintln!("[set_vault] vault lock poisoned; skipping search init");
+            None
+        };
+
+        if let Ok(mut search_guard) = state.search.write() {
+            *search_guard = search_state;
         }
     }
 

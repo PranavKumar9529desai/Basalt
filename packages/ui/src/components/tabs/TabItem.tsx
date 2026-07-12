@@ -21,6 +21,7 @@ export interface TabItemProps {
   onDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   showDropIndicator?: "left" | "right";
+  hidden?: boolean;
   className?: string;
 }
 
@@ -35,6 +36,7 @@ export const TabItem = memo(function TabItem({
   onDrop,
   onDragEnd,
   showDropIndicator,
+  hidden,
   className,
 }: TabItemProps) {
   const canClose = tab.canClose ?? true;
@@ -45,11 +47,13 @@ export const TabItem = memo(function TabItem({
         render={
           <div
             ref={elementRef}
+            data-tab-id={tab.id}
             role="tab"
             tabIndex={tab.disabled ? -1 : 0}
             aria-selected={tab.isActive}
             data-active={tab.isActive ? "true" : "false"}
             data-preview={tab.isPreview ? "true" : "false"}
+            style={hidden ? { display: "none" } : undefined}
             className={cn(
               "group/item relative flex items-center gap-1 rounded-t-lg border border-b-0 px-1.5 py-1 transition-colors select-none",
               tab.isActive

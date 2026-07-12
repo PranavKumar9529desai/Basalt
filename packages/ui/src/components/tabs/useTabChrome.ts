@@ -14,16 +14,14 @@ export interface TabsChromeLayout {
   separatorXs: number[];
 }
 
-export function useTabChrome(tabs: TabItemData[]) {
-  const viewportRef = useRef<HTMLDivElement>(null);
+export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [chrome, setChrome] = useState<TabsChromeLayout>({
     activeLeft: null,
     activeWidth: 0,
     separatorXs: [],
   });
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const activeTabId = useMemo(
     () => tabs.find((tab) => tab.isActive)?.id ?? null,
@@ -38,27 +36,32 @@ export function useTabChrome(tabs: TabItemData[]) {
     }
   }, []);
 
-  const checkScrollEdges = useCallback(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-
   const recalcChrome = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const viewportRect = viewport.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
     const activeEl = activeTabId ? tabRefs.current.get(activeTabId) : null;
 
-    const activeLeft = activeEl
-      ? activeEl.getBoundingClientRect().left - viewportRect.left
-      : null;
-    const activeWidth = activeEl ? activeEl.getBoundingClientRect().width : 0;
+    const visibleCount = visibleTabCount ?? tabs.length;
 
+    // Only show active corners if the active tab is visible
+    const activeIndex = activeTabId
+      ? tabs.findIndex((t) => t.id === activeTabId)
+      : -1;
+    const isActiveVisible = activeIndex >= 0 && activeIndex < visibleCount;
+
+    const activeLeft =
+      activeEl && isActiveVisible
+        ? activeEl.getBoundingClientRect().left - containerRect.left
+        : null;
+    const activeWidth =
+      activeEl && isActiveVisible ? activeEl.getBoundingClientRect().width : 0;
+
+    // Compute separators only between visible (non-hidden) tabs
     const separatorXs: number[] = [];
-    for (let i = 0; i < tabs.length - 1; i += 1) {
+    const maxSep = Math.min(tabs.length - 1, visibleCount - 1);
+    for (let i = 0; i < maxSep; i += 1) {
       const current = tabs[i];
       const next = tabs[i + 1];
       if (current.isActive || next.isActive) continue;
@@ -69,7 +72,7 @@ export function useTabChrome(tabs: TabItemData[]) {
 
       const currentRect = currentEl.getBoundingClientRect();
       const nextRect = nextEl.getBoundingClientRect();
-      const midX = (currentRect.right + nextRect.left) / 2 - viewportRect.left;
+      const midX = (currentRect.right + nextRect.left) / 2 - containerRect.left;
       separatorXs.push(midX);
     }
 
@@ -84,49 +87,30 @@ export function useTabChrome(tabs: TabItemData[]) {
       }
       return { activeLeft, activeWidth, separatorXs };
     });
-  }, [activeTabId, tabs]);
+  }, [activeTabId, tabs, visibleTabCount]);
 
+  // Layout effect on mount/change
   useLayoutEffect(() => {
     recalcChrome();
-    checkScrollEdges();
-  }, [recalcChrome, checkScrollEdges]);
+  }, [recalcChrome]);
 
+  // ResizeObserver — recalc chrome when container resizes
   useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const onScroll = () => {
+    const ro = new ResizeObserver(() => {
       recalcChrome();
-      checkScrollEdges();
-    };
-    const onResize = () => {
-      recalcChrome();
-      checkScrollEdges();
-    };
-    viewport.addEventListener("scroll", onScroll);
-    window.addEventListener("resize", onResize);
-    return () => {
-      viewport.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [recalcChrome, checkScrollEdges]);
+    });
+    ro.observe(container);
 
-  const scrollTabsLeft = useCallback(() => {
-    viewportRef.current?.scrollBy({ left: -160, behavior: "smooth" });
-  }, []);
-
-  const scrollTabsRight = useCallback(() => {
-    viewportRef.current?.scrollBy({ left: 160, behavior: "smooth" });
-  }, []);
+    return () => ro.disconnect();
+  }, [recalcChrome]);
 
   return {
-    viewportRef,
+    containerRef,
     tabRefs,
     chrome,
-    canScrollLeft,
-    canScrollRight,
     setTabRef,
-    scrollTabsLeft,
-    scrollTabsRight,
   };
 }

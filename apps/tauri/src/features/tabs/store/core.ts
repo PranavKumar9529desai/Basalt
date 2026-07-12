@@ -121,6 +121,7 @@ function buildInitialState() {
     groupOrder: [ROOT_GROUP_ID as TabGroupId],
     focusedGroupId: ROOT_GROUP_ID as TabGroupId,
     layoutRoot: createGroupNode(ROOT_GROUP_ID as TabGroupId),
+    persistVersion: 0,
   };
 }
 
@@ -212,6 +213,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       groups,
       groupOrder,
       focusedGroupId: activate ? targetGroup.id : current.focusedGroupId,
+      persistVersion: get().persistVersion + 1,
     });
 
     return incomingTabId;
@@ -258,6 +260,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       groups,
       groupOrder,
       focusedGroupId: activate ? targetGroup.id : current.focusedGroupId,
+      persistVersion: get().persistVersion + 1,
     });
 
     return incomingTabId;
@@ -332,6 +335,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           normalized.groups,
           normalized.groupOrder,
         ),
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -356,6 +360,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
             previewTabId: group.previewTabId === tabId ? tabId : null,
           },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -389,6 +394,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
                 : null,
           },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -458,6 +464,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
             rest,
             filteredOrder,
           ),
+          persistVersion: state.persistVersion + 1,
         };
       }
 
@@ -470,6 +477,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           nextGroups,
           nextOrder,
         ),
+        persistVersion: state.persistVersion + 1,
       };
     });
 
@@ -519,6 +527,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           updatedGroups,
           remainingOrder,
         ),
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -547,6 +556,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...state.tabs,
           [tabId]: { ...tab, title },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -571,6 +581,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
               group.previewTabId === tabId ? null : group.previewTabId,
           },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -584,6 +595,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...state.tabs,
           [tabId]: { ...tab, isPinned: false },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -622,6 +634,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...state.groups,
           [groupId]: { ...group, tabIds },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },
@@ -683,6 +696,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           normalized.groups,
           normalized.groupOrder,
         ),
+        persistVersion: state.persistVersion + 1,
       };
     });
   },

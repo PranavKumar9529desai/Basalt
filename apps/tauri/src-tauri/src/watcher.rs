@@ -11,6 +11,7 @@ use crate::app_state::AppState;
 pub struct FileChangeEvent {
     pub path: String,
     pub kind: String,
+    pub needs_tree_refresh: bool,
 }
 
 pub fn start_watcher(
@@ -25,7 +26,7 @@ pub fn start_watcher(
     let watcher = VaultWatcher::watch(
         Path::new(vault_path),
         vault_arc,
-        move |changed_path: PathBuf| {
+        move |changed_path: PathBuf, needs_refresh: bool| {
             // Update search index on .md file changes.
             if changed_path
                 .extension()
@@ -54,13 +55,14 @@ pub fn start_watcher(
                 }
             }
 
-            // Emit event to frontend (existing behaviour).
+            // Emit event to frontend.
             let kind = if changed_path.exists() { "modified" } else { "deleted" };
             let _ = app_handle.emit(
                 "vault://file-changed",
                 FileChangeEvent {
                     path: changed_path.to_string_lossy().to_string(),
                     kind: kind.to_string(),
+                    needs_tree_refresh: needs_refresh,
                 },
             );
         },

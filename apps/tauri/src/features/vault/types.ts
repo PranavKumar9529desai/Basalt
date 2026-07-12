@@ -69,6 +69,8 @@ export interface FileChangeEvent {
   path: string;
   /** "created" | "modified" | "deleted" */
   kind: "created" | "modified" | "deleted";
+  /** false for content-only saves (no tree change), true for structural changes */
+  needsTreeRefresh: boolean;
 }
 
 /** Returned by `create_note` Rust command. */

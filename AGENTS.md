@@ -259,6 +259,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [009-rust-crate-restructure](docs/adr/009-rust-crate-restructure.md) | ADR-009: Rust Crate Restructure — Hyphenated Names, Single Responsibility |
 | [010-obsidian-style-note-creation](docs/adr/010-obsidian-style-note-creation.md) | ADR-010: Obsidian-Style Instant Note Creation |
 | [011-prose-typography-system](docs/adr/011-prose-typography-system.md) | ADR-011: Prose Typography System — Inter, Heading Scale, Editor Font Wiring |
+| [017-benchmark-infrastructure](docs/adr/017-benchmark-infrastructure.md) | ADR-017: Benchmark Infrastructure — Criterion for Performance Measurement |
 <!-- ADR_INDEX_END -->
 
 ---

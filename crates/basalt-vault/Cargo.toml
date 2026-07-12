@@ -16,4 +16,13 @@ serde_json = "1"
 ignore = "0.4.23"
 
 [dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
 tempfile = "3"
+
+[[bench]]
+name = "index_walk"
+harness = false
+
+[[bench]]
+name = "cache_roundtrip"
+harness = false

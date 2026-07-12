@@ -29,9 +29,10 @@ fn main() {
 
     // 2. Start watcher
     println!("3. Starting watcher...");
-    let _watcher = VaultWatcher::watch(&test_dir, Arc::clone(&vault_arc), |changed_path| {
-        println!("[on_change] {:?}", changed_path);
-    })
+    let _watcher =
+        VaultWatcher::watch(&test_dir, Arc::clone(&vault_arc), |changed_path, _needs_refresh| {
+            println!("[on_change] {:?}", changed_path);
+        })
     .expect("Failed to start watcher");
 
     // Give watcher time to boot up

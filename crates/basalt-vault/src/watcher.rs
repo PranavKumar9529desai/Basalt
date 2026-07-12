@@ -23,7 +23,7 @@ impl VaultWatcher {
     pub fn watch<P, F>(path: P, vault_arc: Arc<RwLock<Vault>>, on_change: F) -> Result<Self>
     where
         P: AsRef<Path>,
-        F: Fn(PathBuf) + Send + 'static,
+        F: Fn(PathBuf, bool) + Send + 'static,
     {
         let (tx, rx) = std::sync::mpsc::channel();
 
@@ -94,7 +94,7 @@ impl VaultWatcher {
         vault_arc: &Arc<RwLock<Vault>>,
         on_change: &F,
     ) where
-        F: Fn(PathBuf) + Send + 'static,
+        F: Fn(PathBuf, bool) + Send + 'static,
     {
         let mut vault = match vault_arc.write() {
             Ok(v) => v,
@@ -103,21 +103,22 @@ impl VaultWatcher {
 
         for path in files {
             let path_str = path.to_string_lossy().to_string();
+            let was_indexed = vault.arena.get_id(&path_str).is_some();
 
             if path.exists() {
                 // Modified or created
                 if let Ok(content) = std::fs::read_to_string(&path) {
                     vault.add_document(&path_str, &content);
-                    println!("[watcher] updated: {}", path_str);
                 }
             } else {
                 // Removed
                 vault.remove_document(&path_str);
-                println!("[watcher] removed: {}", path_str);
             }
 
-            // Notify the caller after the vault has been updated
-            on_change(path);
+            // Content-only modification of an existing file doesn't change tree structure.
+            // New files (not previously indexed) and deletions always need a tree refresh.
+            let needs_refresh = !was_indexed || !path.exists();
+            on_change(path, needs_refresh);
         }
     }
 }

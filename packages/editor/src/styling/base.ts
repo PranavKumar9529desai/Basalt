@@ -24,10 +24,13 @@ const baseTheme = EditorView.theme({
   },
   ".cm-content": {
     fontFamily: "inherit",
-    // Left-aligned, max-width constrained for readability.
-    // No centering — centering caused the content to "shift right" whenever
-    // any width change occurred (scrollbar toggle, resize, tab overflow).
+    // Centered via auto margins (stable — doesn't trigger re-centering
+    // shifts like justifyContent:center on the scroller does).
+    // flexGrow: 0 prevents CodeMirror's default flexGrow: 2 from fighting
+    // the auto margins.
+    flexGrow: "0",
     maxWidth: "45rem",
+    margin: "0 auto",
   },
   ".cm-line": {
     lineHeight: "1.6",

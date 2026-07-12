@@ -16,6 +16,14 @@ function isTabSnapshot(value: unknown): value is TabsWorkspaceSnapshot {
   return candidate.version === 1 && Array.isArray(candidate.groupOrder);
 }
 
+/**
+ * Subscribes to `persistVersion` instead of the full `tabs`/`groups` objects.
+ *
+ * This avoids re-rendering the parent component on every `markTabDirty` call
+ * (which fires on every keystroke). Only structural mutations (open, close,
+ * move, split, merge) bump `persistVersion`, so the persistence effect only
+ * runs when the workspace layout actually changes.
+ */
 export function useTabPersistence({
   workspace,
   workspaceKey = "tabsWorkspace",
@@ -25,17 +33,12 @@ export function useTabPersistence({
   const hydrateFromWorkspaceSnapshot = useTabsStore(
     (state) => state.hydrateFromWorkspaceSnapshot,
   );
-  const toWorkspaceSnapshot = useTabsStore(
-    (state) => state.toWorkspaceSnapshot,
-  );
-  const tabs = useTabsStore((state) => state.tabs);
-  const groups = useTabsStore((state) => state.groups);
-  const groupOrder = useTabsStore((state) => state.groupOrder);
-  const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
+  const persistVersion = useTabsStore((state) => state.persistVersion);
 
   const restoredRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Restore previous session once ──────────────────────────────────────────
   useEffect(() => {
     if (!enabled || restoredRef.current) return;
     const maybeSnapshot = workspace?.[workspaceKey];
@@ -45,11 +48,12 @@ export function useTabPersistence({
     restoredRef.current = true;
   }, [enabled, hydrateFromWorkspaceSnapshot, workspace, workspaceKey]);
 
+  // ── Persist on structural changes only ─────────────────────────────────────
   useEffect(() => {
     if (!enabled || !restoredRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const snapshot = toWorkspaceSnapshot();
+      const snapshot = useTabsStore.getState().toWorkspaceSnapshot();
       invoke("set_workspace_key", {
         key: workspaceKey,
         value: snapshot,
@@ -63,14 +67,5 @@ export function useTabPersistence({
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [
-    debounceMs,
-    enabled,
-    focusedGroupId,
-    groupOrder,
-    groups,
-    tabs,
-    toWorkspaceSnapshot,
-    workspaceKey,
-  ]);
+  }, [debounceMs, enabled, persistVersion, workspaceKey]);
 }

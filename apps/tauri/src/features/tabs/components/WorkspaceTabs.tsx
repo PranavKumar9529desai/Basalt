@@ -1,5 +1,5 @@
 import { TabGroupFrame, TabsBar } from "@workspace/ui/components/tabs";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type DragEvent, type ReactNode, useCallback, useMemo } from "react";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
 import type {
@@ -63,6 +63,7 @@ function TabGroupPane({
   // Subscribe to only the data this group needs — avoids re-rendering when
   // tabs in OTHER groups change.
   const group = useTabsStore((state) => state.groups[groupId]);
+  const tabsRecord = useTabsStore((state) => state.tabs);
   const focusedGroupId = useTabsStore((state) => state.focusedGroupId);
   const setFocusedGroup = useTabsStore((state) => state.setFocusedGroup);
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
@@ -81,11 +82,13 @@ function TabGroupPane({
   const tabIds = group.tabIds;
   const activeTabId = group.activeTabId;
 
-  // groupTabs recomputes only when THIS group's tabIds or activeTabId change.
+  // groupTabs recomputes when THIS group's tabIds, activeTabId, or tab
+  // metadata (e.g. isDirty) change.  We read tabsRecord from the store
+  // subscription instead of getState() so that markTabDirty updates the
+  // dirty indicator immediately.
   const groupTabs = useMemo(() => {
-    const { tabs } = useTabsStore.getState();
     return tabIds
-      .map((tabId) => tabs[tabId])
+      .map((tabId) => tabsRecord[tabId])
       .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
       .map((tab) => ({
         id: tab.id,
@@ -96,41 +99,76 @@ function TabGroupPane({
         isPreview: tab.isPreview,
         canClose: true,
       }));
-  }, [tabIds, activeTabId]);
+  }, [tabIds, activeTabId, tabsRecord]);
 
   // groupActiveTab recomputes only when THIS group's activeTabId changes.
+  // this is all tech debt once i need sit and understand this corretly
   const groupActiveTab = useMemo(() => {
     if (!activeTabId) return null;
     const { tabs } = useTabsStore.getState();
     return tabs[activeTabId] ?? null;
   }, [activeTabId]);
 
+  // Stabilise per-group event handlers so that the tabsBar useMemo only
+  // recomputes when groupTabs or presentation props change, not every time
+  // the parent re-renders.
+  const handleGroupTabSelect = useCallback(
+    (tabId: string) => handleTabSelect(group.id, tabId),
+    [group.id, handleTabSelect],
+  );
+  const handleGroupTabClose = useCallback(
+    (tabId: string) => handleTabClose(group.id, tabId),
+    [group.id, handleTabClose],
+  );
+  const handleGroupTabPinToggle = useCallback(
+    (tabId: string) => handleTabPinToggle(tabId),
+    [handleTabPinToggle],
+  );
+  const handleGroupTabDragStart = useCallback(
+    (tabId: string, event: DragEvent<HTMLElement>) =>
+      tabDnD.handleTabDragStart(group.id, tabId, event),
+    [group.id, tabDnD.handleTabDragStart],
+  );
+  const handleGroupTabDragOver = useCallback(
+    (_: string, event: DragEvent<HTMLElement>) =>
+      tabDnD.handleTabDragOver(event),
+    [tabDnD.handleTabDragOver],
+  );
+  const handleGroupTabDrop = useCallback(
+    (tabId: string, event: DragEvent<HTMLElement>, edge: "left" | "right") =>
+      tabDnD.handleTabDropOnTab(group.id, tabId, event, edge),
+    [group.id, tabDnD.handleTabDropOnTab],
+  );
+  const handleGroupTabDragEnd = useCallback(
+    (_: string, event: DragEvent<HTMLElement>) =>
+      tabDnD.handleTabDragEnd(event),
+    [tabDnD.handleTabDragEnd],
+  );
+
   const tabsBar = useMemo(
     () => (
       <TabsBar
         tabs={groupTabs}
-        onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
-        onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
-        onPinToggle={(tabId) => handleTabPinToggle(tabId)}
-         nTabDragStart={(tabId, event) =>
-          tabDnD.handleTabDragStart(group.id, tabId, event)
-        }
-        onTabDragOver={(_, event) => tabDnD.handleTabDragOver(event)}
-        onTabDrop={(tabId, event, edge) =>
-          tabDnD.handleTabDropOnTab(group.id, tabId, event, edge)
-        }
-        onTabDragEnd={(_, event) => tabDnD.handleTabDragEnd(event)}
+        onSelectTab={handleGroupTabSelect}
+        onCloseTab={handleGroupTabClose}
+        onPinToggle={handleGroupTabPinToggle}
+        onTabDragStart={handleGroupTabDragStart}
+        onTabDragOver={handleGroupTabDragOver}
+        onTabDrop={handleGroupTabDrop}
+        onTabDragEnd={handleGroupTabDragEnd}
         leftSlot={isFocused ? tabBarLeftSlot : undefined}
         rightSlot={isFocused ? tabBarRightSlot : undefined}
       />
     ),
     [
       groupTabs,
-      group.id,
-      handleTabSelect,
-      handleTabClose,
-      handleTabPinToggle,
-      tabDnD,
+      handleGroupTabSelect,
+      handleGroupTabClose,
+      handleGroupTabPinToggle,
+      handleGroupTabDragStart,
+      handleGroupTabDragOver,
+      handleGroupTabDrop,
+      handleGroupTabDragEnd,
       isFocused,
       tabBarLeftSlot,
       tabBarRightSlot,

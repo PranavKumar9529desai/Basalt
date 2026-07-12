@@ -151,8 +151,10 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
   useEffect(() => {
     const unlistenPromise = listen<FileChangeEvent>(
       "vault://file-changed",
-      () => {
-        refreshTree();
+      (event) => {
+        if (event.payload.needsTreeRefresh) {
+          refreshTree();
+        }
       },
     );
 

@@ -1,0 +1,72 @@
+{
+  "tabsWorkspace": {
+    "focusedGroupId": "group-root",
+    "groupOrder": [
+      "group-root"
+    ],
+    "groups": [
+      {
+        "activeTabId": "tab:/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md",
+        "id": "group-root",
+        "previewTabId": "tab:/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md",
+        "tabIds": [
+          "tab:/home/pranav/Documents/obsidian/Subset 2.md",
+          "tab:/home/pranav/Documents/obsidian/Combination Sum.md",
+          "tab:/home/pranav/Documents/obsidian/Permant/Workflow backend.md",
+          "tab:/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md"
+        ]
+      }
+    ],
+    "layout": {
+      "groupId": "group-root",
+      "type": "group"
+    },
+    "paneFocus": {
+      "focusedPaneId": "group-root"
+    },
+    "tabs": [
+      {
+        "createdAt": 1782463043210,
+        "id": "tab:/home/pranav/Documents/obsidian/Subset 2.md",
+        "isDirty": false,
+        "isPinned": true,
+        "isPreview": false,
+        "lastAccessedAt": 1782464965388,
+        "path": "/home/pranav/Documents/obsidian/Subset 2.md",
+        "title": "Subset 2.md"
+      },
+      {
+        "createdAt": 1782463140579,
+        "id": "tab:/home/pranav/Documents/obsidian/Combination Sum.md",
+        "isDirty": false,
+        "isPinned": true,
+        "isPreview": false,
+        "lastAccessedAt": 1782465074574,
+        "path": "/home/pranav/Documents/obsidian/Combination Sum.md",
+        "title": "Combination Sum.md"
+      },
+      {
+        "createdAt": 1782463246752,
+        "id": "tab:/home/pranav/Documents/obsidian/Permant/Workflow backend.md",
+        "isDirty": false,
+        "isPinned": true,
+        "isPreview": false,
+        "lastAccessedAt": 1782465078837,
+        "path": "/home/pranav/Documents/obsidian/Permant/Workflow backend.md",
+        "title": "Workflow backend.md"
+      },
+      {
+        "createdAt": 1783666642496,
+        "id": "tab:/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md",
+        "isDirty": false,
+        "isPinned": false,
+        "isPreview": true,
+        "lastAccessedAt": 1783666642496,
+        "path": "/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md",
+        "title": "Harness Engineering Material.md"
+      }
+    ],
+    "version": 1
+  },
+  "sidebarWidth": 221
+}
