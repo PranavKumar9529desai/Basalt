@@ -112,7 +112,7 @@ function TabGroupPane({
         onSelectTab={(tabId) => handleTabSelect(group.id, tabId)}
         onCloseTab={(tabId) => handleTabClose(group.id, tabId)}
         onPinToggle={(tabId) => handleTabPinToggle(tabId)}
-        onTabDragStart={(tabId, event) =>
+         nTabDragStart={(tabId, event) =>
           tabDnD.handleTabDragStart(group.id, tabId, event)
         }
         onTabDragOver={(_, event) => tabDnD.handleTabDragOver(event)}
