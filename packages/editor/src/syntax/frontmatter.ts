@@ -1,3 +1,5 @@
+import { foldService, syntaxTree } from "@codemirror/language";
+import type { Extension } from "@codemirror/state";
 import type { MarkdownConfig } from "@lezer/markdown";
 
 /**
@@ -36,3 +38,18 @@ export const yamlFrontmatterExtension: MarkdownConfig = {
     },
   ],
 };
+
+/**
+ * CodeMirror fold service that lets the user collapse the whole frontmatter
+ * block into a single line. Wired into the editor alongside the Lezer parse
+ * extension above.
+ */
+export const yamlFrontmatterFold: Extension = foldService.of(
+  (state, lineStart, _lineEnd) => {
+    const tree = syntaxTree(state);
+    const node = tree.resolveInner(lineStart, 1);
+    if (node.type.name !== "YAMLFrontMatter" || node.to <= node.from + 1)
+      return null;
+    return { from: node.from, to: node.to };
+  },
+);
