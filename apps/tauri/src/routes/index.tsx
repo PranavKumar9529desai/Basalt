@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { WorkspaceView } from "../app-shell";
+import { WorkspaceInit } from "../app-shell";
 import type { BootResult } from "../features/vault";
 
 interface LoaderData {
@@ -23,6 +23,6 @@ export const Route = createFileRoute("/")({
 
   component: function RouteComponent() {
     const { boot } = Route.useLoaderData();
-    return <WorkspaceView boot={boot} />;
+    return <WorkspaceInit boot={boot} />;
   },
 });

@@ -1,3 +1,23 @@
+/**
+ * WorkspaceView — Pure workspace layout.
+ *
+ * Architecture: This component is responsible ONLY for composing the visual
+ * layout of the workspace. It reads feature state from Zustand stores via
+ * hooks (useTabs, useVaultTree, useFocusedPaneStore) — it does NOT perform
+ * any initialization or persistence.
+ *
+ * All initialization is owned by WorkspaceInit (parent). This component
+ * receives boot as a prop solely to seed useVaultTree(boot.tree) — the
+ * boot object is never stored in a Zustand store.
+ *
+ * Cross-feature wiring (vault ↔ tabs ↔ editor) happens here via shell
+ * hooks (useWorkspaceSidebar, useWorkspaceTabHandlers) — this is the
+ * ONLY place where features are composed together.
+ *
+ * Command registration for vault actions (app:new-file, app:delete-file)
+ * lives here because those commands depend on `controller` from
+ * useWorkspaceSidebar — runtime hook data, not boot seed data.
+ */
 import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
@@ -6,14 +26,8 @@ import { useCommandStore } from "@workspace/commands";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
-import { initSettings } from "../features/settings";
 import type { PaneRenderContext } from "../features/tabs";
-import {
-  getTabByPath,
-  useTabPersistence,
-  useTabs,
-  WorkspaceTabs,
-} from "../features/tabs";
+import { getTabByPath, useTabs, WorkspaceTabs } from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import {
   FileTree,
@@ -34,7 +48,6 @@ interface WorkspaceViewProps {
 }
 
 export function WorkspaceView({ boot }: WorkspaceViewProps) {
-  initSettings(boot.settings);
   const vaultPath = boot.vault_path;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
@@ -56,7 +69,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   );
 
   const tabs = useTabs();
-  useTabPersistence({ workspace: boot.workspace });
 
   const focusedSessionSelected = useFocusedPaneStore(
     (state) => state.focusedPaneSelected,
