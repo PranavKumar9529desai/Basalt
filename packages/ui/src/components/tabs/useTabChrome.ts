@@ -9,8 +9,11 @@ import {
 import type { TabItemData } from "./types";
 
 export interface TabsChromeLayout {
+  /** Left edge of the visible active tab, relative to the strip container (null when hidden). */
   activeLeft: number | null;
+  /** Width of the visible active tab (0 when hidden). */
   activeWidth: number;
+  /** X positions of the 1px separators between inactive tabs. */
   separatorXs: number[];
 }
 
@@ -45,7 +48,8 @@ export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
 
     const visibleCount = visibleTabCount ?? tabs.length;
 
-    // Only show active corners if the active tab is visible
+    // Only draw the active-tab corner nubs when the active tab is actually
+    // visible (not overflowed into the dropdown).
     const activeIndex = activeTabId
       ? tabs.findIndex((t) => t.id === activeTabId)
       : -1;
@@ -58,7 +62,8 @@ export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
     const activeWidth =
       activeEl && isActiveVisible ? activeEl.getBoundingClientRect().width : 0;
 
-    // Compute separators only between visible (non-hidden) tabs
+    // Separators only between visible tabs, skipping any pair adjacent to the
+    // active tab (Chrome draws no divider there).
     const separatorXs: number[] = [];
     const maxSep = Math.min(tabs.length - 1, visibleCount - 1);
     for (let i = 0; i < maxSep; i += 1) {

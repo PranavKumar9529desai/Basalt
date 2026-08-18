@@ -1,7 +1,7 @@
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 import type { TabModel } from "../tabs/types";
-import type { FlatTreeNode } from "../vault/types";
+import type { FlatTreeNode } from "../vault";
 import { Editor } from "./components/EditorContextMenu";
 import { useEditor } from "./hooks/useEditor";
 import { useFocusedPaneStore } from "./store";
@@ -126,6 +126,10 @@ export function PaneContent({
   const setFocusedPaneSelected = useFocusedPaneStore(
     (s) => s.setFocusedPaneSelected,
   );
+  const setFocusedPaneBacklinks = useFocusedPaneStore(
+    (s) => s.setFocusedPaneBacklinks,
+  );
+  const setStats = useFocusedPaneStore((s) => s.setStats);
 
   // Sync focused pane selection only when this pane is focused.
   // Previously this synced *all* editor state on every keystroke.
@@ -144,6 +148,32 @@ export function PaneContent({
     editor.selected?.name,
     setFocusedPaneSelected,
   ]);
+
+  // Push the focused note's backlinks up to the shell (right sidebar) — only
+  // while this pane is focused, so the sidebar always mirrors the focused pane.
+  useEffect(() => {
+    if (!isFocused || !editor.selected) {
+      setFocusedPaneBacklinks([]);
+      return;
+    }
+    setFocusedPaneBacklinks(editor.backlinks);
+  }, [
+    isFocused,
+    editor.selected,
+    editor.backlinks,
+    setFocusedPaneBacklinks,
+  ]);
+
+  // Push lightweight editor stats (chars/words) up for the status bar.
+  useEffect(() => {
+    if (!isFocused) return;
+    const text = editor.content;
+    const trimmed = text.trim();
+    setStats({
+      chars: text.length,
+      words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length,
+    });
+  }, [isFocused, editor.content, setStats]);
 
   // Load note when active tab changes
   useEffect(() => {
@@ -206,7 +236,7 @@ export function PaneContent({
             className="flex-1 min-h-0"
             value={editor.content}
             onChange={handleEditorChange}
-            initialContent=""
+            initialContent="This is Created pranav Desai "
             onFetchLinks={editor.onFetchLinks}
             onFetchTags={editor.onFetchTags}
             onOpenLink={editor.handleOpenLink}

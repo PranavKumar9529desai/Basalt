@@ -72,5 +72,3 @@ export interface TabsWorkspaceSnapshot {
   layout?: TabLayoutNode;
   paneFocus?: PaneFocusSnapshot;
 }
-
-export type TabClickOpenBehavior = "preview" | "pinned" | "vscode";

@@ -55,7 +55,10 @@ export const TabItem = memo(function TabItem({
             data-preview={tab.isPreview ? "true" : "false"}
             style={hidden ? { display: "none" } : undefined}
             className={cn(
-              "group/item relative flex items-center gap-1 rounded-t-lg border border-b-0 px-1.5 py-1 transition-colors select-none",
+              // Flat top + open bottom: the active tab's bottom edge sits flush
+              // against the editor pane. The concave corner cutouts ("nubs")
+              // are drawn by TabsBar's chrome layer, not by SVG.
+              "group/item relative z-10 flex h-9 items-center gap-1 rounded-t-lg border border-b-0 px-2 transition-colors select-none",
               tab.isActive
                 ? "z-20 border-[var(--sat-layout-border)] bg-[var(--sat-editor-background)]"
                 : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]/70",
@@ -87,68 +90,73 @@ export const TabItem = memo(function TabItem({
                 onSelect?.(tab.id);
               }
             }}
-          />
+          >
+            {showDropIndicator === "left" && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-0 top-1 bottom-1 z-30 w-0.5 rounded-full bg-[var(--sat-accent-primary)]"
+              />
+            )}
+            {showDropIndicator === "right" && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute right-0 top-1 bottom-1 z-30 w-0.5 rounded-full bg-[var(--sat-accent-primary)]"
+              />
+            )}
+
+            {/* ── Content ── */}
+            <div
+              data-disabled={tab.disabled ? "true" : undefined}
+              className={cn(
+                "flex h-8 min-w-[150px] max-w-[280px] flex-1 items-center justify-start gap-1 px-1 transition-colors",
+                tab.isActive
+                  ? "text-[var(--sat-text-primary)]"
+                  : "text-[var(--sat-text-muted)] opacity-85 hover:opacity-100",
+                tab.isPreview && "italic",
+                tab.disabled && "cursor-not-allowed opacity-50",
+              )}
+            >
+              {tab.icon}
+              <span className="truncate text-xs max-w-[180px]">
+                {tab.title}
+              </span>
+              {tab.isDirty ? (
+                <span
+                  aria-hidden="true"
+                  className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[var(--sat-accent-primary)]"
+                />
+              ) : null}
+            </div>
+
+            {canClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                draggable={false}
+                className={cn(
+                  "relative z-10 text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]",
+                  !tab.isActive && "invisible group-hover/item:visible",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose?.(tab.id);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                aria-label="Close tab"
+                title="Close tab"
+              >
+                <IconX size={12} />
+              </Button>
+            ) : null}
+          </div>
         }
       >
-        {showDropIndicator === "left" && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-[var(--sat-accent-primary)] z-30"
-          />
-        )}
-        {showDropIndicator === "right" && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute right-0 top-1 bottom-1 w-0.5 rounded-full bg-[var(--sat-accent-primary)] z-30"
-          />
-        )}
-        <div
-          data-disabled={tab.disabled ? "true" : undefined}
-          className={cn(
-            "flex h-7 min-w-[170px] max-w-[300px] flex-1 items-center justify-start gap-1 rounded-sm border border-transparent px-2 transition-colors",
-            tab.isActive
-              ? "text-[var(--sat-text-primary)]"
-              : "text-[var(--sat-text-muted)] opacity-85 hover:opacity-100",
-            tab.isPreview && "italic",
-            tab.disabled && "cursor-not-allowed opacity-50",
-          )}
-        >
-          {tab.icon}
-          <span className="truncate text-xs max-w-[180px]">{tab.title}</span>
-          {tab.isDirty ? (
-            <span
-              aria-hidden="true"
-              className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[var(--sat-accent-primary)]"
-            />
-          ) : null}
-        </div>
-
-        {canClose ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            draggable={false}
-            className={cn(
-              "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)] z-10",
-              !tab.isActive && "invisible group-hover/item:visible",
-            )}
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose?.(tab.id);
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-            aria-label="Close tab"
-            title="Close tab"
-          >
-            <IconX size={12} />
-          </Button>
-        ) : null}
+        <TooltipContent side="bottom">
+          <span>{tab.title}</span>
+        </TooltipContent>
       </TooltipTrigger>
-      <TooltipContent side="bottom">
-        <span>{tab.title}</span>
-      </TooltipContent>
     </Tooltip>
   );
 });

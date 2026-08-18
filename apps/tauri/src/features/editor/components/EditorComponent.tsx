@@ -112,7 +112,7 @@ export function EditorComponent({
           basicSetup={BASIC_SETUP}
           extensions={allExtensions}
           onChange={handleChange}
-          className="flex h-full min-h-0 flex-col"
+          className=""
         />
       </div>
     </div>

@@ -8,6 +8,8 @@ export interface SidebarPanelProps {
   minWidth?: number;
   maxWidth?: number;
   collapsed?: boolean;
+  /** Which edge the panel sits on. Controls resize-handle placement and border. */
+  side?: "left" | "right";
   onWidthChange?: (width: number) => void;
   className?: string;
 }
@@ -18,6 +20,7 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
   minWidth = 160,
   maxWidth,
   collapsed = false,
+  side = "left",
   onWidthChange,
   className,
 }) => {
@@ -31,15 +34,18 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
 
       if (panelRef.current) {
         const panelRect = panelRef.current.getBoundingClientRect();
-        let newWidth = e.clientX - panelRect.left;
+        const newWidth =
+          side === "right"
+            ? panelRect.right - e.clientX
+            : e.clientX - panelRect.left;
 
         // Use provided maxWidth or dynamically calculate minimum 300px space for the editor
         const computedMaxWidth =
           maxWidth ?? Math.max(minWidth, window.innerWidth - 300);
-        newWidth = Math.max(minWidth, Math.min(newWidth, computedMaxWidth));
+        const clamped = Math.max(minWidth, Math.min(newWidth, computedMaxWidth));
 
-        setWidth(newWidth);
-        onWidthChange?.(newWidth);
+        setWidth(clamped);
+        onWidthChange?.(clamped);
       }
     };
 
@@ -69,12 +75,16 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
       ref={panelRef}
       style={{ width: `${width}px` }}
       className={cn(
-        "group relative flex flex-col shrink-0 h-full bg-[var(--sat-surface-2)] border-r border-[var(--sat-layout-border)]",
+        "group relative flex flex-col shrink-0 h-full bg-[var(--sat-surface-2)]",
+        side === "right"
+          ? "border-l border-[var(--sat-layout-border)]"
+          : "border-r border-[var(--sat-layout-border)]",
         className,
       )}
     >
       {children}
       <ResizeHandle
+        side={side}
         isResizing={isResizing}
         onMouseDown={(e: React.MouseEvent) => {
           e.preventDefault();

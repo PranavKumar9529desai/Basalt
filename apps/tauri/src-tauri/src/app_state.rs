@@ -1,9 +1,9 @@
 use std::sync::{Arc, RwLock};
 
-use basalt_vault::{watcher::VaultWatcher, Vault};
 use basalt_search::SearchState;
+use basalt_vault::{watcher::VaultWatcher, Vault};
 
-/// Global application state shared across Tauri commands.
+/// Global application state shared across Tauri COMMANDS.
 pub struct AppState {
     pub vault: Arc<RwLock<Vault>>,
     pub vault_path: RwLock<Option<String>>,

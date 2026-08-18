@@ -21,7 +21,6 @@ export { useTabsStore } from "./store";
 export type {
   OpenableTabInput,
   SplitDirection,
-  TabClickOpenBehavior,
   TabGroupId,
   TabGroupModel,
   TabId,

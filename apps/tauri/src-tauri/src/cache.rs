@@ -47,8 +47,7 @@ pub fn load_or_index_vault(
 
         // Restore vault from cache then patch only the files that changed.
         let mut vault = cache.vault;
-        let _new_mtimes =
-            incremental_reindex(Path::new(vault_path), &mut vault, &old_mtimes);
+        let _new_mtimes = incremental_reindex(Path::new(vault_path), &mut vault, &old_mtimes);
         let note_count = vault.graph.metadata_cache.len();
 
         // Persist updated cache (rebuild to keep fresh file mtimes).
@@ -74,7 +73,11 @@ pub fn load_or_index_vault(
         .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
 
     // Fresh index — no prior mtimes.
-    Ok(("full_index".into(), note_count, std::collections::HashMap::new()))
+    Ok((
+        "full_index".into(),
+        note_count,
+        std::collections::HashMap::new(),
+    ))
 }
 
 pub fn index_and_persist(
@@ -105,9 +108,9 @@ pub fn update_last_vault(app: &tauri::AppHandle, vault_path: &str) {
 /// Returns the directory where the tantivy search index for `vault_path` is stored.
 /// Uses the same djb2 hash as `cache_filename` so the index lives alongside the vault cache.
 pub(crate) fn search_index_dir(app: &tauri::AppHandle, vault_path: &str) -> std::path::PathBuf {
-    let hash: u32 = vault_path
-        .bytes()
-        .fold(5381u32, |acc, b| acc.wrapping_mul(33).wrapping_add(b as u32));
+    let hash: u32 = vault_path.bytes().fold(5381u32, |acc, b| {
+        acc.wrapping_mul(33).wrapping_add(b as u32)
+    });
     app.path()
         .app_cache_dir()
         .expect("app cache dir unavailable")

@@ -6,8 +6,8 @@ import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
 import { useSearchStore } from "../features/search";
-import { useSettingsStore } from "../features/settings";
-import type { PaneRenderContext, TabClickOpenBehavior } from "../features/tabs";
+import { initSettings, useSettingsStore } from "../features/settings";
+import type { PaneRenderContext } from "../features/tabs";
 import {
   getTabByPath,
   useTabPersistence,
@@ -23,26 +23,23 @@ import {
   VaultSplash,
 } from "../features/vault";
 import { AppCommands } from "./AppCommands";
+import { ActivityBar } from "./ActivityBar";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
+import { RightSidebar } from "./RightSidebar";
 import { Sidebar } from "./Sidebar";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
-
-function parseTabClickOpenBehavior(value: unknown): TabClickOpenBehavior {
-  if (value === "preview" || value === "pinned" || value === "vscode") {
-    return value;
-  }
-  return "vscode";
-}
 
 interface WorkspaceViewProps {
   boot: BootResult;
 }
 
 export function WorkspaceView({ boot }: WorkspaceViewProps) {
+  initSettings(boot.settings);
   const vaultPath = boot.vault_path;
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
 
   const {
     treeNodes,
@@ -61,9 +58,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   );
 
   const tabs = useTabs();
-  const tabClickOpenBehavior = parseTabClickOpenBehavior(
-    boot.settings?.tabClickOpenBehavior,
-  );
 
   useTabPersistence({ workspace: boot.workspace });
 
@@ -126,7 +120,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
       openPinned: tabs.openPinned,
       setTabTitle: tabs.setTabTitle,
       closeTab: tabs.closeTab,
-      tabClickOpenBehavior,
     },
   });
 
@@ -193,11 +186,19 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
         hasActiveTab={Boolean(focusedSessionTab)}
       />
 
+      <ActivityBar
+        leftSidebarOpen={sidebarOpen}
+        onToggleLeftSidebar={() => setSidebarOpen((v) => !v)}
+        rightSidebarOpen={rightSidebarOpen}
+        onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
+      />
+
       <Sidebar
         defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
         collapsed={!sidebarOpen}
         onCreateNote={controller.createNoteInstant}
         onCreateFolder={controller.startFolderInline}
+        onCollapse={() => setSidebarOpen(false)}
       >
         <FileTree
           visibleNodes={visibleNodes}
@@ -234,6 +235,12 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
             )}
           </Button>
         }
+      />
+
+      <RightSidebar
+        open={rightSidebarOpen}
+        onOpenChange={setRightSidebarOpen}
+        onOpenNote={handleSearchOpen}
       />
 
       <WorkspaceOverlays

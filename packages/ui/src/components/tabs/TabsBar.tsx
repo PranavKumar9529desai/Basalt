@@ -253,7 +253,7 @@ export function TabsBar({
       role="tablist"
       aria-label="Open tabs"
       className={cn(
-        "relative z-50 flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 pt-1 overflow-hidden",
+        "relative z-50 flex h-9 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--sat-layout-border)] after:pointer-events-none after:z-10",
         className,
       )}
       onDragOver={(e) => e.preventDefault()}
@@ -333,7 +333,7 @@ export function TabsBar({
           )}
         </div>
 
-        {/* ── Chrome: separators + corner nubs ── */}
+        {/* ── Chrome: separators + active-tab corner nubs ── */}
         <div className="pointer-events-none absolute inset-0 z-20">
           {chrome.separatorXs.map((x, idx) => (
             <span
@@ -344,6 +344,10 @@ export function TabsBar({
             />
           ))}
 
+          {/* Concave cutouts at the active tab's bottom corners — the
+              "chrome nubs". A circle flooded with editor-background shadow,
+              clipped to its outer quadrant, carves the notch that makes the
+              active tab blend into the editor pane below. Pure CSS, no SVG. */}
           {chrome.activeLeft !== null && chrome.activeWidth > 0 ? (
             <>
               <span

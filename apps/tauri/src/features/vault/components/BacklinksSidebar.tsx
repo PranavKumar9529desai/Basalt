@@ -20,7 +20,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   onOpenNote,
 }) => {
   return (
-    <div className="flex flex-col h-full bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--sat-surface-2)] overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--sat-layout-border)] shrink-0">
         {/* Link icon */}

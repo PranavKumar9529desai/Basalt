@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { TabClickOpenBehavior, TabGroupId, TabModel } from "../../features/tabs";
+import type { TabGroupId, TabModel } from "../../features/tabs";
 import {
   findGroupForTab,
   tabIdFromPath,
@@ -7,6 +7,7 @@ import {
 } from "../../features/tabs";
 import type { FlatTreeNode } from "../../features/vault";
 import { useVaultController, useVaultMutations } from "../../features/vault";
+import { useSetting } from "../../features/settings";
 
 interface NoteSelection {
   path: string;
@@ -24,7 +25,6 @@ interface EditorInterface {
     tabId: string,
     opts: { force: boolean },
   ) => void;
-  tabClickOpenBehavior: TabClickOpenBehavior;
 }
 
 interface Props {
@@ -56,8 +56,9 @@ export function useWorkspaceSidebar({
     closeTab,
     focusedSessionTab,
     focusedSessionSelected,
-    tabClickOpenBehavior,
   } = editor;
+
+  const tabClickOpenBehavior = useSetting("tabClickOpenBehavior");
 
   // loadNote only depends on stable store actions — never changes.
   const loadNote = useCallback(

@@ -117,6 +117,8 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
   }, []);
 
   // Open a folder and all ancestors.
+  // used for backlinks and quick-open
+  // for relveling folder, we need to open all ancestors
   const openFolder = useCallback((relPath: string) => {
     if (!relPath) return;
     const parts = relPath.split("/").filter(Boolean);

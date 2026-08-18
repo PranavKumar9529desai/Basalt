@@ -1,5 +1,18 @@
 /* Semantic mapping for CodeMirror classes to design tokens */
 
+/*
+ * Constrain the CodeMirror element chain to its flex parent.
+ * Without this, the wrapper @uiw/react-codemirror injects around .cm-editor
+ * (`.cm-theme-light`) keeps height:auto, so `.cm-editor { height: 100% }`
+ * resolves to content height and the editor grows to match the document —
+ * breaking vertical scrolling inside the pane.
+ */
+.cm-theme-light,
+.cm-theme-dark,
+.cm-editor {
+  height: 100%;
+}
+
 .cm-editor {
   background-color: var(--sat-editor-background, var(--sat-surface-1));
   color: var(--sat-text-primary);

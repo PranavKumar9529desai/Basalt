@@ -16,21 +16,13 @@ const baseTheme = EditorView.theme({
   ".cm-scroller": {
     overflowY: "auto",
     overflowX: "hidden",
-    padding: "24px 32px",
+    // Responsive gutters — at least 32px, scales to 5% on wider panes.
+    // Content area ends up ~90% of pane width with comfortable margins.
+    padding: "24px max(32px, 5%)",
     fontFamily: "var(--sat-font-sans)",
-    // No display:flex / justifyContent:center — they cause re-centering
-    // shifts when any width change occurs (scrollbar, resize, tab overflow).
-    // Centering is handled by .cm-content margin: 0 auto (stable).
   },
   ".cm-content": {
     fontFamily: "inherit",
-    // Centered via auto margins (stable — doesn't trigger re-centering
-    // shifts like justifyContent:center on the scroller does).
-    // flexGrow: 0 prevents CodeMirror's default flexGrow: 2 from fighting
-    // the auto margins.
-    flexGrow: "0",
-    maxWidth: "45rem",
-    margin: "0 auto",
   },
   ".cm-line": {
     lineHeight: "1.6",
