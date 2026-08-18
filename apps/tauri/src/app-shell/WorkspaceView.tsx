@@ -2,11 +2,11 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
+import { useCommandStore } from "@workspace/commands";
 import { Button } from "@workspace/ui/components/ui/button";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
-import { useSearchStore } from "../features/search";
-import { initSettings, useSettingsStore } from "../features/settings";
+import { initSettings } from "../features/settings";
 import type { PaneRenderContext } from "../features/tabs";
 import {
   getTabByPath,
@@ -22,9 +22,7 @@ import {
   useVaultTree,
   VaultSplash,
 } from "../features/vault";
-import { AppCommands } from "./AppCommands";
 import { ActivityBar } from "./ActivityBar";
-import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { RightSidebar } from "./RightSidebar";
@@ -58,36 +56,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   );
 
   const tabs = useTabs();
-
   useTabPersistence({ workspace: boot.workspace });
-
-  const openSearch = useSearchStore((s) => s.openSearch);
-  const openSwitcher = useSearchStore((s) => s.openSwitcher);
-  const openSettings = useSettingsStore((s) => s.open);
-
-  useKeyboardShortcuts(
-    {
-      search: {
-        key: "f",
-        meta: true,
-        handler: openSearch,
-        preventDefault: true,
-      },
-      "quick-open": {
-        key: "o",
-        meta: true,
-        handler: openSwitcher,
-        preventDefault: true,
-      },
-      settings: {
-        key: ",",
-        meta: true,
-        handler: openSettings,
-        preventDefault: true,
-      },
-    },
-    [openSearch, openSettings, openSwitcher],
-  );
 
   const focusedSessionSelected = useFocusedPaneStore(
     (state) => state.focusedPaneSelected,
@@ -160,6 +129,17 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     [treeNodes, tabs.openInPreview, tabs.setTabTitle],
   );
 
+  // Vault commands — need hook data, so registered here in the shell.
+  useEffect(() => {
+    const { registerCommand, unregister } = useCommandStore.getState();
+    registerCommand("app:new-file", controller.createNoteInstant);
+    registerCommand("app:delete-file", controller.handleDeleteFromCommands);
+    return () => {
+      unregister("app:new-file");
+      unregister("app:delete-file");
+    };
+  }, [controller.createNoteInstant, controller.handleDeleteFromCommands]);
+
   if (!vaultPath) {
     return (
       <VaultSplash
@@ -172,20 +152,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   return (
     <div className="flex flex-1 min-h-0">
-      <AppCommands
-        onCreateNote={controller.createNoteInstant}
-        onDeleteNote={controller.handleDeleteFromCommands}
-        onCloseActiveTab={tabHandlers.handleCloseActiveTab}
-        onCloseOtherTabs={tabHandlers.handleCloseOtherTabs}
-        onCloseTabsToRight={tabHandlers.handleCloseTabsToRight}
-        onTogglePinActiveTab={tabHandlers.handleTogglePinActiveTab}
-        onSplitRight={tabHandlers.handleSplitRight}
-        onSplitLeft={tabHandlers.handleSplitLeft}
-        onSplitTop={tabHandlers.handleSplitUp}
-        onSplitBottom={tabHandlers.handleSplitDown}
-        hasActiveTab={Boolean(focusedSessionTab)}
-      />
-
       <ActivityBar
         leftSidebarOpen={sidebarOpen}
         onToggleLeftSidebar={() => setSidebarOpen((v) => !v)}

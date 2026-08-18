@@ -1,2 +1,3 @@
+export { HotkeyHandler } from "./keyboard";
 export { useCommandStore } from "./store";
-export type { Command } from "./types";
+export type { Command, CommandMetadata } from "./types";

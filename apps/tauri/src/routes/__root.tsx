@@ -1,11 +1,13 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TooltipProvider } from "@workspace/ui/components/ui/tooltip";
+import { HotkeyHandler } from "@workspace/commands";
 import { EditorCommandPalette } from "../features/editor/components/CommandPalette";
 import { StatusBar } from "../app-shell/StatusBar";
 
 export const Route = createRootRoute({
   component: () => (
     <TooltipProvider>
+      <HotkeyHandler />
       <div className="flex flex-col h-screen bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] overflow-hidden">
         <EditorCommandPalette />
         {/* Main workspace area — fills all space */}

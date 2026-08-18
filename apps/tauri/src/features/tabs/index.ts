@@ -1,3 +1,5 @@
+import "./commands";
+
 export type { PaneRenderContext } from "./components/WorkspaceTabs";
 export { WorkspaceTabs } from "./components/WorkspaceTabs";
 export { useTabDnD } from "./hooks/useTabDnD";
