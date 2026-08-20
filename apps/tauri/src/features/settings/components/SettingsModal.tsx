@@ -1,4 +1,5 @@
 import { IconX } from "@tabler/icons-react";
+import { useKeybindingService } from "@workspace/keybindings";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 import { useSettingsStore } from "../store";
@@ -8,16 +9,20 @@ import { SettingsPanel } from "./SettingsPanel";
 export function SettingsModal() {
   const { isOpen, close } = useSettingsStore();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const keybindingService = useKeybindingService();
 
+  // Set "modalOpen" context for when clause evaluation
+  useEffect(() => {
+    keybindingService.setContext("modalOpen", isOpen);
+    return () => keybindingService.setContext("modalOpen", false);
+  }, [isOpen, keybindingService]);
+
+  // Register Escape action for closing settings
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", handler, { capture: true });
-    return () =>
-      window.removeEventListener("keydown", handler, { capture: true });
-  }, [isOpen, close]);
+    keybindingService.registerAction("closeTopModal", close);
+    return () => keybindingService.unregisterAction("closeTopModal");
+  }, [isOpen, close, keybindingService]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {

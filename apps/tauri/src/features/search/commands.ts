@@ -1,9 +1,7 @@
-import { useCommandStore } from "@workspace/commands";
+import { commandService } from "@workspace/commands";
 import { useSearchStore } from "./store";
 
-const { registerCommand, unregister } = useCommandStore.getState();
+commandService.registerCommand("search:open", useSearchStore.getState().openSearch);
+commandService.registerCommand("switcher:open", useSearchStore.getState().openSwitcher);
 
-registerCommand("search:open", useSearchStore.getState().openSearch);
-registerCommand("switcher:open", useSearchStore.getState().openSwitcher);
-
-export { unregister };
+export const unregister = commandService.unregister.bind(commandService);

@@ -1,13 +1,30 @@
+/**
+ * useWorkspace — Cross-feature orchestrator.
+ *
+ * Architecture: This hook owns ALL cross-feature wiring between vault, tabs,
+ * editor, and settings. It reads from multiple feature stores and composes
+ * their APIs into higher-level operations (e.g., "open a file in the
+ * editor" = vault node click → tabs.openInPreview → setTabTitle).
+ *
+ * This lives in `shared/` (not `features/`) because it imports from
+ * multiple features — vault, tabs, editor, and settings. Features must
+ * never import from each other directly; cross-feature composition
+ * belongs here or in `app-shell/`.
+ *
+ * Callers pass in raw feature data (treeNodes, visibleNodes, vaultPath)
+ * and editor interface callbacks. This hook returns composed controller
+ * actions and UI state for the shell to render.
+ */
 import { useCallback, useMemo } from "react";
-import type { TabGroupId, TabModel } from "../../features/tabs";
+import type { TabGroupId, TabModel } from "../features/tabs";
 import {
   findGroupForTab,
   tabIdFromPath,
   useTabsStore,
-} from "../../features/tabs";
-import type { FlatTreeNode } from "../../features/vault";
-import { useVaultController, useVaultMutations } from "../../features/vault";
-import { useSetting } from "../../features/settings";
+} from "../features/tabs";
+import type { FlatTreeNode } from "../features/vault";
+import { useVaultController, useVaultMutations } from "../features/vault";
+import { useSetting } from "../features/settings";
 
 interface NoteSelection {
   path: string;
@@ -37,7 +54,7 @@ interface Props {
   editor: EditorInterface;
 }
 
-export function useWorkspaceSidebar({
+export function useWorkspace({
   vaultPath,
   treeNodes,
   visibleNodes,

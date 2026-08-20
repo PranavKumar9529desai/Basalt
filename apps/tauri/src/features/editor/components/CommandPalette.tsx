@@ -1,28 +1,20 @@
-import { type Command, useCommandStore } from "@workspace/commands";
+import { type Command, commandService } from "@workspace/commands";
+import { useKeybindingService } from "@workspace/keybindings";
 import { CommandPalette } from "@workspace/ui/components/command-palette/CommandPalette";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function EditorCommandPalette() {
-  const commandsObj = useCommandStore((s) => s.commands);
-  const commands = useMemo(() => {
-    return Object.values(commandsObj).filter(
-      (cmd) => !cmd.checkCallback || cmd.checkCallback(),
-    );
-  }, [commandsObj]);
-  const execute = useCommandStore((s) => s.execute);
+  const keybindingService = useKeybindingService();
   const [open, setOpen] = useState(false);
 
-  // Global Ctrl+P listener
+  // Register Ctrl+P action
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
-        e.preventDefault();
-        setOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+    keybindingService.registerAction("openCommandPalette", () => setOpen(true));
+    return () => keybindingService.unregisterAction("openCommandPalette");
+  }, [keybindingService]);
+
+  // Read commands fresh each time palette opens (commands are registered at import time)
+  const commands = open ? commandService.getCommands() : [];
 
   return (
     <CommandPalette
@@ -30,10 +22,10 @@ export function EditorCommandPalette() {
         id: c.id,
         name: c.name,
         icon: c.icon,
-        shortcut: c.hotkeys?.[0],
+        shortcut: undefined,
         category: c.category,
       }))}
-      onSelect={execute}
+      onSelect={(id) => commandService.execute(id)}
       open={open}
       onOpenChange={setOpen}
     />

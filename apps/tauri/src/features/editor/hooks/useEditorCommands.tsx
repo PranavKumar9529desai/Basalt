@@ -14,7 +14,7 @@ import {
   IconSelect,
   IconStrikethrough,
 } from "@tabler/icons-react";
-import { useCommandStore } from "@workspace/commands";
+import { commandService } from "@workspace/commands";
 import { useEffect } from "react";
 
 /**
@@ -23,8 +23,8 @@ import { useEffect } from "react";
  * EditorView instance (e.g., via EditorComponent's onViewReady callback).
  */
 export function useEditorCommands(view: EditorView | null) {
-  const register = useCommandStore((s) => s.register);
-  const unregister = useCommandStore((s) => s.unregister);
+  const register = commandService.register.bind(commandService);
+  const unregister = commandService.unregister.bind(commandService);
 
   useEffect(() => {
     if (!view) return;
@@ -197,5 +197,5 @@ export function useEditorCommands(view: EditorView | null) {
         unregister(cmd.id);
       });
     };
-  }, [view, register, unregister]);
+    }, [view]);
 }

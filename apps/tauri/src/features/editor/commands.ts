@@ -1,7 +1,5 @@
-import { useCommandStore } from "@workspace/commands";
+import { commandService } from "@workspace/commands";
 
-const { registerCommand } = useCommandStore.getState();
-
-registerCommand("app:extract-selection", () => {
+commandService.registerCommand("app:extract-selection", () => {
   // TODO: implement extract selection to new note
 });

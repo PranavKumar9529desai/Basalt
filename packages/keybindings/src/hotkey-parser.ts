@@ -1,6 +1,3 @@
-import { useEffect } from "react";
-import { useCommandStore } from "./store";
-
 /**
  * Parsed representation of a hotkey string like "CmdOrCtrl+F".
  *
@@ -13,7 +10,7 @@ import { useCommandStore } from "./store";
  *
  * The key portion matches `KeyboardEvent.key` (lowercased).
  */
-interface ParsedHotkey {
+export interface ParsedHotkey {
   key: string;
   cmdOrCtrl: boolean;
   shift: boolean;
@@ -53,7 +50,7 @@ export function parseHotkey(hotkey: string): ParsedHotkey {
   return { key, cmdOrCtrl, shift, alt };
 }
 
-function matchesHotkey(e: KeyboardEvent, parsed: ParsedHotkey): boolean {
+export function matchesHotkey(e: KeyboardEvent, parsed: ParsedHotkey): boolean {
   const keyMatch = e.key.toLowerCase() === parsed.key;
   const modMatch = parsed.cmdOrCtrl
     ? e.ctrlKey || e.metaKey
@@ -61,41 +58,4 @@ function matchesHotkey(e: KeyboardEvent, parsed: ParsedHotkey): boolean {
   const shiftMatch = parsed.shift ? e.shiftKey : !e.shiftKey;
   const altMatch = parsed.alt ? e.altKey : !e.altKey;
   return keyMatch && modMatch && shiftMatch && altMatch;
-}
-
-/**
- * Global hotkey handler — reads hotkeys from the command store and
- * dispatches to the matching command's callback.
- *
- * Mount this once at the root of the app. It subscribes to the command
- * store and re-evaluates on every keydown.
- *
- * @example
- * // In __root.tsx
- * <HotkeyHandler />
- */
-export function HotkeyHandler() {
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const { commands, execute } = useCommandStore.getState();
-
-      for (const cmd of Object.values(commands)) {
-        if (!cmd.hotkeys?.length) continue;
-        if (cmd.checkCallback && !cmd.checkCallback()) continue;
-
-        for (const hotkey of cmd.hotkeys) {
-          if (matchesHotkey(e, parseHotkey(hotkey))) {
-            e.preventDefault();
-            execute(cmd.id);
-            return;
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  return null;
 }

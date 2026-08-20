@@ -1,91 +1,16 @@
 [
-  {
-    "id": "app:new-file",
-    "name": "Create New Note",
-    "category": "File",
-    "icon": "IconFilePlus",
-    "hotkeys": ["CmdOrCtrl+N"]
-  },
-  {
-    "id": "app:delete-file",
-    "name": "Delete Current Note",
-    "category": "File",
-    "icon": "IconTrash"
-  },
-  {
-    "id": "app:extract-selection",
-    "name": "Extract selection to new note",
-    "category": "Editor",
-    "icon": "IconPlus"
-  },
-  {
-    "id": "tabs:close-active",
-    "name": "Close Current Tab",
-    "category": "Tabs",
-    "icon": "IconX",
-    "hotkeys": ["CmdOrCtrl+W"]
-  },
-  {
-    "id": "tabs:close-others",
-    "name": "Close Other Tabs",
-    "category": "Tabs",
-    "icon": "IconRectangleVertical"
-  },
-  {
-    "id": "tabs:close-right",
-    "name": "Close Tabs to the Right",
-    "category": "Tabs",
-    "icon": "IconRectangleVertical"
-  },
-  {
-    "id": "tabs:toggle-pin",
-    "name": "Pin/Unpin Current Tab",
-    "category": "Tabs",
-    "icon": "IconPinned"
-  },
-  {
-    "id": "tabs:split-right",
-    "name": "Split Right and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-left",
-    "name": "Split Left and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-up",
-    "name": "Split Up and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-down",
-    "name": "Split Down and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "search:open",
-    "name": "Search Vault",
-    "category": "Search",
-    "icon": "IconSearch",
-    "hotkeys": ["CmdOrCtrl+F"]
-  },
-  {
-    "id": "switcher:open",
-    "name": "Quick Open File",
-    "category": "Search",
-    "icon": "IconFileSearch",
-    "hotkeys": ["CmdOrCtrl+O"]
-  },
-  {
-    "id": "app:open-settings",
-    "name": "Open Settings",
-    "category": "App",
-    "icon": "IconSettings",
-    "hotkeys": ["CmdOrCtrl+,"]
-  }
+  { "id": "app:new-file", "name": "Create New Note", "category": "File", "icon": "IconFilePlus" },
+  { "id": "app:delete-file", "name": "Delete Current Note", "category": "File", "icon": "IconTrash" },
+  { "id": "app:extract-selection", "name": "Extract selection to new note", "category": "Editor", "icon": "IconPlus" },
+  { "id": "tabs:close-active", "name": "Close Current Tab", "category": "Tabs", "icon": "IconX" },
+  { "id": "tabs:close-others", "name": "Close Other Tabs", "category": "Tabs", "icon": "IconRectangleVertical" },
+  { "id": "tabs:close-right", "name": "Close Tabs to the Right", "category": "Tabs", "icon": "IconRectangleVertical" },
+  { "id": "tabs:toggle-pin", "name": "Pin/Unpin Current Tab", "category": "Tabs", "icon": "IconPinned" },
+  { "id": "tabs:split-right", "name": "Split Right and Move Tab", "category": "Tabs", "icon": "IconLayoutBoardSplit" },
+  { "id": "tabs:split-left", "name": "Split Left and Move Tab", "category": "Tabs", "icon": "IconLayoutBoardSplit" },
+  { "id": "tabs:split-up", "name": "Split Up and Move Tab", "category": "Tabs", "icon": "IconLayoutBoardSplit" },
+  { "id": "tabs:split-down", "name": "Split Down and Move Tab", "category": "Tabs", "icon": "IconLayoutBoardSplit" },
+  { "id": "search:open", "name": "Search Vault", "category": "Search", "icon": "IconSearch" },
+  { "id": "switcher:open", "name": "Quick Open File", "category": "Search", "icon": "IconFileSearch" },
+  { "id": "app:open-settings", "name": "Open Settings", "category": "App", "icon": "IconSettings" }
 ]

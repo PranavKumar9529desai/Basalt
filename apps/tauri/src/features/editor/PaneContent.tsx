@@ -1,3 +1,4 @@
+import { useKeybindingService } from "@workspace/keybindings";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 import type { TabModel } from "../tabs/types";
@@ -122,6 +123,19 @@ export function PaneContent({
   onActivateGroup,
 }: PaneContentProps) {
   const editor = useEditor({ findNote });
+  const keybindingService = useKeybindingService();
+
+  // Register "saveActiveFile" action bound to this editor's performSave
+  useEffect(() => {
+    keybindingService.registerAction("saveActiveFile", editor.performSave);
+    return () => keybindingService.unregisterAction("saveActiveFile");
+  }, [keybindingService, editor.performSave]);
+
+  // Set "editorFocused" context for when clause evaluation
+  useEffect(() => {
+    keybindingService.setContext("editorFocused", isFocused);
+    return () => keybindingService.setContext("editorFocused", false);
+  }, [isFocused, keybindingService]);
   const lastLoadedPathRef = useRef<string | null>(null);
   const setFocusedPaneSelected = useFocusedPaneStore(
     (s) => s.setFocusedPaneSelected,

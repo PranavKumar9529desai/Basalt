@@ -11,18 +11,18 @@
  * boot object is never stored in a Zustand store.
  *
  * Cross-feature wiring (vault ↔ tabs ↔ editor) happens here via shell
- * hooks (useWorkspaceSidebar, useWorkspaceTabHandlers) — this is the
+ * hooks (useWorkspace, useWorkspaceTabHandlers) — this is the
  * ONLY place where features are composed together.
  *
  * Command registration for vault actions (app:new-file, app:delete-file)
  * lives here because those commands depend on `controller` from
- * useWorkspaceSidebar — runtime hook data, not boot seed data.
+ * useWorkspace — runtime hook data, not boot seed data.
  */
 import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
-import { useCommandStore } from "@workspace/commands";
+import { commandService } from "@workspace/commands";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
@@ -37,7 +37,8 @@ import {
   VaultSplash,
 } from "../features/vault";
 import { ActivityBar } from "./ActivityBar";
-import { useWorkspaceSidebar } from "./hooks/useWorkspaceSidebar";
+import { useWorkspace } from "../shared/useWorkspace";
+import "../shared/paneCommands";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { RightSidebar } from "./RightSidebar";
 import { Sidebar } from "./Sidebar";
@@ -87,7 +88,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     contextMenu,
     selection,
     handleConfirmDeleteWithTabs,
-  } = useWorkspaceSidebar({
+  } = useWorkspace({
     vaultPath,
     treeNodes,
     visibleNodes,
@@ -143,12 +144,11 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   // Vault commands — need hook data, so registered here in the shell.
   useEffect(() => {
-    const { registerCommand, unregister } = useCommandStore.getState();
-    registerCommand("app:new-file", controller.createNoteInstant);
-    registerCommand("app:delete-file", controller.handleDeleteFromCommands);
+    commandService.registerCommand("app:new-file", controller.createNoteInstant);
+    commandService.registerCommand("app:delete-file", controller.handleDeleteFromCommands);
     return () => {
-      unregister("app:new-file");
-      unregister("app:delete-file");
+      commandService.unregister("app:new-file");
+      commandService.unregister("app:delete-file");
     };
   }, [controller.createNoteInstant, controller.handleDeleteFromCommands]);
 

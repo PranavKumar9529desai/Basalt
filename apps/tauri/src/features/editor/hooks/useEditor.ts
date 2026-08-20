@@ -157,19 +157,7 @@ export function useEditor({ findNote }: UseEditorOptions): UseEditorReturn {
     [scheduleSave],
   );
 
-  // ── Ctrl+S — flush immediately ────────────────────────────────────────────
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        performSave();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [performSave]);
+  // ── Ctrl+S — registered as action "saveActiveFile" via KeybindingService ──
 
   // ── Save on window blur ───────────────────────────────────────────────────
 

@@ -1,12 +1,11 @@
 import type { EditorView } from "@codemirror/view";
-import { useCommandStore } from "@workspace/commands";
+import { commandService } from "@workspace/commands";
 import { type ContextMenuState, contextMenuExtension } from "@workspace/editor";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuShortcut,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -22,16 +21,14 @@ export function Editor({ ...props }: EditorProps) {
 
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
 
-  const execute = useCommandStore((s) => s.execute);
-  const commandsObj = useCommandStore((s) => s.commands);
-  const commands = useMemo(() => Object.values(commandsObj), [commandsObj]);
+  const commands = useMemo(() => commandService.getCommands(), []);
 
   const handleCommand = useCallback(
     (commandId: string) => {
       setMenuState(null);
-      execute(commandId);
+      commandService.execute(commandId);
     },
-    [execute],
+    [],
   );
 
   const menuAnchor = useMemo(() => {
@@ -69,9 +66,6 @@ export function Editor({ ...props }: EditorProps) {
                   {cmd.icon}
                 </div>
                 <span>{cmd.name}</span>
-                {cmd.hotkeys?.[0] && (
-                  <ContextMenuShortcut>{cmd.hotkeys[0]}</ContextMenuShortcut>
-                )}
               </ContextMenuItem>
             ))}
 
@@ -103,11 +97,7 @@ export function Editor({ ...props }: EditorProps) {
                       {cmd.icon}
                     </div>
                     <span>{cmd.name}</span>
-                    {cmd.hotkeys?.[0] && (
-                      <ContextMenuShortcut>
-                        {cmd.hotkeys[0]}
-                      </ContextMenuShortcut>
-                    )}
+
                   </ContextMenuItem>
                 ))}
               </ContextMenuSubContent>

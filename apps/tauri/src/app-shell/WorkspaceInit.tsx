@@ -16,7 +16,7 @@
  *
  * Note: Command registration for vault actions (app:new-file, app:delete-file)
  * stays in WorkspaceView because those commands depend on `controller` from
- * useWorkspaceSidebar, which is a runtime hook result — not boot data.
+ * useWorkspace, which is a runtime hook result — not boot data.
  */
 import type { BootResult } from "../features/vault";
 import { initSettings } from "../features/settings";
