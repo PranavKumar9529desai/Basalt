@@ -112,6 +112,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevTabRef = useRef<typeof tab | null>(null);
+  /** Last write WE made — watcher events for it are our own echo. */
+  const lastSelfSaveRef = useRef<{ path: string; at: number } | null>(null);
 
   const tabRef = useLatestRef(tab);
   const servicesRef = useLatestRef(services);
@@ -190,6 +192,10 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       if (isActive) setSaveStatus("saving");
       try {
         await ioRef.current.saveFile(meta.path, state.doc.toString());
+        // Remember our own write — the vault watcher echoes it back as
+        // vault://file-changed and we must not mistake it for an external
+        // edit (spurious conflict banner).
+        lastSelfSaveRef.current = { path: meta.path, at: Date.now() };
         dirtyRef.current.delete(tabId);
         servicesRef.current.markTabDirty(tabId, false);
         if (isActive) {
@@ -333,6 +339,17 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         const t = tabRef.current;
         if (!t || changedPath !== t.path) return;
 
+        // Our own save echoed back by the watcher — ignore.
+        const self = lastSelfSaveRef.current;
+        if (
+          kind !== "deleted" &&
+          self &&
+          self.path === changedPath &&
+          Date.now() - self.at < 1500
+        ) {
+          return;
+        }
+
         if (kind === "deleted") {
           ioRef.current.setStatus("! The open file was deleted from disk.");
           setSaveStatus("conflict");
@@ -345,9 +362,13 @@ export function MarkdownLeaf({ tab }: LeafProps) {
             "! File changed externally. Save or discard your changes.",
           );
         } else {
-          // No unsaved edits — silently reload from disk.
+          // No unsaved edits — reload from disk, but only if the content
+          // actually differs (our own echo / no-op writes must not nuke
+          // the undo history).
           try {
             const text = await ioRef.current.readFile(changedPath);
+            const current = statesRef.current.get(t.id);
+            if (current && current.doc.toString() === text) return;
             const state = EditorState.create({
               doc: text,
               extensions: extensionsRef.current,

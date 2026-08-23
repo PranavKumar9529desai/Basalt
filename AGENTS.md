@@ -28,8 +28,9 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | Command palette / quick switcher / search (tantivy + nucleo) | ✅ Complete |
 | File tree / sidebar / note creation (Obsidian-style instant) | ✅ Complete |
 | **View registry + generic side docks (ADR-018 Phase 1)** | ✅ Complete |
-| Leaf types for editor area (ADR-018 Phase 2) | ⏳ Next up |
+| **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)** | ✅ Complete |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3) | ⏳ Not started |
+| Editor perf baseline (typing-latency harness) | ⏳ Next up |
 | NoteGraph / backlinks panel | ⏳ Backlinks sidebar exists; graph not started |
 | Rust acceleration (batched IPC) | ⏳ Not started |
 | Plugin host (ADR-018 Phase 5) | ⏳ Not started — do not build before phases 1–4 |
