@@ -20,14 +20,14 @@ export interface SidebarHeaderProps {
 
 /**
  * Header strip rendered at the top of a sidebar panel. Sized to match the
- * tab bar (h-10) and draws its own bottom hairline so that, when placed
- * next to a tab bar, both lines merge into one continuous separator —
- * the Obsidian "single app" look.
+ * tab bar (h-10). The bottom hairline is NOT drawn here — the shell's
+ * <StripSeparator> owns the single continuous line across all header
+ * sections, so they read as one unified band (the Obsidian look).
  */
 export const SidebarHeader: FC<SidebarHeaderProps> = memo(
   ({ title, actions, trailing }) => {
     return (
-      <div className="relative z-10 flex shrink-0 items-center h-10 bg-[var(--sat-surface-2)] px-2 gap-0.5 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--sat-layout-border)] after:pointer-events-none">
+      <div className="relative flex shrink-0 items-center h-10 bg-[var(--sat-surface-2)] px-2 gap-0.5">
         {title ? (
           <span className="mr-auto truncate text-xs font-semibold uppercase tracking-wide text-[var(--sat-text-secondary)] select-none">
             {title}

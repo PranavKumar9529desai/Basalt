@@ -29,11 +29,6 @@ export interface TabsBarProps {
   onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
-  /**
-   * Draw the bottom hairline. Disable when wrapped inside TopStrip, which
-   * owns the single continuous line across the whole strip.
-   */
-  bottomLine?: boolean;
   className?: string;
 }
 
@@ -107,7 +102,6 @@ export function TabsBar({
   onTabDragEnd,
   leftSlot,
   rightSlot,
-  bottomLine = true,
   className,
 }: TabsBarProps) {
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
@@ -258,10 +252,12 @@ export function TabsBar({
     <div
       role="tablist"
       aria-label="Open tabs"
+      // No z-index here: the bar background must stay BELOW the shell's
+      // StripSeparator (z-10), while the active tab and chrome nubs (z-20)
+      // carve through it. A z-index on this root would lift the opaque
+      // background above the line and hide it.
       className={cn(
-        "pt-[0.5px] relative z-50 flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden",
-        bottomLine &&
-          "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--sat-layout-border)] after:pointer-events-none after:z-10",
+        "pt-[0.5px] relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden",
         className,
       )}
       onDragOver={(e) => e.preventDefault()}
@@ -352,6 +348,17 @@ export function TabsBar({
             />
           ))}
 
+          {/* Melt: erase the bottom separator beneath the active tab so it
+              blends straight into the editor pane (Obsidian-style). The nub
+              arcs below reconnect the line to the tab's side borders. */}
+          {chrome.activeLeft !== null && chrome.activeWidth > 0 ? (
+            <span
+              aria-hidden="true"
+              className="absolute bottom-0 h-[2px] bg-[var(--sat-editor-background)]"
+              style={{ left: chrome.activeLeft, width: chrome.activeWidth }}
+            />
+          ) : null}
+
           {/* Concave cutouts at the active tab's bottom corners — the
               "chrome nubs". A circle flooded with editor-background shadow,
               clipped to its outer quadrant, carves the notch that makes the
@@ -392,7 +399,9 @@ export function TabsBar({
       {/* ── Dropdown trigger — sticky at right edge ── */}
       <div
         ref={dropdownWrapperRef}
-        className="shrink-0 z-30 flex items-stretch bg-[var(--sat-surface-2)]"
+        // No opaque background: it would chop the StripSeparator hairline
+        // short of the right edge.
+        className="shrink-0 flex items-stretch"
       >
         {tabs.length > 0 && (
           <div className="w-px h-5 self-center bg-[var(--sat-layout-divider,var(--sat-layout-border))]" />
@@ -411,7 +420,7 @@ export function TabsBar({
               });
             }
           }}
-          className="flex items-center gap-1 px-2 text-xs font-medium h-full transition-colors bg-[var(--sat-surface-2)] hover:bg-[var(--sat-surface-3)] text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)]"
+          className="flex items-center gap-1 px-2 text-xs font-medium h-full transition-colors hover:bg-[var(--sat-surface-3)] text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)]"
         >
           <IconChevronDown size={16} stroke={2} />
           <span className="tabular-nums">

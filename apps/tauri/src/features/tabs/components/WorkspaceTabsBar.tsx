@@ -10,7 +10,8 @@ export interface WorkspaceTabsBarProps {
 }
 
 // WorkspaceTabsBar — store→view wiring for the editor tab bar. Rendered by
-// the shell inside the TopStrip, separate from the editor pane.
+// the shell as the header cell of the editor column in the workspace grid.
+// The bottom hairline is owned by the shell's <StripSeparator>, not drawn here.
 export function WorkspaceTabsBar({
   onSelectTab,
   onCloseTab,
@@ -73,9 +74,8 @@ export function WorkspaceTabsBar({
 
   return (
     <TabsBar
-      className="min-w-0 flex-1"
+      className="min-w-0 shrink-0"
       tabs={tabsBarTabs}
-      bottomLine={false}
       onSelectTab={onSelect}
       onCloseTab={onClose}
       onPinToggle={onPin}

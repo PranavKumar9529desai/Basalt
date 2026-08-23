@@ -18,12 +18,11 @@
  * lives here because those commands depend on `controller` from
  * useWorkspace — runtime hook data, not boot seed data.
  */
+
 import { commandService } from "@workspace/commands";
+import { StripSeparator } from "@workspace/ui/components/top-strip";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FileTreeToggle,
-  TopStrip,
-} from "@workspace/ui/components/top-strip";
+
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
 import type { PaneRenderContext } from "../features/tabs";
 import {
@@ -40,8 +39,8 @@ import {
   useVaultTree,
   VaultSplash,
 } from "../features/vault";
-import { ActivityBar } from "./ActivityBar";
 import { useWorkspace } from "../shared/useWorkspace";
+import { ActivityBar } from "./ActivityBar";
 import "../shared/paneCommands";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { RightSidebar } from "./RightSidebar";
@@ -144,8 +143,14 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   // Vault commands — need hook data, so registered here in the shell.
   useEffect(() => {
-    commandService.registerCommand("app:new-file", controller.createNoteInstant);
-    commandService.registerCommand("app:delete-file", controller.handleDeleteFromCommands);
+    commandService.registerCommand(
+      "app:new-file",
+      controller.createNoteInstant,
+    );
+    commandService.registerCommand(
+      "app:delete-file",
+      controller.handleDeleteFromCommands,
+    );
     return () => {
       commandService.unregister("app:new-file");
       commandService.unregister("app:delete-file");
@@ -164,52 +169,60 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <TopStrip
-        leftSlot={
-          <FileTreeToggle
-            open={sidebarOpen}
-            onToggle={() => setSidebarOpen((v) => !v)}
+      {/**
+       * Workspace grid — the single authority for header-band geometry.
+       * Row 1 is the 40px header band (ribbon top, sidebar header, tab bar);
+       * StripSeparator pins to its bottom edge and spans every header column
+       * except the ribbon, whose vertical border runs through unbroken.
+       * Columns span both rows so each owns its header + content internally.
+       */}
+      <div className="grid flex-1 min-h-0 grid-cols-[auto_auto_1fr_auto] grid-rows-[40px_1fr]">
+        <div className="col-start-1 row-span-full">
+          <ActivityBar
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            rightSidebarOpen={rightSidebarOpen}
+            onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
           />
-        }
+        </div>
 
+        <div className="col-start-2 row-span-full flex min-h-0 min-w-0 flex-col">
+          <Sidebar
+            defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
+            collapsed={!sidebarOpen}
+            onCreateNote={controller.createNoteInstant}
+            onCreateFolder={controller.startFolderInline}
+          >
+            <FileTree
+              visibleNodes={visibleNodes}
+              openFolders={openFolders}
+              selectedIds={selection.selectedIds}
+              cutIds={controller.cutIds}
+              onFileClick={controller.onTreeFileClick}
+              onFolderToggle={controller.onTreeFolderToggle}
+              onContextMenu={controller.onTreeContextMenu}
+              onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
+              ghostNode={mutations.ghostNode}
+              onCommitEdit={controller.handleCommitEdit}
+              onCancelEdit={controller.handleCancelEdit}
+            />
+          </Sidebar>
+        </div>
 
-
-      >
-        <WorkspaceTabsBar
-          onSelectTab={tabHandlers.handleTabSelect}
-          onCloseTab={tabHandlers.handleTabClose}
-          onPinToggle={tabHandlers.handleTabPinToggle}
-        />
-      </TopStrip>
-
-      <div className="flex flex-1 min-h-0">
-        <ActivityBar
-          rightSidebarOpen={rightSidebarOpen}
-          onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
-        />
-
-        <Sidebar
-          defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
-          collapsed={!sidebarOpen}
-          onCreateNote={controller.createNoteInstant}
-          onCreateFolder={controller.startFolderInline}
-        >
-          <FileTree
-            visibleNodes={visibleNodes}
-            openFolders={openFolders}
-            selectedIds={selection.selectedIds}
-            cutIds={controller.cutIds}
-            onFileClick={controller.onTreeFileClick}
-            onFolderToggle={controller.onTreeFolderToggle}
-            onContextMenu={controller.onTreeContextMenu}
-            onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
-            ghostNode={mutations.ghostNode}
-            onCommitEdit={controller.handleCommitEdit}
-            onCancelEdit={controller.handleCancelEdit}
+        <div className="col-start-3 row-span-full flex min-h-0 min-w-0 flex-col">
+          <WorkspaceTabsBar
+            onSelectTab={tabHandlers.handleTabSelect}
+            onCloseTab={tabHandlers.handleTabClose}
+            onPinToggle={tabHandlers.handleTabPinToggle}
           />
-        </Sidebar>
 
-        <WorkspaceTabs renderPane={renderPane} />
+          <WorkspaceTabs renderPane={renderPane} />
+        </div>
+
+        {/* The ONE bottom hairline under the header band. z-10: above the
+            sections' opaque backgrounds, below the active tab + chrome nubs
+            (z-20) which carve the cut-through. */}
+        <StripSeparator className="col-start-2 col-end-[-1] row-start-1 self-end" />
 
         <RightSidebar
           open={rightSidebarOpen}

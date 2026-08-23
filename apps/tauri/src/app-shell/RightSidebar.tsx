@@ -26,9 +26,11 @@ export function RightSidebar({
       minWidth={200}
       collapsed={!open}
       side="right"
-      className="border-l border-[var(--sat-layout-border)]"
+      className="col-start-4 row-span-full border-l border-[var(--sat-layout-border)]"
     >
-      <div className="flex items-center h-9 shrink-0 border-b border-[var(--sat-layout-border)] px-2">
+      {/* No border-b / hairline here — the shell's StripSeparator owns the
+          continuous line under the whole header band. */}
+      <div className="flex h-10 shrink-0 items-center px-2">
         <button
           type="button"
           onClick={() => onOpenChange(false)}

@@ -19,7 +19,7 @@ export interface WorkspaceTabsProps {
 // ---------------------------------------------------------------------------
 // WorkspaceTabs — single pane, reads directly from tabs store.
 // The tab bar itself lives in WorkspaceTabsBar and is rendered by the
-// shell inside the TopStrip.
+// shell as the editor column's header cell in the workspace grid.
 // ---------------------------------------------------------------------------
 
 export function WorkspaceTabs({ renderPane }: WorkspaceTabsProps) {
