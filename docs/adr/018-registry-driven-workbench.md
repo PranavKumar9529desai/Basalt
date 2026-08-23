@@ -3,7 +3,6 @@
 ## Status
 
 Accepted (2026-06-25)
-
 ## Context
 
 Basalt's goal is an Obsidian-class desktop Markdown workspace that eventually

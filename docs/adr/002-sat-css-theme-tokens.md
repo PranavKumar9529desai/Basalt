@@ -66,7 +66,7 @@ Seven themes ship with the app (dark, light, dracula, catppuccin-mocha, catppucc
 }
 ```
 
-`ThemeProvider` (`apps/tauri/src/layout/ThemeProvider.tsx`) sets `document.documentElement.setAttribute("data-theme", id)` — the entire CSS cascade updates instantly with no React re-renders.
+`ThemeProvider` (`apps/tauri/src/app-shell/ThemeProvider.tsx`) sets `document.documentElement.setAttribute("data-theme", id)` — the entire CSS cascade updates instantly with no React re-renders.
 
 **Current constraint:** All themes are resolved at **build time**. There is no runtime path for loading user-supplied theme files. This is the gap that must be closed to support community themes.
 
