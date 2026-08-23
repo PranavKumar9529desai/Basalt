@@ -3,39 +3,9 @@
 // ---------------------------------------------------------------------------
 
 import type { StateCreator } from "zustand";
-import { ROOT_GROUP_ID } from "../constants";
-import type { TabGroupId, TabGroupModel, TabId } from "../types";
-import { createGroupNode, normalizeLayoutRoot } from "./layout";
+import { ROOT_PANE_ID } from "../constants";
+import type { TabPaneId, TabPane, TabId } from "../types";
 import type { TabsState } from "./types";
-
-// ---- local helpers (simple, no deps on the old helpers.ts) ----
-
-function ensureAtLeastOneGroup(
-  groups: Record<TabGroupId, TabGroupModel>,
-  groupOrder: TabGroupId[],
-  focusedGroupId: TabGroupId | null,
-) {
-  if (groupOrder.length > 0 && focusedGroupId && groups[focusedGroupId]) {
-    return { groups, groupOrder, focusedGroupId };
-  }
-  const fallbackId = groupOrder[0] ?? ROOT_GROUP_ID;
-  const nextGroups = { ...groups };
-  const nextOrder =
-    groupOrder.length > 0 ? [...groupOrder] : [fallbackId as TabGroupId];
-  if (!nextGroups[fallbackId]) {
-    nextGroups[fallbackId] = {
-      id: fallbackId as TabGroupId,
-      tabIds: [],
-      activeTabId: null,
-      previewTabId: null,
-    };
-  }
-  return {
-    groups: nextGroups,
-    groupOrder: nextOrder as TabGroupId[],
-    focusedGroupId: fallbackId as TabGroupId,
-  };
-}
 
 // ---- slice interface ----
 
@@ -54,21 +24,14 @@ export const createPersistenceSlice: StateCreator<
     const state = get();
     return {
       version: 1,
-      focusedGroupId: state.focusedGroupId ?? null,
-      groupOrder: [...state.groupOrder],
-      layout: state.layoutRoot,
-      paneFocus: {
-        focusedPaneId: state.focusedGroupId ?? null,
-      },
-      groups: state.groupOrder
-        .map((groupId) => state.groups[groupId])
-        .filter((group): group is TabGroupModel => Boolean(group))
-        .map((group) => ({
-          id: group.id,
-          tabIds: [...group.tabIds],
-          activeTabId: group.activeTabId,
-          previewTabId: group.previewTabId,
-        })),
+      panes: [
+        {
+          id: state.pane.id,
+          tabIds: [...state.pane.tabIds],
+          activeTabId: state.pane.activeTabId,
+          previewTabId: state.pane.previewTabId,
+        },
+      ],
       tabs: Object.values(state.tabs).map((tab) => ({ ...tab })),
     };
   },
@@ -79,56 +42,24 @@ export const createPersistenceSlice: StateCreator<
     const tabs = Object.fromEntries(
       snapshot.tabs.map((tab) => [tab.id, tab]),
     ) as Record<TabId, import("../types").TabModel>;
-    const groups: Record<string, TabGroupModel> = {};
-    for (const group of snapshot.groups) {
-      groups[group.id] = {
-        id: group.id as TabGroupId,
-        tabIds: group.tabIds.filter((tabId) => Boolean(tabs[tabId])),
-        activeTabId:
-          group.activeTabId && tabs[group.activeTabId]
-            ? (group.activeTabId as TabId)
-            : null,
-        previewTabId:
-          group.previewTabId && tabs[group.previewTabId]
-            ? (group.previewTabId as TabId)
-            : null,
-      };
-    }
 
-    const uniqueOrder = snapshot.groupOrder.filter((groupId) =>
-      Boolean(groups[groupId]),
-    ) as TabGroupId[];
-    const normalized = ensureAtLeastOneGroup(
-      groups,
-      uniqueOrder,
-      snapshot.focusedGroupId as TabGroupId,
-    );
+    // Accept `panes` (new format) or `groups` (legacy format)
+    const paneData = snapshot.panes ?? snapshot.groups;
+    const firstPane = paneData?.[0];
 
-    const fallbackGroupId =
-      normalized.groupOrder[0] ?? (ROOT_GROUP_ID as TabGroupId);
-    const layoutCandidate = snapshot.layout ?? createGroupNode(fallbackGroupId);
-    const normalizedLayout = normalizeLayoutRoot(
-      layoutCandidate,
-      normalized.groups,
-      normalized.groupOrder,
-    );
+    const pane: TabPane = {
+      id: (firstPane?.id as TabPaneId) ?? (ROOT_PANE_ID as TabPaneId),
+      tabIds: (firstPane?.tabIds ?? []).filter((tabId) => Boolean(tabs[tabId])),
+      activeTabId:
+        firstPane?.activeTabId && tabs[firstPane.activeTabId]
+          ? (firstPane.activeTabId as TabId)
+          : null,
+      previewTabId:
+        firstPane?.previewTabId && tabs[firstPane.previewTabId]
+          ? (firstPane.previewTabId as TabId)
+          : null,
+    };
 
-    const desiredFocusedGroupId =
-      snapshot.paneFocus?.focusedPaneId ?? snapshot.focusedGroupId;
-    const finalFocusedGroupId =
-      desiredFocusedGroupId && normalized.groups[desiredFocusedGroupId]
-        ? (desiredFocusedGroupId as TabGroupId)
-        : normalized.focusedGroupId;
-
-    set({
-      tabs,
-      groups: normalized.groups,
-      groupOrder: normalized.groupOrder,
-      focusedGroupId: finalFocusedGroupId,
-      layoutRoot: normalizedLayout,
-    });
+    set({ tabs, pane });
   },
-
-  // reset is already in core.ts — hydrateFromWorkspaceSnapshot replaces it
-  // for restoration; reset stays in CoreSlice for the "new workspace" path.
 });

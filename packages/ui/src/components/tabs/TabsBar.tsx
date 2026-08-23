@@ -29,6 +29,11 @@ export interface TabsBarProps {
   onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
+  /**
+   * Draw the bottom hairline. Disable when wrapped inside TopStrip, which
+   * owns the single continuous line across the whole strip.
+   */
+  bottomLine?: boolean;
   className?: string;
 }
 
@@ -102,6 +107,7 @@ export function TabsBar({
   onTabDragEnd,
   leftSlot,
   rightSlot,
+  bottomLine = true,
   className,
 }: TabsBarProps) {
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
@@ -253,7 +259,9 @@ export function TabsBar({
       role="tablist"
       aria-label="Open tabs"
       className={cn(
-        "relative z-50 flex h-9 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--sat-layout-border)] after:pointer-events-none after:z-10",
+        "pt-[0.5px] relative z-50 flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden",
+        bottomLine &&
+          "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-[var(--sat-layout-border)] after:pointer-events-none after:z-10",
         className,
       )}
       onDragOver={(e) => e.preventDefault()}
@@ -281,7 +289,7 @@ export function TabsBar({
         ref={containerRef}
         className="relative flex-1 min-w-0 h-full overflow-hidden"
       >
-        <div className="flex h-full items-end gap-0">
+        <div className=" flex h-full items-end gap-0">
           {tabs.map((tab, index) => (
             <TabItemCell
               key={tab.id}
@@ -358,6 +366,7 @@ export function TabsBar({
                   width: 12,
                   height: 12,
                   borderRadius: "100%",
+                  border: "1px solid var(--sat-layout-border)",
                   boxShadow: "0 0 0 40px var(--sat-editor-background)",
                   clipPath: "inset(50% -6px 0 50%)",
                 }}
@@ -370,6 +379,7 @@ export function TabsBar({
                   width: 12,
                   height: 12,
                   borderRadius: "100%",
+                  border: "1px solid var(--sat-layout-border)",
                   boxShadow: "0 0 0 40px var(--sat-editor-background)",
                   clipPath: "inset(50% 50% 0 -6px)",
                 }}

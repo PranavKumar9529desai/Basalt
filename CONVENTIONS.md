@@ -68,8 +68,11 @@ packages/ui/              ← Primitives: props in, DOM out.
 apps/tauri/src/features/  ← Business logic: hooks, stores, IPC calls.
                            🚫 No cross-feature imports (exception: types)
 
+apps/tauri/src/shared/    ← Cross-feature orchestration.
+                           Imports from 2+ features. NOT in either feature.
+
 apps/tauri/src/app-shell/ ← Thin glue: wires features into layout.
-                           ✅ Only place cross-feature wiring happens
+                           ✅ Only renders chrome + mounts providers
 ```
 
 ### 2.1 The Litmus Test
@@ -78,7 +81,8 @@ apps/tauri/src/app-shell/ ← Thin glue: wires features into layout.
 
 - **Yes** → `packages/ui/`
 - **No, it needs Tauri/IPC/state** → `apps/tauri/src/features/`
-- **It wires multiple features** → `apps/tauri/src/app-shell/`
+- **No, it wires 2+ features** → `apps/tauri/src/shared/`
+- **It's layout/chrome** → `apps/tauri/src/app-shell/`
 
 ### 2.2 Cross-Feature Import Rule
 
@@ -93,10 +97,27 @@ import { useEditor } from "../../editor/hooks/useEditor";
 // features/vault/index.ts
 export { useVaultTree } from "./hooks/useVaultTree";
 
-// ✅ CORRECT — shell wires features together
-// app-shell/App.tsx
-import { useVaultTree } from "../features/vault";
-import { useEditor } from "../features/editor";
+// ✅ CORRECT — shared wires features together
+// shared/useWorkspace.ts
+import { useVaultController } from "../features/vault";
+import { useTabsStore } from "../features/tabs";
+```
+
+Exception: a feature may import **types only** from another feature's `types.ts`, but never re-export them.
+
+### 2.3 Shared Layer Rule
+
+`shared/` owns ALL cross-feature orchestration. If a module imports from 2+ features, it lives in `shared/` — not in either feature, not in `app-shell/`.
+
+```
+// ❌ WRONG — orchestration in a feature
+// features/tabs/commands.ts
+import { useFocusedPaneStore } from "../editor";  // cross-feature!
+
+// ✅ CORRECT — orchestration in shared
+// shared/paneCommands.ts
+import { useFocusedPaneStore } from "../features/editor";
+import { useTabsStore } from "../features/tabs";
 ```
 
 Exception: a feature may import **types only** from another feature's `types.ts`, but never re-export them.
@@ -170,6 +191,7 @@ useEffect(() => {
 - Only import from feature `index.ts` files, never deep paths.
 - Compose features, pass callbacks between them.
 - Keep under 200 lines. If longer, extract sub-components.
+- Does NOT contain orchestration logic — that belongs in `shared/`.
 
 ---
 
@@ -272,65 +294,59 @@ const SettingsPanel = lazy(() => import("./SettingsPanel"));
 ```
 apps/tauri/src/
 ├── app-shell/
-│   ├── App.tsx                    # Main layout (what WorkspaceView is today)
-│   ├── AppCommands.tsx            # Command palette registration
-│   ├── ActivityBar.tsx            # Chrome: activity bar
-│   ├── Sidebar.tsx                # Chrome: resizable sidebar
-│   ├── StatusBar.tsx              # Chrome: bottom bar
-│   ├── ThemeProvider.tsx          # Theme context + persistence
-│   ├── ThemeSelect.tsx            # Theme picker
-│   ├── hooks/
-│   │   ├── useShellSidebar.ts     # Vault tree + file controller orchestration
-│   │   ├── useShellTabHandlers.ts # Tab event handler orchestration
-│   │   └── useKeyboardShortcuts.ts# Centralized global shortcuts
-│   └── index.ts
+│   ├── WorkspaceView.tsx        # Main layout composition
+│   ├── WorkspaceInit.tsx        # One-time boot + persistence
+│   ├── ActivityBar.tsx
+│   ├── Sidebar.tsx
+│   ├── StatusBar.tsx
+│   ├── ThemeProvider.tsx
+│   ├── WorkspaceOverlays.tsx
+│   └── hooks/
+│       └── useWorkspaceTabHandlers.ts
+├── shared/
+│   ├── useWorkspace.ts          # Vault ↔ Tabs ↔ Editor orchestration
+│   └── paneCommands.ts          # Tab commands needing editor state
 ├── features/
 │   ├── editor/
-│   │   ├── Editor.tsx             # CodeMirror wrapper + context menu
-│   │   ├── EditorComponent.tsx    # Raw CodeMirror component
-│   │   ├── EditorCommandPalette.tsx
-│   │   ├── PaneContent.tsx        # (replaces PaneInstance — pure tab content rendering)
+│   │   ├── PaneContent.tsx
+│   │   ├── components/CommandPalette.tsx
 │   │   ├── hooks/useEditor.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── tabs/
-│   │   ├── WorkspaceTabs.tsx      # Layout tree + tab bars only (no editor content)
+│   │   ├── components/WorkspaceTabs.tsx
 │   │   ├── hooks/
 │   │   │   ├── useTabs.ts
 │   │   │   ├── useTabPersistence.ts
 │   │   │   └── useTabDnD.ts
 │   │   ├── store/
-│   │   │   ├── core.ts            # All tab state logic (1 file, not 5 slices)
-│   │   │   └── persistence.ts     # Save/restore workspace snapshots
+│   │   │   ├── core.ts
+│   │   │   └── persistence.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── vault/
 │   │   ├── hooks/
 │   │   │   ├── useVaultTree.ts
-│   │   │   ├── useVaultMutations.ts  # Merged create+delete+move
-│   │   │   └── useVaultController.ts # Merged selection+clipboard+contextMenu
+│   │   │   ├── useVaultMutations.ts
+│   │   │   └── useVaultController.ts
 │   │   ├── components/
 │   │   │   ├── FileTree.tsx
-│   │   │   ├── SaveIndicator.tsx
 │   │   │   └── BacklinksSidebar.tsx
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── search/
-│   │   ├── SearchModal.tsx
-│   │   ├── QuickSwitcher.tsx
+│   │   ├── components/SearchModal.tsx
+│   │   ├── components/QuickSwitcher.tsx
 │   │   ├── store.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   └── settings/
-│       ├── SettingsModal.tsx
-│       ├── SettingsNav.tsx
-│       ├── SettingsPanel.tsx
-│       ├── sections/
+│       ├── components/SettingsModal.tsx
 │       ├── store.ts
 │       └── index.ts
 ├── routes/
 │   ├── __root.tsx
-│   └── index.tsx                  # → imports from app-shell, not features
+│   └── index.tsx
 └── main.tsx
 
 packages/ui/src/components/
@@ -343,7 +359,7 @@ packages/ui/src/components/
 ├── confirm-dialog/
 ├── input-dialog/
 ├── palette-shell/
-├── status-bar/                    # (moved from layout/)
+├── status-bar/
 └── (no loose files at components/ level)
 ```
 

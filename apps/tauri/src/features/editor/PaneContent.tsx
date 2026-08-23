@@ -13,10 +13,8 @@ import { useFocusedPaneStore } from "./store";
 
 export interface PaneContentProps {
   activeTab: TabModel | null;
-  isFocused: boolean;
   findNote: (name: string) => FlatTreeNode | undefined;
   markTabDirty: (tabId: string, dirty: boolean) => void;
-  onActivateGroup: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -31,7 +29,7 @@ function ConflictBanner({
   onDiscard: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 bg-[color-mix(in srgb,var(--sat-state-danger) 18%,transparent)] border-b border-[var(--sat-state-danger)] text-sm text-[var(--sat-text-primary)] shrink-0">
+    <div className="flex items-center gap-3 px-3 py-2 bg-[color-mix(in_srgb,var(--sat-state-danger) 18%,transparent)] border-b border-[var(--sat-state-danger)] text-sm text-[var(--sat-text-primary)] shrink-0">
       <span className="flex-1 text-xs leading-snug">
         File changed externally. Keep your edits or discard them?
       </span>
@@ -51,33 +49,6 @@ function ConflictBanner({
         className="bg-[var(--sat-surface-2)] border-[var(--sat-layout-border)] hover:bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
       >
         Discard
-      </Button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Inactive pane placeholder
-// ---------------------------------------------------------------------------
-
-function InactiveGroupPane({
-  activeTitle,
-  onActivate,
-}: {
-  activeTitle: string | null;
-  onActivate: () => void;
-}) {
-  return (
-    <div className="flex h-full items-center justify-center bg-[var(--sat-surface-2)] px-6 text-center">
-      <Button
-        type="button"
-        onClick={onActivate}
-        variant="outline"
-        className="border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)]"
-      >
-        {activeTitle
-          ? `Activate pane to edit: ${activeTitle}`
-          : "Activate pane to edit"}
       </Button>
     </div>
   );
@@ -117,10 +88,8 @@ function SaveIndicator({ status }: { status: string }) {
 
 export function PaneContent({
   activeTab,
-  isFocused,
   findNote,
   markTabDirty,
-  onActivateGroup,
 }: PaneContentProps) {
   const editor = useEditor({ findNote });
   const keybindingService = useKeybindingService();
@@ -133,9 +102,10 @@ export function PaneContent({
 
   // Set "editorFocused" context for when clause evaluation
   useEffect(() => {
-    keybindingService.setContext("editorFocused", isFocused);
+    keybindingService.setContext("editorFocused", true);
     return () => keybindingService.setContext("editorFocused", false);
-  }, [isFocused, keybindingService]);
+  }, [keybindingService]);
+
   const lastLoadedPathRef = useRef<string | null>(null);
   const setFocusedPaneSelected = useFocusedPaneStore(
     (s) => s.setFocusedPaneSelected,
@@ -145,49 +115,36 @@ export function PaneContent({
   );
   const setStats = useFocusedPaneStore((s) => s.setStats);
 
-  // Sync focused pane selection only when this pane is focused.
-  // Previously this synced *all* editor state on every keystroke.
+  // Sync focused pane selection when the active tab changes
   useEffect(() => {
-    if (isFocused && editor.selected) {
+    if (editor.selected) {
       setFocusedPaneSelected({
         path: editor.selected.path,
         name: editor.selected.name,
       });
-    } else if (isFocused && !editor.selected) {
+    } else {
       setFocusedPaneSelected(null);
     }
-  }, [
-    isFocused,
-    editor.selected?.path,
-    editor.selected?.name,
-    setFocusedPaneSelected,
-  ]);
+  }, [editor.selected?.path, editor.selected?.name, setFocusedPaneSelected]);
 
-  // Push the focused note's backlinks up to the shell (right sidebar) — only
-  // while this pane is focused, so the sidebar always mirrors the focused pane.
+  // Push the focused note's backlinks up to the shell (right sidebar)
   useEffect(() => {
-    if (!isFocused || !editor.selected) {
+    if (!editor.selected) {
       setFocusedPaneBacklinks([]);
       return;
     }
     setFocusedPaneBacklinks(editor.backlinks);
-  }, [
-    isFocused,
-    editor.selected,
-    editor.backlinks,
-    setFocusedPaneBacklinks,
-  ]);
+  }, [editor.selected, editor.backlinks, setFocusedPaneBacklinks]);
 
   // Push lightweight editor stats (chars/words) up for the status bar.
   useEffect(() => {
-    if (!isFocused) return;
     const text = editor.content;
     const trimmed = text.trim();
     setStats({
       chars: text.length,
       words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length,
     });
-  }, [isFocused, editor.content, setStats]);
+  }, [editor.content, setStats]);
 
   // Load note when active tab changes
   useEffect(() => {
@@ -215,19 +172,6 @@ export function PaneContent({
     [activeTab, markTabDirty, editor.handleChange],
   );
 
-  const handlePanePointerDown = useCallback(() => {
-    onActivateGroup();
-  }, [onActivateGroup]);
-
-  if (!isFocused) {
-    return (
-      <InactiveGroupPane
-        activeTitle={activeTab?.title ?? null}
-        onActivate={onActivateGroup}
-      />
-    );
-  }
-
   if (!activeTab) {
     return null;
   }
@@ -240,10 +184,7 @@ export function PaneContent({
           onDiscard={editor.discardAndReload}
         />
       )}
-      <div
-        className="flex flex-1 min-h-0"
-        onPointerDownCapture={handlePanePointerDown}
-      >
+      <div className="flex flex-1 min-h-0">
         <div className="flex flex-1 flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
           <SaveIndicator status={editor.saveStatus} />
           <Editor

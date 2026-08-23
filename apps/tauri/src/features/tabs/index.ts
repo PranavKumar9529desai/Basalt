@@ -1,5 +1,6 @@
 export type { PaneRenderContext } from "./components/WorkspaceTabs";
 export { WorkspaceTabs } from "./components/WorkspaceTabs";
+export { WorkspaceTabsBar } from "./components/WorkspaceTabsBar";
 export { useTabDnD } from "./hooks/useTabDnD";
 export type {
   CachedTabContent,
@@ -10,19 +11,17 @@ export type {
 export { useTabIO } from "./hooks/useTabIO";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabs } from "./hooks/useTabs";
-export { getTabByPath, findGroupForTab, tabIdFromPath } from "./selectors";
+export { getTabByPath, findPaneForTab, tabIdFromPath } from "./selectors";
 export type {
   CloseTabOptions,
-  MoveTabOptions,
   OpenTabOptions,
   TabsState,
 } from "./store";
 export { useTabsStore } from "./store";
 export type {
   OpenableTabInput,
-  SplitDirection,
-  TabGroupId,
-  TabGroupModel,
+  TabPaneId,
+  TabPane,
   TabId,
   TabModel,
   TabsWorkspaceSnapshot,

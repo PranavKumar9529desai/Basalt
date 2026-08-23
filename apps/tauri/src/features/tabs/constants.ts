@@ -1,1 +1,1 @@
-export const ROOT_GROUP_ID = "group-root";
+export const ROOT_PANE_ID = "pane-root";

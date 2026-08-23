@@ -3,7 +3,6 @@ import {
   IconChevronUp,
   IconFilePlus,
   IconFolderPlus,
-  IconLayoutSidebarLeftCollapse,
 } from "@tabler/icons-react";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -19,7 +18,6 @@ interface SidebarProps {
   collapsed?: boolean;
   onCreateNote: () => void;
   onCreateFolder: () => void;
-  onCollapse?: () => void;
 }
 
 export function Sidebar({
@@ -28,7 +26,6 @@ export function Sidebar({
   collapsed,
   onCreateNote,
   onCreateFolder,
-  onCollapse,
 }: SidebarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -72,22 +69,7 @@ export function Sidebar({
       onWidthChange={handleWidthChange}
       collapsed={collapsed}
     >
-      <SidebarHeader
-        actions={actions}
-        trailing={
-          onCollapse ? (
-            <button
-              type="button"
-              onClick={onCollapse}
-              title="Collapse sidebar"
-              aria-label="Collapse sidebar"
-              className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
-            >
-              <IconLayoutSidebarLeftCollapse size={16} stroke={1.5} />
-            </button>
-          ) : undefined
-        }
-      />
+      <SidebarHeader actions={actions} />
       {children}
     </SidebarPanel>
   );

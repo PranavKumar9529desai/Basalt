@@ -8,6 +8,7 @@
     "./components/file-tree": "./src/components/file-tree/index.ts",
     "./components/activity-bar": "./src/components/activity-bar/index.ts",
     "./components/tabs": "./src/components/tabs/index.ts",
+    "./components/top-strip": "./src/components/top-strip/index.ts",
     "./components/input-dialog": "./src/components/input-dialog/index.ts",
     "./components/confirm-dialog": "./src/components/confirm-dialog/index.ts",
     "./components/palette-shell": "./src/components/palette-shell/index.ts",

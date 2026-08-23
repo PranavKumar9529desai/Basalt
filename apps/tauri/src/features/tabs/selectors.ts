@@ -1,4 +1,4 @@
-import type { TabGroupId, TabGroupModel, TabId, TabModel } from "./types";
+import type { TabId, TabPane, TabPaneId, TabModel } from "./types";
 
 /** Construct the stable tab ID for a given file path. */
 export function tabIdFromPath(path: string): TabId {
@@ -6,17 +6,14 @@ export function tabIdFromPath(path: string): TabId {
 }
 
 /**
- * Find which group a tab belongs to by scanning all groups.
- * Returns the group ID or null if the tab isn't open.
+ * Check if a tab exists in the pane.
+ * Returns the pane ID or null if the tab isn't open.
  */
-export function findGroupForTab(
-  groups: Record<TabGroupId, TabGroupModel>,
+export function findPaneForTab(
+  pane: TabPane,
   tabId: TabId,
-): TabGroupId | null {
-  for (const [groupId, group] of Object.entries(groups)) {
-    if (group.tabIds.includes(tabId)) return groupId as TabGroupId;
-  }
-  return null;
+): TabPaneId | null {
+  return pane.tabIds.includes(tabId) ? pane.id : null;
 }
 
 /**
@@ -24,12 +21,11 @@ export function findGroupForTab(
  * Returns null if no tab is open for that path.
  */
 export function getTabByPath(
-  groups: Record<TabGroupId, TabGroupModel>,
+  pane: TabPane,
   tabs: Record<TabId, TabModel>,
   path: string,
 ): TabModel | null {
-  const tabId = tabIdFromPath(path);
-  const groupId = findGroupForTab(groups, tabId);
-  if (!groupId) return null;
-  return tabs[tabId] ?? null;
+  const id = tabIdFromPath(path);
+  if (!pane.tabIds.includes(id)) return null;
+  return tabs[id] ?? null;
 }

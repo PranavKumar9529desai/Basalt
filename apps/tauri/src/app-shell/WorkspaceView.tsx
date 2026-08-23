@@ -18,16 +18,20 @@
  * lives here because those commands depend on `controller` from
  * useWorkspace — runtime hook data, not boot seed data.
  */
-import {
-  IconLayoutSidebarLeftCollapse,
-  IconLayoutSidebarLeftExpand,
-} from "@tabler/icons-react";
 import { commandService } from "@workspace/commands";
-import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FileTreeToggle,
+  TopStrip,
+} from "@workspace/ui/components/top-strip";
 import { PaneContent, useFocusedPaneStore } from "../features/editor";
 import type { PaneRenderContext } from "../features/tabs";
-import { getTabByPath, useTabs, WorkspaceTabs } from "../features/tabs";
+import {
+  getTabByPath,
+  useTabs,
+  WorkspaceTabs,
+  WorkspaceTabsBar,
+} from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import {
   FileTree,
@@ -77,9 +81,9 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   const focusedSessionTab = useMemo(
     () =>
       focusedSessionSelected?.path
-        ? getTabByPath(tabs.groups, tabs.tabs, focusedSessionSelected.path)
+        ? getTabByPath(tabs.pane, tabs.tabs, focusedSessionSelected.path)
         : null,
-    [focusedSessionSelected?.path, tabs.groups, tabs.tabs],
+    [focusedSessionSelected?.path, tabs.pane, tabs.tabs],
   );
 
   const {
@@ -112,8 +116,6 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
       closeOtherTabs: tabs.closeOtherTabs,
       closeTabsToRight: tabs.closeTabsToRight,
       togglePinTab: tabs.togglePinTab,
-      splitGroupWithTab: tabs.splitGroupWithTab,
-      setFocusedGroup: tabs.setFocusedGroup,
     },
     focusedSessionTab,
   });
@@ -122,10 +124,8 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
     (ctx: PaneRenderContext) => (
       <PaneContent
         activeTab={ctx.activeTab}
-        isFocused={ctx.isFocused}
         findNote={findNote}
         markTabDirty={ctx.markTabDirty}
-        onActivateGroup={ctx.onActivateGroup}
       />
     ),
     [findNote],
@@ -163,63 +163,60 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
-      <ActivityBar
-        leftSidebarOpen={sidebarOpen}
-        onToggleLeftSidebar={() => setSidebarOpen((v) => !v)}
-        rightSidebarOpen={rightSidebarOpen}
-        onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
-      />
-
-      <Sidebar
-        defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
-        collapsed={!sidebarOpen}
-        onCreateNote={controller.createNoteInstant}
-        onCreateFolder={controller.startFolderInline}
-        onCollapse={() => setSidebarOpen(false)}
-      >
-        <FileTree
-          visibleNodes={visibleNodes}
-          openFolders={openFolders}
-          selectedIds={selection.selectedIds}
-          cutIds={controller.cutIds}
-          onFileClick={controller.onTreeFileClick}
-          onFolderToggle={controller.onTreeFolderToggle}
-          onContextMenu={controller.onTreeContextMenu}
-          onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
-          ghostNode={mutations.ghostNode}
-          onCommitEdit={controller.handleCommitEdit}
-          onCancelEdit={controller.handleCancelEdit}
-        />
-      </Sidebar>
-
-      <WorkspaceTabs
-        handleTabSelect={tabHandlers.handleTabSelect}
-        handleTabClose={tabHandlers.handleTabClose}
-        handleTabPinToggle={tabHandlers.handleTabPinToggle}
-        renderPane={renderPane}
-        tabBarLeftSlot={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen((v) => !v)}
-            title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-          >
-            {sidebarOpen ? (
-              <IconLayoutSidebarLeftCollapse size={20} stroke={1.5} />
-            ) : (
-              <IconLayoutSidebarLeftExpand size={20} stroke={1.5} />
-            )}
-          </Button>
+    <div className="flex flex-1 min-h-0 flex-col">
+      <TopStrip
+        leftSlot={
+          <FileTreeToggle
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen((v) => !v)}
+          />
         }
-      />
 
-      <RightSidebar
-        open={rightSidebarOpen}
-        onOpenChange={setRightSidebarOpen}
-        onOpenNote={handleSearchOpen}
-      />
+
+
+      >
+        <WorkspaceTabsBar
+          onSelectTab={tabHandlers.handleTabSelect}
+          onCloseTab={tabHandlers.handleTabClose}
+          onPinToggle={tabHandlers.handleTabPinToggle}
+        />
+      </TopStrip>
+
+      <div className="flex flex-1 min-h-0">
+        <ActivityBar
+          rightSidebarOpen={rightSidebarOpen}
+          onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
+        />
+
+        <Sidebar
+          defaultWidth={boot.workspace?.sidebarWidth as number | undefined}
+          collapsed={!sidebarOpen}
+          onCreateNote={controller.createNoteInstant}
+          onCreateFolder={controller.startFolderInline}
+        >
+          <FileTree
+            visibleNodes={visibleNodes}
+            openFolders={openFolders}
+            selectedIds={selection.selectedIds}
+            cutIds={controller.cutIds}
+            onFileClick={controller.onTreeFileClick}
+            onFolderToggle={controller.onTreeFolderToggle}
+            onContextMenu={controller.onTreeContextMenu}
+            onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
+            ghostNode={mutations.ghostNode}
+            onCommitEdit={controller.handleCommitEdit}
+            onCancelEdit={controller.handleCancelEdit}
+          />
+        </Sidebar>
+
+        <WorkspaceTabs renderPane={renderPane} />
+
+        <RightSidebar
+          open={rightSidebarOpen}
+          onOpenChange={setRightSidebarOpen}
+          onOpenNote={handleSearchOpen}
+        />
+      </div>
 
       <WorkspaceOverlays
         contextMenu={contextMenu}

@@ -22,6 +22,9 @@ Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms
 | Area | Status |
 |---|---|
 | Three-layer architecture | ✅ Established |
+| Shared orchestration layer | ✅ Established |
+| CommandService (TS package) | ✅ Complete |
+| KeybindingService (TS package) | ✅ Complete |
 | Tab system | ✅ Complete |
 | Per-pane editor (PaneContent) | ✅ Complete — replaces old PaneManager |
 | Theming (`--sat-*` tokens) | ✅ Established |
@@ -50,39 +53,78 @@ The following structural cleanups are DONE and should be treated as the current 
 
 ---
 
-## 1. Three-Layer Architecture — [ADR-001](docs/adr/001-three-layer-architecture.md)
+## 1. Architecture
 
-Every UI feature MUST be split across exactly three layers:
+Four layers. Dependencies flow downward only. No cycles.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  routes/          TanStack Router (2 routes max)    │
+│  main.tsx         App entry, provider tree          │
+└────────────────────────┬────────────────────────────┘
+                         │ imports
+┌────────────────────────▼────────────────────────────┐
+│  app-shell/         Layout composition              │
+│                     Wires features into UI          │
+│                     ONLY place cross-feature        │
+│                     wiring happens                  │
+├─────────────────────────────────────────────────────┤
+│  shared/            Cross-feature orchestration     │
+│                     Vault ↔ Tabs ↔ Editor wiring    │
+│                     Commands that need multiple     │
+│                     features' stores                │
+└────────────────────────┬────────────────────────────┘
+                         │ imports
+┌────────────────────────▼────────────────────────────┐
+│  features/          Business logic per domain       │
+│  ├── vault/         File tree, CRUD, IPC            │
+│  ├── tabs/          Tab state, groups, persistence  │
+│  ├── editor/        CodeMirror, focused pane atom   │
+│  ├── search/        Tantivy + Nucleo search         │
+│  └── settings/      Preferences, theme              │
+│                                                     │
+│  🚫 NEVER import from another feature               │
+│  ✅ MAY import types from another feature's types.ts│
+└────────────────────────┬────────────────────────────┘
+                         │ imports
+┌────────────────────────▼────────────────────────────┐
+│  packages/ui/       Visual primitives               │
+│                    Props in, DOM out                 │
+│  🚫 No Tauri, no business state, no IPC            │
+└─────────────────────────────────────────────────────┘
+```
 
 | Layer | Location | Responsibility | Tauri? |
 |---|---|---|---|
 | **Primitives** | `packages/ui/` | Visual components. Props in, DOM out. | 🚫 Never |
-| **Features** | `apps/tauri/src/features/` | State, hooks, business logic, IPC | ✅ Yes |
+| **Features** | `apps/tauri/src/features/` | State, hooks, business logic, IPC. One per domain. | ✅ Yes |
+| **Shared** | `apps/tauri/src/shared/` | Cross-feature orchestration. Imports from 2+ features. | ✅ Yes |
 | **Shell** | `apps/tauri/src/app-shell/` | Layout composition. Thin glue only. | ✅ Yes |
 
 **Litmus test:** Can this render in an empty `index.html` with zero backend?
 - Yes → `packages/ui/`
-- No → `apps/tauri/src/features/`
+- No, it's one domain → `apps/tauri/src/features/`
+- No, it wires 2+ features → `apps/tauri/src/shared/`
+- It's layout/chrome → `apps/tauri/src/app-shell/`
 
 ### Current directory structure
 
 ```
 apps/tauri/src/
-├── app-shell/              ← Thin glue (wires features into layout)
+├── app-shell/              ← Layout composition (thin glue)
 │   ├── ActivityBar.tsx
-│   ├── AppCommands.tsx      ← Command palette registration
 │   ├── Sidebar.tsx
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── ThemeSelect.tsx
-│   ├── WorkspaceOverlays.tsx
 │   ├── WorkspaceView.tsx    ← Main shell entry point
-│   ├── index.ts
+│   ├── WorkspaceOverlays.tsx
+│   ├── WorkspaceInit.tsx    ← One-time boot + persistence
 │   └── hooks/
-│       ├── useKeyboardShortcuts.ts
-│       ├── useWorkspaceSidebar.ts
 │       └── useWorkspaceTabHandlers.ts
-├── features/               ← Business logic (no cross-feature imports)
+├── shared/                 ← Cross-feature orchestration
+│   ├── useWorkspace.ts     ← Vault + tabs + editor + settings wiring
+│   └── paneCommands.ts     ← Tab commands that need editor state
+├── features/               ← Business logic (zero cross-feature imports)
 │   ├── editor/
 │   ├── search/
 │   ├── settings/
@@ -165,6 +207,11 @@ Features MUST NOT import from other features directly. Cross-feature wiring goes
 
 Every feature exposes its API via hooks. State: Zustand (see [ADR-005](docs/adr/005-zustand-feature-state.md)). No prop drilling.
 
+### 🚫 Shared layer rules
+`shared/` owns ALL cross-feature orchestration. If a module imports from 2+ features, it lives in `shared/` — not in either feature, not in `app-shell/`.
+
+`app-shell/` is layout only — it renders chrome (sidebar, tabs, status bar) and mounts providers. It does NOT contain orchestration logic.
+
 ---
 
 ## 4. Navigation Model — [ADR-004](docs/adr/004-state-driven-navigation.md)
@@ -211,9 +258,10 @@ Tailwind is allowed for layout/spacing only (`flex`, `gap-2`, `p-4`, `grid`, `w-
 ## 7. Conventions Established During 2026-06 Refactoring
 
 ### Keyboard shortcuts
-- All **global** keyboard shortcuts go in `app-shell/hooks/useKeyboardShortcuts.ts`
-- Editor-specific shortcuts (like Ctrl+S save) stay in the editor hook — they need editor state
-- Modal/dialog-scoped shortcuts (like Escape to close) stay in the modal — they're not global
+- All **global** keyboard shortcuts are defined in `packages/keybindings/keybindings.json`
+- The `KeybindingService` resolves shortcuts and routes to commands or actions
+- Editor-specific shortcuts (like Ctrl+S save) register actions via `useKeybindingService().registerAction()`
+- Modal/dialog-scoped shortcuts (like Escape to close) register actions via the same pattern, gated by `when` clauses
 
 ### Theme persistence
 - `ThemeProvider` accepts an optional `persistence` prop implementing `ThemePersistence`
@@ -248,12 +296,10 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 <!-- ADR_INDEX_START -->
 | File | Decision |
 |---|---|
-| [001-three-layer-architecture](docs/adr/001-three-layer-architecture.md) | ADR-001: Three-Layer UI Architecture |
 | [002-sat-css-theme-tokens](docs/adr/002-sat-css-theme-tokens.md) | ADR-002: `--sat-*` CSS Custom Properties for All Colors |
 | [003-shadcn-radix-over-raw-html](docs/adr/003-shadcn-radix-over-raw-html.md) | ADR-003: shadcn/Radix Over Raw Tailwind Markup |
 | [004-state-driven-navigation](docs/adr/004-state-driven-navigation.md) | ADR-004: State-Driven Navigation Within the Workspace |
 | [005-zustand-feature-state](docs/adr/005-zustand-feature-state.md) | ADR-005: Zustand for Feature State Management |
-| [006-pane-manager-per-pane-editor](docs/adr/006-pane-manager-per-pane-editor.md) | ADR-006: PaneManager — One Editor Instance Per Visible Pane |
 | [007-typescript-rust-responsibilities](docs/adr/007-typescript-rust-responsibilities.md) | ADR-007: TypeScript vs Rust Responsibility Split |
 | [008-native-search-architecture](docs/adr/008-native-search-architecture.md) | ADR-008: Native Search Architecture — Tantivy + Nucleo |
 | [009-rust-crate-restructure](docs/adr/009-rust-crate-restructure.md) | ADR-009: Rust Crate Restructure — Hyphenated Names, Single Responsibility |
@@ -274,8 +320,8 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add editor business logic | `apps/tauri/src/features/editor/` |
 | Add vault/sidebar business logic | `apps/tauri/src/features/vault/` |
 | Add search business logic | `apps/tauri/src/features/search/` |
-| Wire sidebar + tabs + editor together | `apps/tauri/src/app-shell/` |
-| Register a global keyboard shortcut | `app-shell/hooks/useKeyboardShortcuts.ts` |
+| Wire sidebar + tabs + editor together | `apps/tauri/src/shared/` |
+| Register a global keyboard shortcut | `packages/keybindings/` (keybindings.json) |
 | Add a Tauri command handler | `apps/tauri/src-tauri/src/lib.rs` |
 | Add markdown parsing logic | `crates/basalt_core/` |
 | Add filesystem operations | `crates/basalt_fs/` |

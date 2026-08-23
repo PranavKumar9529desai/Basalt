@@ -1,22 +1,5 @@
 export type TabId = string;
-export type TabGroupId = string;
-
-export type SplitDirection = "left" | "right" | "top" | "bottom";
-
-export type TabLayoutAxis = "row" | "column";
-
-export interface TabLayoutGroupNode {
-  type: "group";
-  groupId: TabGroupId;
-}
-
-export interface TabLayoutSplitNode {
-  type: "split";
-  axis: TabLayoutAxis;
-  children: TabLayoutNode[];
-}
-
-export type TabLayoutNode = TabLayoutGroupNode | TabLayoutSplitNode;
+export type TabPaneId = string;
 
 export interface OpenableTabInput {
   path: string;
@@ -34,8 +17,8 @@ export interface TabModel {
   lastAccessedAt: number;
 }
 
-export interface TabGroupModel {
-  id: TabGroupId;
+export interface TabPane {
+  id: TabPaneId;
   tabIds: TabId[];
   activeTabId: TabId | null;
   previewTabId: TabId | null;
@@ -52,23 +35,22 @@ export interface SerializedTab {
   lastAccessedAt: number;
 }
 
-export interface SerializedTabGroup {
-  id: TabGroupId;
+export interface SerializedTabPane {
+  id: TabPaneId;
   tabIds: TabId[];
   activeTabId: TabId | null;
   previewTabId: TabId | null;
 }
 
-export interface PaneFocusSnapshot {
-  focusedPaneId: TabGroupId | null;
-}
-
+/** Backward-compat: old snapshots may have these fields. */
 export interface TabsWorkspaceSnapshot {
   version: 1;
-  focusedGroupId: TabGroupId | null;
-  groupOrder: TabGroupId[];
-  groups: SerializedTabGroup[];
+  panes?: SerializedTabPane[];
   tabs: SerializedTab[];
-  layout?: TabLayoutNode;
-  paneFocus?: PaneFocusSnapshot;
+  /** Legacy — ignored on hydrate. */
+  groups?: SerializedTabPane[];
+  /** Legacy — ignored on hydrate. */
+  focusedGroupId?: string;
+  /** Legacy — ignored on hydrate. */
+  groupOrder?: string[];
 }

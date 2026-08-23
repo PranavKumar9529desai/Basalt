@@ -16,9 +16,8 @@
  * actions and UI state for the shell to render.
  */
 import { useCallback, useMemo } from "react";
-import type { TabGroupId, TabModel } from "../features/tabs";
+import type { TabModel } from "../features/tabs";
 import {
-  findGroupForTab,
   tabIdFromPath,
   useTabsStore,
 } from "../features/tabs";
@@ -37,11 +36,7 @@ interface EditorInterface {
   openInPreview: (opts: { path: string; title: string }) => string;
   openPinned: (opts: { path: string; title: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
-  closeTab: (
-    groupId: TabGroupId,
-    tabId: string,
-    opts: { force: boolean },
-  ) => void;
+  closeTab: (tabId: string, opts: { force: boolean }) => void;
 }
 
 interface Props {
@@ -86,18 +81,11 @@ export function useWorkspace({
     [openInPreview, setTabTitle],
   );
 
-  // closeNote reads groups from store synchronously to avoid depending on the
-  // unstable `groups` prop.
+  // closeNote — single pane, just close the tab directly.
   const closeNote = useCallback(() => {
     const tab = focusedSessionTab;
     if (!tab) return;
-    const { groups } = useTabsStore.getState();
-    for (const group of Object.values(groups)) {
-      if (group.tabIds.includes(tab.id)) {
-        closeTab(group.id, tab.id, { force: true });
-        break;
-      }
-    }
+    closeTab(tab.id, { force: true });
   }, [focusedSessionTab, closeTab]);
 
   // onFileOpen only depends on stable store actions — never changes.
@@ -149,10 +137,7 @@ export function useWorkspace({
     const state = useTabsStore.getState();
     for (const path of deletedPaths) {
       const tabId = tabIdFromPath(path);
-      const groupId = findGroupForTab(state.groups, tabId);
-      if (groupId) {
-        state.closeTab(groupId, tabId, { force: true });
-      }
+      state.closeTab(tabId, { force: true });
     }
   }, [controller.handleConfirmDelete, mutations.pendingDeletePaths]);
 

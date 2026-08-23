@@ -13,16 +13,18 @@ interface UseTabPersistenceOptions {
 function isTabSnapshot(value: unknown): value is TabsWorkspaceSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<TabsWorkspaceSnapshot>;
-  return candidate.version === 1 && Array.isArray(candidate.groupOrder);
+  if (candidate.version !== 1) return false;
+  // Accept new `panes` format or legacy `groups`/`groupOrder` format
+  return Array.isArray(candidate.panes) || Array.isArray(candidate.groups) || Array.isArray(candidate.groupOrder);
 }
 
 /**
- * Subscribes to `persistVersion` instead of the full `tabs`/`groups` objects.
+ * Subscribes to `persistVersion` instead of the full `tabs`/`pane` objects.
  *
  * This avoids re-rendering the parent component on every `markTabDirty` call
  * (which fires on every keystroke). Only structural mutations (open, close,
- * move, split, merge) bump `persistVersion`, so the persistence effect only
- * runs when the workspace layout actually changes.
+ * move) bump `persistVersion`, so the persistence effect only runs when the
+ * workspace layout actually changes.
  */
 export function useTabPersistence({
   workspace,

@@ -1,17 +1,43 @@
 # Basalt
 
-Basalt is a Rust core for Obsidian-style Markdown parsing, fast vault metadata indexing, and link graph construction, with optional WASM bindings.
+Obsidian-class desktop Markdown workspace — Tauri (Rust) backend, React frontend.
 
-## Workspace Layout
-- `crates/basalt_core`: Markdown parsing, metadata extraction, graph, UTF-16 mapping
-- `crates/basalt_fs`: Vault indexing and filesystem watcher
-- `crates/basalt_wasm`: WASM bindings for rendering + metadata
-- `apps/tauri`: UI shell (placeholder)
-- `docs/architecture.md`: System overview
-- `scratch/`: Generated artifacts and debug outputs
+## Architecture
 
-## Quick Notes
-- Vault indexing uses **metadata extraction**, not full AST parsing.
-- Full AST parsing is **per-file** via `parse_markdown`.
-- Offsets for tags/links/headings are stored in UTF-16 for editor compatibility.
+```
+packages/ui/              ← Visual primitives (shadcn, Radix)
+packages/editor/          ← CodeMirror markdown editor
+packages/commands/        ← CommandService (TS class)
+packages/keybindings/     ← KeybindingService (TS class)
+packages/theme/           ← --sat-* CSS token system
 
+apps/tauri/src/
+├── features/             ← Business logic (vault, tabs, editor, search, settings)
+├── shared/               ← Cross-feature orchestration
+├── app-shell/            ← Layout composition (thin glue)
+└── routes/               ← TanStack Router
+
+crates/
+├── basalt-core/          ← Markdown parsing, metadata extraction
+├── basalt-fs/            ← Vault indexing, filesystem watcher
+├── basalt-parser/        ← HeadlessAST markdown parser
+├── basalt-graph/         ← Wikilink graph, backlinks
+├── basalt-search/        ← Tantivy full-text + Nucleo fuzzy search
+└── basalt-wasm/          ← WASM bindings
+```
+
+## Quick Start
+
+```bash
+bun install
+bun run dev
+```
+
+## Commands
+
+```bash
+bun run dev          # Tauri dev server
+bun run lint         # Biome lint
+bunx tsc --noEmit    # TypeScript type-check
+bun run build        # Production build
+```
