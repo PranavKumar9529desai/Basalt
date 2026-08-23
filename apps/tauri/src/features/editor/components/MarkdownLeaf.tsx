@@ -4,10 +4,13 @@ import {
   contextMenuExtension,
   createEditorExtensions,
   type ContextMenuState,
+  editorBenchmarkState,
+  runTypingBenchmark,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
 import { useLeafServices, type LeafProps } from "@workspace/views";
 import { Button } from "@workspace/ui/components/ui/button";
+import { commandService } from "@workspace/commands";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { FileChangeEvent, SaveStatus } from "../../vault/types";
@@ -146,6 +149,9 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       contextMenuExtension(setMenuState),
       EditorView.updateListener.of((u) => {
         if (!u.docChanged) return;
+        // Benchmark dispatches must not mark tabs dirty, schedule saves,
+        // or pollute stats — the benchmark restores the doc itself.
+        if (editorBenchmarkState.active) return;
         const t = tabRef.current;
         if (!t) return;
         dirtyRef.current.add(t.id);
@@ -301,6 +307,29 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     keybindingService.setContext("editorFocused", true);
     return () => keybindingService.setContext("editorFocused", false);
   }, [keybindingService]);
+
+  // ── Dev: editor typing benchmark (ADR-017 frontend counterpart) ─────────
+
+  useEffect(() => {
+    if (!view) return;
+    commandService.registerCommand("dev:editor-benchmark", () => {
+      try {
+        const results = runTypingBenchmark(view);
+        console.table(results);
+        ioRef.current.setStatus(
+          `Editor bench — ${results
+            .map(
+              (r) =>
+                `${(r.sizeBytes / 1024).toFixed(0)}KB: p50 ${r.p50Ms.toFixed(2)}ms, p95 ${r.p95Ms.toFixed(2)}ms, max ${r.maxMs.toFixed(2)}ms`,
+            )
+            .join("  |  ")}  (details in console)`,
+        );
+      } catch (err) {
+        console.error("[MarkdownLeaf] benchmark failed:", err);
+      }
+    });
+    return () => commandService.unregister("dev:editor-benchmark");
+  }, [view, ioRef]);
 
   // ── Flush on window blur / unmount ───────────────────────────────────────
 

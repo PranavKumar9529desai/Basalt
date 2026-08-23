@@ -9,6 +9,15 @@
 // ──────────────────────────────────────────────
 
 export { createEditorExtensions } from "./editor";
+export {
+  editorBenchmarkState,
+  generateMarkdownDoc,
+  runTypingBenchmark,
+} from "./benchmark";
+export type {
+  TypingBenchmarkOptions,
+  TypingBenchmarkSample,
+} from "./benchmark";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
 export type { EditorConfig, FetchLinksFn, FetchTagsFn } from "./types";
