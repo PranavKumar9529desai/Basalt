@@ -1,0 +1,18 @@
+{
+  "name": "@workspace/views",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {},
+  "peerDependencies": {
+    "react": "catalog:default"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:default",
+    "react": "catalog:default",
+    "typescript": "^5.8.3"
+  }
+}

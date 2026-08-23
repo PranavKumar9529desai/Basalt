@@ -139,6 +139,18 @@
         "typescript": "^5.0.0",
       },
     },
+    "packages/views": {
+      "name": "@workspace/views",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/react": "catalog:default",
+        "react": "catalog:default",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "react": "catalog:default",
+      },
+    },
   },
   "overrides": {
     "@types/react": "19.1.8",
@@ -581,6 +593,8 @@
     "@workspace/theme": ["@workspace/theme@workspace:packages/theme"],
 
     "@workspace/ui": ["@workspace/ui@workspace:packages/ui"],
+
+    "@workspace/views": ["@workspace/views@workspace:packages/views"],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 

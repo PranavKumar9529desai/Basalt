@@ -27,14 +27,14 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete |
 | Command palette / quick switcher / search (tantivy + nucleo) | ✅ Complete |
 | File tree / sidebar / note creation (Obsidian-style instant) | ✅ Complete |
-| **View registry + generic side docks (ADR-018 Phase 1)** | ⏳ Next up |
-| Leaf types for editor area (ADR-018 Phase 2) | ⏳ Not started |
+| **View registry + generic side docks (ADR-018 Phase 1)** | ✅ Complete |
+| Leaf types for editor area (ADR-018 Phase 2) | ⏳ Next up |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3) | ⏳ Not started |
 | NoteGraph / backlinks panel | ⏳ Backlinks sidebar exists; graph not started |
 | Rust acceleration (batched IPC) | ⏳ Not started |
 | Plugin host (ADR-018 Phase 5) | ⏳ Not started — do not build before phases 1–4 |
 
-**Direction:** the shell must render from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls, never shell surgery. Don't add hardcoded panels to the shell.
+**Direction:** the shell renders from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls in `app-shell/viewRegistrations.ts`, never shell surgery. Views read app state via `useWorkspaceContext()`.
 
 ---
 
