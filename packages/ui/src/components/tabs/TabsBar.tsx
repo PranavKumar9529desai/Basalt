@@ -257,7 +257,7 @@ export function TabsBar({
       // carve through it. A z-index on this root would lift the opaque
       // background above the line and hide it.
       className={cn(
-        "pt-[0.5px] relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-1 overflow-hidden",
+        "pt-[0.5px] relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 overflow-hidden",
         className,
       )}
       onDragOver={(e) => e.preventDefault()}
