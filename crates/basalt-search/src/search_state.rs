@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::UNIX_EPOCH;
+use std::time::{Duration, Instant, UNIX_EPOCH};
 
 use anyhow::Result;
 use basalt_vault::Vault;
@@ -9,12 +9,27 @@ use crate::nucleo_scorer::NucleoScorer;
 use crate::tantivy::{extract_snippets, TantivyIndex};
 use basalt_types::{ContentResult, FileResult};
 
+/// How long the index may hold uncommitted in-memory updates before the
+/// next flush writes them to disk. Commits create a new tantivy segment
+/// and fsync — they must never run per autosave. Queries flush earlier
+/// anyway (freshness exactly when it matters).
+const IDLE_COMMIT_DELAY: Duration = Duration::from_secs(10);
+
 /// Top-level search engine for Basalt.
 /// Owns both the tantivy full-text index and the nucleo in-memory file scorer.
 /// Stored in `AppState` behind an `Arc<RwLock<Option<SearchState>>>`.
+///
+/// Commit policy: `update_document`/`remove_document` only touch the
+/// in-memory index and mark it pending. Commits happen via
+/// [`SearchState::flush_if_due`] (idle timer) or
+/// [`SearchState::flush_pending`] (forced before queries).
 pub struct SearchState {
     tantivy: TantivyIndex,
     nucleo: NucleoScorer,
+    /// Uncommitted in-memory updates exist.
+    pending: bool,
+    /// When the last pending update was made.
+    last_change: Option<Instant>,
 }
 
 impl SearchState {
@@ -89,11 +104,18 @@ impl SearchState {
         }
 
         let nucleo = NucleoScorer::new(paths);
-        Ok(Self { tantivy, nucleo })
+        Ok(Self {
+            tantivy,
+            nucleo,
+            pending: false,
+            last_change: None,
+        })
     }
 
     /// BM25 full-text search. Reads matched note bodies from disk to build snippets.
-    pub fn search_content(&self, query: &str, limit: usize) -> Vec<ContentResult> {
+    /// Flushes pending updates first so results always reflect saved state.
+    pub fn search_content(&mut self, query: &str, limit: usize) -> Vec<ContentResult> {
+        let _ = self.flush_pending();
         let mut results = match self.tantivy.search(query, limit) {
             Ok(r) => r,
             Err(e) => {
@@ -116,6 +138,7 @@ impl SearchState {
     /// Fuzzy file-name search via nucleo. Requires `&mut self` because
     /// `nucleo_matcher::Matcher::score` takes `&mut self`.
     pub fn search_files(&mut self, query: &str, limit: usize) -> Vec<FileResult> {
+        let _ = self.flush_pending();
         self.nucleo.search(query, limit)
     }
 
@@ -131,19 +154,55 @@ impl SearchState {
 
         self.tantivy.update_document(path, &title, content, tags)?;
         self.nucleo.add_item(path.to_string(), title);
+        self.mark_pending();
         Ok(())
     }
 
-    /// Commit all pending tantivy writes. Call after one or more `update_document` calls.
+    /// Commit all pending tantivy writes. Prefer [`flush_if_due`] /
+    /// [`flush_pending`] — direct commits defeat the batching policy.
     pub fn commit(&mut self) -> Result<()> {
-        self.tantivy.commit()
+        self.tantivy.commit()?;
+        self.pending = false;
+        self.last_change = None;
+        Ok(())
+    }
+
+    /// Commit if updates have been idle for at least `IDLE_COMMIT_DELAY`.
+    /// Cheap no-op while changes keep arriving (e.g. continuous typing).
+    /// Call this from a low-frequency timer.
+    pub fn flush_if_due(&mut self) -> Result<()> {
+        if self.pending
+            && self
+                .last_change
+                .is_some_and(|t| t.elapsed() >= IDLE_COMMIT_DELAY)
+        {
+            self.flush_pending()?;
+        }
+        Ok(())
+    }
+
+    /// Force-commit pending updates now (used before queries and by the
+    /// idle flusher when due).
+    pub fn flush_pending(&mut self) -> Result<()> {
+        if self.pending {
+            self.tantivy.commit()?;
+            self.pending = false;
+            self.last_change = None;
+        }
+        Ok(())
+    }
+
+    fn mark_pending(&mut self) {
+        self.pending = true;
+        self.last_change = Some(Instant::now());
     }
 
     /// Remove a note from both indexes when it is deleted.
+    /// Marks the index pending — flushed by the normal commit policy.
     pub fn remove_document(&mut self, path: &str) -> Result<()> {
         self.tantivy.remove_document(path)?;
-        self.tantivy.commit()?;
         self.nucleo.remove_item(path);
+        self.mark_pending();
         Ok(())
     }
 }

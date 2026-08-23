@@ -9,12 +9,13 @@ pub fn search_content(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<ContentResult>, String> {
-    let search = state
+    // Write lock: the query flushes pending index updates first.
+    let mut search = state
         .search
-        .read()
+        .write()
         .map_err(|_| "search lock poisoned".to_string())?;
     let search = search
-        .as_ref()
+        .as_mut()
         .ok_or_else(|| "search index not ready".to_string())?;
     Ok(search.search_content(&query, limit.unwrap_or(20)))
 }

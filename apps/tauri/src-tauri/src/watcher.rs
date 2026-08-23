@@ -14,6 +14,22 @@ pub struct FileChangeEvent {
     pub needs_tree_refresh: bool,
 }
 
+/// Background loop that applies the search layer's commit policy:
+/// pending index updates are committed once they have been idle for
+/// `IDLE_COMMIT_DELAY`. Runs for the lifetime of the app; each tick is
+/// a cheap no-op while nothing is pending.
+pub fn start_search_flusher(state: &AppState) {
+    let search_arc = Arc::clone(&state.search);
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        if let Ok(mut guard) = search_arc.write() {
+            if let Some(ref mut search) = *guard {
+                let _ = search.flush_if_due();
+            }
+        }
+    });
+}
+
 pub fn start_watcher(
     state: &AppState,
     vault_path: &str,
@@ -58,10 +74,13 @@ pub fn start_watcher(
                                     .collect::<Vec<_>>()
                                     .join(" ");
                                 let _ = search.update_document(&path_str, &content, &tags);
-                                let _ = search.commit();
+                                // Batched: the idle flusher commits when
+                                // changes settle — never per event.
+                                let _ = search.flush_if_due();
                             }
                         } else {
                             let _ = search.remove_document(&path_str);
+                            let _ = search.flush_if_due();
                         }
                     }
                 }

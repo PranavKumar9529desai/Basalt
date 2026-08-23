@@ -7,7 +7,7 @@ use tauri::State;
 use crate::app_state::AppState;
 use crate::cache::{load_or_index_vault, update_last_vault};
 use crate::config::load_config;
-use crate::watcher::start_watcher;
+use crate::watcher::{start_search_flusher, start_watcher};
 use crate::workspace::load_workspace;
 
 #[derive(Serialize)]
@@ -69,6 +69,7 @@ pub fn boot(state: State<AppState>, app: tauri::AppHandle) -> Result<BootResult,
     let (status, note_count, known_mtimes) = load_or_index_vault(&vault_path, &state, &app)?;
 
     start_watcher(&state, &vault_path, &app)?;
+    start_search_flusher(&state);
 
     // Initialise the search index (non-fatal — vault still works if this fails).
     // We minimise the search write lock scope: briefly set None to drop the
@@ -155,6 +156,7 @@ pub fn set_vault(
 
     // (Re-)start the watcher.
     start_watcher(&state, &vault_path, &app)?;
+    start_search_flusher(&state);
 
     // Initialise the search index (non-fatal — vault still works if this fails).
     // Minimise search write lock scope: brief None, build outside, brief swap.

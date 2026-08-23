@@ -91,7 +91,10 @@ pub fn save_file(
             let path_str = abs.to_string_lossy().to_string();
             let tags = extract_inline_tags(&content);
             let _ = search.update_document(&path_str, &content, &tags);
-            let _ = search.commit();
+            // Commit policy is owned by the search layer: this is a no-op
+            // while typing keeps the index busy, and flushes after the
+            // idle window once changes settle.
+            let _ = search.flush_if_due();
         }
     }
 
