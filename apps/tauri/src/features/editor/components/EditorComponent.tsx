@@ -1,120 +1,52 @@
-import type { Extension } from "@codemirror/state";
-import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import {
-  createEditorExtensions,
-  type FetchLinksFn,
-  type FetchTagsFn,
-} from "@workspace/editor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { useEffect, useRef } from "react";
+import { useLatestRef } from "../hooks/useLatestRef";
 
-export interface EditorProps {
-  initialContent?: string;
-  value?: string;
-  onChange?: (value: string) => void;
+export interface EditorComponentProps {
+  /**
+   * The state the view is created with. The view is created ONCE on mount;
+   * later document swaps are done by the owner calling `view.setState()`
+   * with a state built from the SAME extensions — never by re-mounting.
+   */
+  initialState: EditorState;
+  /** Called once the EditorView exists. */
+  onReady?: (view: EditorView) => void;
   className?: string;
-  onFetchLinks?: FetchLinksFn;
-  onFetchTags?: FetchTagsFn;
-  onOpenLink?: (link: string) => void;
-  onSearch?: (query: string) => void;
-  /**
-   * Called when the CodeMirror EditorView becomes available.
-   * Use this in the parent to wire up editor command hooks (useEditorCommands).
-   */
-  onViewReady?: (view: NonNullable<ReactCodeMirrorRef["view"]>) => void;
-  /**
-   * Optional theme extensions to inject (e.g., CSS-var based themes).
-   * They are applied before the built-in defaults so they can override colors.
-   */
-  themeExtensions?: Extension[];
-  /**
-   * Whether to include the built-in dark theme defaults.
-   * Keep true unless you want a fully custom theme stack.
-   */
-  includeDefaultTheme?: boolean;
 }
 
-const BASIC_SETUP = {
-  lineNumbers: false,
-  foldGutter: false,
-  highlightActiveLine: false,
-  // Disable CM's built-in search panel so ⌘F reaches our global handler.
-  searchKeymap: false,
-};
-
+/**
+ * Raw CodeMirror host — uncontrolled by design.
+ *
+ * The document lives inside CodeMirror; React never receives it on
+ * keystrokes. This is the core of the editor performance model: typing
+ * causes zero React re-renders.
+ */
 export function EditorComponent({
-  initialContent = "",
-  value,
-  onChange,
+  initialState,
+  onReady,
   className = "",
-  onFetchLinks,
-  onFetchTags,
-  onOpenLink,
-  onViewReady,
-  themeExtensions,
-  includeDefaultTheme = true,
-  extensions = [],
-}: EditorProps & { extensions?: Extension[] }) {
-  const isControlled = value !== undefined;
-  const [internalValue, setInternalValue] = useState(initialContent);
-  const content = isControlled ? (value as string) : internalValue;
-
-  const editorRef = useRef<ReactCodeMirrorRef>(null);
-  const view = editorRef.current?.view;
-
-  const allExtensions = useMemo(() => {
-    return [
-      ...createEditorExtensions({
-        onFetchLinks,
-        onFetchTags,
-        onOpenLink,
-        themeExtensions,
-        includeDefaultTheme,
-      }),
-      ...extensions,
-    ];
-  }, [
-    includeDefaultTheme,
-    onFetchLinks,
-    onFetchTags,
-    onOpenLink,
-    themeExtensions,
-    extensions,
-  ]);
+}: EditorComponentProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const onReadyRef = useLatestRef(onReady);
 
   useEffect(() => {
-    if (view && onViewReady) {
-      onViewReady(view);
-    }
-  }, [view, onViewReady]);
-
-  const handleChange = useCallback(
-    (val: string) => {
-      if (!isControlled) {
-        setInternalValue(val);
-      }
-      if (onChange) {
-        onChange(val);
-      }
-    },
-    [isControlled, onChange],
-  );
+    if (!parentRef.current) return;
+    const view = new EditorView({
+      state: initialState,
+      parent: parentRef.current,
+    });
+    onReadyRef.current?.(view);
+    return () => view.destroy();
+    // Mount once — document swaps happen via view.setState() by the owner.
+    // (deps intentionally empty)
+  }, []);
 
   return (
     <div
       className={`flex h-full min-h-0 w-full flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
     >
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        <CodeMirror
-          ref={editorRef}
-          value={content}
-          height="100%"
-          maxHeight="100%"
-          basicSetup={BASIC_SETUP}
-          extensions={allExtensions}
-          onChange={handleChange}
-          className=""
-        />
-      </div>
+      <div ref={parentRef} className="relative flex-1 min-h-0 overflow-hidden" />
     </div>
   );
 }

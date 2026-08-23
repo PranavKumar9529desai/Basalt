@@ -1,5 +1,6 @@
-import { IconFolder, IconLink } from "@tabler/icons-react";
-import { viewRegistry } from "@workspace/views";
+import { IconFileText, IconFolder, IconLink } from "@tabler/icons-react";
+import { leafRegistry, viewRegistry } from "@workspace/views";
+import { MarkdownLeaf } from "../features/editor";
 import { BacklinksView } from "./views/BacklinksView";
 import {
   FileExplorerHeaderActions,
@@ -29,4 +30,12 @@ viewRegistry.register({
   icon: IconLink,
   side: "right",
   component: BacklinksView,
+});
+
+leafRegistry.register({
+  type: "markdown",
+  name: "Markdown",
+  icon: IconFileText,
+  extensions: [".md", ".markdown"],
+  component: MarkdownLeaf,
 });

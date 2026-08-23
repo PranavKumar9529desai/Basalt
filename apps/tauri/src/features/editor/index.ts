@@ -1,7 +1,5 @@
 import "./commands";
 
 export { EditorCommandPalette } from "./components/CommandPalette";
-export { Editor } from "./components/EditorContextMenu";
-export { useEditor } from "./hooks/useEditor";
-export { PaneContent } from "./PaneContent";
+export { MarkdownLeaf } from "./components/MarkdownLeaf";
 export { useFocusedPaneStore } from "./store";

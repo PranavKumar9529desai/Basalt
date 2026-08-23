@@ -88,6 +88,16 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     [treeNodes, openInPreview, setTabTitle],
   );
 
+  // Open a note by path+name — the leaf-services surface (wikilinks,
+  // backlinks views). Creates a preview tab, unlike in-place navigation.
+  const openNote = useCallback(
+    ({ path, name }: { path: string; name: string }) => {
+      const tabId = openInPreview({ path, title: name });
+      setTabTitle(tabId, name);
+    },
+    [openInPreview, setTabTitle],
+  );
+
   return {
     vaultPath,
     ...tree,
@@ -95,6 +105,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     focusedSessionTab,
     findNote,
     openNotePreview,
+    openNote,
   };
 }
 

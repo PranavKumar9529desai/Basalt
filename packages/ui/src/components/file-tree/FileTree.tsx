@@ -51,6 +51,10 @@ export function FileTree({
     getScrollElement: () => scrollRef.current,
     estimateSize: () => TREE_ROW_HEIGHT,
     overscan: 8,
+    // Breathing room above the first row and below the last (scrolls with
+    // the list — plain CSS padding would break virtualizer measurements).
+    paddingStart: 8,
+    paddingEnd: 8,
   });
 
   return (

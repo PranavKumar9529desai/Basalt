@@ -13,11 +13,11 @@
  */
 
 import { commandService } from "@workspace/commands";
+import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { StripSeparator } from "@workspace/ui/components/top-strip";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { PaneContent } from "../features/editor";
 import type { PaneRenderContext } from "../features/tabs";
 import { useTabs, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
 import type { BootResult } from "../features/vault";
@@ -83,15 +83,36 @@ function WorkspaceShell({
     focusedSessionTab: ws.focusedSessionTab,
   });
 
+  // Stable services bag for leaf components — identity must not change per
+  // render, or every keystroke would re-render the active leaf.
+  const leafServices = useMemo(
+    () => ({
+      openNote: ws.openNote,
+      markTabDirty: tabs.markTabDirty,
+      findNote: ws.findNote,
+    }),
+    [ws.openNote, tabs.markTabDirty, ws.findNote],
+  );
+
   const renderPane = useCallback(
-    (ctx: PaneRenderContext) => (
-      <PaneContent
-        activeTab={ctx.activeTab}
-        findNote={ws.findNote}
-        markTabDirty={ctx.markTabDirty}
-      />
-    ),
-    [ws.findNote],
+    (ctx: PaneRenderContext) => {
+      const tab = ctx.activeTab;
+      if (!tab) return null;
+
+      // ADR-018 Phase 2: leaf content resolves from the registry by the
+      // tab's viewType — never a component switch statement here.
+      const leaf =
+        leafRegistry.get(tab.viewType) ?? leafRegistry.get("markdown");
+      if (!leaf) return null;
+      const LeafComponent = leaf.component;
+
+      return (
+        <LeafServicesProvider services={leafServices}>
+          <LeafComponent tab={tab} />
+        </LeafServicesProvider>
+      );
+    },
+    [leafServices],
   );
 
   // Vault commands — need controller data from the context.

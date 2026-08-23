@@ -3,6 +3,7 @@
 // Single-pane model: one TabPane holds all open tabs.
 // ---------------------------------------------------------------------------
 
+import { leafRegistry } from "@workspace/views";
 import type { StateCreator } from "zustand";
 import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, TabPaneId } from "../types";
@@ -112,6 +113,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       id: incomingTabId,
       path: note.path,
       title: note.title ?? titleFromPath(note.path),
+      viewType: leafRegistry.viewTypeForPath(note.path) ?? "markdown",
       isPinned: false,
       isPreview: true,
       isDirty: false,
@@ -152,6 +154,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       id: incomingTabId,
       path: note.path,
       title: note.title ?? titleFromPath(note.path),
+      viewType: leafRegistry.viewTypeForPath(note.path) ?? "markdown",
       isPinned: true,
       isPreview: false,
       isDirty: false,

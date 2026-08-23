@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { commandService } from "@workspace/commands";
-import { type ContextMenuState, contextMenuExtension } from "@workspace/editor";
+import { type ContextMenuState } from "@workspace/editor";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,101 +10,105 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useEditorCommands } from "../hooks/useEditorCommands";
 
-import { EditorComponent, type EditorProps } from "./EditorComponent";
+export interface EditorContextMenuProps {
+  /** null = closed. Coordinates come from the CM contextMenu extension. */
+  menuState: ContextMenuState | null;
+  onMenuStateChange: (state: ContextMenuState | null) => void;
+  /** The live EditorView — wires format commands into the palette. */
+  view: EditorView | null;
+  onSearch?: (query: string) => void;
+}
 
-export function Editor({ ...props }: EditorProps) {
-  const [view, setView] = useState<EditorView | null>(null);
+/**
+ * Presentational context-menu overlay for the editor. Anchored at the
+ * right-click coordinates emitted by the CM contextMenu extension; the
+ * menu state lives in the leaf component so it survives document swaps.
+ */
+export function EditorContextMenu({
+  menuState,
+  onMenuStateChange,
+  view,
+  onSearch,
+}: EditorContextMenuProps) {
   useEditorCommands(view);
-
-  const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
 
   const commands = useMemo(() => commandService.getCommands(), []);
 
   const handleCommand = useCallback(
     (commandId: string) => {
-      setMenuState(null);
+      onMenuStateChange(null);
       commandService.execute(commandId);
     },
-    [],
+    [onMenuStateChange],
   );
 
   const menuAnchor = useMemo(() => {
     if (!menuState) return null;
     return {
-      getBoundingClientRect: () => new DOMRect(menuState.x, menuState.y, 0, 0),
+      getBoundingClientRect: () =>
+        new DOMRect(menuState.x, menuState.y, 0, 0),
     };
   }, [menuState]);
 
   const formatCommands = commands.filter((c) => c.category === "Format");
   const editorCommands = commands.filter((c) => c.category === "Editor");
 
-  const cmExtension = useMemo(() => contextMenuExtension(setMenuState), []);
-
   return (
-    <div className="relative flex-1 min-h-0 overflow-hidden">
-      <ContextMenu
-        open={!!menuState}
-        onOpenChange={(open) => !open && setMenuState(null)}
-      >
-        <EditorComponent
-          {...props}
-          extensions={[cmExtension]}
-          onViewReady={setView}
-        />
+    <ContextMenu
+      open={!!menuState}
+      onOpenChange={(open) => !open && onMenuStateChange(null)}
+    >
+      {menuState && (
+        <ContextMenuContent anchor={menuAnchor}>
+          {editorCommands.map((cmd) => (
+            <ContextMenuItem
+              key={cmd.id}
+              onClick={() => handleCommand(cmd.id)}
+            >
+              <div className="mr-2 flex size-4 shrink-0 items-center justify-center opacity-90">
+                {cmd.icon}
+              </div>
+              <span>{cmd.name}</span>
+            </ContextMenuItem>
+          ))}
 
-        {menuState && (
-          <ContextMenuContent anchor={menuAnchor}>
-            {editorCommands.map((cmd) => (
+          <ContextMenuSeparator />
+
+          {menuState.selection.text && (
+            <>
               <ContextMenuItem
-                key={cmd.id}
-                onClick={() => handleCommand(cmd.id)}
+                onClick={() => {
+                  onSearch?.(menuState.selection.text);
+                  onMenuStateChange(null);
+                }}
               >
-                <div className="flex size-4 shrink-0 items-center justify-center opacity-90 mr-2">
-                  {cmd.icon}
-                </div>
-                <span>{cmd.name}</span>
+                Search for "{menuState.selection.text}"
               </ContextMenuItem>
-            ))}
+              <ContextMenuSeparator />
+            </>
+          )}
 
-            <ContextMenuSeparator />
-
-            {menuState.selection.text && (
-              <>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>Format</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              {formatCommands.map((cmd) => (
                 <ContextMenuItem
-                  onClick={() => {
-                    props.onSearch?.(menuState.selection.text);
-                    setMenuState(null);
-                  }}
+                  key={cmd.id}
+                  onClick={() => handleCommand(cmd.id)}
                 >
-                  Search for "{menuState.selection.text}"
+                  <div className="mr-2 flex size-4 shrink-0 items-center justify-center opacity-90">
+                    {cmd.icon}
+                  </div>
+                  <span>{cmd.name}</span>
                 </ContextMenuItem>
-                <ContextMenuSeparator />
-              </>
-            )}
-
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>Format</ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                {formatCommands.map((cmd) => (
-                  <ContextMenuItem
-                    key={cmd.id}
-                    onClick={() => handleCommand(cmd.id)}
-                  >
-                    <div className="flex size-4 shrink-0 items-center justify-center opacity-90 mr-2">
-                      {cmd.icon}
-                    </div>
-                    <span>{cmd.name}</span>
-
-                  </ContextMenuItem>
-                ))}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          </ContextMenuContent>
-        )}
-      </ContextMenu>
-    </div>
+              ))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        </ContextMenuContent>
+      )}
+    </ContextMenu>
   );
 }

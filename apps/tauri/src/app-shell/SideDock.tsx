@@ -59,7 +59,10 @@ export function SideDock({
       side={side}
       className={className}
     >
-      <div className="flex h-10 shrink-0 items-center bg-[var(--sat-surface-2)] px-2 gap-1">
+      {/* pt-1 mirrors the tab bar's bottom-anchored tabs (h-9 in h-10) so
+          header content shares their vertical center instead of floating 2px
+          high in the full band. */}
+      <div className="flex h-10 shrink-0 items-center bg-[var(--sat-surface-2)] px-2 pt-1 gap-1">
         {views.length > 1
           ? views.map((view) => {
               const isActive = view.type === active.type;
