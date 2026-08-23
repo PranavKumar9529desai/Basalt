@@ -190,12 +190,11 @@ export function MarkdownLeaf({ tab }: LeafProps) {
 
       const isActive = tabRef.current?.id === tabId;
       if (isActive) setSaveStatus("saving");
+      // Tag the write BEFORE the await — the watcher echo can arrive before
+      // the invoke promise resolves (separate IPC channels, unordered).
+      lastSelfSaveRef.current = { path: meta.path, at: Date.now() };
       try {
         await ioRef.current.saveFile(meta.path, state.doc.toString());
-        // Remember our own write — the vault watcher echoes it back as
-        // vault://file-changed and we must not mistake it for an external
-        // edit (spurious conflict banner).
-        lastSelfSaveRef.current = { path: meta.path, at: Date.now() };
         dirtyRef.current.delete(tabId);
         servicesRef.current.markTabDirty(tabId, false);
         if (isActive) {
@@ -357,6 +356,12 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         }
 
         if (dirtyRef.current.has(t.id)) {
+          // Dirty + file changed. Could still be our own echo (raced past
+          // the timestamp window) — only a REAL content difference between
+          // disk and our document is a genuine conflict.
+          const diskText = await ioRef.current.readFile(changedPath);
+          const current = statesRef.current.get(t.id);
+          if (current && current.doc.toString() === diskText) return;
           setConflict(true);
           ioRef.current.setStatus(
             "! File changed externally. Save or discard your changes.",
@@ -368,7 +373,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           try {
             const text = await ioRef.current.readFile(changedPath);
             const current = statesRef.current.get(t.id);
-            if (current && current.doc.toString() === text) return;
+            if (!current || current.doc.toString() === text) return;
             const state = EditorState.create({
               doc: text,
               extensions: extensionsRef.current,
