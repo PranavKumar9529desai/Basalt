@@ -21,12 +21,24 @@ pub fn start_watcher(
 ) -> Result<(), String> {
     let vault_arc = Arc::clone(&state.vault);
     let search_arc = Arc::clone(&state.search);
+    let self_writes = Arc::clone(&state.self_writes);
     let app_handle = app.clone();
 
     let watcher = VaultWatcher::watch(
         Path::new(vault_path),
         vault_arc,
         move |changed_path: PathBuf, needs_refresh: bool| {
+            // App-initiated writes (save_file) register themselves here
+            // BEFORE writing. Consume the marker and skip: the save path
+            // already updated the cache and the search index, and the
+            // frontend knows about its own writes. vault://file-changed
+            // must mean "changed by something OTHER than the app".
+            if let Ok(mut guard) = self_writes.lock() {
+                if guard.remove(&changed_path) {
+                    return;
+                }
+            }
+
             // Update search index on .md file changes.
             if changed_path
                 .extension()

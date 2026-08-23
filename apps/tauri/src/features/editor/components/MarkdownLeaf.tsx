@@ -112,8 +112,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevTabRef = useRef<typeof tab | null>(null);
-  /** Last write WE made — watcher events for it are our own echo. */
-  const lastSelfSaveRef = useRef<{ path: string; at: number } | null>(null);
 
   const tabRef = useLatestRef(tab);
   const servicesRef = useLatestRef(services);
@@ -190,9 +188,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
 
       const isActive = tabRef.current?.id === tabId;
       if (isActive) setSaveStatus("saving");
-      // Tag the write BEFORE the await — the watcher echo can arrive before
-      // the invoke promise resolves (separate IPC channels, unordered).
-      lastSelfSaveRef.current = { path: meta.path, at: Date.now() };
       try {
         await ioRef.current.saveFile(meta.path, state.doc.toString());
         dirtyRef.current.delete(tabId);
@@ -328,7 +323,19 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     [saveTab, tabRef],
   );
 
-  // ── External file-change conflict detection ──────────────────────────────
+  // ── External file-change reconciliation ──────────────────────────────
+  //
+  // With self-write suppression in Rust, events reaching this handler are
+  // external by contract — but the CONTENT DIFF remains the only arbiter
+  // (vim FileChangedShell / VS Code text-file model): duplicate OS events,
+  // marker misses, or no-op touches must never surface as conflicts or
+  // destroy undo history.
+  //
+  //   disk == doc    → echo / no-op → ignore
+  //   disk != doc,
+  //   dirty          → genuine concurrent edit → conflict banner
+  //   disk != doc,
+  //   clean          → external edit → reload from disk
 
   useEffect(() => {
     const unlistenPromise = listen<FileChangeEvent>(
@@ -338,53 +345,36 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         const t = tabRef.current;
         if (!t || changedPath !== t.path) return;
 
-        // Our own save echoed back by the watcher — ignore.
-        const self = lastSelfSaveRef.current;
-        if (
-          kind !== "deleted" &&
-          self &&
-          self.path === changedPath &&
-          Date.now() - self.at < 1500
-        ) {
-          return;
-        }
-
         if (kind === "deleted") {
           ioRef.current.setStatus("! The open file was deleted from disk.");
           setSaveStatus("conflict");
           return;
         }
 
+        let diskText: string;
+        try {
+          diskText = await ioRef.current.readFile(changedPath);
+        } catch (err) {
+          console.error("[MarkdownLeaf] reconcile read failed:", err);
+          return;
+        }
+
+        const current = statesRef.current.get(t.id);
+        if (!current || current.doc.toString() === diskText) return;
+
         if (dirtyRef.current.has(t.id)) {
-          // Dirty + file changed. Could still be our own echo (raced past
-          // the timestamp window) — only a REAL content difference between
-          // disk and our document is a genuine conflict.
-          const diskText = await ioRef.current.readFile(changedPath);
-          const current = statesRef.current.get(t.id);
-          if (current && current.doc.toString() === diskText) return;
           setConflict(true);
           ioRef.current.setStatus(
             "! File changed externally. Save or discard your changes.",
           );
         } else {
-          // No unsaved edits — reload from disk, but only if the content
-          // actually differs (our own echo / no-op writes must not nuke
-          // the undo history).
-          try {
-            const text = await ioRef.current.readFile(changedPath);
-            const current = statesRef.current.get(t.id);
-            if (!current || current.doc.toString() === text) return;
-            const state = EditorState.create({
-              doc: text,
-              extensions: extensionsRef.current,
-            });
-            statesRef.current.set(t.id, state);
-            viewRef.current?.setState(state);
-            setSaveStatus("saved");
-          } catch (err) {
-            console.error("[MarkdownLeaf] silent reload failed:", err);
-            ioRef.current.setStatus(`Reload failed: ${String(err)}`);
-          }
+          const state = EditorState.create({
+            doc: diskText,
+            extensions: extensionsRef.current,
+          });
+          statesRef.current.set(t.id, state);
+          viewRef.current?.setState(state);
+          setSaveStatus("saved");
         }
       },
     );

@@ -19,6 +19,16 @@ fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
     p.canonicalize()
 }
 
+/// Extract inline tags (#tag) from content for the search index tags field.
+pub(crate) fn extract_inline_tags(content: &str) -> String {
+    content
+        .split_whitespace()
+        .filter(|w| w.starts_with('#') && w.len() > 1)
+        .map(|w| w.trim_start_matches('#'))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Read a markdown file from disk.
 #[tauri::command]
 pub fn open_file(path: String) -> Result<String, String> {
@@ -27,15 +37,40 @@ pub fn open_file(path: String) -> Result<String, String> {
 }
 
 /// Write content to a markdown file and re-index it in the vault.
+/// Save a markdown file — the WRITE CHOKE POINT for editor autosaves
+/// (ADR-018 follow-up: single source of truth for file changes).
+///
+/// Contract:
+///   - Registers the path as a SELF-WRITE before touching disk, so the OS
+///     watcher consumes the marker and stays silent: no duplicate events,
+///     no search reindex churn from the watcher path.
+///   - Updates the vault cache and search index directly (the index update
+///     is in-memory; commit policy is owned by the search layer).
+///   - Emits NOTHING: the frontend initiated this write and already knows.
+///     `vault://file-changed` therefore means "changed by something OTHER
+///     than the app" — the contract graph view and plugins will rely on.
 #[tauri::command]
 pub fn save_file(
     path: String,
     content: String,
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<(), String> {
     let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
-    std::fs::write(&abs, &content).map_err(|e| e.to_string())?;
+
+    // Register BEFORE the write so the watcher can never observe the file
+    // in a written-but-unregistered state.
+    if let Ok(mut guard) = state.self_writes.lock() {
+        guard.insert(abs.clone());
+    }
+
+    if let Err(e) = std::fs::write(&abs, &content) {
+        // Roll the marker back so a failed save doesn't swallow the next
+        // genuine external event for this file.
+        if let Ok(mut guard) = state.self_writes.lock() {
+            guard.remove(&abs);
+        }
+        return Err(e.to_string());
+    }
 
     let mut vault = state
         .vault
@@ -46,14 +81,19 @@ pub fn save_file(
         vault.add_document(path_str, &content);
     }
 
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: abs.to_string_lossy().to_string(),
-            kind: "modified".into(),
-            needs_tree_refresh: false,
-        },
-    );
+    drop(vault);
+
+    // Keep the search index logically current (in-memory). The watcher no
+    // longer sees self-writes, so this is now the ONLY index update path
+    // for editor saves. Commit policy is owned by the search layer.
+    if let Ok(mut guard) = state.search.write() {
+        if let Some(ref mut search) = *guard {
+            let path_str = abs.to_string_lossy().to_string();
+            let tags = extract_inline_tags(&content);
+            let _ = search.update_document(&path_str, &content, &tags);
+            let _ = search.commit();
+        }
+    }
 
     Ok(())
 }
