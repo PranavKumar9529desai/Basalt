@@ -3,53 +3,38 @@
 > Mandatory for ALL AI agents (Claude, Codex, Gemini, etc.).  
 > Violating any rule marked 🚫 is a hard error — stop and fix it.  
 >
-> **START HERE:** Before reading anything below, read these two files first:
+> **READ FIRST:**
 > - [`CONVENTIONS.md`](./CONVENTIONS.md) — Authoritative coding standards (supersedes ADRs where they conflict)
-> - [`PLAN.md`](./PLAN.md) — Active cleanup campaign with parallel worktree tasks
->
-> Agent task files live in `.agents/tasks/TEMPLATE.md` — use the template to define new tasks.
-> **Parallel agents:** See [`PLAN.md`](./PLAN.md) for the worktree workflow. Each task gets its own branch + worktree via `scripts/make-worktree.sh`.
+> - [`docs/adr/018-registry-driven-workbench.md`](docs/adr/018-registry-driven-workbench.md) — Current architectural direction
 
 ---
 
 ## What We're Building
 
-Basalt is an Obsidian-class desktop Markdown workspace — Tauri (Rust) backend, React frontend.  
-Goal: match or beat Obsidian in feel (sub-16ms input latency, <800ms TTI, <150ms search on 5k notes).
+**Basalt** — an Obsidian-class desktop Markdown workspace. Tauri (Rust) backend, React frontend.
 
-## Current State (as of 2026-06-24)
+The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150ms search on 5k notes. Every change is measured against that feel. When in doubt, prefer the approach that keeps the app fast.
+
+## Current State (as of 2026-06-25)
 
 | Area | Status |
 |---|---|
-| Three-layer architecture | ✅ Established |
-| Shared orchestration layer | ✅ Established |
-| CommandService (TS package) | ✅ Complete |
-| KeybindingService (TS package) | ✅ Complete |
-| Tab system | ✅ Complete |
-| Per-pane editor (PaneContent) | ✅ Complete — replaces old PaneManager |
-| Theming (`--sat-*` tokens) | ✅ Established |
-| Command palette | ✅ Working |
-| File tree / sidebar | ✅ Working |
-| Note creation (Obsidian-style instant) | ✅ Complete |
-| Search (⌘F + ⌘O, tantivy + nucleo) | ✅ Complete |
-| NoteGraph / backlinks | ⏳ Not started |
+| Four-layer architecture | ✅ Established |
+| CommandService + KeybindingService (registry pattern) | ✅ Complete |
+| Workspace grid + unified header band (`StripSeparator`) | ✅ Complete |
+| Tab system (single pane, DnD, persistence, overflow dropdown) | ✅ Complete |
+| Per-pane editor (`PaneContent`) | ✅ Complete |
+| Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete |
+| Command palette / quick switcher / search (tantivy + nucleo) | ✅ Complete |
+| File tree / sidebar / note creation (Obsidian-style instant) | ✅ Complete |
+| **View registry + generic side docks (ADR-018 Phase 1)** | ⏳ Next up |
+| Leaf types for editor area (ADR-018 Phase 2) | ⏳ Not started |
+| Layout as serializable tree / pane splits (ADR-018 Phase 3) | ⏳ Not started |
+| NoteGraph / backlinks panel | ⏳ Backlinks sidebar exists; graph not started |
 | Rust acceleration (batched IPC) | ⏳ Not started |
-| Editor inline title (rename via title bar) | ⏳ Not started |
+| Plugin host (ADR-018 Phase 5) | ⏳ Not started — do not build before phases 1–4 |
 
-### Refactoring completed (2026-06-24)
-
-The following structural cleanups are DONE and should be treated as the current state:
-
-- **Duplication eliminated**: `PaneInstance.tsx` deleted → `PaneContent.tsx` is the single editor pane source
-- **Circular import broken**: vault no longer re-exports editor hooks
-- **Store slices merged**: 5 tabs store slice files → 2 (`core.ts` + `persistence.ts`)
-- **Dead code removed**: duplicate shadcn ui copies, unused wrapper hooks, unused plugin registration
-- **Vault hooks collapsed**: 9 hooks → 4 (`useVaultTree`, `useVaultMutations`, `useVaultController`, `useVaultActions`)
-- **Editor session store shrunk**: syncing ALL editor state on every keystroke → minimal focused-pane atom
-- **Keyboard shortcuts centralized**: 3 raw `addEventListener("keydown")` → single `useKeyboardShortcuts` hook in `app-shell/hooks/`
-- **Theme persistence abstracted**: `ThemeProvider` no longer hardcodes `invoke()` — injectable `ThemePersistence` interface
-- **Layout merged**: `layout/` + `features/workspace/` → `app-shell/` (single glue layer)
-- **PascalCase enforced**: all component files renamed to match their export name
+**Direction:** the shell must render from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls, never shell surgery. Don't add hardcoded panels to the shell.
 
 ---
 
@@ -88,9 +73,10 @@ Four layers. Dependencies flow downward only. No cycles.
 └────────────────────────┬────────────────────────────┘
                          │ imports
 ┌────────────────────────▼────────────────────────────┐
-│  packages/ui/       Visual primitives               │
-│                    Props in, DOM out                 │
-│  🚫 No Tauri, no business state, no IPC            │
+│  packages/          ui/, editor/, commands/,        │
+│                     keybindings/, theme/            │
+│                     Primitives + registries.        │
+│  🚫 No Tauri, no business state, no IPC (ui/)       │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -112,28 +98,23 @@ Four layers. Dependencies flow downward only. No cycles.
 ```
 apps/tauri/src/
 ├── app-shell/              ← Layout composition (thin glue)
-│   ├── ActivityBar.tsx
+│   ├── ActivityBar.tsx       (becomes Ribbon per ADR-018 lexicon)
 │   ├── Sidebar.tsx
+│   ├── RightSidebar.tsx
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── WorkspaceView.tsx    ← Main shell entry point
+│   ├── ThemeSelect.tsx
+│   ├── WorkspaceView.tsx     ← Workspace grid + header band
 │   ├── WorkspaceOverlays.tsx
-│   ├── WorkspaceInit.tsx    ← One-time boot + persistence
+│   ├── WorkspaceInit.tsx     ← One-time boot + persistence
 │   └── hooks/
 │       └── useWorkspaceTabHandlers.ts
 ├── shared/                 ← Cross-feature orchestration
-│   ├── useWorkspace.ts     ← Vault + tabs + editor + settings wiring
-│   └── paneCommands.ts     ← Tab commands that need editor state
+│   ├── useWorkspace.ts
+│   └── paneCommands.ts
 ├── features/               ← Business logic (zero cross-feature imports)
-│   ├── editor/
-│   ├── search/
-│   ├── settings/
-│   ├── tabs/
-│   └── vault/
+│   ├── editor/  search/  settings/  tabs/  vault/
 ├── routes/                 ← TanStack Router (2 routes max)
-│   ├── __root.tsx
-│   ├── index.tsx
-│   └── routeTree.gen.ts
 └── main.tsx
 ```
 
@@ -143,9 +124,6 @@ apps/tauri/src/
 
 ### 🚫 Always prefer shadcn/Radix over raw Tailwind markup
 
-Use shadcn/ui components for: buttons, inputs, dialogs, dropdowns, scroll areas, separators, cards, tooltips, popovers, modals, context menus.  
-Only write raw HTML+Tailwind when no shadcn component covers the need.
-
 ```tsx
 // ❌ WRONG
 <button className="px-4 py-2 bg-[var(--sat-accent-primary)] rounded">Save</button>
@@ -154,9 +132,6 @@ Only write raw HTML+Tailwind when no shadcn component covers the need.
 // ✅ CORRECT
 import { Button } from "@workspace/ui/components/ui/button";
 <Button variant="default">Save</Button>
-
-import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
-<ScrollArea className="h-full">{children}</ScrollArea>
 ```
 
 ### 🚫 UI components MUST be dumb (stateless/presentational)
@@ -165,52 +140,16 @@ Components in `packages/ui/` MUST NOT: call `invoke()`, fetch data, manage busin
 
 They MAY contain: internal UI state (hover, open/close), refs for DOM measurement, event handlers that call prop callbacks.
 
-### Folder structure
-
-```
-packages/ui/src/components/
-├── ui/           # Atomic shadcn primitives (do not manually edit)
-├── tabs/         # Feature group — index.ts re-exports required
-├── sidebar/      # Feature group — index.ts re-exports required
-└── CommandPalette.tsx  # Standalone fine as single file
-```
-
-One component per file. Filename = component name (PascalCase). Every feature folder needs `index.ts`.
-
 ---
 
 ## 3. Feature Rules
 
-```
-features/
-└── tabs/
-    ├── types.ts
-    ├── store/         # Zustand: max 2 files (core.ts + persistence.ts)
-    ├── hooks/
-    │   ├── useTabs.ts       # Primary hook — feature's public API
-    │   └── useTabDnD.ts     # Secondary hooks for specific concerns
-    └── index.ts             # Re-exports
-```
+Full standards (naming, file budgets, state rules, anti-patterns) live in [`CONVENTIONS.md`](./CONVENTIONS.md). The hard lines:
 
-### 🚫 Store conventions (established during 2026-06 refactoring)
-- **Max 2 store files per feature** — merge all mutation slices into `core.ts`, put persistence/snapshot logic in `persistence.ts`
-- **No "mirror" stores** — if a store only exists to reflect another feature's state, delete it and read from the source directly
-- **No echo-chamber effects** — don't sync ALL editor state into a store on every keystroke. Only store what other components actually consume
-
-### 🚫 Hook conventions (established during 2026-06 refactoring)
-- **Max 4 hooks per feature** — if you have more, merge smaller hooks into the 3-4 that compose naturally
-- **No wrapper hooks that just spread sub-hooks** — merge sub-hook logic directly
-- **Pass state objects as hook params** — don't require callers to call 4 separate hooks before calling the 5th orchestrator hook
-
-### 🚫 Cross-feature imports
-Features MUST NOT import from other features directly. Cross-feature wiring goes through shell.
-
-Every feature exposes its API via hooks. State: Zustand (see [ADR-005](docs/adr/005-zustand-feature-state.md)). No prop drilling.
-
-### 🚫 Shared layer rules
-`shared/` owns ALL cross-feature orchestration. If a module imports from 2+ features, it lives in `shared/` — not in either feature, not in `app-shell/`.
-
-`app-shell/` is layout only — it renders chrome (sidebar, tabs, status bar) and mounts providers. It does NOT contain orchestration logic.
+- **Max 2 store files per feature** (`core.ts` + `persistence.ts`) — no mirror stores, no echo-chamber effects
+- **Max 4 hooks per feature** — no wrapper hooks that just spread sub-hooks
+- **🚫 No cross-feature imports** — wiring goes through `shared/`; types-only exception
+- **Every feature folder has `index.ts`** — the only legal import surface for other layers
 
 ---
 
@@ -234,7 +173,6 @@ Routes exist ONLY for top-level app modes:
 // ❌ WRONG
 <div className="bg-blue-600 text-white border-gray-700">
 <div className="bg-[#1e293b]">
-<div style={{ backgroundColor: '#0f172a' }}>
 
 // ✅ CORRECT
 <div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] border-[var(--sat-layout-border)]">
@@ -255,33 +193,12 @@ Tailwind is allowed for layout/spacing only (`flex`, `gap-2`, `p-4`, `grid`, `w-
 
 ---
 
-## 7. Conventions Established During 2026-06 Refactoring
-
-### Keyboard shortcuts
-- All **global** keyboard shortcuts are defined in `packages/keybindings/keybindings.json`
-- The `KeybindingService` resolves shortcuts and routes to commands or actions
-- Editor-specific shortcuts (like Ctrl+S save) register actions via `useKeybindingService().registerAction()`
-- Modal/dialog-scoped shortcuts (like Escape to close) register actions via the same pattern, gated by `when` clauses
-
-### Theme persistence
-- `ThemeProvider` accepts an optional `persistence` prop implementing `ThemePersistence`
-- Default implementation uses `invoke()` — but tests/Storybook can inject a mock
-- Avoid calling `invoke()` directly inside context providers unless absolutely necessary
-
-### File naming
-- `*.tsx` component files: **PascalCase** matching the exported name (`WorkspaceTabs.tsx`, `PaneContent.tsx`)
-- `*.ts` hook files: **camelCase** with `use` prefix (`useTabs.ts`)
-- `*.ts` store/config/type files: **camelCase** (`store.ts`, `types.ts`, `constants.ts`)
-- `index.ts` barrel exports: use `index.ts` (not PascalCase)
-
----
-
-## 8. Commands
+## 7. Commands
 
 ```bash
-bun run dev          # Start Tauri dev server
-bun run lint         # Biome lint
-bunx tsc --noEmit    # TypeScript type-check (run after any structural change)
+bun run dev          # Start Tauri dev server (repo root)
+bun run lint         # Biome lint (repo root)
+cd apps/tauri && bunx tsc --noEmit   # TypeScript type-check
 bun run build        # Production build
 ```
 
@@ -289,7 +206,7 @@ Always run `bun run lint && bunx tsc --noEmit` after completing any implementati
 
 ---
 
-## 9. Architectural Decision Records
+## 8. Architectural Decision Records
 
 When we finalize an architectural decision, document it in `docs/adr/NNN-name.md`:
 
@@ -306,6 +223,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [010-obsidian-style-note-creation](docs/adr/010-obsidian-style-note-creation.md) | ADR-010: Obsidian-Style Instant Note Creation |
 | [011-prose-typography-system](docs/adr/011-prose-typography-system.md) | ADR-011: Prose Typography System — Inter, Heading Scale, Editor Font Wiring |
 | [017-benchmark-infrastructure](docs/adr/017-benchmark-infrastructure.md) | ADR-017: Benchmark Infrastructure — Criterion for Performance Measurement |
+| [018-registry-driven-workbench](docs/adr/018-registry-driven-workbench.md) | ADR-018: Registry-Driven Workbench |
 <!-- ADR_INDEX_END -->
 
 ---
@@ -323,5 +241,8 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Wire sidebar + tabs + editor together | `apps/tauri/src/shared/` |
 | Register a global keyboard shortcut | `packages/keybindings/` (keybindings.json) |
 | Add a Tauri command handler | `apps/tauri/src-tauri/src/lib.rs` |
-| Add markdown parsing logic | `crates/basalt_core/` |
-| Add filesystem operations | `crates/basalt_fs/` |
+| Add markdown parsing logic | `crates/basalt-parser/` |
+| Add vault/filesystem operations | `crates/basalt-vault/` |
+| Add shared Rust domain types | `crates/basalt-types/` |
+| Add graph/backlinks compute | `crates/basalt-graph/` |
+| Add search/indexing compute | `crates/basalt-search/` |

@@ -18,8 +18,8 @@ apps/tauri/src/
 └── routes/               ← TanStack Router
 
 crates/
-├── basalt-core/          ← Markdown parsing, metadata extraction
-├── basalt-fs/            ← Vault indexing, filesystem watcher
+├── basalt-types/         ← Shared Rust domain types
+├── basalt-vault/         ← Vault indexing, filesystem watcher
 ├── basalt-parser/        ← HeadlessAST markdown parser
 ├── basalt-graph/         ← Wikilink graph, backlinks
 ├── basalt-search/        ← Tantivy full-text + Nucleo fuzzy search
@@ -38,6 +38,6 @@ bun run dev
 ```bash
 bun run dev          # Tauri dev server
 bun run lint         # Biome lint
-bunx tsc --noEmit    # TypeScript type-check
+bunx tsc --noEmit    # TypeScript type-check (run from apps/tauri)
 bun run build        # Production build
 ```

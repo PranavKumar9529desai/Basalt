@@ -122,7 +122,7 @@ import { useTabsStore } from "../features/tabs";
 
 Exception: a feature may import **types only** from another feature's `types.ts`, but never re-export them.
 
-### 2.3 File Count Budget per Feature
+### 2.4 File Count Budget per Feature
 
 | Aspect | Max | Why |
 |--------|-----|-----|
@@ -289,18 +289,20 @@ const SettingsPanel = lazy(() => import("./SettingsPanel"));
 
 ---
 
-## 8. File Organization (Final Target State)
+## 8. File Organization (Current Structure)
 
 ```
 apps/tauri/src/
 ├── app-shell/
-│   ├── WorkspaceView.tsx        # Main layout composition
+│   ├── WorkspaceView.tsx        # Workspace grid + header band
 │   ├── WorkspaceInit.tsx        # One-time boot + persistence
+│   ├── WorkspaceOverlays.tsx
 │   ├── ActivityBar.tsx
 │   ├── Sidebar.tsx
+│   ├── RightSidebar.tsx
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── WorkspaceOverlays.tsx
+│   ├── ThemeSelect.tsx
 │   └── hooks/
 │       └── useWorkspaceTabHandlers.ts
 ├── shared/
@@ -309,39 +311,37 @@ apps/tauri/src/
 ├── features/
 │   ├── editor/
 │   │   ├── PaneContent.tsx
-│   │   ├── components/CommandPalette.tsx
-│   │   ├── hooks/useEditor.ts
+│   │   ├── components/          # CommandPalette, EditorComponent, EditorContextMenu
+│   │   ├── hooks/               # useEditor, useEditorCommands
+│   │   ├── commands.ts
+│   │   ├── store.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── tabs/
-│   │   ├── components/WorkspaceTabs.tsx
-│   │   ├── hooks/
-│   │   │   ├── useTabs.ts
-│   │   │   ├── useTabPersistence.ts
-│   │   │   └── useTabDnD.ts
-│   │   ├── store/
-│   │   │   ├── core.ts
-│   │   │   └── persistence.ts
+│   │   ├── components/          # WorkspaceTabs, WorkspaceTabsBar
+│   │   ├── hooks/               # useTabs, useTabDnD, useTabIO, useTabPersistence
+│   │   ├── store/               # core.ts + persistence.ts
+│   │   ├── constants.ts
+│   │   ├── selectors.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── vault/
-│   │   ├── hooks/
-│   │   │   ├── useVaultTree.ts
-│   │   │   ├── useVaultMutations.ts
-│   │   │   └── useVaultController.ts
-│   │   ├── components/
-│   │   │   ├── FileTree.tsx
-│   │   │   └── BacklinksSidebar.tsx
+│   │   ├── hooks/               # useVaultTree, useVaultMutations,
+│   │   │                        # useVaultController, useVaultActions
+│   │   ├── components/          # FileTree, BacklinksSidebar, SaveIndicator, VaultSplash
+│   │   ├── commands.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── search/
-│   │   ├── components/SearchModal.tsx
-│   │   ├── components/QuickSwitcher.tsx
+│   │   ├── components/          # SearchModal, QuickSwitcher
+│   │   ├── commands.ts
 │   │   ├── store.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   └── settings/
-│       ├── components/SettingsModal.tsx
+│       ├── components/          # SettingsModal, SettingsNav, SettingsPanel, sections/
+│       ├── commands.ts
+│       ├── settings-data.ts
 │       ├── store.ts
 │       └── index.ts
 ├── routes/
@@ -359,9 +359,13 @@ packages/ui/src/components/
 ├── confirm-dialog/
 ├── input-dialog/
 ├── palette-shell/
-├── status-bar/
+├── top-strip/                     # StripSeparator (header-band hairline)
 └── (no loose files at components/ level)
 ```
+
+Direction (view registry, leaf types, pane splits) is defined in
+[ADR-018](docs/adr/018-registry-driven-workbench.md) — update this section
+as phases land.
 
 ---
 
