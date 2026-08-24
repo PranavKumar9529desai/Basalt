@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FileChangeEvent, SaveStatus } from "../../vault/types";
 import { useLatestRef } from "../hooks/useLatestRef";
 import { useNoteIO } from "../hooks/useNoteIO";
-import { useFocusedPaneStore } from "../store";
+import { useActiveNoteStore } from "../store";
 import { EditorComponent } from "./EditorComponent";
 import { EditorContextMenu } from "./EditorContextMenu";
 
@@ -148,7 +148,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       if (!state) return;
       const text = state.doc.toString();
       const trimmed = text.trim();
-      useFocusedPaneStore.getState().setStats({
+      useActiveNoteStore.getState().setStats({
         chars: text.length,
         words: trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length,
       });
@@ -195,16 +195,23 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   // doesn't save, and the autosave timer only covers the active tab.
   useEffect(() => {
     return services.onTabStructureChanged(() => {
-      const open = services.getOpenTabIds();
+      const openIds = services.getOpenTabIds();
+      const openPaths = services.getOpenTabPaths();
       for (const id of statesRef.current.keys()) {
-        if (open.has(id)) continue;
+        // Match on path as well as id: if a future rename/move feature
+        // rekeys tabs (id derives from path), the old id disappears while
+        // the note itself is still open — pruning it would drop live state.
+        const meta = tabMetaRef.current.get(id);
+        if (openIds.has(id) || (meta && openPaths.has(meta.path))) continue;
         if (dirtyRef.current.has(id)) void saveTab(id);
         statesRef.current.delete(id);
         scrollRef.current.delete(id);
         dirtyRef.current.delete(id);
       }
-      for (const id of tabMetaRef.current.keys()) {
-        if (!open.has(id)) tabMetaRef.current.delete(id);
+      for (const [id, meta] of tabMetaRef.current) {
+        if (!openIds.has(id) && !openPaths.has(meta.path)) {
+          tabMetaRef.current.delete(id);
+        }
       }
     });
   }, [services, saveTab]);
@@ -258,9 +265,9 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     }
     prevTabRef.current = t;
 
-    useFocusedPaneStore
+    useActiveNoteStore
       .getState()
-      .setFocusedPaneSelected({ path: t.path, name: t.title });
+      .setActiveNote({ path: t.path, name: t.title });
     void ioRef.current.refreshBacklinks(t.path);
     void showTab(t);
   }, [tab.id, showTab, saveTab, ioRef, tabRef]);

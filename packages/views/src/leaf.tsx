@@ -32,6 +32,9 @@ export interface LeafServices {
   /** Snapshot of every open tab id, across all panes. Leaves key per-tab
    * caches by tab id and prune on tab close via onTabStructureChanged. */
   getOpenTabIds: () => Set<string>;
+  /** Snapshot of every open tab's note path. Pruning must match on path
+   * too: a tab whose id changed (rename/move rekey) is NOT closed. */
+  getOpenTabPaths: () => Set<string>;
   /** Fires after structural tab mutations (open/close/pin/rename). Returns
    * an unsubscribe function. Ephemeral changes (dirty/active) don't fire. */
   onTabStructureChanged: (cb: () => void) => () => void;

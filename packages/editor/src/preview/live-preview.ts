@@ -386,9 +386,14 @@ class PreviewScheduler {
     view: EditorView;
   }) {
     const field = update.view.state.field(livePreviewField, false);
-    const needsCatchUp = field !== undefined && !field.complete;
+    // Docs at or below LAZY_DOC_THRESHOLD rebuilt synchronously in the field
+    // during this same transaction — an idle rebuild would be pure waste.
+    const isLazyDoc =
+      update.view.state.doc.length > LAZY_DOC_THRESHOLD ||
+      (field !== undefined && !field.complete);
     if (
-      ((update.docChanged || update.selectionSet) || needsCatchUp) &&
+      (update.docChanged || update.selectionSet) &&
+      isLazyDoc &&
       !this.scheduled &&
       !editorBenchmarkState.active
     ) {

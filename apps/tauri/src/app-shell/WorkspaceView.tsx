@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PaneRenderContext } from "../features/tabs";
 import { useTabs, useTabsStore, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
 import type { BootResult } from "../features/vault";
-import { useVaultActions, VaultSplash } from "../features/vault";
+import { useVaultMutations, VaultSplash } from "../features/vault";
 import "../shared/paneCommands";
 import { ActivityBar } from "./ActivityBar";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
@@ -38,14 +38,14 @@ interface WorkspaceViewProps {
 }
 
 export function WorkspaceView({ boot }: WorkspaceViewProps) {
-  const vaultActions = useVaultActions();
+  const { isIndexing, status, pickAndSetVault } = useVaultMutations();
 
   if (!boot.vault_path) {
     return (
       <VaultSplash
-        isIndexing={vaultActions.isIndexing}
-        status={vaultActions.status}
-        onOpenVault={vaultActions.pickAndSetVault}
+        isIndexing={isIndexing}
+        status={status}
+        onOpenVault={pickAndSetVault}
       />
     );
   }
@@ -76,17 +76,22 @@ function WorkspaceShell({
     tabActions: {
       activateTab: tabs.activateTab,
       closeTab: tabs.closeTab,
-      closeOtherTabs: tabs.closeOtherTabs,
-      closeTabsToRight: tabs.closeTabsToRight,
       togglePinTab: tabs.togglePinTab,
     },
-    focusedSessionTab: ws.focusedSessionTab,
   });
 
   // Stable services bag for leaf components — identity must not change per
   // render, or every keystroke would re-render the active leaf.
   const getOpenTabIds = useCallback(
     () => new Set(Object.keys(useTabsStore.getState().tabs)),
+    [],
+  );
+
+  const getOpenTabPaths = useCallback(
+    () =>
+      new Set(
+        Object.values(useTabsStore.getState().tabs).map((t) => t.path),
+      ),
     [],
   );
 
@@ -108,9 +113,17 @@ function WorkspaceShell({
       markTabDirty: tabs.markTabDirty,
       findNote: ws.findNote,
       getOpenTabIds,
+      getOpenTabPaths,
       onTabStructureChanged,
     }),
-    [ws.openNote, tabs.markTabDirty, ws.findNote, getOpenTabIds, onTabStructureChanged],
+    [
+      ws.openNote,
+      tabs.markTabDirty,
+      ws.findNote,
+      getOpenTabIds,
+      getOpenTabPaths,
+      onTabStructureChanged,
+    ],
   );
 
   const renderPane = useCallback(
