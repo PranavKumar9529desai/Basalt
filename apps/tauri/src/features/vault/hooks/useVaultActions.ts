@@ -3,10 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
 import type { BootResult } from "../types";
 
-// ---------------------------------------------------------------------------
-// Hook input / output types
-// ---------------------------------------------------------------------------
-
 export interface UseVaultActionsReturn {
   isIndexing: boolean;
   status: string | null;
@@ -33,8 +29,6 @@ export function useVaultActions(): UseVaultActionsReturn {
   const [isIndexing, setIsIndexing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  // ── Pick a new vault folder ───────────────────────────────────────────────
-
   const pickAndSetVault = useCallback(async () => {
     try {
       // Use the native Rust dialog command so we don't need the JS dialog plugin.
@@ -57,8 +51,6 @@ export function useVaultActions(): UseVaultActionsReturn {
       setIsIndexing(false);
     }
   }, [router]);
-
-  // ── Re-index the current vault ────────────────────────────────────────────
 
   const reindexVault = useCallback(async () => {
     try {

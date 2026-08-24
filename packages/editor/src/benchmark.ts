@@ -21,8 +21,6 @@ import type { EditorView } from "@codemirror/view";
 /** Set while a benchmark is running. Update listeners must skip work. */
 export const editorBenchmarkState = { active: false };
 
-// ── Deterministic fixture generation ─────────────────────────────────────
-
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -105,8 +103,6 @@ export function generateMarkdownDoc(
   }
   return parts.join("\n");
 }
-
-// ── Benchmark ────────────────────────────────────────────────────────────
 
 export interface TypingBenchmarkSample {
   /** Target document size in bytes. */
@@ -228,8 +224,6 @@ export function runTypingBenchmark(
   return results;
 }
 
-// ── Extension isolation mode ─────────────────────────────────────────────
-
 /** One extension subset to measure, e.g. `{ name: "+live-preview", … }`. */
 export interface IsolationVariant {
   name: string;
@@ -264,8 +258,6 @@ export function runIsolationBenchmark(
   view.setState(originalState); // no-op safety net
   return results;
 }
-
-// ── Report formatting (devtools-free output) ─────────────────────────────
 
 export type BenchmarkReportRow = TypingBenchmarkSample & {
   variant?: string;

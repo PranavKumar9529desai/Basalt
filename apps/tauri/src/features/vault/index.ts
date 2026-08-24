@@ -1,7 +1,3 @@
-// ---------------------------------------------------------------------------
-// Vault feature — barrel export
-// ---------------------------------------------------------------------------
-
 export { BacklinksSidebar } from "./components/BacklinksSidebar";
 export { FileTree } from "./components/FileTree";
 export { SaveIndicator } from "./components/SaveIndicator";

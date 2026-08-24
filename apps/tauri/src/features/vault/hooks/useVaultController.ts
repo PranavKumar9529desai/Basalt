@@ -1,14 +1,7 @@
-// ---------------------------------------------------------------------------
-// useVaultController — single hook merging selection, clipboard, context menu,
-// and file-tree controller logic (was 4 separate hooks).
-// ---------------------------------------------------------------------------
-
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { FlatTreeNode } from "../types";
 import type { UseVaultMutationsReturn } from "./useVaultMutations";
-
-// ---- In-memory clipboard state (was useVaultClipboard) ----
 
 interface VaultClipboardItem {
   path: string;
@@ -55,8 +48,6 @@ function useVaultClipboardState() {
     isCutPath,
   };
 }
-
-// ---- Context menu state (was useVaultContextMenu) ----
 
 type VaultContextTargetKind = "file" | "folder" | "root";
 
@@ -109,8 +100,6 @@ function useVaultContextMenuState() {
     closeMenu,
   };
 }
-
-// ---- Selection state (was useVaultSelection) ----
 
 function useVaultSelectionState() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -178,8 +167,6 @@ function useVaultSelectionState() {
   };
 }
 
-// ---- Editor interface (same shape as before) ----
-
 interface NoteSelection {
   name: string;
   path: string;
@@ -190,10 +177,6 @@ interface VaultNoteController {
   loadNote: (note: NoteSelection) => void | Promise<void>;
   closeNote: () => void;
 }
-
-// ---------------------------------------------------------------------------
-// Options
-// ---------------------------------------------------------------------------
 
 export interface UseVaultControllerOptions {
   treeNodes: FlatTreeNode[];
@@ -207,12 +190,7 @@ export interface UseVaultControllerOptions {
   onFileOpen?: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
 }
 
-// ---------------------------------------------------------------------------
-// Return type
-// ---------------------------------------------------------------------------
-
 export interface UseVaultControllerReturn {
-  // Controller methods (previously from useVaultFileTreeController)
   createNoteInstant: () => Promise<void>;
   startFolderInline: () => void;
   cutIds: Set<string>;
@@ -234,16 +212,14 @@ export interface UseVaultControllerReturn {
   onMenuCut: () => void;
   onMenuPaste: () => Promise<void>;
   onMenuDelete: () => void;
-  // Selection state (merged from useVaultSelection)
   selection: ReturnType<typeof useVaultSelectionState>;
-  // Context menu state (merged from useVaultContextMenu)
   contextMenu: ReturnType<typeof useVaultContextMenuState>;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
+/**
+ * Single controller hook for the file tree: merges selection, clipboard,
+ * context-menu, and file-operation logic that was previously four hooks.
+ */
 export function useVaultController({
   treeNodes,
   visibleNodes,
@@ -573,7 +549,6 @@ export function useVaultController({
   }, [editor.selected, mutations, selection.selectedIds, treeNodes]);
 
   return {
-    // Controller methods
     createNoteInstant,
     startFolderInline,
     cutIds,
@@ -592,7 +567,6 @@ export function useVaultController({
     onMenuCut,
     onMenuPaste,
     onMenuDelete,
-    // Exposed state
     selection,
     contextMenu,
   };

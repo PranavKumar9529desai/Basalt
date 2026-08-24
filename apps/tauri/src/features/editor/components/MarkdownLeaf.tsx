@@ -28,10 +28,6 @@ import { EditorContextMenu } from "./EditorContextMenu";
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const STATS_DEBOUNCE_MS = 500;
 
-// ---------------------------------------------------------------------------
-// Conflict banner + save indicator (rendered above the editor)
-// ---------------------------------------------------------------------------
-
 function ConflictBanner({
   onKeepMine,
   onDiscard,
@@ -65,19 +61,14 @@ function ConflictBanner({
   );
 }
 
-// ---------------------------------------------------------------------------
-// MarkdownLeaf — the registered "markdown" leaf type (ADR-018 Phase 2).
-//
-// Performance model:
-//   - ONE EditorView for the whole session; documents are swapped via
-//     view.setState() with a per-tab EditorState cache (undo history,
-//     cursor and selection survive tab switches — no reload per switch).
-//   - Typing causes ZERO React re-renders: the document lives in CM.
-//   - Saves capture the doc from the CM state (not React state) and are
-//     debounced; switching tabs flushes the previous tab first.
-//   - Word/char stats are debounced, not O(n) per keystroke.
-// ---------------------------------------------------------------------------
-
+/**
+ * Registered "markdown" leaf (ADR-018 Phase 2). One EditorView per session;
+ * documents are swapped via setState() with a per-tab EditorState cache, so
+ * undo history, cursor, and scroll survive tab switches. Typing never
+ * re-renders React — the doc lives in CM6. Saves capture the doc from CM
+ * state (debounced; a tab switch flushes the previous tab first). Word/char
+ * stats are debounced, never O(n) per keystroke.
+ */
 export function MarkdownLeaf({ tab }: LeafProps) {
   const services = useLeafServices();
   const io = useNoteIO();
@@ -105,8 +96,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   const ioRef = useLatestRef(io);
   const setSaveStatusRef = useLatestRef(setSaveStatus);
 
-  // ── Wikilink navigation — opens the target as a tab via services ────────
-
   const handleOpenLink = useCallback(
     (linkName: string) => {
       const s = servicesRef.current;
@@ -120,8 +109,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     [ioRef, servicesRef],
   );
 
-  // ── Extensions — built once; every EditorState uses this exact list ──────
-
+  // Built once — every EditorState (initial, per-tab, conflict reload) must
+  // use this exact list.
   const extensions: Extension[] = useMemo(
     () => [
       ...createEditorExtensions({
@@ -149,8 +138,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   );
   const extensionsRef = useLatestRef(extensions);
 
-  // ── Stats — debounced, computed from the CM doc, not React state ─────────
-
+  // Stats are debounced and computed from the CM doc, not React state.
   const scheduleStatsRef = useRef<() => void>(() => {});
   scheduleStatsRef.current = () => {
     if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
@@ -166,8 +154,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       });
     }, STATS_DEBOUNCE_MS);
   };
-
-  // ── Save pipeline ────────────────────────────────────────────────────────
 
   const saveTab = useCallback(
     async (tabId: string) => {
@@ -203,8 +189,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     }, AUTOSAVE_DEBOUNCE_MS);
   };
 
-  // ── Tab switching — doc swap, never remount ──────────────────────────────
-
+  // Doc swap, never remount.
   const showTab = useCallback(
     async (t: typeof tab) => {
       const view = viewRef.current;
@@ -260,8 +245,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     void showTab(t);
   }, [tab.id, showTab, saveTab, ioRef, tabRef]);
 
-  // ── View ready ───────────────────────────────────────────────────────────
-
   const handleReady = useCallback(
     (view: EditorView) => {
       viewRef.current = view;
@@ -276,8 +259,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     [extensions],
   );
 
-  // ── Ctrl+S ───────────────────────────────────────────────────────────────
-
   useEffect(() => {
     keybindingService.registerAction("saveActiveFile", () => {
       const t = tabRef.current;
@@ -291,12 +272,10 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     return () => keybindingService.setContext("editorFocused", false);
   }, [keybindingService]);
 
-  // ── Dev: editor typing benchmark (ADR-017 frontend counterpart) ─────────
-  //
-  // Results go to a temp file via `write_dev_report` so prod runs need NO
-  // devtools open (devtools inflate measurements 2–5×). Console output is
-  // a convenience copy only.
-
+  // Dev: editor typing benchmark (ADR-017 frontend counterpart). Results go
+  // to a temp file via write_dev_report so prod runs need NO devtools open
+  // (devtools inflate measurements 2–5×); console output is a convenience
+  // copy only.
   useEffect(() => {
     if (!view) return;
 
@@ -366,8 +345,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     };
   }, [view, io, ioRef, handleOpenLink]);
 
-  // ── Flush on window blur / unmount ───────────────────────────────────────
-
   useEffect(() => {
     const onBlur = () => {
       const t = tabRef.current;
@@ -387,20 +364,14 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     [saveTab, tabRef],
   );
 
-  // ── External file-change reconciliation ──────────────────────────────
-  //
-  // With self-write suppression in Rust, events reaching this handler are
-  // external by contract — but the CONTENT DIFF remains the only arbiter
-  // (vim FileChangedShell / VS Code text-file model): duplicate OS events,
-  // marker misses, or no-op touches must never surface as conflicts or
-  // destroy undo history.
-  //
-  //   disk == doc    → echo / no-op → ignore
-  //   disk != doc,
-  //   dirty          → genuine concurrent edit → conflict banner
-  //   disk != doc,
-  //   clean          → external edit → reload from disk
-
+  // External file-change reconciliation. With self-write suppression in Rust,
+  // events reaching this handler are external by contract — but the content
+  // diff remains the only arbiter (vim FileChangedShell model): duplicate OS
+  // events, marker misses, or no-op touches must never surface as conflicts
+  // or destroy undo history.
+  //   disk == doc        → echo / no-op → ignore
+  //   disk != doc, dirty → concurrent edit → conflict banner
+  //   disk != doc, clean → external edit → reload from disk
   useEffect(() => {
     const unlistenPromise = listen<FileChangeEvent>(
       "vault://file-changed",
@@ -448,8 +419,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     };
   }, [extensionsRef, ioRef, tabRef]);
 
-  // ── Conflict actions ─────────────────────────────────────────────────────
-
   const handleKeepMine = useCallback(() => {
     const t = tabRef.current;
     if (!t) return;
@@ -477,8 +446,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       console.error("[MarkdownLeaf] discardAndReload failed:", err);
     }
   }, [extensionsRef, ioRef, servicesRef, tabRef]);
-
-  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <>

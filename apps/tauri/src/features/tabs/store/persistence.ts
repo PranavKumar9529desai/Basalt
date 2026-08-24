@@ -1,13 +1,7 @@
-// ---------------------------------------------------------------------------
-// Persistence slice — workspace snapshot export/hydrate
-// ---------------------------------------------------------------------------
-
 import type { StateCreator } from "zustand";
 import { ROOT_PANE_ID } from "../constants";
 import type { TabPaneId, TabPane, TabId } from "../types";
 import type { TabsState } from "./types";
-
-// ---- slice interface ----
 
 export interface PersistenceSlice {
   toWorkspaceSnapshot: TabsState["toWorkspaceSnapshot"];

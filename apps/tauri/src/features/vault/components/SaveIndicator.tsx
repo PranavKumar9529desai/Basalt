@@ -1,9 +1,5 @@
 import type { SaveStatus } from "../types";
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
 const CONFIG: Record<SaveStatus, { dot: string; label: string }> = {
   saved: { dot: "bg-[var(--sat-state-success)]", label: "Saved" },
   saving: {

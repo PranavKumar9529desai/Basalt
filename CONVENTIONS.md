@@ -249,6 +249,7 @@ When you encounter any of these, remove them — don't leave them for later:
 | Unused plugin/extension systems | `registerSection`/`unregisterSection` with no plugins |
 | Console.log fallbacks | `callback: () => { if (fn) fn(); else console.log(...) }` |
 | Re-export chains of >1 hop | `layout/index.tsx` that just re-exports from features |
+| Banner/box comment blocks | `// ----` ASCII headers + essays → replace with a 1–3 line doc comment on the code itself (§8) |
 
 ---
 
@@ -289,7 +290,69 @@ const SettingsPanel = lazy(() => import("./SettingsPanel"));
 
 ---
 
-## 8. File Organization (Current Structure)
+## 8. Comments
+
+### 8.1 🚫 No banner/box comments
+
+Never write ASCII-art section headers or boxed essays. They rot out of sync
+with the code, they're noise in diffs and greps, and a file-top essay is
+skipped by every reader:
+
+```
+// ❌ WRONG
+// ---------------------------------------------------------------------------
+// MarkdownLeaf — the registered "markdown" leaf type (ADR-018 Phase 2).
+//
+// Performance model:
+//   - ONE EditorView for the whole session; documents are swapped via
+//     view.setState() ...
+// ---------------------------------------------------------------------------
+```
+
+```tsx
+// ✅ CORRECT — short doc comment on the thing itself
+/**
+ * Registered "markdown" leaf. One EditorView per session; documents are
+ * swapped via setState() so undo history and cursor survive tab switches.
+ * Typing never re-renders React — the doc lives in CM6, not component state.
+ */
+export function MarkdownLeaf({ tab }: { tab: WorkspaceTab }) {
+```
+
+### 8.2 What comments are for
+
+A comment answers a question the code raises but can't answer itself:
+
+| Write a comment that... | Example |
+|---|---|
+| Explains **why** this approach over the obvious alternative | `setState() not dispatch — history/cursor survive tab switches` |
+| States an **invariant** other code depends on | `vault://file-changed means external change only — self-writes suppressed in Rust` |
+| Names a **non-obvious constraint** | `debounced — stats are O(n), too slow per keystroke` |
+
+Never narrate what the next line of code obviously does. If the comment
+restates the code, delete it.
+
+### 8.3 ADR references are footnotes, not explanations
+
+`// Per ADR-018 Phase 2, we do X` explains nothing — it outsources the
+explanation to another document the reader must go find. State the reasoning
+in the comment itself; cite the ADR afterwards as provenance:
+
+```tsx
+// ✅ CORRECT — reasoning inline, ADR as a pointer
+// One view + setState doc-swap keeps undo/cursor alive across tab switches
+// (rationale: ADR-018).
+
+// ❌ WRONG — name-drop instead of explanation
+// As decided in ADR-018 Phase 2, this is the registered markdown leaf.
+```
+
+A comment must stand alone after the ADR it cites is renamed, superseded,
+or forgotten.
+
+---
+
+## 9. File Organization (Current Structure)
 
 ```
 apps/tauri/src/
@@ -369,7 +432,7 @@ as phases land.
 
 ---
 
-## 9. Commit Message Convention
+## 10. Commit Message Convention
 
 ```
 type(scope): description

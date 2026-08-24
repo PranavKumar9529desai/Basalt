@@ -40,7 +40,6 @@ export function useTabPersistence({
   const restoredRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Restore previous session once ──────────────────────────────────────────
   useEffect(() => {
     if (!enabled || restoredRef.current) return;
     const maybeSnapshot = workspace?.[workspaceKey];
@@ -50,7 +49,6 @@ export function useTabPersistence({
     restoredRef.current = true;
   }, [enabled, hydrateFromWorkspaceSnapshot, workspace, workspaceKey]);
 
-  // ── Persist on structural changes only ─────────────────────────────────────
   useEffect(() => {
     if (!enabled || !restoredRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);

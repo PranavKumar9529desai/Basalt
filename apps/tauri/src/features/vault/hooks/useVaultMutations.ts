@@ -1,9 +1,3 @@
-// ---------------------------------------------------------------------------
-// useVaultMutations — merged create + delete mutations
-// Previously split across useVaultCreateMutations + useVaultDeleteMutations +
-// a wrapper useVaultMutations. Now one file.
-// ---------------------------------------------------------------------------
-
 import { invoke } from "@tauri-apps/api/core";
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useState } from "react";
@@ -49,10 +43,8 @@ export interface UseVaultMutationsReturn {
 }
 
 export function useVaultMutations(): UseVaultMutationsReturn {
-  // --- Ghost state ---
   const [ghostNode, setGhostNode] = useState<GhostNode | null>(null);
 
-  // --- Delete state ---
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(
     null,
@@ -63,11 +55,8 @@ export function useVaultMutations(): UseVaultMutationsReturn {
   );
   const [pendingDeleteNames, setPendingDeleteNames] = useState<string[]>([]);
 
-  // --- Shared ---
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // ---- Ghost/inline creation ----
 
   const createNoteInline = useCallback(
     (opts?: { parentRelPath?: string; depth?: number }) => {
@@ -102,8 +91,6 @@ export function useVaultMutations(): UseVaultMutationsReturn {
   const clearGhost = useCallback(() => {
     setGhostNode(null);
   }, []);
-
-  // ---- Create (invoke-backed) ----
 
   const createNote = useCallback(
     async (name: string, parent?: string): Promise<CreateNoteResult | null> => {
@@ -181,8 +168,6 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     },
     [],
   );
-
-  // ---- Delete ----
 
   const requestDelete = useCallback((path: string, name: string) => {
     setPendingDeletePaths([path]);

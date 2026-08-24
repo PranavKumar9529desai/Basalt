@@ -112,8 +112,6 @@ export function TabsBar({
     right: number;
   } | null>(null);
 
-  // ── Overflow measurement (visibility-based, no scrolling) ───────────────
-
   const tabWidthsRef = useRef<Map<string, number>>(new Map());
   const [visibleTabCount, setVisibleTabCount] = useState(tabs.length);
 
@@ -182,8 +180,6 @@ export function TabsBar({
     return () => document.removeEventListener("keydown", onKey);
   }, [dropdownOpen]);
 
-  // ── Drag-and-drop indicator state ────────────────────────────────────────
-
   const [dropIndicator, setDropIndicator] = useState<{
     tabId: string;
     edge: "left" | "right";
@@ -239,14 +235,10 @@ export function TabsBar({
     [onTabDragEnd, setDropIndicatorBoth],
   );
 
-  // ── Dropdown helpers ─────────────────────────────────────────────────────
-
   const closeDropdown = useCallback(() => {
     setDropdownOpen(false);
     setDropdownPosition(null);
   }, []);
-
-  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div

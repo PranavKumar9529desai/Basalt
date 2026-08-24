@@ -126,7 +126,10 @@ const codeSyntaxHighlighter = HighlightStyle.define([
   { tag: t.blockComment, class: "sat-syntax-comment" },
   { tag: t.docComment, class: "sat-syntax-doc" },
   { tag: t.function(t.variableName), class: "sat-syntax-function" },
-  { tag: t.definition(t.function(t.variableName)), class: "sat-syntax-function" },
+  {
+    tag: t.definition(t.function(t.variableName)),
+    class: "sat-syntax-function",
+  },
   { tag: t.typeName, class: "sat-syntax-type" },
   { tag: t.className, class: "sat-syntax-type" },
   { tag: t.variableName, class: "sat-syntax-variable" },
@@ -180,8 +183,5 @@ const codeSyntaxHighlighter = HighlightStyle.define([
  * with a recognised programming language.
  */
 export function codeSyntaxHighlightingExtension(): Extension {
-  return [
-    CODE_HIGHLIGHT_THEME,
-    syntaxHighlighting(codeSyntaxHighlighter),
-  ];
+  return [CODE_HIGHLIGHT_THEME, syntaxHighlighting(codeSyntaxHighlighter)];
 }

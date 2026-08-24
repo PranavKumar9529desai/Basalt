@@ -6,10 +6,6 @@ interface BacklinksSidebarProps {
   onOpenNote: (note: LinkSuggestion) => void;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function pathToLinkSuggestion(path: string): LinkSuggestion {
   const name = path.split("/").pop() ?? path;
   return { name, path };

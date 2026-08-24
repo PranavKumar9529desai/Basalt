@@ -17,20 +17,6 @@ import {
   useMemo,
 } from "react";
 
-// ---------------------------------------------------------------------------
-// WorkspaceProvider — the "app context" for workbench views (ADR-018).
-//
-// Owns the single instance of the cross-feature composition (vault tree
-// state + useWorkspace controller/mutations) and exposes it to views via
-// context. Views consume this instead of receiving prop drills from the
-// shell — the same role Obsidian's `app` object plays for its views, and
-// the surface future plugins will receive.
-//
-// There is exactly ONE provider (mounted by WorkspaceView); hooks like
-// useWorkspace hold state (contextMenu, selection) and must never be
-// instantiated twice.
-// ---------------------------------------------------------------------------
-
 function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const tree = useVaultTree(initialTree);
   const { treeNodes, visibleNodes, toggleFolder, openFolder, refreshTree } =
@@ -113,6 +99,14 @@ export type WorkspaceContextValue = ReturnType<typeof useWorkspaceState>;
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
+/**
+ * App context for workbench views (ADR-018): owns the single instance of the
+ * cross-feature composition (vault tree + useWorkspace) and exposes it via
+ * context instead of prop drills — the role Obsidian's `app` object plays
+ * for its views, and the surface future plugins will receive. Mount exactly
+ * once (WorkspaceView); the hooks underneath hold state and must never be
+ * instantiated twice.
+ */
 export function WorkspaceProvider({
   vaultPath,
   initialTree,

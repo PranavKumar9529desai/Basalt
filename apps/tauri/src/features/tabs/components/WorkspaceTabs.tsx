@@ -3,10 +3,6 @@ import { type ReactNode, useMemo } from "react";
 import { useTabsStore } from "../store";
 import type { TabModel } from "../types";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface PaneRenderContext {
   activeTab: TabModel | null;
   markTabDirty: (tabId: string, dirty: boolean) => void;
@@ -16,12 +12,11 @@ export interface WorkspaceTabsProps {
   renderPane: (context: PaneRenderContext) => ReactNode;
 }
 
-// ---------------------------------------------------------------------------
-// WorkspaceTabs — single pane, reads directly from tabs store.
-// The tab bar itself lives in WorkspaceTabsBar and is rendered by the
-// shell as the editor column's header cell in the workspace grid.
-// ---------------------------------------------------------------------------
-
+/**
+ * Single-pane tab host reading directly from the tabs store. The tab bar
+ * itself lives in WorkspaceTabsBar, rendered by the shell as the editor
+ * column's header cell in the workspace grid.
+ */
 export function WorkspaceTabs({ renderPane }: WorkspaceTabsProps) {
   const activeTabId = useTabsStore((state) => state.pane.activeTabId);
   const markTabDirty = useTabsStore((state) => state.markTabDirty);

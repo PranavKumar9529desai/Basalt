@@ -28,18 +28,15 @@ interface WorkspaceInitProps {
 }
 
 export function WorkspaceInit({ boot }: WorkspaceInitProps) {
-  // ── 1. Settings hydration ────────────────────────────────────────────────
   // Plain function call — reads boot.settings once and writes to the Zustand
   // settings store. Idempotent: calling again with same data is a no-op.
   initSettings(boot.settings);
 
-  // ── 2. Tab persistence ───────────────────────────────────────────────────
   // Restores the previous session's tab layout from boot.workspace on mount,
   // then debounces saves back to Rust on structural mutations.
   // Needs boot.workspace to seed the hydration — cannot be moved to stores.
   useTabPersistence({ workspace: boot.workspace });
 
-  // ── Render ───────────────────────────────────────────────────────────────
   // WorkspaceView is a pure layout — reads from stores, receives boot for
   // vault tree initialization (useVaultTree needs boot.tree).
   return <WorkspaceView boot={boot} />;

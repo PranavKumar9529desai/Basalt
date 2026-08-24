@@ -71,7 +71,6 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
   const [treeNodes, setTreeNodes] = useState<FlatTreeNode[]>(initialTree);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
-  // ── Visibility derivation ──────────────────────────────────────────────
   // A node is visible when ALL of its ancestor folders are open.
   // We enforce this invariant on the `openFolders` set itself: when a folder
   // is closed we remove all its descendants from the set.  That means we only
@@ -90,8 +89,6 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
       return openFolders.has(parentRel);
     });
   }, [treeNodes, openFolders]);
-
-  // ── Toggle ─────────────────────────────────────────────────────────────
 
   const toggleFolder = useCallback((relPath: string) => {
     setOpenFolders((prev) => {
@@ -116,9 +113,8 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
     });
   }, []);
 
-  // Open a folder and all ancestors.
-  // used for backlinks and quick-open
-  // for relveling folder, we need to open all ancestors
+  // Open a folder and all ancestors — used by backlinks, quick-open, and
+  // folder reveal, all of which need the full ancestor chain visible.
   const openFolder = useCallback((relPath: string) => {
     if (!relPath) return;
     const parts = relPath.split("/").filter(Boolean);
@@ -133,8 +129,6 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
     });
   }, []);
 
-  // ── Tree refresh ───────────────────────────────────────────────────────
-
   const refreshTree = useCallback(async () => {
     try {
       const tree = await invoke<FlatTreeNode[]>("get_vault_tree");
@@ -144,12 +138,9 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
     }
   }, []);
 
-  // ── Automatic refresh on file-system changes ───────────────────────────
-  //
   // The Rust watcher emits `vault://file-changed` whenever a .md file is
   // created, modified, or deleted.  We re-fetch the full tree so the sidebar
   // always reflects the real file system without any manual "re-index".
-
   useEffect(() => {
     const unlistenPromise = listen<FileChangeEvent>(
       "vault://file-changed",

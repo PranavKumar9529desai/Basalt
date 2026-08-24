@@ -8,8 +8,6 @@ import { Input } from "@workspace/ui/components/ui/input";
 import { cn } from "@workspace/ui/lib/utils";
 import React from "react";
 
-// ─── PaletteShell ────────────────────────────────────────────────────────────
-
 export interface PaletteShellProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,8 +36,6 @@ export function PaletteShell({
     </Dialog>
   );
 }
-
-// ─── PaletteShellInput ───────────────────────────────────────────────────────
 
 export interface PaletteShellInputProps {
   value: string;
@@ -74,8 +70,6 @@ export function PaletteShellInput({
     </div>
   );
 }
-
-// ─── PaletteShellFooter ──────────────────────────────────────────────────────
 
 export interface PaletteShellFooterHint {
   icon: React.ReactNode;

@@ -2,11 +2,52 @@ use std::path::{Path, PathBuf};
 
 use basalt_vault::path_utils::resolve_creation_path;
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
 use tauri::State;
 
 use crate::app_state::AppState;
 use crate::watcher::FileChangeEvent;
+
+// ---------------------------------------------------------------------------
+// Write choke point helpers (ADR-018)
+//
+// Every app-initiated filesystem mutation goes through the same contract as
+// save_file:
+//   1. Register self-write markers BEFORE touching disk — the watcher
+//      consumes them and stays silent.
+//   2. Update the vault cache directly.
+//   3. Update the search index directly (in-memory; commit policy is owned
+//      by the search layer) — the watcher no longer does it for us.
+//   4. Emit NOTHING: the frontend initiated the operation and refreshes its
+//      own tree. `vault://file-changed` means "changed by something OTHER
+//      than the app".
+// ---------------------------------------------------------------------------
+
+fn register_self_writes(state: &AppState, paths: &[PathBuf]) {
+    if let Ok(mut guard) = state.self_writes.lock() {
+        for p in paths {
+            guard.insert(p.clone());
+        }
+    }
+}
+
+fn index_upsert(state: &AppState, path_str: &str, content: &str) {
+    if let Ok(mut guard) = state.search.write() {
+        if let Some(ref mut search) = *guard {
+            let tags = extract_inline_tags(content);
+            let _ = search.update_document(path_str, content, &tags);
+            let _ = search.flush_if_due();
+        }
+    }
+}
+
+fn index_remove(state: &AppState, path_str: &str) {
+    if let Ok(mut guard) = state.search.write() {
+        if let Some(ref mut search) = *guard {
+            let _ = search.remove_document(path_str);
+            let _ = search.flush_if_due();
+        }
+    }
+}
 
 fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
     let p = Path::new(path);
@@ -83,19 +124,9 @@ pub fn save_file(
 
     drop(vault);
 
-    // Keep the search index logically current (in-memory). The watcher no
-    // longer sees self-writes, so this is now the ONLY index update path
-    // for editor saves. Commit policy is owned by the search layer.
-    if let Ok(mut guard) = state.search.write() {
-        if let Some(ref mut search) = *guard {
-            let path_str = abs.to_string_lossy().to_string();
-            let tags = extract_inline_tags(&content);
-            let _ = search.update_document(&path_str, &content, &tags);
-            // Commit policy is owned by the search layer: this is a no-op
-            // while typing keeps the index busy, and flushes after the
-            // idle window once changes settle.
-            let _ = search.flush_if_due();
-        }
+    // Commit policy is owned by the search layer.
+    if let Some(path_str) = abs.to_str() {
+        index_upsert(&state, path_str, &content);
     }
 
     Ok(())
@@ -124,17 +155,22 @@ pub fn open_files(paths: Vec<String>) -> Result<Vec<OpenFileResult>, String> {
 }
 
 /// Write multiple markdown files to disk in a single IPC call.
-/// Acquires the vault write lock once for all files.
+/// Goes through the write choke point: self-write markers registered per
+/// file before its write, cache + index updated directly, nothing emitted.
 #[tauri::command]
-pub fn save_files(
-    files: Vec<SaveFileInput>,
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
+pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> Result<(), String> {
     let mut abs_paths: Vec<PathBuf> = Vec::new();
     for file in &files {
         let abs = canonical_md_path(&file.path).map_err(|e| e.to_string())?;
-        std::fs::write(&abs, &file.content).map_err(|e| e.to_string())?;
+        // Register BEFORE the write so the watcher can never observe the file
+        // in a written-but-unregistered state.
+        register_self_writes(&state, &[abs.clone()]);
+        if let Err(e) = std::fs::write(&abs, &file.content) {
+            if let Ok(mut guard) = state.self_writes.lock() {
+                guard.remove(&abs);
+            }
+            return Err(e.to_string());
+        }
         abs_paths.push(abs);
     }
 
@@ -150,15 +186,10 @@ pub fn save_files(
     }
     drop(vault);
 
-    for abs in &abs_paths {
-        let _ = app.emit(
-            "vault://file-changed",
-            FileChangeEvent {
-                path: abs.to_string_lossy().to_string(),
-                kind: "modified".into(),
-                needs_tree_refresh: false,
-            },
-        );
+    for (file, abs) in files.iter().zip(&abs_paths) {
+        if let Some(path_str) = abs.to_str() {
+            index_upsert(&state, path_str, &file.content);
+        }
     }
 
     Ok(())
@@ -276,7 +307,6 @@ pub fn create_note(
     name: String,
     parent: Option<String>, // relative folder path inside vault, e.g. "Daily Journal"
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<CreateNoteResult, String> {
     let vault_path_str = state
         .vault_path
@@ -301,7 +331,16 @@ pub fn create_note(
 
     let content = String::new();
 
-    std::fs::write(&file_path, &content).map_err(|e| format!("failed to write file: {e}"))?;
+    // Choke point: marker BEFORE the write. `file_path` is built from the
+    // canonical vault root, so it matches the path the watcher reports.
+    register_self_writes(&state, &[file_path.clone()]);
+
+    if let Err(e) = std::fs::write(&file_path, &content) {
+        if let Ok(mut guard) = state.self_writes.lock() {
+            guard.remove(&file_path);
+        }
+        return Err(format!("failed to write file: {e}"));
+    }
 
     let abs_path = file_path
         .canonicalize()
@@ -316,16 +355,7 @@ pub fn create_note(
             .map_err(|_| "vault lock poisoned".to_string())?;
         vault.add_document(&abs_path, &content);
     }
-
-    // Emit change so the frontend refreshes immediately.
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: abs_path.clone(),
-            kind: "created".into(),
-            needs_tree_refresh: true,
-        },
-    );
+    index_upsert(&state, &abs_path, &content);
 
     let clean_name = file_name.trim_end_matches(".md").to_string();
 
@@ -341,7 +371,6 @@ pub fn create_note(
 pub fn create_untitled_note(
     parent: Option<String>,
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<CreateNoteResult, String> {
     let vault_path_str = state
         .vault_path
@@ -395,8 +424,14 @@ pub fn create_untitled_note(
         }
 
         let content = String::new();
-        std::fs::write(&file_path, &content)
-            .map_err(|e| format!("failed to write file: {e}"))?;
+
+        register_self_writes(&state, &[file_path.clone()]);
+        if let Err(e) = std::fs::write(&file_path, &content) {
+            if let Ok(mut guard) = state.self_writes.lock() {
+                guard.remove(&file_path);
+            }
+            return Err(format!("failed to write file: {e}"));
+        }
 
         let abs_path = file_path
             .canonicalize()
@@ -411,15 +446,7 @@ pub fn create_untitled_note(
                 .map_err(|_| "vault lock poisoned".to_string())?;
             vault.add_document(&abs_path, &content);
         }
-
-        let _ = app.emit(
-            "vault://file-changed",
-            FileChangeEvent {
-                path: abs_path.clone(),
-                kind: "created".into(),
-                needs_tree_refresh: true,
-            },
-        );
+        index_upsert(&state, &abs_path, &content);
 
         return Ok(CreateNoteResult {
             path: abs_path,
@@ -435,7 +462,6 @@ pub fn create_folder(
     name: String,
     parent: Option<String>, // relative folder path inside vault
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<String, String> {
     let vault_path_str = state
         .vault_path
@@ -458,24 +484,17 @@ pub fn create_folder(
         return Err(format!("'{last}' already exists"));
     }
 
+    // Choke point: suppress the watcher's mkdir event; the frontend refreshes
+    // its own tree after this call returns.
+    register_self_writes(&state, &[folder_path.clone()]);
     std::fs::create_dir_all(&folder_path).map_err(|e| format!("failed to create folder: {e}"))?;
-
-    // Emit change so the frontend refreshes immediately (watchers may miss mkdir).
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: folder_path.to_string_lossy().to_string(),
-            kind: "created".into(),
-            needs_tree_refresh: true,
-        },
-    );
 
     Ok(folder_path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
-pub fn delete_file(path: String, state: State<AppState>, app: tauri::AppHandle) -> Result<(), String> {
-    apply_delete_paths(vec![path], state, app)
+pub fn delete_file(path: String, state: State<AppState>) -> Result<(), String> {
+    apply_delete_paths(vec![path], state)
 }
 
 fn canonical_vault_path(state: &AppState) -> Result<PathBuf, String> {
@@ -512,11 +531,7 @@ fn prune_nested_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     kept
 }
 
-fn apply_delete_paths(
-    raw_paths: Vec<String>,
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
+fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<(), String> {
     if raw_paths.is_empty() {
         return Err("no paths provided".to_string());
     }
@@ -536,6 +551,42 @@ fn apply_delete_paths(
     }
 
     let targets = prune_nested_paths(canonical);
+
+    // Choke point: enumerate every affected path (files + cached dir
+    // descendants) and register markers BEFORE deleting, so the watcher's
+    // per-file delete events are all suppressed.
+    let mut self_write_paths: Vec<PathBuf> = Vec::new();
+    let mut deleted_md_paths: Vec<String> = Vec::new();
+    {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        for abs in &targets {
+            self_write_paths.push(abs.clone());
+            if abs.is_dir() {
+                let abs_str = abs.to_string_lossy().to_string();
+                let prefix = format!("{abs_str}/");
+                for p in vault
+                    .graph
+                    .metadata_cache
+                    .keys()
+                    .filter_map(|id| vault.arena.get_string(*id).cloned())
+                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
+                {
+                    self_write_paths.push(PathBuf::from(&p));
+                    if p.ends_with(".md") {
+                        deleted_md_paths.push(p);
+                    }
+                }
+            } else if abs.extension().and_then(|e| e.to_str()) == Some("md") {
+                if let Some(p) = abs.to_str() {
+                    deleted_md_paths.push(p.to_string());
+                }
+            }
+        }
+    }
+    register_self_writes(&state, &self_write_paths);
 
     let mut delete_order = targets.clone();
     delete_order.sort_by_key(|p| std::cmp::Reverse(p.components().count()));
@@ -573,25 +624,17 @@ fn apply_delete_paths(
         }
     }
 
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: vault_root.to_string_lossy().to_string(),
-            kind: "modified".into(),
-            needs_tree_refresh: true,
-        },
-    );
+    // The watcher is suppressed for self-deletes — take over its index duty.
+    for path in &deleted_md_paths {
+        index_remove(&state, path);
+    }
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn delete_paths(
-    paths: Vec<String>,
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
-    apply_delete_paths(paths, state, app)
+pub fn delete_paths(paths: Vec<String>, state: State<AppState>) -> Result<(), String> {
+    apply_delete_paths(paths, state)
 }
 
 #[tauri::command]
@@ -599,7 +642,6 @@ pub fn move_paths(
     source_paths: Vec<String>,
     destination_rel_path: Option<String>,
     state: State<AppState>,
-    app: tauri::AppHandle,
 ) -> Result<(), String> {
     if source_paths.is_empty() {
         return Err("no source paths provided".to_string());
@@ -655,6 +697,35 @@ pub fn move_paths(
         source_pairs.push((source, destination_item));
     }
 
+    // Choke point: register BOTH sides of every move (plus cached dir
+    // descendants) BEFORE renaming so the watcher's create/remove events are
+    // all suppressed. The vault cache still holds pre-move paths here.
+    let mut self_write_paths: Vec<PathBuf> = Vec::new();
+    for (source, destination_item) in &source_pairs {
+        self_write_paths.push(source.clone());
+        self_write_paths.push(destination_item.clone());
+        if source.is_dir() {
+            let prefix = format!("{}/", source.to_string_lossy());
+            let vault = state
+                .vault
+                .read()
+                .map_err(|_| "vault lock poisoned".to_string())?;
+            for old_path in vault
+                .graph
+                .metadata_cache
+                .keys()
+                .filter_map(|id| vault.arena.get_string(*id).cloned())
+                .filter(|p| p.starts_with(&prefix))
+            {
+                let suffix = old_path.trim_start_matches(&prefix).to_string();
+                self_write_paths.push(PathBuf::from(&old_path));
+                self_write_paths
+                    .push(destination_item.join(&suffix));
+            }
+        }
+    }
+    register_self_writes(&state, &self_write_paths);
+
     for (source, destination_item) in &source_pairs {
         std::fs::rename(source, destination_item)
             .map_err(|e| format!("failed to move '{}': {e}", source.display()))?;
@@ -705,28 +776,30 @@ pub fn move_paths(
     }
 
     // Single vault write lock — no disk I/O inside.
+    let moved_md: Vec<(String, String, Option<String>)>;
     {
         let mut vault = state
             .vault
             .write()
             .map_err(|_| "vault lock poisoned".to_string())?;
 
-        for (source_str, destination_str, content) in file_ops {
-            vault.remove_document(&source_str);
+        for (source_str, destination_str, content) in &file_ops {
+            vault.remove_document(source_str);
             if let Some(c) = content {
-                vault.add_document(&destination_str, &c);
+                vault.add_document(destination_str, c);
             }
         }
+        moved_md = file_ops; // all file_ops entries are .md by construction
     }
 
-    let _ = app.emit(
-        "vault://file-changed",
-        FileChangeEvent {
-            path: destination_path.to_string_lossy().to_string(),
-            kind: "modified".into(),
-            needs_tree_refresh: true,
-        },
-    );
+    // The watcher is suppressed for self-moves — take over its index duty:
+    // remove old paths, upsert moved content at new paths.
+    for (source_str, destination_str, content) in &moved_md {
+        index_remove(&state, source_str);
+        if let Some(c) = content {
+            index_upsert(&state, destination_str, c);
+        }
+    }
 
     Ok(())
 }

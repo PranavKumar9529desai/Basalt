@@ -1,17 +1,8 @@
-// ---------------------------------------------------------------------------
-// Core tabs store — all state mutation logic.
-// Single-pane model: one TabPane holds all open tabs.
-// ---------------------------------------------------------------------------
-
 import { leafRegistry } from "@workspace/views";
 import type { StateCreator } from "zustand";
 import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, TabPaneId } from "../types";
 import type { TabsState } from "./types";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function nowMs() {
   return Date.now();
@@ -38,10 +29,6 @@ function removeTabFromPane(pane: TabsState["pane"], tabId: TabId): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Initial state
-// ---------------------------------------------------------------------------
-
 function buildInitialState() {
   return {
     tabs: {} as Record<TabId, TabModel>,
@@ -55,10 +42,10 @@ function buildInitialState() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Core slice — all mutations in one StateCreator
-// ---------------------------------------------------------------------------
-
+/**
+ * Core slice — all tab state mutations in one StateCreator. Single-pane
+ * model: one TabPane holds all open tabs.
+ */
 export interface CoreSlice {
   openInPreview: TabsState["openInPreview"];
   openPinned: TabsState["openPinned"];
@@ -80,8 +67,6 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
   set,
   get,
 ) => ({
-  // ---- open ----
-
   openInPreview: (note, options) => {
     const activate = options?.activate ?? true;
     const incomingTabId = makeTabId(note.path) as TabId;
@@ -261,8 +246,6 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     });
   },
 
-  // ---- meta ----
-
   markTabDirty: (tabId, isDirty) => {
     set((state) => {
       const tab = state.tabs[tabId];
@@ -334,8 +317,6 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     }
   },
 
-  // ---- move ----
-
   moveTabWithinPane: (fromIndex, toIndex) => {
     set((state) => {
       const pane = state.pane;
@@ -358,8 +339,6 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       };
     });
   },
-
-  // ---- reset ----
 
   reset: () => {
     set(buildInitialState());

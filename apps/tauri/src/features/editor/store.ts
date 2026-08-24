@@ -1,15 +1,11 @@
 import { create } from "zustand";
 
-// ---------------------------------------------------------------------------
-// Minimal focused-pane state.
-// Tracks which pane is currently focused, the note it has open, the backlinks
-// for that note (consumed by the right-hand sidebar), and lightweight editor
-// stats (chars/words) consumed by the status bar.
-//
-// Deliberately NOT syncing content/saveStatus on every keystroke — only what
-// the workspace shell actually renders.
-// ---------------------------------------------------------------------------
-
+/**
+ * Minimal focused-pane state: the focused pane's open note, backlinks for
+ * the right sidebar, and lightweight stats for the status bar. Deliberately
+ * does NOT sync content/saveStatus per keystroke — only what the shell
+ * actually renders.
+ */
 export interface FocusedPaneInfo {
   /** The note (path + name) that the focused pane has loaded. */
   focusedPaneSelected: { path: string; name: string } | null;

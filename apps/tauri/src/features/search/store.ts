@@ -4,7 +4,6 @@ import { create } from "zustand";
 import type { ContentResult, FileResult } from "./types";
 
 interface SearchStore {
-  // ── Full-text modal (⌘F) ─────────────────────────────────────────────────
   isSearchOpen: boolean;
   searchQuery: string;
   searchResults: ContentResult[];
@@ -18,7 +17,6 @@ interface SearchStore {
   searchSelectNext: () => void;
   searchSelectPrev: () => void;
 
-  // ── Quick switcher (⌘O) ──────────────────────────────────────────────────
   isSwitcherOpen: boolean;
   switcherQuery: string;
   switcherResults: FileResult[];
@@ -33,7 +31,6 @@ interface SearchStore {
 }
 
 export const useSearchStore = create<SearchStore>()((set, get) => ({
-  // ── Search modal state ───────────────────────────────────────────────────
   isSearchOpen: false,
   searchQuery: "",
   searchResults: [],
@@ -86,7 +83,6 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     set({ searchSelectedIndex: Math.max(searchSelectedIndex - 1, 0) });
   },
 
-  // ── Switcher state ───────────────────────────────────────────────────────
   isSwitcherOpen: false,
   switcherQuery: "",
   switcherResults: [],

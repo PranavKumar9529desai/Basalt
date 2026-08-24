@@ -1,8 +1,7 @@
-// ---------------------------------------------------------------------------
-// Mirrors Rust structs from basalt_fs::tree and tauri/src-tauri/src/lib.rs
-// Keep these in sync with the Rust side — serde(rename_all = "camelCase")
-// is applied on the Rust structs so all fields arrive in camelCase.
-// ---------------------------------------------------------------------------
+/**
+ * Mirrors Rust structs from basalt_fs::tree and lib.rs. serde(rename_all =
+ * "camelCase") is applied on the Rust side — keep both sides in sync.
+ */
 
 export type NodeKind = "file" | "folder";
 
