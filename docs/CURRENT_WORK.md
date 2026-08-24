@@ -53,9 +53,10 @@ conclusions.
    `dev:editor-benchmark-isolation` from the palette (prod build preferred:
    `bun run build:linux` then run the binary). Compare variants against
    `base`; the delta names the culprit.
-3. **Optimize live-preview per ADR-019** (single-pass pipeline: no nested
-   dispatches, one fused tree walk, viewport-independent, scoped active-line
-   work). Regression gate: p95 ≤ 4ms @ 100KB full stack; stretch ≤ 2ms.
+3. **Optimize live-preview per ADR-019** — single-pass engine (commit
+   `37c5975`) + incremental lazy mapping on docs > 48KB (`perf(editor):
+   incremental live-preview`). Regression gate: p95 ≤ 4ms @ 100KB full stack;
+   stretch ≤ 2ms. **Awaiting re-benchmark.**
 4. Then: graph view (first real *view* consumer) and HTML renderer (first new
    *leaf* registration) — both are pure `viewRegistrations.ts` additions.
 
