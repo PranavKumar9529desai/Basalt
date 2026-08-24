@@ -1,45 +1,42 @@
 /**
- * Live Preview Orchestrator
+ * Live Preview — single-pass decoration engine (ADR-019).
  *
- * ## Decoration types and where they live
+ * ## Pipeline invariants (binding, see docs/adr/019)
  *
- * | Type                          | What it does                                      | Where it lives  |
- * |-------------------------------|---------------------------------------------------|-----------------|
- * | Decoration.line()             | Adds a CSS class to a whole line element          | StateField only |
- * | Decoration.replace({ block: false }) | Hides a range and shows a widget inline.   | StateField only |
- * |                               | The line still exists in the document — cursor    |                 |
- * |                               | can navigate to it via click or arrow keys.       |                 |
- * | Decoration.mark()             | Adds a CSS class to an inline text span           | ViewPlugin only |
+ * 1. One keystroke = one transaction = one tree walk. Decorations are computed
+ *    inside StateField/ViewPlugin update paths — NEVER dispatched from an
+ *    update listener (that doubles transaction cost per keystroke).
+ * 2. One fused pre-order walk feeds every handler: block decorations (line
+ *    classes, replace widgets), tree-derived inline marks, and mark hiding.
+ *    The old design ran three separate walks plus a nested dispatch.
+ * 3. Viewport-independence: the field owns full-document decorations and never
+ *    rebuilds on scroll. Only the tags scan stays viewport-scoped (it is a
+ *    text pass over visible lines, not a tree pass).
+ * 4. Selection-dependent work is scoped: only cursor-revealed marks/widgets
+ *    recompute on selection change; everything else is rebuilt with them but
+ *    from the same single walk.
  *
- * ## Why NOT block: true
+ * ## Decoration types
  *
- * Decoration.replace({ block: true }) yanks the replaced range out of normal
- * line flow and treats it as a floating block between lines. This breaks cursor
- * navigation: up/down arrows skip the widget entirely and mouse clicks on it do
- * not map back to any document position. Avoid it — use block: false (default)
- * and let the widget's own CSS (display: block / flex) control its visual size.
+ * | Type                          | What it does                                      | Where     |
+ * |-------------------------------|---------------------------------------------------|-----------|
+ * | Decoration.line()             | Adds a CSS class to a whole line element          | Field     |
+ * | Decoration.replace()          | Hides a range / swaps in a widget                 | Field     |
+ * | Decoration.mark()             | Adds a CSS class to an inline text span           | Field + tag plugin |
  *
- * ## Why StateField vs ViewPlugin
+ * Why NOT block: true — it yanks replaced ranges out of normal line flow,
+ * breaking cursor navigation (arrows skip the widget, clicks don't map back).
+ * Use block: false and let widget CSS control visual size.
  *
- * Decoration.line() and Decoration.replace() must be provided by a StateField
- * because CodeMirror requires those decoration sets to cover the full document
- * (not just the visible viewport). ViewPlugins are only allowed to emit
- * Decoration.mark() (inline marks), which are safe to produce per-viewport.
+ * ## Focus model
  *
- * Architecture:
- *   StateField  `livePreviewBlockField`
- *     - Iterates the FULL syntax tree on every relevant change.
- *     - Emits: Decoration.line() classes, Decoration.replace() widgets
- *       (HR, callout header, code fence header/footer).
- *
- *   ViewPlugin  `livePreviewInlinePlugin`
- *     - Iterates only visible ranges.
- *     - Emits: Decoration.mark() only (inline-code, wikilink, mark-hiding).
- *
- * Both are exported together as `livePreviewPlugin` (an array of extensions).
+ * Builders run inside StateField updates where no view exists. Focus state is
+ * tracked by `hasFocusField` via focus/blur DOM events; when unfocused, the
+ * active-line reveal/hide logic keeps the document fully rendered.
  */
 
-import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
+import { ensureSyntaxTree } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
 import { StateEffect, StateField } from "@codemirror/state";
 import {
   Decoration,
@@ -84,10 +81,7 @@ import {
   handleFrontmatterFallback,
   handleFrontmatterNode,
 } from "./frontmatter";
-import {
-  handleHeading7Lines,
-  handleHeadingNode,
-} from "./headings";
+import { handleHeading7Lines, handleHeadingNode } from "./headings";
 import {
   handleInlineNode,
   handleTagsInLine,
@@ -149,45 +143,62 @@ function makeCollector() {
 }
 
 // ---------------------------------------------------------------------------
-// StateField – block decorations (line classes + block replace widgets)
+// Single-pass engine — one walk builds every decoration
 // ---------------------------------------------------------------------------
 
-function buildBlockDecorations(view: EditorView): DecorationSet {
+interface PreviewState {
+  decorations: DecorationSet;
+  /** Code-block ranges discovered during the walk; shared with the viewport-
+   * scoped tags plugin so it can skip code blocks without its own scan. */
+  codeBlockRanges: { from: number; to: number }[];
+  /** Last-known DOM focus, snapshotted at rebuild time so builders never
+   * need a view reference. */
+  focused: boolean;
+}
+
+/**
+ * Build all live-preview decorations for `state` in ONE pre-order walk of the
+ * syntax tree. Runs inside StateField create/update — no view access.
+ */
+function buildPreviewState(
+  state: EditorState,
+  hasFocus: boolean,
+): PreviewState {
   const { collector, finish } = makeCollector();
-
-  // We need selection info for cursor-inside-block checks.
-  const headPos = view.state.selection.main.head;
-
+  const headPos = state.selection.main.head;
+  const doc = state.doc;
   const ctx: DecorationContext = {
-    activeLine: view.hasFocus
+    activeLine: hasFocus
       ? (() => {
-          const l = view.state.doc.lineAt(headPos);
+          const l = doc.lineAt(headPos);
           return { from: l.from, to: l.to, number: l.number };
         })()
       : null,
     headPos,
-    view,
+    state,
     codeBlockRanges: [],
   };
 
-  // Walk the FULL document so block decorations outside the viewport are
-  // still registered (required by CodeMirror for StateField-provided decos).
-  const tree = ensureSyntaxTree(
-    view.state,
-    view.state.doc.length,
-    300,
-  );
+  // Full-document coverage is required for StateField-provided line/replace
+  // decorations. Budgeted so first paint on huge notes is never blocked; once
+  // parsed, subsequent calls short-circuit.
+  const tree = ensureSyntaxTree(state, doc.length, 300);
   if (!tree) {
-    // Tree not yet ready — skip decorations rather than using a stale partial tree.
-    return Decoration.none;
+    return {
+      decorations: Decoration.none,
+      codeBlockRanges: [],
+      focused: hasFocus,
+    };
   }
 
   let frontmatterFound = false;
 
   tree.iterate({
     enter(node) {
-      // Code blocks: line classes + header/footer block widgets
-      if (handleCodeBlockNode(node, 0, view.state.doc.length, ctx, collector)) {
+      // Code blocks: ranges recorded FIRST (pre-order ⇒ parents before
+      // children, so the binary-search skip below stays valid mid-walk),
+      // then line classes + header/footer block widgets. Children skipped.
+      if (handleCodeBlockNode(node, 0, doc.length, ctx, collector)) {
         return false;
       }
 
@@ -200,7 +211,7 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
 
       // Try callout first — if it matches, skip plain blockquote styling
       if (!handleCalloutNode(node, ctx, collector)) {
-        handleBlockquoteNode(node, 0, view.state.doc.length, ctx, collector);
+        handleBlockquoteNode(node, 0, doc.length, ctx, collector);
       }
 
       // List item depth classes + bullet/number widgets
@@ -217,12 +228,18 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
 
       // Horizontal rule: replace with <hr> widget when cursor is off the line
       if (node.type.name === "HorizontalRule") {
-        const line = ctx.view.state.doc.lineAt(node.from);
+        const line = doc.lineAt(node.from);
         const onActiveLine = ctx.activeLine?.number === line.number;
         if (!onActiveLine) {
           collector.addReplace(line.from, line.to, new HorizontalRuleWidget());
         }
       }
+
+      // Inline marks (inline code, wikilinks) + WYSIWYG mark hiding —
+      // formerly a separate viewport-only pass with its own full-tree
+      // pre-scan; fused here per ADR-019 rule 2.
+      handleInlineNode(node, collector);
+      handleMarkHidingNode(node, ctx, collector);
     },
   });
 
@@ -231,146 +248,115 @@ function buildBlockDecorations(view: EditorView): DecorationSet {
   }
 
   // Heading-7 line classes (post-walk)
-  handleHeading7Lines(0, view.state.doc.length, ctx, collector);
+  handleHeading7Lines(0, doc.length, ctx, collector);
 
-  return finish();
+  // Pre-order traversal emits ranges in document order, but the binary-search
+  // contract of isInCodeBlock deserves a cheap defensive sort.
+  sortCodeBlockRanges(ctx.codeBlockRanges);
+
+  return {
+    decorations: finish(),
+    codeBlockRanges: ctx.codeBlockRanges,
+    focused: hasFocus,
+  };
 }
 
 // ---------------------------------------------------------------------------
-// ViewPlugin – inline decorations (marks only, NO block)
+// Focus tracking — builders have no view, sync DOM focus into field effects
 // ---------------------------------------------------------------------------
 
-function buildInlineDecorations(view: EditorView): DecorationSet {
-  const { collector, finish } = makeCollector();
+const setHasFocus = StateEffect.define<boolean>();
 
-  const headPos = view.state.selection.main.head;
+// ---------------------------------------------------------------------------
+// The live-preview StateField — sole owner of document-wide decorations
+// ---------------------------------------------------------------------------
 
-  const ctx: DecorationContext = {
-    activeLine: view.hasFocus
-      ? (() => {
-          const l = view.state.doc.lineAt(headPos);
-          return { from: l.from, to: l.to, number: l.number };
-        })()
-      : null,
-    headPos,
-    view,
-    codeBlockRanges: [],
-  };
+export const livePreviewField = StateField.define<PreviewState>({
+  create: (state) => buildPreviewState(state, false),
 
-  // First pass: collect code block ranges so inline handlers can skip them.
-  // We use syntaxTree (non-blocking) here since this runs in the view layer.
-  const fullTree = syntaxTree(view.state);
-  fullTree.iterate({
-    enter(node) {
-      const name = node.type.name;
-      if (name === "FencedCode" || name === "CodeBlock") {
-        ctx.codeBlockRanges.push({ from: node.from, to: node.to });
-        return false;
+  update(value, tr) {
+    let focused = value.focused;
+    let focusChanged = false;
+    for (const e of tr.effects) {
+      if (e.is(setHasFocus)) {
+        focused = e.value;
+        focusChanged = focused !== value.focused;
       }
-    },
-  });
+    }
 
-  // Ensure ranges are sorted (pre-pass is in doc order, but safety-sort for binary search)
-  sortCodeBlockRanges(ctx.codeBlockRanges);
+    // Rebuild only on real dependencies: doc edits, explicit selection moves
+    // (cursor-revealed marks/widgets), or focus flips. Scroll never rebuilds.
+    if (tr.docChanged || tr.selection || focusChanged) {
+      return buildPreviewState(tr.state, focused);
+    }
+    return value;
+  },
 
-  // Second pass: inline marks over visible ranges only
-  for (const range of view.visibleRanges) {
-    const rangeFrom = range.from;
-    const rangeTo = range.to;
+  provide: (f) => EditorView.decorations.from(f, (s) => s.decorations),
+});
 
-    const tree =
-      ensureSyntaxTree(view.state, rangeTo, 300) ?? syntaxTree(view.state);
+const focusTracking = EditorView.domEventHandlers({
+  focus(_event, view) {
+    if (!view.state.field(livePreviewField).focused) {
+      view.dispatch({ effects: setHasFocus.of(true) });
+    }
+    return false;
+  },
+  blur(_event, view) {
+    if (view.state.field(livePreviewField).focused) {
+      view.dispatch({ effects: setHasFocus.of(false) });
+    }
+    return false;
+  },
+});
 
-    tree.iterate({
-      from: rangeFrom,
-      to: rangeTo,
-      enter(node) {
-        if (isInCodeBlock(node.from, ctx.codeBlockRanges)) {
-          return false;
-        }
-        handleInlineNode(node, collector);
-        handleMarkHidingNode(node, ctx, collector);
-      },
-    });
+// ---------------------------------------------------------------------------
+// Tags plugin — the one viewport-scoped pass (text regex, not tree walk)
+// ---------------------------------------------------------------------------
+
+class TagMarksPlugin {
+  decorations: DecorationSet;
+
+  constructor(view: EditorView) {
+    this.decorations = buildTagMarks(view);
   }
 
-  // Tag scan: regex pass over visible lines
+  update(update: {
+    docChanged: boolean;
+    viewportChanged: boolean;
+    view: EditorView;
+  }) {
+    if (update.docChanged || update.viewportChanged) {
+      this.decorations = buildTagMarks(update.view);
+    }
+  }
+}
+
+function buildTagMarks(view: EditorView): DecorationSet {
+  const { collector, finish } = makeCollector();
+  const ranges = view.state.field(livePreviewField).codeBlockRanges;
+
   for (const range of view.visibleRanges) {
     const startLine = view.state.doc.lineAt(range.from);
     const endLine = view.state.doc.lineAt(range.to);
     for (let ln = startLine.number; ln <= endLine.number; ln++) {
       const line = view.state.doc.line(ln);
-      handleTagsInLine(line.from, line.text, ctx.codeBlockRanges, collector);
+      handleTagsInLine(line.from, line.text, ranges, collector);
     }
   }
-
   return finish();
 }
 
-const livePreviewInlinePlugin = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-
-    constructor(view: EditorView) {
-      this.decorations = buildInlineDecorations(view);
-    }
-
-    update(update: {
-      docChanged: boolean;
-      viewportChanged: boolean;
-      selectionSet: boolean;
-      view: EditorView;
-    }) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
-        this.decorations = buildInlineDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (v) => v.decorations,
-  },
-);
-
-// ---------------------------------------------------------------------------
-// Block decoration updater – keeps the StateField in sync with the view
-// ---------------------------------------------------------------------------
-
-const blockDecorationUpdater = EditorView.updateListener.of((update) => {
-  // Rebuild block decorations on doc/viewport changes AND cursor moves.
-  // Cursor movement matters because block decorations (code header/footer
-  // widgets, HR widget, callout headers) depend on whether the cursor is
-  // inside or outside each block.
-  if (update.docChanged || update.viewportChanged || update.selectionSet) {
-    const newDecos = buildBlockDecorations(update.view);
-    update.view.dispatch({
-      effects: setBlockDecorations.of(newDecos),
-    });
-  }
+const tagMarksPlugin = ViewPlugin.fromClass(TagMarksPlugin, {
+  decorations: (v) => v.decorations,
 });
-
-const setBlockDecorations = StateEffect.define<DecorationSet>();
-
-// Re-export the StateField with effect handling baked in
-export const livePreviewBlockFieldWithEffects =
-  StateField.define<DecorationSet>({
-    create() {
-      return Decoration.none;
-    },
-    update(decos, tr) {
-      for (const e of tr.effects) {
-        if (e.is(setBlockDecorations)) return e.value;
-      }
-      return tr.docChanged ? decos.map(tr.changes) : decos;
-    },
-    provide: (f) => EditorView.decorations.from(f),
-  });
 
 // ---------------------------------------------------------------------------
 // Public export
 // ---------------------------------------------------------------------------
 
 export const livePreviewPlugin = [
-  livePreviewBlockFieldWithEffects,
-  blockDecorationUpdater,
-  livePreviewInlinePlugin,
+  livePreviewField,
+  focusTracking,
+  tagMarksPlugin,
 ];

@@ -27,7 +27,7 @@ export function handleFrontmatterNode(
 ): boolean {
   if (node.type.name !== "YAMLFrontMatter") return false;
 
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   const startLine = doc.lineAt(node.from);
   const endLine = doc.lineAt(node.to);
 
@@ -60,7 +60,7 @@ export function handleFrontmatterFallback(
   ctx: DecorationContext,
   collector: DecorationCollector,
 ): void {
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   if (doc.lines < 2) return;
 
   const firstLine = doc.line(1);

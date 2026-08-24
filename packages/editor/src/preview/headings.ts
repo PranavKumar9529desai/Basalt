@@ -31,7 +31,7 @@ export function handleHeadingNode(
 ): boolean {
   const headingClass = HEADING_CLASS[node.type.name];
   if (headingClass) {
-    const line = ctx.view.state.doc.lineAt(node.from);
+    const line = ctx.state.doc.lineAt(node.from);
     collector.addLineClass(line.from, headingClass);
     return true;
   }
@@ -52,16 +52,16 @@ export function handleHeading7Lines(
   ctx: DecorationContext,
   collector: DecorationCollector,
 ): void {
-  const { view, activeLine, codeBlockRanges } = ctx;
-  const startLine = view.state.doc.lineAt(rangeFrom);
-  const endLine = view.state.doc.lineAt(rangeTo);
+  const { state, activeLine, codeBlockRanges } = ctx;
+  const startLine = state.doc.lineAt(rangeFrom);
+  const endLine = state.doc.lineAt(rangeTo);
 
   for (
     let lineNumber = startLine.number;
     lineNumber <= endLine.number;
     lineNumber += 1
   ) {
-    const line = view.state.doc.line(lineNumber);
+    const line = state.doc.line(lineNumber);
     const match = HEADING_7_RE.exec(line.text);
     if (!match || isInCodeBlock(line.from, codeBlockRanges)) {
       continue;

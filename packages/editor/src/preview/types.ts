@@ -1,4 +1,5 @@
-import type { EditorView, WidgetType } from "@codemirror/view";
+import type { EditorState } from "@codemirror/state";
+import type { WidgetType } from "@codemirror/view";
 
 /**
  * Shared context passed to all decoration handlers during the single tree walk.
@@ -9,8 +10,9 @@ export interface DecorationContext {
   activeLine: { from: number; to: number; number: number } | null;
   /** Cursor head position */
   headPos: number;
-  /** The editor view */
-  view: EditorView;
+  /** The editor state (doc, selection, facets) — never a view: builders must
+   * be callable from StateField updates, where no view is available. */
+  state: EditorState;
   /** Accumulated code block ranges (populated by code-blocks handler during the walk) */
   codeBlockRanges: { from: number; to: number }[];
 }

@@ -92,7 +92,7 @@ export function handleListNode(
   const name = node.type.name;
 
   if (name === "ListItem") {
-    const doc = ctx.view.state.doc;
+    const doc = ctx.state.doc;
     const itemLine = doc.lineAt(node.from);
     const depth = listDepth(node);
     const depthClass = `cm-live-list-depth-${Math.min(depth, 3)}`;
@@ -123,16 +123,16 @@ export function handleListNode(
           sibling = sibling.prevSibling;
         }
         const markEnd =
-          node.to < ctx.view.state.doc.length &&
-          ctx.view.state.doc.sliceString(node.to, node.to + 1) === " "
+          node.to < ctx.state.doc.length &&
+          ctx.state.doc.sliceString(node.to, node.to + 1) === " "
             ? node.to + 1
             : node.to;
         collector.addReplace(node.from, markEnd, new ListNumberWidget(number));
       } else {
         const depth = listDepth(node);
         const markEnd =
-          node.to < ctx.view.state.doc.length &&
-          ctx.view.state.doc.sliceString(node.to, node.to + 1) === " "
+          node.to < ctx.state.doc.length &&
+          ctx.state.doc.sliceString(node.to, node.to + 1) === " "
             ? node.to + 1
             : node.to;
         collector.addReplace(node.from, markEnd, new ListBulletWidget(depth));

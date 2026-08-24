@@ -44,21 +44,24 @@ export class CodeHeaderWidget extends WidgetType {
       const lines = fullText.split("\n");
       if (lines.length >= 2) {
         const innerCode = lines.slice(1, -1).join("\n");
-        navigator.clipboard.writeText(innerCode).then(() => {
-          const originalHtml = copyBtn.innerHTML;
-          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copied!`;
-          setTimeout(() => {
-            copyBtn.innerHTML = originalHtml;
-          }, 2000);
-        }).catch(() => {
-          // Clipboard write failed (permissions, HTTPS, or Tauri policy).
-          // Fallback: restore original button and briefly show a fallback indicator.
-          const originalHtml = copyBtn.innerHTML;
-          copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Failed`;
-          setTimeout(() => {
-            copyBtn.innerHTML = originalHtml;
-          }, 2000);
-        });
+        navigator.clipboard
+          .writeText(innerCode)
+          .then(() => {
+            const originalHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Copied!`;
+            setTimeout(() => {
+              copyBtn.innerHTML = originalHtml;
+            }, 2000);
+          })
+          .catch(() => {
+            // Clipboard write failed (permissions, HTTPS, or Tauri policy).
+            // Fallback: restore original button and briefly show a fallback indicator.
+            const originalHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Failed`;
+            setTimeout(() => {
+              copyBtn.innerHTML = originalHtml;
+            }, 2000);
+          });
       }
     });
 
@@ -161,7 +164,7 @@ export function handleCodeBlockNode(
   ctx.codeBlockRanges.push({ from: node.from, to: node.to });
 
   const hasCursor = ctx.headPos >= node.from && ctx.headPos <= node.to;
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   const startLine = doc.lineAt(node.from);
   const endLine = doc.lineAt(node.to);
 

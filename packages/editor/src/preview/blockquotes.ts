@@ -23,7 +23,7 @@ export function handleBlockquoteNode(
 ): boolean {
   if (node.type.name !== "Blockquote") return false;
 
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   const startLine = doc.lineAt(Math.max(node.from, rangeFrom));
   const endLine = doc.lineAt(Math.min(node.to, rangeTo));
 

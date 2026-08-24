@@ -30,7 +30,7 @@ export function handleTableNode(
 ): boolean {
   if (node.type.name !== "Table") return false;
 
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   let rowIndex = 0;
 
   let child = node.node.firstChild;

@@ -261,7 +261,7 @@ export function handleCalloutNode(
 ): boolean {
   if (node.type.name !== "Blockquote") return false;
 
-  const doc = ctx.view.state.doc;
+  const doc = ctx.state.doc;
   const firstLine = doc.lineAt(node.from);
   const match = CALLOUT_RE.exec(firstLine.text);
   if (!match) return false;
