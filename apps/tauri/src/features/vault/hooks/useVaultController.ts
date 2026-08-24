@@ -369,8 +369,14 @@ export function useVaultController({
       editor.selected !== null &&
       mutations.pendingDeletePaths.includes(editor.selected.path);
     const deleted = await mutations.confirmDelete();
-    if (deleted && deletesSelectedEditor) editor.closeNote();
-  }, [editor, mutations]);
+    if (deleted) {
+      // Backend no longer emits vault://file-changed for app-initiated
+      // deletes (write choke point contract) — refresh locally like the
+      // other mutations do.
+      await refreshTree();
+      if (deletesSelectedEditor) editor.closeNote();
+    }
+  }, [editor, mutations, refreshTree]);
 
   const onMenuNewNote = useCallback(() => {
     const ctx = deriveParentContextFromMenuTarget();

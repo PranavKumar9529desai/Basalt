@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::app_state::AppState;
-use crate::watcher::FileChangeEvent;
 
 // ---------------------------------------------------------------------------
 // Write choke point helpers (ADR-018)
