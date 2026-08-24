@@ -62,16 +62,15 @@ conclusions.
 
 ### Recorded migration debt (not urgent)
 
-- 6 other emit sites in `apps/tauri/src-tauri/src/commands/files.rs`
-  (create/rename/delete/move) still double-emit with the OS watcher; migrate
-  onto the choke point via a shared `write_through` helper.
-- Closed-tab `EditorState`s stay in `MarkdownLeaf`'s `statesRef` cache until
-  remount — prune when tabs close (needs a tabs-store signal).
-- `SearchState.commit()` still called directly by `save_file` (parity);
-  flush_if_due is the policy — consider dropping the direct call once flusher
-  thread is trusted.
-- 2 biome "info" style nits in `packages/editor/src/benchmark.ts`
-  (useTemplate) — harmless.
+- ~~6 other emit sites in `commands/files.rs`~~ ✅ DONE — all mutations on the
+  choke point; `vault://file-changed` = external only.
+- ~~Closed-tab `EditorState` pruning~~ ✅ DONE — `onTabStructureChanged`
+  signal via LeafServices; dirty tabs flush-save before prune.
+- ~~`SearchState.commit()` direct call in `save_file`~~ ✅ VERIFIED already
+  resolved by lazy-commit policy (no .commit() sites outside tests).
+- Remaining known trade-offs: lingering self-write markers if a watcher event
+  never arrives for a registered path (rare, benign); live-preview reveal on
+  >48KB docs is deferred to idle ticks (~350ms cap).
 ### Key invariants (do not break)
 
 - `vault://file-changed` means **external change only** (self-writes suppressed
