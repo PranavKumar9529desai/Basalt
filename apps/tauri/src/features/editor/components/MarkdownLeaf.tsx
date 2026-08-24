@@ -189,6 +189,26 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     }, AUTOSAVE_DEBOUNCE_MS);
   };
 
+  // Prune per-tab caches when tabs close. Without this, closed tabs'
+  // EditorStates (full documents + undo history) linger until remount.
+  // Dirty tabs flush-save BEFORE their state is dropped: closeTab(force)
+  // doesn't save, and the autosave timer only covers the active tab.
+  useEffect(() => {
+    return services.onTabStructureChanged(() => {
+      const open = services.getOpenTabIds();
+      for (const id of statesRef.current.keys()) {
+        if (open.has(id)) continue;
+        if (dirtyRef.current.has(id)) void saveTab(id);
+        statesRef.current.delete(id);
+        scrollRef.current.delete(id);
+        dirtyRef.current.delete(id);
+      }
+      for (const id of tabMetaRef.current.keys()) {
+        if (!open.has(id)) tabMetaRef.current.delete(id);
+      }
+    });
+  }, [services, saveTab]);
+
   // Doc swap, never remount.
   const showTab = useCallback(
     async (t: typeof tab) => {

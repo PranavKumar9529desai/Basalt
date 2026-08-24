@@ -19,7 +19,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
-import { useTabs, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
+import { useTabs, useTabsStore, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import { useVaultActions, VaultSplash } from "../features/vault";
 import "../shared/paneCommands";
@@ -85,13 +85,32 @@ function WorkspaceShell({
 
   // Stable services bag for leaf components — identity must not change per
   // render, or every keystroke would re-render the active leaf.
+  const getOpenTabIds = useCallback(
+    () => new Set(Object.keys(useTabsStore.getState().tabs)),
+    [],
+  );
+
+  // Structural-tab-mutation signal: persistVersion bumps only on open/close/
+  // pin/rename, so leaves can prune per-tab caches without re-rendering.
+  const onTabStructureChanged = useCallback((cb: () => void) => {
+    let last = useTabsStore.getState().persistVersion;
+    return useTabsStore.subscribe((s) => {
+      if (s.persistVersion !== last) {
+        last = s.persistVersion;
+        cb();
+      }
+    });
+  }, []);
+
   const leafServices = useMemo(
     () => ({
       openNote: ws.openNote,
       markTabDirty: tabs.markTabDirty,
       findNote: ws.findNote,
+      getOpenTabIds,
+      onTabStructureChanged,
     }),
-    [ws.openNote, tabs.markTabDirty, ws.findNote],
+    [ws.openNote, tabs.markTabDirty, ws.findNote, getOpenTabIds, onTabStructureChanged],
   );
 
   const renderPane = useCallback(

@@ -29,6 +29,12 @@ export interface LeafServices {
   markTabDirty: (tabId: string, dirty: boolean) => void;
   /** Resolve a note name (e.g. wikilink target) to a tree node. */
   findNote: (name: string) => { name: string; path: string } | undefined;
+  /** Snapshot of every open tab id, across all panes. Leaves key per-tab
+   * caches by tab id and prune on tab close via onTabStructureChanged. */
+  getOpenTabIds: () => Set<string>;
+  /** Fires after structural tab mutations (open/close/pin/rename). Returns
+   * an unsubscribe function. Ephemeral changes (dirty/active) don't fire. */
+  onTabStructureChanged: (cb: () => void) => () => void;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);
