@@ -43,6 +43,10 @@ export interface TabsState {
   closeOtherTabs: (tabId: TabId) => void;
   closeTabsToRight: (tabId: TabId) => void;
   moveTabWithinPane: (fromIndex: number, toIndex: number) => void;
+  /** Repoint open tabs after files/folders moved on disk. Ids are STABLE:
+   * only path/title change, so leaf caches keyed by id survive the move
+   * and dirty state is preserved. */
+  updateTabPaths: (moves: Array<{ from: string; to: string }>) => void;
   toWorkspaceSnapshot: () => TabsWorkspaceSnapshot;
   hydrateFromWorkspaceSnapshot: (snapshot: TabsWorkspaceSnapshot) => void;
   reset: () => void;

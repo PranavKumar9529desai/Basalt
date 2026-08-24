@@ -92,6 +92,11 @@ function WorkspaceShell({
     [],
   );
 
+  const getTabInfo = useCallback(
+    (tabId: string) => useTabsStore.getState().tabs[tabId] ?? null,
+    [],
+  );
+
   // Structural-tab-mutation signal: persistVersion bumps only on open/close/
   // pin/rename, so leaves can prune per-tab caches without re-rendering.
   const onTabStructureChanged = useCallback((cb: () => void) => {
@@ -111,6 +116,7 @@ function WorkspaceShell({
       findNote: ws.findNote,
       getOpenTabIds,
       getOpenTabPaths,
+      getTabInfo,
       onTabStructureChanged,
     }),
     [
@@ -119,6 +125,7 @@ function WorkspaceShell({
       ws.findNote,
       getOpenTabIds,
       getOpenTabPaths,
+      getTabInfo,
       onTabStructureChanged,
     ],
   );

@@ -18,7 +18,7 @@
  */
 import { useCallback, useMemo } from "react";
 import type { TabModel } from "../features/tabs";
-import { tabIdFromPath, useTabsStore } from "../features/tabs";
+import { useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
 import { useVaultController, useVaultMutations } from "../features/vault";
 import { useSetting } from "../features/settings";
@@ -116,6 +116,32 @@ export function useWorkspaceController({
     [activeNote, loadNote, closeNote],
   );
 
+  // Repoint open tabs after a move/paste. Tab ids are stable; only path
+  // and title change, so leaf EditorState caches (keyed by id) — including
+  // unsaved edits in dirty tabs — survive the move.
+  const handlePathsMoved = useCallback(
+    (sourcePaths: string[], destinationRelPath: string) => {
+      if (!vaultPath) return;
+      const destAbs = destinationRelPath
+        ? `${vaultPath}/${destinationRelPath}`
+        : vaultPath;
+      const state = useTabsStore.getState();
+      const moves: Array<{ from: string; to: string }> = [];
+      for (const tab of Object.values(state.tabs)) {
+        const source = sourcePaths.find(
+          (s) => tab.path === s || tab.path.startsWith(`${s}/`),
+        );
+        if (!source) continue;
+        moves.push({
+          from: tab.path,
+          to: `${destAbs}${tab.path.slice(source.length)}`,
+        });
+      }
+      if (moves.length > 0) state.updateTabPaths(moves);
+    },
+    [vaultPath],
+  );
+
   const controller = useVaultController({
     treeNodes,
     visibleNodes,
@@ -126,6 +152,7 @@ export function useWorkspaceController({
     toggleFolder,
     refreshTree,
     onFileOpen,
+    onPathsMoved: handlePathsMoved,
   });
 
   // Destructure so the callback depends on the stable method, not the
@@ -135,10 +162,13 @@ export function useWorkspaceController({
     const deletedPaths = [...mutations.pendingDeletePaths];
     await handleConfirmDelete();
 
+    // Close by path match, not id derivation: tab ids can be stale after a
+    // move repointed paths in place (updateTabPaths keeps original ids).
     const state = useTabsStore.getState();
-    for (const path of deletedPaths) {
-      const tabId = tabIdFromPath(path);
-      state.closeTab(tabId, { force: true });
+    for (const tab of Object.values(state.tabs)) {
+      if (deletedPaths.includes(tab.path)) {
+        state.closeTab(tab.id, { force: true });
+      }
     }
   }, [handleConfirmDelete, mutations.pendingDeletePaths]);
 

@@ -59,6 +59,7 @@ export interface CoreSlice {
   unpinTab: TabsState["unpinTab"];
   togglePinTab: TabsState["togglePinTab"];
   moveTabWithinPane: TabsState["moveTabWithinPane"];
+  updateTabPaths: TabsState["updateTabPaths"];
 
   reset: TabsState["reset"];
 }
@@ -71,10 +72,21 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     const activate = options?.activate ?? true;
     const incomingTabId = makeTabId(note.path) as TabId;
 
-    const existingTab = get().tabs[incomingTabId];
+    // Prefer id lookup, then fall back to path lookup: a moved note's tab
+    // keeps its original (path-derived) id after updateTabPaths repoints it,
+    // so opening the note at its new path must find that tab, not duplicate.
+    let targetId = incomingTabId;
+    let existingTab = get().tabs[targetId];
+    if (!existingTab) {
+      const byPath = Object.values(get().tabs).find((t) => t.path === note.path);
+      if (byPath) {
+        targetId = byPath.id;
+        existingTab = byPath;
+      }
+    }
     if (existingTab) {
-      if (activate) get().activateTab(incomingTabId);
-      return incomingTabId;
+      if (activate) get().activateTab(targetId);
+      return targetId;
     }
 
     const current = get();
@@ -123,11 +135,20 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     const activate = options?.activate ?? true;
     const incomingTabId = makeTabId(note.path) as TabId;
 
-    const existingTab = get().tabs[incomingTabId];
+    // Same path fallback as openInPreview — moved notes keep stale ids.
+    let targetId = incomingTabId;
+    let existingTab = get().tabs[targetId];
+    if (!existingTab) {
+      const byPath = Object.values(get().tabs).find((t) => t.path === note.path);
+      if (byPath) {
+        targetId = byPath.id;
+        existingTab = byPath;
+      }
+    }
     if (existingTab) {
-      get().pinTab(incomingTabId);
-      if (activate) get().activateTab(incomingTabId);
-      return incomingTabId;
+      get().pinTab(targetId);
+      if (activate) get().activateTab(targetId);
+      return targetId;
     }
 
     const current = get();
@@ -334,6 +355,28 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       tabIds.splice(insertIndex, 0, moved);
       return {
         pane: { ...pane, tabIds },
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  updateTabPaths: (moves) => {
+    set((state) => {
+      const byFrom = new Map(moves.map((m) => [m.from, m.to]));
+      let changed = false;
+      const nextTabs: Record<TabId, TabModel> = {};
+      for (const [id, tab] of Object.entries(state.tabs)) {
+        const to = byFrom.get(tab.path);
+        if (!to) {
+          nextTabs[id] = tab;
+          continue;
+        }
+        changed = true;
+        nextTabs[id] = { ...tab, path: to, title: titleFromPath(to) };
+      }
+      if (!changed) return state;
+      return {
+        tabs: nextTabs,
         persistVersion: state.persistVersion + 1,
       };
     });

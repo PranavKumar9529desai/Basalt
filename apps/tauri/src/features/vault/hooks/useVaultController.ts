@@ -188,6 +188,10 @@ export interface UseVaultControllerOptions {
   toggleFolder: (relPath: string) => void;
   refreshTree: () => Promise<void>;
   onFileOpen?: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
+  /** Fired after a successful move/paste with the sources and destination.
+   * Cross-feature wiring (e.g. repointing open tabs) belongs to the caller
+   * — this hook must stay tabs-free. */
+  onPathsMoved?: (sourcePaths: string[], destinationRelPath: string) => void;
 }
 
 export interface UseVaultControllerReturn {
@@ -230,6 +234,7 @@ export function useVaultController({
   toggleFolder,
   refreshTree,
   onFileOpen,
+  onPathsMoved,
 }: UseVaultControllerOptions): UseVaultControllerReturn {
   const selection = useVaultSelectionState();
   const clipboard = useVaultClipboardState();
@@ -437,12 +442,18 @@ export function useVaultController({
       destinationRelPath,
     );
     if (moved) {
+      // Report BEFORE clearing the clipboard — the caller needs the source
+      // paths to repoint anything tracking them (open tabs).
+      onPathsMoved?.(
+        clipboard.clipboard.items.map((item) => item.path),
+        destinationRelPath,
+      );
       clipboard.clearClipboard();
       await refreshTree();
       if (destinationRelPath) openFolder(destinationRelPath);
     }
     contextMenu.closeMenu();
-  }, [clipboard, contextMenu, mutations, openFolder, refreshTree]);
+  }, [clipboard, contextMenu, mutations, openFolder, refreshTree, onPathsMoved]);
 
   const onMenuDelete = useCallback(() => {
     const target = contextMenu.menuState.target;

@@ -165,17 +165,21 @@ export function MarkdownLeaf({ tab }: LeafProps) {
 
   const saveTab = useCallback(
     async (tabId: string) => {
-      const meta = tabMetaRef.current.get(tabId);
+      // The live tab is the source of truth for the path: a move can repoint
+      // a tab's path in place (stable id), and tabMetaRef may still hold the
+      // pre-move snapshot for background tabs.
+      const liveTab = tabRef.current;
+      const isActive = liveTab?.id === tabId;
+      const meta =
+        isActive && liveTab
+          ? { path: liveTab.path, name: liveTab.title }
+          : tabMetaRef.current.get(tabId);
+      if (!meta) return;
 
-      // Source of truth is the LIVE CM6 view for the focused tab; the
-      // statesRef cache is a restore snapshot for background tabs (kept in
-      // sync by the update listener below). Saving from the snapshot for the
-      // active tab would silently persist pre-edit content.
-      const isActive = tabRef.current?.id === tabId;
       const state =
         (isActive ? viewRef.current?.state : undefined) ??
         statesRef.current.get(tabId);
-      if (!meta || !state) return;
+      if (!state) return;
       if (isActive && viewRef.current) {
         statesRef.current.set(tabId, viewRef.current.state);
       }
@@ -215,6 +219,17 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     return services.onTabStructureChanged(() => {
       const openIds = services.getOpenTabIds();
       const openPaths = services.getOpenTabPaths();
+      // Refresh metadata first: a move repoints a tab's path in place
+      // (stable id), so cached {path} snapshots can be stale for background
+      // tabs that are about to be flush-saved or pruned below.
+      for (const id of statesRef.current.keys()) {
+        const info = services.getTabInfo(id);
+        if (!info) continue;
+        const meta = tabMetaRef.current.get(id);
+        if (!meta || meta.path !== info.path || meta.name !== info.title) {
+          tabMetaRef.current.set(id, { path: info.path, name: info.title });
+        }
+      }
       for (const id of statesRef.current.keys()) {
         // Match on path as well as id: if a future rename/move feature
         // rekeys tabs (id derives from path), the old id disappears while
@@ -271,8 +286,11 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   );
 
   useEffect(() => {
-    // Depend on tab.id only — the tab object gets a new identity on every
-    // tabs-store update (e.g. dirty flips) and this effect must not re-run.
+    // Depend on tab.id + tab.path — the tab object gets a new identity on
+    // every tabs-store update (e.g. dirty flips) and this effect must not
+    // re-run for those. path IS included: a move repoints the path in place
+    // (stable id) and showTab's cached-state branch refreshes meta/backlinks
+    // WITHOUT reloading from disk, so in-progress edits survive moves.
     const t = tabRef.current;
     const prev = prevTabRef.current;
     const view = viewRef.current;
@@ -288,7 +306,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       .setActiveNote({ path: t.path, name: t.title });
     void ioRef.current.refreshBacklinks(t.path);
     void showTab(t);
-  }, [tab.id, showTab, saveTab, ioRef, tabRef]);
+  }, [tab.id, tab.path, showTab, saveTab, ioRef, tabRef]);
 
   const handleReady = useCallback(
     (view: EditorView) => {

@@ -35,6 +35,11 @@ export interface LeafServices {
   /** Snapshot of every open tab's note path. Pruning must match on path
    * too: a tab whose id changed (rename/move rekey) is NOT closed. */
   getOpenTabPaths: () => Set<string>;
+  /** Live {path, title} for an open tab id, read from the tabs store.
+   * Leaves refresh their per-tab metadata caches from this when moves
+   * repoint a tab's path without changing its id. Returns null if the
+   * tab is closed. */
+  getTabInfo: (tabId: string) => { path: string; title: string } | null;
   /** Fires after structural tab mutations (open/close/pin/rename). Returns
    * an unsubscribe function. Ephemeral changes (dirty/active) don't fire. */
   onTabStructureChanged: (cb: () => void) => () => void;
