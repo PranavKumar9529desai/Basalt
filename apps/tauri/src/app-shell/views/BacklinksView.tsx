@@ -1,4 +1,4 @@
-import { useFocusedPaneStore } from "../../features/editor";
+import { useActiveNoteStore } from "../../features/editor";
 import { BacklinksSidebar } from "../../features/vault";
 import { useWorkspaceContext } from "../WorkspaceProvider";
 
@@ -8,13 +8,13 @@ import { useWorkspaceContext } from "../WorkspaceProvider";
  * and opens notes through the workspace context.
  */
 export function BacklinksView() {
-  const backlinks = useFocusedPaneStore((s) => s.focusedPaneBacklinks);
-  const { openNotePreview } = useWorkspaceContext();
+  const backlinks = useActiveNoteStore((s) => s.activeNoteBacklinks);
+  const { openNote } = useWorkspaceContext();
 
   return (
     <BacklinksSidebar
       backlinks={backlinks}
-      onOpenNote={({ path }) => openNotePreview(path)}
+      onOpenNote={({ path }) => openNote(path)}
     />
   );
 }

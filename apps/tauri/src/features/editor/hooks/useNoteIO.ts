@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
-import { useFocusedPaneStore } from "../store";
+import { useActiveNoteStore } from "../store";
 import type { LinkSuggestion, SaveStatus } from "../types";
 
 /**
@@ -9,7 +9,7 @@ import type { LinkSuggestion, SaveStatus } from "../types";
  * Owns NO document state: the document lives in CodeMirror (per-tab
  * EditorStates owned by MarkdownLeaf). This hook only wraps IPC and the
  * small pieces of React state the UI actually renders (status line,
- * focused tab's save status) and mirrors backlinks into the focused-pane
+ * active tab's save status) and mirrors backlinks into the active-note
  * store for the right dock.
  */
 export function useNoteIO() {
@@ -29,7 +29,7 @@ export function useNoteIO() {
   const refreshBacklinks = useCallback(async (path: string) => {
     try {
       const links = await invoke<string[]>("get_backlinks", { path });
-      useFocusedPaneStore.getState().setFocusedPaneBacklinks(links);
+      useActiveNoteStore.getState().setActiveNoteBacklinks(links);
     } catch (err) {
       console.error("[useNoteIO] get_backlinks failed:", err);
     }

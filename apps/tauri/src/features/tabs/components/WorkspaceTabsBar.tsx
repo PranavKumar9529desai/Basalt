@@ -11,7 +11,7 @@ export interface WorkspaceTabsBarProps {
 
 // WorkspaceTabsBar — store→view wiring for the editor tab bar. Rendered by
 // the shell as the header cell of the editor column in the workspace grid.
-// The bottom hairline is owned by the shell's <StripSeparator>, not drawn here.
+// The bottom hairline is owned by the shell's <HeaderBandRule>, not drawn here.
 export function WorkspaceTabsBar({
   onSelectTab,
   onCloseTab,

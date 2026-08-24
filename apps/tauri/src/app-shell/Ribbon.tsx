@@ -5,11 +5,11 @@ import {
   IconSearch,
   IconSettings,
 } from "@tabler/icons-react";
-import { ActivityBar as ActivityBarUI } from "@workspace/ui/components/activity-bar";
+import { Ribbon as RibbonUI } from "@workspace/ui/components/ribbon";
 import { useSearchStore } from "../features/search";
-import { useSettingsStore } from "../features/settings";
+import { useSettingsModalStore } from "../features/settings";
 
-interface ActivityBarProps {
+interface RibbonProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   rightSidebarOpen: boolean;
@@ -24,14 +24,14 @@ interface ActivityBarProps {
  * The file-tree toggle is the first (topmost) item here, taking the
  * top-left corner position of the workspace.
  */
-export function ActivityBar({
+export function Ribbon({
   sidebarOpen,
   onToggleSidebar,
   rightSidebarOpen,
   onToggleRightSidebar,
-}: ActivityBarProps) {
+}: RibbonProps) {
   const openSearch = useSearchStore((s) => s.openSearch);
-  const openSettings = useSettingsStore((s) => s.open);
+  const openSettings = useSettingsModalStore((s) => s.open);
 
   const SidebarToggleIcon = sidebarOpen
     ? IconLayoutSidebarLeftCollapse
@@ -70,7 +70,7 @@ export function ActivityBar({
   const activeId = rightSidebarOpen ? "backlinks" : null;
 
   return (
-    <ActivityBarUI
+    <RibbonUI
       topItems={topItems}
       bottomItems={bottomItems}
       activeId={activeId}

@@ -112,11 +112,11 @@ Exception: a feature may import **types only** from another feature's `types.ts`
 ```
 // ❌ WRONG — orchestration in a feature
 // features/tabs/commands.ts
-import { useFocusedPaneStore } from "../editor";  // cross-feature!
+import { useActiveNoteStore } from "../editor";  // cross-feature!
 
 // ✅ CORRECT — orchestration in shared
 // shared/paneCommands.ts
-import { useFocusedPaneStore } from "../features/editor";
+import { useActiveNoteStore } from "../features/editor";
 import { useTabsStore } from "../features/tabs";
 ```
 
@@ -360,38 +360,37 @@ apps/tauri/src/
 │   ├── WorkspaceView.tsx        # Workspace grid + header band
 │   ├── WorkspaceInit.tsx        # One-time boot + persistence
 │   ├── WorkspaceOverlays.tsx
-│   ├── ActivityBar.tsx
-│   ├── Sidebar.tsx
-│   ├── RightSidebar.tsx
+│   ├── WorkspaceProvider.tsx    # App context for views (ADR-018)
+│   ├── Ribbon.tsx               # Far-left quick-access bar
+│   ├── SideDock.tsx             # Generic registry-driven dock
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── ThemeSelect.tsx
+│   ├── viewRegistrations.ts     # viewRegistry + leafRegistry entries
+│   ├── views/                   # Registered dock views (FileExplorer, Backlinks)
 │   └── hooks/
 │       └── useWorkspaceTabHandlers.ts
 ├── shared/
-│   ├── useWorkspace.ts          # Vault ↔ Tabs ↔ Editor orchestration
-│   └── paneCommands.ts          # Tab commands needing editor state
+│   ├── useWorkspace.ts          # useWorkspaceController — cross-feature orchestration
+│   └── tabCommands.ts           # Tab commands needing active-note state
 ├── features/
 │   ├── editor/
-│   │   ├── PaneContent.tsx
-│   │   ├── components/          # CommandPalette, EditorComponent, EditorContextMenu
-│   │   ├── hooks/               # useEditor, useEditorCommands
+│   │   ├── components/          # MarkdownLeaf, EditorHost, CommandPalette, EditorContextMenu
+│   │   ├── hooks/               # useNoteIO, useEditorCommands, useLatestRef
 │   │   ├── commands.ts
-│   │   ├── store.ts
+│   │   ├── store.ts             # useActiveNoteStore
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── tabs/
 │   │   ├── components/          # WorkspaceTabs, WorkspaceTabsBar
-│   │   ├── hooks/               # useTabs, useTabDnD, useTabIO, useTabPersistence
+│   │   ├── hooks/               # useTabs, useTabDnD, useTabPersistence
 │   │   ├── store/               # core.ts + persistence.ts
 │   │   ├── constants.ts
 │   │   ├── selectors.ts
 │   │   ├── types.ts
 │   │   └── index.ts
 │   ├── vault/
-│   │   ├── hooks/               # useVaultTree, useVaultMutations,
-│   │   │                        # useVaultController, useVaultActions
-│   │   ├── components/          # FileTree, BacklinksSidebar, SaveIndicator, VaultSplash
+│   │   ├── hooks/               # useVaultTree, useVaultMutations, useVaultController
+│   │   ├── components/          # FileTree, BacklinksSidebar, VaultSplash
 │   │   ├── commands.ts
 │   │   ├── types.ts
 │   │   └── index.ts
@@ -404,8 +403,8 @@ apps/tauri/src/
 │   └── settings/
 │       ├── components/          # SettingsModal, SettingsNav, SettingsPanel, sections/
 │       ├── commands.ts
-│       ├── settings-data.ts
-│       ├── store.ts
+│       ├── settings-data.ts     # useSettingsStore (values) + useSetting/setSetting
+│       ├── store.ts             # useSettingsModalStore (modal chrome)
 │       └── index.ts
 ├── routes/
 │   ├── __root.tsx
@@ -414,7 +413,7 @@ apps/tauri/src/
 
 packages/ui/src/components/
 ├── ui/                            # shadcn primitives only
-├── activity-bar/
+├── ribbon/                        # Ribbon + RibbonItem (quick-access bar)
 ├── sidebar/
 ├── tabs/
 ├── file-tree/
@@ -422,7 +421,7 @@ packages/ui/src/components/
 ├── confirm-dialog/
 ├── input-dialog/
 ├── palette-shell/
-├── top-strip/                     # StripSeparator (header-band hairline)
+├── header-band/                   # HeaderBandRule (header-band hairline)
 └── (no loose files at components/ level)
 ```
 

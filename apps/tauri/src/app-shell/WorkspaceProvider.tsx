@@ -1,4 +1,4 @@
-import { useFocusedPaneStore } from "../features/editor";
+import { useActiveNoteStore } from "../features/editor";
 import {
   getTabByPath,
   useTabsStore,
@@ -8,7 +8,7 @@ import {
   useVaultTree,
   type FlatTreeNode,
 } from "../features/vault";
-import { useWorkspace } from "../shared/useWorkspace";
+import { useWorkspaceController } from "../shared/useWorkspace";
 import {
   type ReactNode,
   createContext,
@@ -22,9 +22,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const { treeNodes, visibleNodes, toggleFolder, openFolder, refreshTree } =
     tree;
 
-  const focusedSessionSelected = useFocusedPaneStore(
-    (s) => s.focusedPaneSelected,
-  );
+  const activeNote = useActiveNoteStore((s) => s.activeNote);
   const pane = useTabsStore((s) => s.pane);
   const tabsRecord = useTabsStore((s) => s.tabs);
   const openInPreview = useTabsStore((s) => s.openInPreview);
@@ -32,15 +30,15 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const setTabTitle = useTabsStore((s) => s.setTabTitle);
   const closeTab = useTabsStore((s) => s.closeTab);
 
-  const focusedSessionTab = useMemo(
+  const activeNoteTab = useMemo(
     () =>
-      focusedSessionSelected?.path
-        ? getTabByPath(pane, tabsRecord, focusedSessionSelected.path)
+      activeNote?.path
+        ? getTabByPath(pane, tabsRecord, activeNote.path)
         : null,
-    [focusedSessionSelected?.path, pane, tabsRecord],
+    [activeNote?.path, pane, tabsRecord],
   );
 
-  const workspace = useWorkspace({
+  const workspace = useWorkspaceController({
     vaultPath,
     treeNodes,
     visibleNodes,
@@ -48,8 +46,8 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     toggleFolder,
     refreshTree,
     editor: {
-      focusedSessionSelected,
-      focusedSessionTab,
+      activeNote,
+      activeNoteTab,
       openInPreview,
       openPinned,
       setTabTitle,
@@ -62,35 +60,25 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     [treeNodes],
   );
 
-  // Open a note by path in a preview tab (used by search, backlinks, and
-  // any view that needs "open this note").
-  const openNotePreview = useCallback(
+  // Open a note by path — the single entry point for wikilinks, backlinks,
+  // search, and any view that needs "open this note". Title resolves from
+  // the tree, falling back to the path's basename.
+  const openNote = useCallback(
     (path: string) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
-      if (!node) return;
-      const tabId = openInPreview({ path: node.path, title: node.name });
-      setTabTitle(tabId, node.name);
-    },
-    [treeNodes, openInPreview, setTabTitle],
-  );
-
-  // Open a note by path+name — the leaf-services surface (wikilinks,
-  // backlinks views). Creates a preview tab, unlike in-place navigation.
-  const openNote = useCallback(
-    ({ path, name }: { path: string; name: string }) => {
+      const name = node?.name ?? path.split("/").pop() ?? path;
       const tabId = openInPreview({ path, title: name });
       setTabTitle(tabId, name);
     },
-    [openInPreview, setTabTitle],
+    [treeNodes, openInPreview, setTabTitle],
   );
 
   return {
     vaultPath,
     ...tree,
     ...workspace,
-    focusedSessionTab,
+    activeNoteTab,
     findNote,
-    openNotePreview,
     openNote,
   };
 }
@@ -101,11 +89,11 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 /**
  * App context for workbench views (ADR-018): owns the single instance of the
- * cross-feature composition (vault tree + useWorkspace) and exposes it via
- * context instead of prop drills — the role Obsidian's `app` object plays
- * for its views, and the surface future plugins will receive. Mount exactly
- * once (WorkspaceView); the hooks underneath hold state and must never be
- * instantiated twice.
+ * cross-feature composition (vault tree + useWorkspaceController) and exposes
+ * it via context instead of prop drills — the role Obsidian's `app` object
+ * plays for its views, and the surface future plugins will receive. Mount
+ * exactly once (WorkspaceView); the hooks underneath hold state and must
+ * never be instantiated twice.
  */
 export function WorkspaceProvider({
   vaultPath,

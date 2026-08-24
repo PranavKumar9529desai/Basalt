@@ -10,7 +10,7 @@ export interface SectionDef {
   component: React.LazyExoticComponent<React.ComponentType>;
 }
 
-interface SettingsStore {
+interface SettingsModalStore {
   isOpen: boolean;
   activeSection: string;
   sections: SectionDef[];
@@ -54,7 +54,7 @@ const CORE_SECTIONS: SectionDef[] = [
   },
 ];
 
-export const useSettingsStore = create<SettingsStore>()((set, get) => ({
+export const useSettingsModalStore = create<SettingsModalStore>()((set, get) => ({
   isOpen: false,
   activeSection: "general",
   sections: CORE_SECTIONS,

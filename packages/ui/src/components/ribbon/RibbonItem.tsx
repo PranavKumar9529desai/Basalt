@@ -2,19 +2,19 @@ import { cn } from "@workspace/ui/lib/utils";
 import type { FC, ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-export interface ActivityBarItemData {
+export interface RibbonItemData {
   id: string;
   icon: ReactNode;
   label: string;
   badge?: number | boolean;
 }
 
-export interface ActivityBarItemProps extends ActivityBarItemData {
+export interface RibbonItemProps extends RibbonItemData {
   isActive: boolean;
   onClick: (id: string) => void;
 }
 
-export const ActivityBarItem: FC<ActivityBarItemProps> = ({
+export const RibbonItem: FC<RibbonItemProps> = ({
   id,
   icon,
   label,

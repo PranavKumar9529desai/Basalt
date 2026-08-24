@@ -22,9 +22,8 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 |---|---|
 | Four-layer architecture | ✅ Established |
 | CommandService + KeybindingService (registry pattern) | ✅ Complete |
-| Workspace grid + unified header band (`StripSeparator`) | ✅ Complete |
+| Workspace grid + unified header band (`HeaderBandRule`) | ✅ Complete |
 | Tab system (single pane, DnD, persistence, overflow dropdown) | ✅ Complete |
-| Per-pane editor (`PaneContent`) | ✅ Complete |
 | Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete |
 | Command palette / quick switcher / search (tantivy + nucleo) | ✅ Complete |
 | File tree / sidebar / note creation (Obsidian-style instant) | ✅ Complete |
@@ -100,20 +99,19 @@ Four layers. Dependencies flow downward only. No cycles.
 ```
 apps/tauri/src/
 ├── app-shell/              ← Layout composition (thin glue)
-│   ├── ActivityBar.tsx       (becomes Ribbon per ADR-018 lexicon)
-│   ├── Sidebar.tsx
-│   ├── RightSidebar.tsx
+│   ├── Ribbon.tsx            (far-left quick-access bar; Obsidian lexicon)
+│   ├── SideDock.tsx          (generic registry-driven side dock)
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── ThemeSelect.tsx
 │   ├── WorkspaceView.tsx     ← Workspace grid + header band
 │   ├── WorkspaceOverlays.tsx
 │   ├── WorkspaceInit.tsx     ← One-time boot + persistence
+│   ├── viewRegistrations.ts  ← registerView()/leaf registry entries
 │   └── hooks/
 │       └── useWorkspaceTabHandlers.ts
 ├── shared/                 ← Cross-feature orchestration
-│   ├── useWorkspace.ts
-│   └── paneCommands.ts
+│   ├── useWorkspace.ts     (useWorkspaceController)
+│   └── tabCommands.ts
 ├── features/               ← Business logic (zero cross-feature imports)
 │   ├── editor/  search/  settings/  tabs/  vault/
 ├── routes/                 ← TanStack Router (2 routes max)

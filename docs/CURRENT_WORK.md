@@ -89,5 +89,21 @@ conclusions.
 - Search commits are batched (idle 10s / before-query). Never commit per save.
 - Shell renders from registries (`viewRegistry` / `leafRegistry`); no feature
   panel imports in `app-shell`. New panels = registration entries only.
-- Header band z-contract: `StripSeparator` z-10 < active tab + nubs z-20;
-  section backgrounds z-auto.
+- Header band z-contract: `HeaderBandRule` (was `StripSeparator`) z-10 <
+  active tab + nubs z-20; section backgrounds z-auto.
+
+### Naming overhaul (2026-08-24, lexicon anchored to ADR-018 / VS Code)
+
+view = side-dock panel, leaf = tab content type. Renamed:
+`useFocusedPaneStore`→`useActiveNoteStore`, `useWorkspace`→
+`useWorkspaceController`, `useVaultActions` merged into `useVaultMutations`,
+`useSettingsDataStore`→`useSettingsStore` (chrome→`useSettingsModalStore`),
+`ActivityBar`→`Ribbon` (ui + shell), `EditorComponent`→`EditorHost`,
+`paneCommands.ts`→`tabCommands.ts`, `TabGroupFrame`→`TabListFrame`,
+`StripSeparator`→`HeaderBandRule` (`top-strip/`→`header-band/`),
+`CUSTOM_THEME`→`BASE_EDITOR_THEME`, `TabModel.viewType`→`leafType`
+(`viewTypeForPath`→`leafTypeForPath`; hydrate accepts legacy `viewType`),
+`openNotePreview`+`openNote` merged into `openNote(path)`. Dead code deleted:
+`useTabIO`, `SaveIndicator`, `ThemeSelect`, `useCommandStore`, duplicate ui
+`useTabDnD`, unwired `useWorkspaceTabHandlers` returns. Banner comments
+replaced with doc comments per CONVENTIONS §8.

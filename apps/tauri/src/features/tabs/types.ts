@@ -11,7 +11,7 @@ export interface TabModel {
   path: string;
   title: string;
   /** Registered leaf type that renders this tab's content (ADR-018). */
-  viewType: string;
+  leafType: string;
   isPinned: boolean;
   isPreview: boolean;
   isDirty: boolean;

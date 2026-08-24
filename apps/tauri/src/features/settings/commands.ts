@@ -1,4 +1,4 @@
 import { commandService } from "@workspace/commands";
-import { useSettingsStore } from "./store";
+import { useSettingsModalStore } from "./store";
 
-commandService.registerCommand("app:open-settings", useSettingsStore.getState().open);
+commandService.registerCommand("app:open-settings", useSettingsModalStore.getState().open);

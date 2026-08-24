@@ -28,7 +28,7 @@ export interface SideDockProps {
  * panel is a registerView() call, never an edit here.
  *
  * The header strip is a plain h-10 band cell; the bottom hairline is
- * owned by the shell's StripSeparator.
+ * owned by the shell's HeaderBandRule.
  */
 export function SideDock({
   side,

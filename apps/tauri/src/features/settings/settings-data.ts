@@ -25,7 +25,7 @@ const DEFAULTS = {
 type SettingsKey = keyof typeof DEFAULTS;
 type SettingsValues = typeof DEFAULTS;
 
-interface SettingsDataStore {
+interface SettingsStore {
   values: Record<string, unknown>;
   set: (key: string, value: unknown) => void;
 }
@@ -38,7 +38,7 @@ interface SettingsDataStore {
  * - `useSetting()` subscribes a component to a single key.
  * - `setSetting()` writes to both the store and the Rust backend.
  */
-export const useSettingsDataStore = create<SettingsDataStore>()((set) => ({
+export const useSettingsStore = create<SettingsStore>()((set) => ({
   values: { ...DEFAULTS },
 
   set: (key, value) =>
@@ -58,7 +58,7 @@ export const useSettingsDataStore = create<SettingsDataStore>()((set) => ({
 export function useSetting<K extends SettingsKey>(
   key: K,
 ): SettingsValues[K] {
-  return useSettingsDataStore(
+  return useSettingsStore(
     (state) => state.values[key] as SettingsValues[K],
   );
 }
@@ -77,7 +77,7 @@ export function setSetting<K extends SettingsKey>(
   key: K,
   value: SettingsValues[K],
 ) {
-  useSettingsDataStore.getState().set(key, value);
+  useSettingsStore.getState().set(key, value);
   invoke("set_setting", { key, value }).catch((err) => {
     console.error(`Failed to persist setting "${key}":`, err);
   });
@@ -95,6 +95,6 @@ export function setSetting<K extends SettingsKey>(
 export function initSettings(backend: Record<string, unknown> | undefined) {
   if (!backend) return;
   const merged = { ...DEFAULTS, ...backend };
-  useSettingsDataStore.getState().set("__init__", undefined);
-  useSettingsDataStore.setState({ values: merged });
+  useSettingsStore.getState().set("__init__", undefined);
+  useSettingsStore.setState({ values: merged });
 }

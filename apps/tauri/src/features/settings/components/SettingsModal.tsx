@@ -2,12 +2,12 @@ import { IconX } from "@tabler/icons-react";
 import { useKeybindingService } from "@workspace/keybindings";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
-import { useSettingsStore } from "../store";
+import { useSettingsModalStore } from "../store";
 import { SettingsNav } from "./SettingsNav";
 import { SettingsPanel } from "./SettingsPanel";
 
 export function SettingsModal() {
-  const { isOpen, close } = useSettingsStore();
+  const { isOpen, close } = useSettingsModalStore();
   const dialogRef = useRef<HTMLDivElement>(null);
   const keybindingService = useKeybindingService();
 

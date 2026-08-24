@@ -245,7 +245,7 @@ export function TabsBar({
       role="tablist"
       aria-label="Open tabs"
       // No z-index here: the bar background must stay BELOW the shell's
-      // StripSeparator (z-10), while the active tab and chrome nubs (z-20)
+      // HeaderBandRule (z-10), while the active tab and chrome nubs (z-20)
       // carve through it. A z-index on this root would lift the opaque
       // background above the line and hide it.
       className={cn(
@@ -391,7 +391,7 @@ export function TabsBar({
       {/* ── Dropdown trigger — sticky at right edge ── */}
       <div
         ref={dropdownWrapperRef}
-        // No opaque background: it would chop the StripSeparator hairline
+        // No opaque background: it would chop the HeaderBandRule hairline
         // short of the right edge.
         className="shrink-0 flex items-stretch"
       >

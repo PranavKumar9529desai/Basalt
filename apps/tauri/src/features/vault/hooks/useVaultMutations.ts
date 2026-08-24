@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useRouter } from "@tanstack/react-router";
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useState } from "react";
-import type { CreateNoteResult } from "../types";
+import type { BootResult, CreateNoteResult } from "../types";
 
 const GHOST_ID = "__ghost__";
 
@@ -37,12 +38,19 @@ export interface UseVaultMutationsReturn {
   requestDelete: (path: string, name: string) => void;
   requestDeleteMany: (items: Array<{ path: string; name: string }>) => void;
   confirmDelete: () => Promise<boolean>;
+  // Vault-level actions
+  isIndexing: boolean;
+  status: string | null;
+  setStatus: (msg: string | null) => void;
+  pickAndSetVault: () => Promise<void>;
+  reindexVault: () => Promise<void>;
   // Shared
   error: string | null;
   isLoading: boolean;
 }
 
 export function useVaultMutations(): UseVaultMutationsReturn {
+  const router = useRouter();
   const [ghostNode, setGhostNode] = useState<GhostNode | null>(null);
 
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -57,6 +65,49 @@ export function useVaultMutations(): UseVaultMutationsReturn {
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isIndexing, setIsIndexing] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  // Vault-level actions — pick a new vault folder / full re-index. Both
+  // re-run the route loader so the fresh boot result (with new tree)
+  // propagates through props.
+  const pickAndSetVault = useCallback(async () => {
+    try {
+      // Use the native Rust dialog command so we don't need the JS dialog plugin.
+      const chosen = await invoke<string | null>("open_vault_dialog");
+      if (!chosen) return;
+
+      setIsIndexing(true);
+      setStatus("Indexing vault…");
+
+      await invoke<BootResult>("set_vault", { path: chosen });
+
+      await router.invalidate();
+      setStatus(null);
+    } catch (err) {
+      console.error("[useVaultMutations] set_vault failed:", err);
+      setStatus(`Error: ${String(err)}`);
+    } finally {
+      setIsIndexing(false);
+    }
+  }, [router]);
+
+  const reindexVault = useCallback(async () => {
+    try {
+      setIsIndexing(true);
+      setStatus("Re-indexing…");
+
+      const result = await invoke<{ note_count: number }>("reindex_vault");
+
+      await router.invalidate();
+      setStatus(`Re-indexed — ${result.note_count} notes.`);
+    } catch (err) {
+      console.error("[useVaultMutations] reindex_vault failed:", err);
+      setStatus(`Re-index error: ${String(err)}`);
+    } finally {
+      setIsIndexing(false);
+    }
+  }, [router]);
 
   const createNoteInline = useCallback(
     (opts?: { parentRelPath?: string; depth?: number }) => {
@@ -246,6 +297,11 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     requestDelete,
     requestDeleteMany,
     confirmDelete,
+    isIndexing,
+    status,
+    setStatus,
+    pickAndSetVault,
+    reindexVault,
     error,
     isLoading,
   };

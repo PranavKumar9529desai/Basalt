@@ -1,5 +1,5 @@
 /**
- * useWorkspace — Cross-feature orchestrator.
+ * useWorkspaceController — Cross-feature orchestrator.
  *
  * Architecture: This hook owns ALL cross-feature wiring between vault, tabs,
  * editor, and settings. It reads from multiple feature stores and composes
@@ -13,7 +13,8 @@
  *
  * Callers pass in raw feature data (treeNodes, visibleNodes, vaultPath)
  * and editor interface callbacks. This hook returns composed controller
- * actions and UI state for the shell to render.
+ * actions and UI state for the shell to render. Consume it via
+ * useWorkspaceContext() — never instantiate a second time.
  */
 import { useCallback, useMemo } from "react";
 import type { TabModel } from "../features/tabs";
@@ -31,8 +32,8 @@ interface NoteSelection {
 }
 
 interface EditorInterface {
-  focusedSessionSelected: NoteSelection | null;
-  focusedSessionTab: TabModel | null;
+  activeNote: NoteSelection | null;
+  activeNoteTab: TabModel | null;
   openInPreview: (opts: { path: string; title: string }) => string;
   openPinned: (opts: { path: string; title: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
@@ -49,7 +50,7 @@ interface Props {
   editor: EditorInterface;
 }
 
-export function useWorkspace({
+export function useWorkspaceController({
   vaultPath,
   treeNodes,
   visibleNodes,
@@ -66,8 +67,8 @@ export function useWorkspace({
     openPinned,
     setTabTitle,
     closeTab,
-    focusedSessionTab,
-    focusedSessionSelected,
+    activeNoteTab,
+    activeNote,
   } = editor;
 
   const tabClickOpenBehavior = useSetting("tabClickOpenBehavior");
@@ -83,10 +84,10 @@ export function useWorkspace({
 
   // closeNote — single pane, just close the tab directly.
   const closeNote = useCallback(() => {
-    const tab = focusedSessionTab;
+    const tab = activeNoteTab;
     if (!tab) return;
     closeTab(tab.id, { force: true });
-  }, [focusedSessionTab, closeTab]);
+  }, [activeNoteTab, closeTab]);
 
   // onFileOpen only depends on stable store actions — never changes.
   const onFileOpen = useCallback(
@@ -106,16 +107,16 @@ export function useWorkspace({
   // recreate its callbacks when the reference changes but the values don't.
   const vaultControllerEditor = useMemo(
     () => ({
-      selected: focusedSessionSelected
+      selected: activeNote
         ? {
-            name: focusedSessionSelected.name,
-            path: focusedSessionSelected.path,
+            name: activeNote.name,
+            path: activeNote.path,
           }
         : null,
       loadNote,
       closeNote,
     }),
-    [focusedSessionSelected, loadNote, closeNote],
+    [activeNote, loadNote, closeNote],
   );
 
   const controller = useVaultController({

@@ -1,5 +1,5 @@
 /**
- * paneCommands — Cross-feature command registrations (tabs + editor).
+ * tabCommands — Cross-feature command registrations (tabs + editor).
  *
  * Architecture: This file registers tab-related commands that depend on
  * editor state (the focused pane). It imports from BOTH `features/tabs`
@@ -11,12 +11,12 @@
  * root), not from within any feature.
  */
 import { commandService } from "@workspace/commands";
-import { useFocusedPaneStore } from "../features/editor";
+import { useActiveNoteStore } from "../features/editor";
 import { getTabByPath } from "../features/tabs/selectors";
 import { useTabsStore } from "../features/tabs/store";
 
 function resolveActiveTab() {
-  const selected = useFocusedPaneStore.getState().focusedPaneSelected;
+  const selected = useActiveNoteStore.getState().activeNote;
   if (!selected?.path) return null;
   const { tabs, pane } = useTabsStore.getState();
   const tab = getTabByPath(pane, tabs, selected.path);

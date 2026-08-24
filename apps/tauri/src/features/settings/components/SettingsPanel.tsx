@@ -1,9 +1,9 @@
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 import { Suspense } from "react";
-import { useSettingsStore } from "../store";
+import { useSettingsModalStore } from "../store";
 
 export function SettingsPanel() {
-  const { sections, activeSection } = useSettingsStore();
+  const { sections, activeSection } = useSettingsModalStore();
   const section = sections.find((s) => s.id === activeSection);
 
   if (!section) return null;

@@ -35,7 +35,7 @@ const baseTheme = EditorView.theme({
   },
 });
 
-export const CUSTOM_THEME = [
+export const BASE_EDITOR_THEME = [
   baseTheme,
   syntaxHighlighting(defaultHighlightStyleOverride),
 ];

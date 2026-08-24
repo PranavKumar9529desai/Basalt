@@ -22,7 +22,7 @@ import type { FileChangeEvent, SaveStatus } from "../../vault/types";
 import { useLatestRef } from "../hooks/useLatestRef";
 import { useNoteIO } from "../hooks/useNoteIO";
 import { useActiveNoteStore } from "../store";
-import { EditorComponent } from "./EditorComponent";
+import { EditorHost } from "./EditorHost";
 import { EditorContextMenu } from "./EditorContextMenu";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
@@ -101,7 +101,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       const s = servicesRef.current;
       const target = s.findNote(linkName) ?? s.findNote(`${linkName}.md`);
       if (target) {
-        s.openNote({ name: target.name, path: target.path });
+        s.openNote(target.path);
       } else {
         ioRef.current.setStatus(`Could not find linked note: "${linkName}"`);
       }
@@ -481,7 +481,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       )}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
-          <EditorComponent
+          <EditorHost
             initialState={initialState}
             onReady={handleReady}
             className="min-h-0 flex-1"

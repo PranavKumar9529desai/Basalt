@@ -23,8 +23,8 @@ export interface LeafProps {
  * leaf never imports the tabs feature, it calls `services.openNote`.
  */
 export interface LeafServices {
-  /** Open a note in a preview tab. */
-  openNote: (note: { path: string; name: string }) => void;
+  /** Open a note by path (preview tab) — wikilinks, backlinks, search. */
+  openNote: (path: string) => void;
   /** Flip a tab's dirty flag in the tabs store. */
   markTabDirty: (tabId: string, dirty: boolean) => void;
   /** Resolve a note name (e.g. wikilink target) to a tree node. */
@@ -67,7 +67,7 @@ export function useLeafServices(): LeafServices {
 /**
  * A registrable leaf type (ADR-018 Phase 2) — the kind of content a tab
  * renders ("markdown", later "html", "graph", ...). Tabs carry a
- * `viewType` resolved at creation time from the file extension.
+ * `leafType` resolved at creation time from the file extension.
  */
 export interface LeafDescriptor {
   /** Stable unique id, e.g. "markdown". */
@@ -84,7 +84,7 @@ export interface LeafDescriptor {
 /**
  * LeafRegistry — same pattern as ViewRegistry/CommandService: providers
  * register by string key, the pane resolver looks up by the tab's
- * `viewType`.
+ * `leafType`.
  */
 export class LeafRegistry {
   private leaves = new Map<string, LeafDescriptor>();
@@ -105,7 +105,7 @@ export class LeafRegistry {
   }
 
   /** Resolve a file path to a registered leaf type via extension. */
-  viewTypeForPath(path: string): string | null {
+  leafTypeForPath(path: string): string | null {
     const lower = path.toLowerCase();
     for (const leaf of this.leaves.values()) {
       if (leaf.extensions.some((ext) => lower.endsWith(ext))) {

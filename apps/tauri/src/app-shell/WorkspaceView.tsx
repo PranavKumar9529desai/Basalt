@@ -14,7 +14,7 @@
 
 import { commandService } from "@workspace/commands";
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
-import { StripSeparator } from "@workspace/ui/components/top-strip";
+import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -22,8 +22,8 @@ import type { PaneRenderContext } from "../features/tabs";
 import { useTabs, useTabsStore, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
-import "../shared/paneCommands";
-import { ActivityBar } from "./ActivityBar";
+import "../shared/tabCommands";
+import { Ribbon } from "./Ribbon";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { SideDock } from "./SideDock";
 import "./viewRegistrations";
@@ -132,9 +132,9 @@ function WorkspaceShell({
       if (!tab) return null;
 
       // ADR-018 Phase 2: leaf content resolves from the registry by the
-      // tab's viewType — never a component switch statement here.
+      // tab's leafType — never a component switch statement here.
       const leaf =
-        leafRegistry.get(tab.viewType) ?? leafRegistry.get("markdown");
+        leafRegistry.get(tab.leafType) ?? leafRegistry.get("markdown");
       if (!leaf) return null;
       const LeafComponent = leaf.component;
 
@@ -177,14 +177,14 @@ function WorkspaceShell({
       {/**
        * Workspace grid — the single authority for header-band geometry.
        * Row 1 is the 40px header band (ribbon top, dock headers, tab bar);
-       * StripSeparator pins to its bottom edge and spans every header
+       * HeaderBandRule pins to its bottom edge and spans every header
        * column except the ribbon, whose vertical border runs through
        * unbroken. Columns span both rows so each owns its header +
        * content internally.
        */}
       <div className="grid flex-1 min-h-0 grid-cols-[auto_auto_1fr_auto] grid-rows-[40px_1fr]">
         <div className="col-start-1 row-span-full">
-          <ActivityBar
+          <Ribbon
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
             rightSidebarOpen={rightSidebarOpen}
@@ -213,7 +213,7 @@ function WorkspaceShell({
         {/* The ONE bottom hairline under the header band. z-10: above the
             sections' opaque backgrounds, below the active tab + chrome nubs
             (z-20) which carve the cut-through. */}
-        <StripSeparator className="col-start-2 col-end-[-1] row-start-1 self-end" />
+        <HeaderBandRule className="col-start-2 col-end-[-1] row-start-1 self-end" />
 
         <SideDock
           side="right"
@@ -228,7 +228,7 @@ function WorkspaceShell({
         mutations={ws.mutations}
         controller={ws.controller}
         onConfirmDelete={ws.handleConfirmDeleteWithTabs}
-        onSearchOpen={ws.openNotePreview}
+        onSearchOpen={ws.openNote}
       />
     </div>
   );

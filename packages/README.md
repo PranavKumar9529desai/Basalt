@@ -8,6 +8,7 @@ Shared libraries for the Basalt workspace app.
 |---|---|---|
 | [`@workspace/ui`](./ui) | Visual components. Props in, DOM out. | Never |
 | [`@workspace/editor`](./editor) | CodeMirror markdown editor extensions & theme | Never |
+| [`@workspace/views`](./views) | View/leaf registries + leaf services context (ADR-018) | Never |
 | [`@workspace/commands`](./commands) | CommandService — global command registry | Never |
 | [`@workspace/keybindings`](./keybindings) | KeybindingService — hotkey resolution + when clauses | Never |
 | [`@workspace/theme`](./theme) | SAT CSS token system & themes | Never |

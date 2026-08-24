@@ -2,13 +2,6 @@ export type { PaneRenderContext } from "./components/WorkspaceTabs";
 export { WorkspaceTabs } from "./components/WorkspaceTabs";
 export { WorkspaceTabsBar } from "./components/WorkspaceTabsBar";
 export { useTabDnD } from "./hooks/useTabDnD";
-export type {
-  CachedTabContent,
-  OpenFileResult,
-  SaveFileInput,
-  UseTabIOOptions,
-} from "./hooks/useTabIO";
-export { useTabIO } from "./hooks/useTabIO";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabs } from "./hooks/useTabs";
 export { getTabByPath, findPaneForTab, tabIdFromPath } from "./selectors";

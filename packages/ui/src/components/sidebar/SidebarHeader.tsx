@@ -21,7 +21,7 @@ export interface SidebarHeaderProps {
 /**
  * Header strip rendered at the top of a sidebar panel. Sized to match the
  * tab bar (h-10). The bottom hairline is NOT drawn here — the shell's
- * <StripSeparator> owns the single continuous line across all header
+ * <HeaderBandRule> owns the single continuous line across all header
  * sections, so they read as one unified band (the Obsidian look).
  */
 export const SidebarHeader: FC<SidebarHeaderProps> = memo(

@@ -36,8 +36,15 @@ export const createPersistenceSlice: StateCreator<
     const tabs = Object.fromEntries(
       snapshot.tabs.map((tab) => [
         tab.id,
-        // Older snapshots predate viewType — default to markdown.
-        { ...tab, viewType: (tab as { viewType?: string }).viewType ?? "markdown" },
+        // Older snapshots predate leafType (or carry it as `viewType`) —
+        // accept both, default to markdown.
+        {
+          ...tab,
+          leafType:
+            (tab as { leafType?: string }).leafType ??
+            (tab as { viewType?: string }).viewType ??
+            "markdown",
+        },
       ]),
     ) as Record<TabId, import("../types").TabModel>;
 

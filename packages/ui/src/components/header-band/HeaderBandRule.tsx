@@ -1,6 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils";
 
-export interface StripSeparatorProps {
+export interface HeaderBandRuleProps {
   className?: string;
 }
 
@@ -22,7 +22,7 @@ export interface StripSeparatorProps {
  * Sections must NOT draw their own header hairlines — this element is the
  * single source of truth for the line.
  */
-export function StripSeparator({ className }: StripSeparatorProps) {
+export function HeaderBandRule({ className }: HeaderBandRuleProps) {
   return (
     <div
       aria-hidden="true"

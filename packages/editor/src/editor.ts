@@ -10,7 +10,7 @@ import {
 } from "./input/suggestions";
 import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
 import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
-import { CUSTOM_THEME } from "./styling/base";
+import { BASE_EDITOR_THEME } from "./styling/base";
 import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { yamlFrontmatterExtension } from "./syntax/frontmatter";
 import { highlightExtension } from "./syntax/highlight";
@@ -51,7 +51,7 @@ export function createEditorExtensionGroups(
   const themeStack: Extension[] = [];
   if (themeExtensions) themeStack.push(...themeExtensions);
   if (includeDefaultTheme) {
-    themeStack.push(CUSTOM_THEME);
+    themeStack.push(BASE_EDITOR_THEME);
   }
 
   return {

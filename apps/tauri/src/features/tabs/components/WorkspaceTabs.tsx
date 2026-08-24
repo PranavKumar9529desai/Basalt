@@ -1,4 +1,4 @@
-import { TabGroupFrame } from "@workspace/ui/components/tabs";
+import { TabListFrame } from "@workspace/ui/components/tabs";
 import { type ReactNode, useMemo } from "react";
 import { useTabsStore } from "../store";
 import type { TabModel } from "../types";
@@ -30,12 +30,12 @@ export function WorkspaceTabs({ renderPane }: WorkspaceTabsProps) {
   return (
     <div className="flex flex-1 min-h-0 bg-[var(--sat-surface-1)]">
       <div className="flex flex-1 min-h-0 w-full min-w-0">
-        <TabGroupFrame className="flex-1 min-h-0 border-0">
+        <TabListFrame className="flex-1 min-h-0 border-0">
           {renderPane({
             activeTab,
             markTabDirty,
           })}
-        </TabGroupFrame>
+        </TabListFrame>
       </div>
     </div>
   );

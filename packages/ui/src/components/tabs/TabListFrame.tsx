@@ -1,17 +1,17 @@
 import { cn } from "@workspace/ui/lib/utils";
 import type { ReactNode } from "react";
 
-export interface TabGroupFrameProps {
+export interface TabListFrameProps {
   tabsBar?: ReactNode;
   children: ReactNode;
   className?: string;
 }
 
-export function TabGroupFrame({
+export function TabListFrame({
   tabsBar,
   children,
   className,
-}: TabGroupFrameProps) {
+}: TabListFrameProps) {
   return (
     <div
       className={cn(

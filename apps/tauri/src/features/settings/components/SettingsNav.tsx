@@ -7,7 +7,7 @@ import {
   CommandList,
 } from "@workspace/ui/components/ui/command";
 import { cn } from "@workspace/ui/lib/utils";
-import { type SettingsGroup, useSettingsStore } from "../store";
+import { type SettingsGroup, useSettingsModalStore } from "../store";
 
 const GROUP_LABELS: Record<SettingsGroup, string> = {
   options: "Options",
@@ -27,7 +27,7 @@ const GROUPS: SettingsGroup[] = [
 ];
 
 export function SettingsNav() {
-  const { sections, activeSection, setActiveSection } = useSettingsStore();
+  const { sections, activeSection, setActiveSection } = useSettingsModalStore();
 
   return (
     <Command className="flex flex-col h-full w-[220px] flex-shrink-0 rounded-none border-r border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]">
