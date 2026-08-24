@@ -82,7 +82,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const q = e.target.value;
       setSwitcherQuery(q);
-      runSwitcher(q);
+      void runSwitcher(q);
     },
     [setSwitcherQuery, runSwitcher],
   );

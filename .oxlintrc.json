@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["./oxlint-plugins/basalt-architecture.mjs"],
   "plugins": [
     "typescript",
     "unicorn",
@@ -15,6 +16,17 @@
     "jsx-a11y/aria-role": "warn",
     // Stale-closure protection — all findings fixed; keep enforced.
     "react-hooks/exhaustive-deps": "error",
+    // Architecture enforcement (AGENTS.md four-layer model).
+    "basalt/no-cross-feature-imports": "error",
+    "basalt/no-upward-layer-imports": "error",
+    "basalt/packages-no-tauri": "error",
+    // Cycle detection via multi-file analysis (project module graph).
+    "import/no-cycle": [
+      "error",
+      {
+        "maxDepth": 20
+      }
+    ],
     // React Compiler rules: project does not use React Compiler yet.
     "react/refs": "off",
     "react/set-state-in-effect": "off",

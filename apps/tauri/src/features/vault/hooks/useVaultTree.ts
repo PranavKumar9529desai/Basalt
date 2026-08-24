@@ -146,13 +146,15 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
       "vault://file-changed",
       (event) => {
         if (event.payload.needsTreeRefresh) {
-          refreshTree();
+          // Watcher-driven refresh is fire-and-forget by design.
+          void refreshTree();
         }
       },
     );
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      // If listen() itself rejected there is nothing to unlisten.
+      unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
     };
   }, [refreshTree]);
 

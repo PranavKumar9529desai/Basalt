@@ -165,7 +165,8 @@ function WorkspaceShell({
   const handleSidebarWidthChange = useCallback((width: number) => {
     if (widthDebounceRef.current) clearTimeout(widthDebounceRef.current);
     widthDebounceRef.current = setTimeout(() => {
-      invoke("set_workspace_key", { key: "sidebarWidth", value: width });
+      // Persisted width is best-effort; a failed write must not surface UI errors.
+      void invoke("set_workspace_key", { key: "sidebarWidth", value: width });
     }, 400);
   }, []);
 

@@ -460,7 +460,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     );
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      // If listen() itself rejected there is nothing to unlisten.
+      unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
     };
   }, [extensionsRef, ioRef, tabRef]);
 

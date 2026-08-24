@@ -9,6 +9,7 @@
   "scripts": {
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "lint:typed": "oxlint --type-aware",
     "format": "oxfmt",
     "check": "bun run lint && bun run format",
     "clear-cache": "bash scripts/clear-cache.sh"
@@ -16,7 +17,8 @@
   "devDependencies": {
     "bun-types": "latest",
     "oxfmt": "^0.65.0",
-    "oxlint": "^1.80.0"
+    "oxlint": "^1.80.0",
+    "oxlint-tsgolint": "^7.0.2001"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

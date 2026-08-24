@@ -274,7 +274,7 @@ export function useVaultController({
       ctx.parentRelPath || undefined,
     );
     if (!result) return;
-    editor.loadNote({ name: result.name, path: result.path });
+    void editor.loadNote({ name: result.name, path: result.path });
     await refreshTree();
   }, [deriveParentContext, editor, mutations, openFolder, refreshTree]);
 
@@ -352,7 +352,8 @@ export function useVaultController({
           leaf,
           parentRelPath || undefined,
         );
-        if (result) editor.loadNote({ name: result.name, path: result.path });
+        if (result)
+          void editor.loadNote({ name: result.name, path: result.path });
         if (parentRelPath) openFolder(parentRelPath);
         await refreshTree();
       }
@@ -387,7 +388,7 @@ export function useVaultController({
         ctx.parentRelPath || undefined,
       );
       if (!result) return;
-      editor.loadNote({ name: result.name, path: result.path });
+      void editor.loadNote({ name: result.name, path: result.path });
       await refreshTree();
     }, 0);
   }, [
@@ -490,7 +491,7 @@ export function useVaultController({
       if (onFileOpen) {
         onFileOpen(node, mode);
       } else {
-        editor.loadNote({ name: node.name, path: node.path });
+        void editor.loadNote({ name: node.name, path: node.path });
       }
     },
     [editor, onFileOpen, selection, visibleNodes],

@@ -51,6 +51,18 @@ export async function writeTtiReport(meta: TtiBootMeta): Promise<void> {
       "loader: invoke(boot) round-trip",
       m("boot_resolved") - m("loader_start"),
     );
+  if (has("boot_resolved", "mount_effect"))
+    push(
+      "react: boot resolved → mount effect",
+      m("mount_effect") - m("boot_resolved"),
+    );
+  if (has("mount_effect", "show_resolved"))
+    push("window: show() round-trip", m("show_resolved") - m("mount_effect"));
+  if (has("show_resolved", "workspace_painted"))
+    push(
+      "window: shown → first painted frame",
+      m("workspace_painted") - m("show_resolved"),
+    );
   if (has("boot_resolved", "workspace_painted"))
     push(
       "react: boot resolved → workspace painted",

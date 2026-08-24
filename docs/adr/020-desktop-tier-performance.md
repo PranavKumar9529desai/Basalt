@@ -7,19 +7,19 @@
 
 Web-standard React optimizations (`React.lazy`, virtualization, selector
 discipline) are table stakes — every checklist has them. Beating Obsidian by
-a *margin* for power users with super-large vaults (≥25k notes — our target
+a _margin_ for power users with super-large vaults (≥25k notes — our target
 userbase per AGENTS.md) requires desktop-tier techniques that exploit the
 Tauri split: **Rust is the backend; the webview is a display surface.**
 
-Guiding invariant: *JS renders pixels; Rust owns every byte of truth. React
-never touches data at scale.* The typing path already obeys this (CM6, zero
+Guiding invariant: _JS renders pixels; Rust owns every byte of truth. React
+never touches data at scale._ The typing path already obeys this (CM6, zero
 re-renders). This ADR extends it to startup and bulk data.
 
 ## Decision: six moves
 
 ### 1. Speculative parallel boot ✅ IMPLEMENTED
 
-The webview takes ~570ms to spawn; today `boot` runs only *after* it loads.
+The webview takes ~570ms to spawn; today `boot` runs only _after_ it loads.
 Serial waste. Instead, `setup()` spawns a thread that performs the full boot
 pipeline (vault load/index, watcher, search init, tree build) while WebKit
 boots in parallel. The `boot` invoke serves the cached result from
@@ -74,12 +74,12 @@ not hundreds. Adopt after profiling shows real jank.
 
 ## Consequences
 
-+ Launch path loses its serial dependency on webview startup
-+ No white flash; perceived launch ≈ real launch
-+ Bulk-data surfaces scale to ≥25k notes without JSON taxes
-− Preboot thread duplicates work if user picks a different vault within the
+- Launch path loses its serial dependency on webview startup
+- No white flash; perceived launch ≈ real launch
+- Bulk-data surfaces scale to ≥25k notes without JSON taxes
+  − Preboot thread duplicates work if user picks a different vault within the
   first seconds (benign; `set_vault` clears the cache)
-− Window invisible until JS paints — mitigated by the 10s Rust failsafe
+  − Window invisible until JS paints — mitigated by the 10s Rust failsafe
 
 ## Verification
 

@@ -176,11 +176,16 @@ export function useEditorCommands(view: EditorView | null) {
         icon: <IconClipboard size={16} />,
         hotkeys: ["Ctrl+V"],
         callback: () => {
-          navigator.clipboard.readText().then((text) => {
-            const { from, to } = view.state.selection.main;
-            view.dispatch({ changes: { from, to, insert: text } });
-            view.focus();
-          });
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              const { from, to } = view.state.selection.main;
+              view.dispatch({ changes: { from, to, insert: text } });
+              view.focus();
+            })
+            .catch(() => {
+              // Clipboard access can be denied; paste is best-effort here.
+            });
         },
       },
     ];

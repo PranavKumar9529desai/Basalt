@@ -32,12 +32,12 @@ export default defineConfig(async () => ({
           if (
             /[\\/]node_modules[\\/]@codemirror[\\/](?!lang-|language-data|legacy-modes)/.test(
               id,
-            )
-            || /[\\/]node_modules[\\/]@lezer[\\/](common|lr|highlight)[\\/]/.test(
+            ) ||
+            /[\\/]node_modules[\\/]@lezer[\\/](common|lr|highlight)[\\/]/.test(
               id,
-            )
-            || /[\\/]node_modules[\\/](@uiw|codemirror)[\\/]/.test(id)
-            || /[\\/]node_modules[\\/](style-mod|w3c-keyname|crelt)[\\/]/.test(id)
+            ) ||
+            /[\\/]node_modules[\\/](@uiw|codemirror)[\\/]/.test(id) ||
+            /[\\/]node_modules[\\/](style-mod|w3c-keyname|crelt)[\\/]/.test(id)
           )
             return "codemirror-vendor";
           if (/[\\/]node_modules[\\/]@tabler[\\/]/.test(id)) return "icons";

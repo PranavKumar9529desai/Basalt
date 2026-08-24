@@ -7,7 +7,7 @@ export type ThemeId =
   | "light"
   | "solarized-dark"
   | "solarized-light";
-export type ThemeMode = "light" | "dark" | string;
+export type ThemeMode = string;
 export interface ThemeMeta {
   id: ThemeId;
   label: string;

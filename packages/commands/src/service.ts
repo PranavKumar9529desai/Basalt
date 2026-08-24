@@ -50,7 +50,8 @@ export class CommandService {
   execute(id: string): void {
     const cmd = this.commands.get(id);
     if (cmd && (!cmd.checkCallback || cmd.checkCallback())) {
-      cmd.callback();
+      // Commands own their error handling; palette dispatch is fire-and-forget.
+      void cmd.callback();
     }
   }
 

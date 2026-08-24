@@ -47,8 +47,15 @@ export function WorkspaceInit({ boot }: WorkspaceInitProps) {
   // 10s Rust failsafe (observed in the 2026-08-24 TTI run: painted @ 9997ms).
   // rAF is still used AFTER show() to timestamp the first real painted frame.
   useEffect(() => {
+    ttiMark("mount_effect");
     getCurrentWindow()
       .show()
+      .then(() => {
+        // Gap between show-resolved and the paint mark = window-mapping /
+        // compositor latency (WM map, first frame after reveal). If large,
+        // the paint tail is reveal cost, not React work.
+        ttiMark("show_resolved");
+      })
       .catch((err) => {
         // Missing capability etc. must never fail silently — the 10s Rust
         // failsafe would mask it as "slow boot" (see TTI run 18:10/18:15).
@@ -65,7 +72,9 @@ export function WorkspaceInit({ boot }: WorkspaceInitProps) {
         });
         // Overlay chunks (search/quick-switcher/settings) are lazy — pull
         // them from disk during idle so first open is instant.
-        const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200));
+        const idle =
+          window.requestIdleCallback ??
+          ((cb: () => void) => setTimeout(cb, 200));
         idle(() => {
           void import("../features/search");
           void import("../features/settings");
