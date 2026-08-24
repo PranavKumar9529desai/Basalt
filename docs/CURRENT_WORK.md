@@ -44,12 +44,15 @@ conclusions.
 
 ### Next steps (in order)
 
-1. **Extension isolation mode in the harness** (~40 lines in
-   `packages/editor/src/benchmark.ts`): run the same typing benchmark against
-   extension subsets (base only, +live-preview, +syntax, +suggestions, +links)
-   to name the culprit instead of guessing.
-2. **Re-run benchmark in a production build** (`bun run tauri build` or vite
-   preview) with isolation on; save results here.
+1. ~~Extension isolation mode in the harness~~ ✅ DONE (commit `44b3885`):
+   `EditorExtensionGroups` in `editor.ts` + `runIsolationBenchmark` +
+   `dev:editor-benchmark-isolation` palette command; results written to
+   `/tmp/basalt-reports/editor-benchmark.md` via `write_dev_report`
+   (no devtools needed).
+2. **Run the isolation benchmark** — launch the app, open a note, run
+   `dev:editor-benchmark-isolation` from the palette (prod build preferred:
+   `bun run build:linux` then run the binary). Compare variants against
+   `base`; the delta names the culprit.
 3. **Optimize the named culprit** (bet: live-preview mark-hiding pass);
    re-benchmark, compare against this baseline.
 4. Then: graph view (first real *view* consumer) and HTML renderer (first new
@@ -67,7 +70,6 @@ conclusions.
   thread is trusted.
 - 2 biome "info" style nits in `packages/editor/src/benchmark.ts`
   (useTemplate) — harmless.
-
 ### Key invariants (do not break)
 
 - `vault://file-changed` means **external change only** (self-writes suppressed
