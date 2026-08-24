@@ -226,6 +226,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [011-prose-typography-system](docs/adr/011-prose-typography-system.md) | ADR-011: Prose Typography System — Inter, Heading Scale, Editor Font Wiring |
 | [017-benchmark-infrastructure](docs/adr/017-benchmark-infrastructure.md) | ADR-017: Benchmark Infrastructure — Criterion for Performance Measurement |
 | [018-registry-driven-workbench](docs/adr/018-registry-driven-workbench.md) | ADR-018: Registry-Driven Workbench |
+| [019-editor-decoration-pipeline](docs/adr/019-editor-decoration-pipeline.md) | ADR-019: Editor Decoration Pipeline — Single-Pass Architecture |
 <!-- ADR_INDEX_END -->
 
 ---
