@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { WorkspaceInit } from "../app-shell";
 import type { BootResult } from "../features/vault";
+import { ttiMark } from "../app-shell/tti";
 
 interface LoaderData {
   boot: BootResult;
@@ -9,7 +10,9 @@ interface LoaderData {
 
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
+    ttiMark("loader_start");
     const boot = await invoke<BootResult>("boot");
+    ttiMark("boot_resolved");
     return { boot };
   },
   pendingComponent: () => (

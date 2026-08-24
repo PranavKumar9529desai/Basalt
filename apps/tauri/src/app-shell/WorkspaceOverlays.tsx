@@ -3,8 +3,21 @@ import {
   FileTreeContextMenu,
   type FileTreeContextTargetKind,
 } from "@workspace/ui/components/file-tree";
-import { QuickSwitcher, SearchModal } from "../features/search";
-import { SettingsModal } from "../features/settings";
+import { lazy, Suspense } from "react";
+
+// Overlay modals are lazy (ADR-020 move 3): none are visible at first paint,
+// so their code (search UI, settings UI, dialog primitives) must not be in
+// the startup bundle. Chunks load from disk in ~1ms on first open; we also
+// idle-prefetch them after boot so even that latency disappears.
+const QuickSwitcher = lazy(() =>
+  import("../features/search").then((m) => ({ default: m.QuickSwitcher })),
+);
+const SearchModal = lazy(() =>
+  import("../features/search").then((m) => ({ default: m.SearchModal })),
+);
+const SettingsModal = lazy(() =>
+  import("../features/settings").then((m) => ({ default: m.SettingsModal })),
+);
 
 interface WorkspaceOverlaysProps {
   contextMenu: {
@@ -79,9 +92,11 @@ export function WorkspaceOverlays({
         isLoading={mutations.isLoading}
       />
 
-      <SearchModal onOpen={onSearchOpen} />
-      <QuickSwitcher onOpen={onSearchOpen} />
-      <SettingsModal />
+      <Suspense fallback={null}>
+        <SearchModal onOpen={onSearchOpen} />
+        <QuickSwitcher onOpen={onSearchOpen} />
+        <SettingsModal />
+      </Suspense>
     </>
   );
 }

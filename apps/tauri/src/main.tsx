@@ -5,6 +5,12 @@ import "./App.css";
 import "../../../packages/ui/src/styles/globals.css";
 import "../../../packages/ui/src/styles/editor.css";
 import { ThemeProvider } from "./app-shell/ThemeProvider";
+import { ttiMark } from "./app-shell/tti";
+
+// TTI: first executable mark. Note: ES module imports hoist above this, so
+// bundle-eval cost before this line is not captured — acceptable; the
+// webview navigation start remains the frontend clock's zero.
+ttiMark("js_entry");
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
