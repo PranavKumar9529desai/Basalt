@@ -48,7 +48,7 @@ features/
 
 Exception: UI component groups in `packages/ui/src/components/` use the same name as their primary export (usually singular kebab-case).
 
-### 1.5 Index files → `index.ts` or `index.tsx`
+### 1.5 Index files → `index.ts` or `.tsx`
 
 Every feature folder MUST have an `index.ts` (or `.tsx`) that re-exports its public API. Never import from deep paths outside the owning feature.
 
@@ -56,6 +56,35 @@ Every feature folder MUST have an `index.ts` (or `.tsx`) that re-exports its pub
 features/tabs/index.ts  ✅ re-exports useTabs, WorkspaceTabs, types
 features/tabs/hooks/useTabs.ts  ← internal, not imported cross-feature
 ```
+
+### 1.6 Vocabulary — the workbench lexicon
+
+One concept = one word. These terms are reserved; do not introduce synonyms
+("strip", "bar", "group", "session") for concepts that already have a name.
+
+| Term | Means | Canonical examples |
+|---|---|---|
+| **view** | A side-dock panel (ADR-018 / VS Code sense) | `viewRegistry`, `FileExplorerView`, `BacklinksView` |
+| **leaf** | The content type a tab renders | `leafRegistry`, `MarkdownLeaf`, `tab.leafType` |
+| **tab** | An open item in the tab strip | `TabModel`, `useTabsStore`, `WorkspaceTabsBar` |
+| **pane** | A tab container (currently exactly one) | `TabPane`, `ROOT_PANE_ID` |
+| **ribbon** | Far-left quick-access bar | `Ribbon`, `RibbonItem` |
+| **dock** | Collapsible side panel host | `SideDock` |
+| **header band** | The 40px top row of the workspace grid | `HeaderBandRule` |
+| **active note** | The note open in the focused tab | `useActiveNoteStore` |
+
+Rules for every new component, hook, store, and file:
+
+1. **Name states what it owns**, not where it sits or how it's consumed.
+   `useActiveNoteStore` ✅ — `useFocusedPaneStore` ❌ (there was no pane in it).
+2. **Registry-first**: new dock panels = `viewRegistry` entries, new tab
+   content = `leafRegistry` entries (both in `app-shell/viewRegistrations.ts`).
+   Never a component switch in the shell.
+3. **No unwired exports**: exported means imported. Anything else is dead
+   code — delete it (§6).
+4. **When a concept dies, rename its leftovers immediately** — a retired
+   idea must not survive inside a name (`TabGroupFrame` → `TabListFrame`).
+5. **ADR references are footnotes, not explanations** (§8.3).
 
 ---
 
