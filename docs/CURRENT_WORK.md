@@ -71,6 +71,13 @@ conclusions.
 - Remaining known trade-offs: lingering self-write markers if a watcher event
   never arrives for a registered path (rare, benign); live-preview reveal on
   >48KB docs is deferred to idle ticks (~350ms cap).
+- **BUG (pre-existing, scoped): moving an open note strands its tab on the
+  dead old path** — tab ids derive from paths and nothing rekeys open tabs
+  after `move_paths`, so the next autosave fails (`save_file` on nonexistent
+  path) and edits are lost. Fix sketch: decouple tab identity from path —
+  stable ids + path updates in place, with MarkdownLeaf reading path from
+  the live tab instead of cached meta. Touches tabs store + leaf meta
+  lifecycle; needs its own session.
 ### Key invariants (do not break)
 
 - `vault://file-changed` means **external change only** (self-writes suppressed
