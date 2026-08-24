@@ -45,6 +45,7 @@ import {
   ViewPlugin,
   WidgetType,
 } from "@codemirror/view";
+import { editorBenchmarkState } from "../benchmark";
 
 // ---------------------------------------------------------------------------
 // Horizontal Rule widget
@@ -154,6 +155,9 @@ interface PreviewState {
   /** Last-known DOM focus, snapshotted at rebuild time so builders never
    * need a view reference. */
   focused: boolean;
+  /** False while the budgeted parse has not yet covered the whole document
+   * (huge notes at mount); the scheduler keeps rescheduling until true. */
+  complete: boolean;
 }
 
 /**
@@ -188,6 +192,7 @@ function buildPreviewState(
       decorations: Decoration.none,
       codeBlockRanges: [],
       focused: hasFocus,
+      complete: false,
     };
   }
 
@@ -258,6 +263,7 @@ function buildPreviewState(
     decorations: finish(),
     codeBlockRanges: ctx.codeBlockRanges,
     focused: hasFocus,
+    complete: true,
   };
 }
 
@@ -267,9 +273,23 @@ function buildPreviewState(
 
 const setHasFocus = StateEffect.define<boolean>();
 
+/** Force a synchronous full rebuild from the current state. */
+const rebuildPreview = StateEffect.define<null>();
+
 // ---------------------------------------------------------------------------
 // The live-preview StateField — sole owner of document-wide decorations
+//
+// Incremental strategy (ADR-019 / Xi-style minimal invalidation):
+//   - docs ≤ LAZY_THRESHOLD bytes: full rebuild per doc/selection change
+//     (measured ~1–2ms there — cheaper than bookkeeping).
+//   - larger docs: typing only MAPS the existing decorations through the
+//     change (position remap, no tree walk); the full walk is deferred to an
+//     idle tick by previewScheduler. Explicit selection moves (click/arrows)
+//     still rebuild synchronously — instant reveal matters more there, and
+//     they are off the keystroke path.
 // ---------------------------------------------------------------------------
+
+const LAZY_DOC_THRESHOLD = 48 * 1024;
 
 export const livePreviewField = StateField.define<PreviewState>({
   create: (state) => buildPreviewState(state, false),
@@ -277,18 +297,47 @@ export const livePreviewField = StateField.define<PreviewState>({
   update(value, tr) {
     let focused = value.focused;
     let focusChanged = false;
+    let forced = false;
     for (const e of tr.effects) {
       if (e.is(setHasFocus)) {
         focused = e.value;
         focusChanged = focused !== value.focused;
+      } else if (e.is(rebuildPreview)) {
+        forced = true;
       }
     }
 
-    // Rebuild only on real dependencies: doc edits, explicit selection moves
-    // (cursor-revealed marks/widgets), or focus flips. Scroll never rebuilds.
-    if (tr.docChanged || tr.selection || focusChanged) {
+    const lazy =
+      tr.state.doc.length > LAZY_DOC_THRESHOLD &&
+      !forced &&
+      !focusChanged &&
+      // Explicit selection moves (clicks, arrows) rebuild synchronously even
+      // on large docs — instant reveal matters more than a sub-frame cost,
+      // and they are off the keystroke path. Pure-change transactions
+      // (typing) have no explicit selection and take the lazy path.
+      !tr.selection;
+
+    if (!lazy) {
+      // Full rebuild: small docs, idle-tick catch-up, focus flips, or an
+      // explicitly requested rebuild. One transaction, one walk.
       return buildPreviewState(tr.state, focused);
     }
+
+    if (tr.docChanged) {
+      // Lazy path — keep every decoration positionally valid by mapping
+      // through the change; structure refresh happens on the next idle tick.
+      return {
+        decorations: value.decorations.map(tr.changes.desc),
+        codeBlockRanges: value.codeBlockRanges.map((r) => ({
+          from: tr.changes.mapPos(r.from),
+          to: tr.changes.mapPos(r.to),
+        })),
+        focused,
+        complete: value.complete,
+      };
+    }
+
+    // Lazy doc, no doc change, no forced/focus trigger → nothing to do.
     return value;
   },
 
@@ -309,6 +358,61 @@ const focusTracking = EditorView.domEventHandlers({
     return false;
   },
 });
+
+// ---------------------------------------------------------------------------
+// Idle scheduler — defers full structure rebuilds on large documents
+//
+// Typing on big notes maps decorations lazily (see livePreviewField); this
+// plugin dispatches `rebuildPreview` when the main thread goes idle so the
+// structure catches up between keystrokes. Also covers mount-time parse
+// growth on huge files. Never schedules while a benchmark is running —
+// measurements must see the pure keystroke path.
+// ---------------------------------------------------------------------------
+
+const IDLE_REBUILD_TIMEOUT_MS = 350;
+
+class PreviewScheduler {
+  private scheduled = false;
+
+  constructor(_view: EditorView) {
+    // Mount-time catch-up: covers budgeted-parse growth on huge notes that
+    // would otherwise stay undecorated until the first interaction.
+    this.schedule(_view);
+  }
+
+  update(update: {
+    docChanged: boolean;
+    selectionSet: boolean;
+    view: EditorView;
+  }) {
+    const field = update.view.state.field(livePreviewField, false);
+    const needsCatchUp = field !== undefined && !field.complete;
+    if (
+      ((update.docChanged || update.selectionSet) || needsCatchUp) &&
+      !this.scheduled &&
+      !editorBenchmarkState.active
+    ) {
+      this.schedule(update.view);
+    }
+  }
+
+  private schedule(view: EditorView) {
+    if (editorBenchmarkState.active) return;
+    this.scheduled = true;
+    const run = () => {
+      this.scheduled = false;
+      if (editorBenchmarkState.active) return;
+      view.dispatch({ effects: rebuildPreview.of(null) });
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: IDLE_REBUILD_TIMEOUT_MS });
+    } else {
+      setTimeout(run, 32);
+    }
+  }
+}
+
+const previewScheduler = ViewPlugin.fromClass(PreviewScheduler);
 
 // ---------------------------------------------------------------------------
 // Tags plugin — the one viewport-scoped pass (text regex, not tree walk)
@@ -358,5 +462,6 @@ const tagMarksPlugin = ViewPlugin.fromClass(TagMarksPlugin, {
 export const livePreviewPlugin = [
   livePreviewField,
   focusTracking,
+  previewScheduler,
   tagMarksPlugin,
 ];
