@@ -4,7 +4,12 @@
  *   import { viewRegistry } from "@workspace/views"
  */
 
-export { LeafRegistry, leafRegistry, LeafServicesProvider, useLeafServices } from "./leaf";
+export {
+  LeafRegistry,
+  leafRegistry,
+  LeafServicesProvider,
+  useLeafServices,
+} from "./leaf";
 export type {
   LeafDescriptor,
   LeafProps,

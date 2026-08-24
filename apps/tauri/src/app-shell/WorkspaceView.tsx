@@ -19,7 +19,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
-import { useTabs, useTabsStore, WorkspaceTabs, WorkspaceTabsBar } from "../features/tabs";
+import {
+  useTabs,
+  useTabsStore,
+  WorkspaceTabs,
+  WorkspaceTabsBar,
+} from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
 import "../shared/tabCommands";
@@ -27,10 +32,7 @@ import { Ribbon } from "./Ribbon";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { SideDock } from "./SideDock";
 import "./viewRegistrations";
-import {
-  WorkspaceProvider,
-  useWorkspaceContext,
-} from "./WorkspaceProvider";
+import { WorkspaceProvider, useWorkspaceContext } from "./WorkspaceProvider";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
 
 interface WorkspaceViewProps {
@@ -51,10 +53,7 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   }
 
   return (
-    <WorkspaceProvider
-      vaultPath={boot.vault_path}
-      initialTree={boot.tree}
-    >
+    <WorkspaceProvider vaultPath={boot.vault_path} initialTree={boot.tree}>
       <WorkspaceShell
         defaultSidebarWidth={boot.workspace?.sidebarWidth as number | undefined}
       />
@@ -89,9 +88,7 @@ function WorkspaceShell({
 
   const getOpenTabPaths = useCallback(
     () =>
-      new Set(
-        Object.values(useTabsStore.getState().tabs).map((t) => t.path),
-      ),
+      new Set(Object.values(useTabsStore.getState().tabs).map((t) => t.path)),
     [],
   );
 

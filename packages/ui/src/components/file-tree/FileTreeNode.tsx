@@ -267,7 +267,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
               <div
                 key={i}
                 className="absolute top-0 bottom-0 w-px bg-[var(--sat-layout-border)] opacity-30"
-                style={{ left: `${(i * INDENT_PX) + 4 + INDENT_PX / 2}px` }}
+                style={{ left: `${i * INDENT_PX + 4 + INDENT_PX / 2}px` }}
               />
             ))}
           </div>

@@ -1,20 +1,29 @@
 {
   "name": "basalt",
-  "module": "index.ts",
-  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
+  "type": "module",
+  "module": "index.ts",
   "scripts": {
-    "lint": "biome lint .",
-    "format": "biome format --write .",
-    "check": "biome check --write .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "check": "bun run lint && bun run format",
     "clear-cache": "bash scripts/clear-cache.sh"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "overrides": {
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6"
   },
   "catalogs": {
     "default": {
@@ -24,12 +33,5 @@
       "@types/react-dom": "19.1.6",
       "@base-ui/react": "^1.2.0"
     }
-  },
-  "overrides": {
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
   }
 }

@@ -34,6 +34,7 @@ export function SettingsNav() {
       <div className="px-3 pt-3 pb-2">
         <CommandInput
           placeholder="Search settings..."
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- Intentional: focus search when settings opens
           autoFocus
           className="h-8 text-xs"
         />

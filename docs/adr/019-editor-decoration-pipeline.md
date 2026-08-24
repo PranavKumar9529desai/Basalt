@@ -3,19 +3,20 @@
 ## Status
 
 Accepted (2026-06-25)
+
 ## Context
 
 The editor performance campaign (see `docs/CURRENT_WORK.md`) measured typing
 latency with the extension-isolation benchmark (commit `44b3885`) and produced
 a clean attribution at 100KB (production build, no devtools):
 
-| Variant | p50 | p95 | Cost added vs base |
-|---|---|---|---|
-| base | 0ms | 1ms | — |
-| +syntax / +input / +suggestions | ≤2ms | 3ms | +2ms |
-| +links | 0ms | 1ms | +0ms |
-| **+live-preview** | **7ms** | **12ms** | **+11ms** |
-| full | 7ms | 12ms | +11ms |
+| Variant                         | p50     | p95      | Cost added vs base |
+| ------------------------------- | ------- | -------- | ------------------ |
+| base                            | 0ms     | 1ms      | —                  |
+| +syntax / +input / +suggestions | ≤2ms    | 3ms      | +2ms               |
+| +links                          | 0ms     | 1ms      | +0ms               |
+| **+live-preview**               | **7ms** | **12ms** | **+11ms**          |
+| full                            | 7ms     | 12ms     | +11ms              |
 
 Live preview owns essentially the entire keystroke overhead above the CM6
 floor, and it scales with document size. Root causes in
@@ -23,7 +24,7 @@ floor, and it scales with document size. Root causes in
 
 1. **Nested dispatch per keystroke.** `blockDecorationUpdater` is an update
    listener that rebuilds block decorations by walking the full syntax tree,
-   then dispatches a *second* transaction to install them. Every keystroke
+   then dispatches a _second_ transaction to install them. Every keystroke
    pays for two transactions and two update cycles.
 2. **Three full-document walks per keystroke.** The block builder iterates the
    entire parsed tree; the inline plugin's code-block pre-pass iterates the

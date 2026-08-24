@@ -285,8 +285,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
         },
         pane: {
           ...pane,
-          previewTabId:
-            pane.previewTabId === tabId ? null : pane.previewTabId,
+          previewTabId: pane.previewTabId === tabId ? null : pane.previewTabId,
         },
         persistVersion: state.persistVersion + 1,
       };

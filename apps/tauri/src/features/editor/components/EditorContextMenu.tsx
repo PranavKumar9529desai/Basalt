@@ -48,8 +48,7 @@ export function EditorContextMenu({
   const menuAnchor = useMemo(() => {
     if (!menuState) return null;
     return {
-      getBoundingClientRect: () =>
-        new DOMRect(menuState.x, menuState.y, 0, 0),
+      getBoundingClientRect: () => new DOMRect(menuState.x, menuState.y, 0, 0),
     };
   }, [menuState]);
 
@@ -64,10 +63,7 @@ export function EditorContextMenu({
       {menuState && (
         <ContextMenuContent anchor={menuAnchor}>
           {editorCommands.map((cmd) => (
-            <ContextMenuItem
-              key={cmd.id}
-              onClick={() => handleCommand(cmd.id)}
-            >
+            <ContextMenuItem key={cmd.id} onClick={() => handleCommand(cmd.id)}>
               <div className="mr-2 flex size-4 shrink-0 items-center justify-center opacity-90">
                 {cmd.icon}
               </div>

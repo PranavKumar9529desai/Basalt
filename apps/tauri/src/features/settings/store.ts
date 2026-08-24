@@ -54,23 +54,25 @@ const CORE_SECTIONS: SectionDef[] = [
   },
 ];
 
-export const useSettingsModalStore = create<SettingsModalStore>()((set, get) => ({
-  isOpen: false,
-  activeSection: "general",
-  sections: CORE_SECTIONS,
+export const useSettingsModalStore = create<SettingsModalStore>()(
+  (set, get) => ({
+    isOpen: false,
+    activeSection: "general",
+    sections: CORE_SECTIONS,
 
-  open: (section) =>
-    set({ isOpen: true, activeSection: section ?? get().activeSection }),
-  close: () => set({ isOpen: false }),
-  setActiveSection: (id) => set({ activeSection: id }),
-  registerSection: (def) =>
-    set((state) => ({
-      sections: state.sections.some((s) => s.id === def.id)
-        ? state.sections
-        : [...state.sections, def],
-    })),
-  unregisterSection: (id) =>
-    set((state) => ({
-      sections: state.sections.filter((s) => s.id !== id),
-    })),
-}));
+    open: (section) =>
+      set({ isOpen: true, activeSection: section ?? get().activeSection }),
+    close: () => set({ isOpen: false }),
+    setActiveSection: (id) => set({ activeSection: id }),
+    registerSection: (def) =>
+      set((state) => ({
+        sections: state.sections.some((s) => s.id === def.id)
+          ? state.sections
+          : [...state.sections, def],
+      })),
+    unregisterSection: (id) =>
+      set((state) => ({
+        sections: state.sections.filter((s) => s.id !== id),
+      })),
+  }),
+);

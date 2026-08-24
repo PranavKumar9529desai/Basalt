@@ -48,16 +48,13 @@ export function useNoteIO() {
     [],
   );
 
-  const onFetchTags = useCallback(
-    async (query: string): Promise<string[]> => {
-      try {
-        return await invoke<string[]>("autocomplete_tags", { prefix: query });
-      } catch {
-        return [];
-      }
-    },
-    [],
-  );
+  const onFetchTags = useCallback(async (query: string): Promise<string[]> => {
+    try {
+      return await invoke<string[]>("autocomplete_tags", { prefix: query });
+    } catch {
+      return [];
+    }
+  }, []);
 
   return {
     status,

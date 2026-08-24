@@ -38,7 +38,8 @@ Never make N serial Tauri `invoke()` calls where one batched call works.
 
 ## Consequences
 
-+ JS stays thin — no large allocations, no synchronous file I/O
-+ Rust handles the vault at full native speed
-- All Rust↔TS data must serialize/deserialize through JSON IPC — keep payloads compact
-- Rust commands need careful versioning once workspace snapshot format stabilizes
+- JS stays thin — no large allocations, no synchronous file I/O
+- Rust handles the vault at full native speed
+
+* All Rust↔TS data must serialize/deserialize through JSON IPC — keep payloads compact
+* Rust commands need careful versioning once workspace snapshot format stabilizes

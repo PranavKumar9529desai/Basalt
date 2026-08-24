@@ -6,7 +6,11 @@
   { "key": "CmdOrCtrl+,", "command": "app:open-settings" },
   { "key": "CmdOrCtrl+B", "command": "editor:bold", "when": "editorFocused" },
   { "key": "CmdOrCtrl+I", "command": "editor:italic", "when": "editorFocused" },
-  { "key": "CmdOrCtrl+A", "command": "editor:select-all", "when": "editorFocused" },
+  {
+    "key": "CmdOrCtrl+A",
+    "command": "editor:select-all",
+    "when": "editorFocused"
+  },
   { "key": "CmdOrCtrl+X", "command": "editor:cut", "when": "editorFocused" },
   { "key": "CmdOrCtrl+C", "command": "editor:copy", "when": "editorFocused" },
   { "key": "CmdOrCtrl+V", "command": "editor:paste", "when": "editorFocused" },

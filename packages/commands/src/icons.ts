@@ -27,6 +27,8 @@ const ICONS: Record<string, ComponentType<{ size?: number }>> = {
   IconX,
 };
 
-export function resolveIcon(name: string | undefined): ComponentType<{ size?: number }> | undefined {
+export function resolveIcon(
+  name: string | undefined,
+): ComponentType<{ size?: number }> | undefined {
   return name ? ICONS[name] : undefined;
 }

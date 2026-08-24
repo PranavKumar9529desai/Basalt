@@ -28,6 +28,7 @@ export const RibbonItem: FC<RibbonItemProps> = ({
         render={
           <button
             type="button"
+            aria-label={label}
             onClick={() => onClick(id)}
             className={cn(
               "relative flex items-center justify-center py-2.5 w-full transition-colors outline-none",

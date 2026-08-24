@@ -15,7 +15,11 @@ function isTabSnapshot(value: unknown): value is TabsWorkspaceSnapshot {
   const candidate = value as Partial<TabsWorkspaceSnapshot>;
   if (candidate.version !== 1) return false;
   // Accept new `panes` format or legacy `groups`/`groupOrder` format
-  return Array.isArray(candidate.panes) || Array.isArray(candidate.groups) || Array.isArray(candidate.groupOrder);
+  return (
+    Array.isArray(candidate.panes) ||
+    Array.isArray(candidate.groups) ||
+    Array.isArray(candidate.groupOrder)
+  );
 }
 
 /**

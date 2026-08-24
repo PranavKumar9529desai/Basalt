@@ -37,7 +37,8 @@ bun run dev
 
 ```bash
 bun run dev          # Tauri dev server
-bun run lint         # Biome lint
+bun run lint         # Oxlint
+bun run format       # Oxfmt (format all files)
 bunx tsc --noEmit    # TypeScript type-check (run from apps/tauri)
 bun run build        # Production build
 ```

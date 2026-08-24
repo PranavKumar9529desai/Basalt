@@ -4,14 +4,14 @@ Shared libraries for the Basalt workspace app.
 
 ## Package Overview
 
-| Package | Responsibility | Tauri? |
-|---|---|---|
-| [`@workspace/ui`](./ui) | Visual components. Props in, DOM out. | Never |
-| [`@workspace/editor`](./editor) | CodeMirror markdown editor extensions & theme | Never |
-| [`@workspace/views`](./views) | View/leaf registries + leaf services context (ADR-018) | Never |
-| [`@workspace/commands`](./commands) | CommandService — global command registry | Never |
-| [`@workspace/keybindings`](./keybindings) | KeybindingService — hotkey resolution + when clauses | Never |
-| [`@workspace/theme`](./theme) | SAT CSS token system & themes | Never |
+| Package                                   | Responsibility                                         | Tauri? |
+| ----------------------------------------- | ------------------------------------------------------ | ------ |
+| [`@workspace/ui`](./ui)                   | Visual components. Props in, DOM out.                  | Never  |
+| [`@workspace/editor`](./editor)           | CodeMirror markdown editor extensions & theme          | Never  |
+| [`@workspace/views`](./views)             | View/leaf registries + leaf services context (ADR-018) | Never  |
+| [`@workspace/commands`](./commands)       | CommandService — global command registry               | Never  |
+| [`@workspace/keybindings`](./keybindings) | KeybindingService — hotkey resolution + when clauses   | Never  |
+| [`@workspace/theme`](./theme)             | SAT CSS token system & themes                          | Never  |
 
 ## Architecture
 
@@ -35,11 +35,13 @@ apps/tauri/src/
 ### When to Create a New Package
 
 Create a package when:
+
 1. The code passes the primitives litmus test (no Tauri, no business state)
 2. It will be used by multiple features or other packages
 3. It has a clear single responsibility
 
 Do NOT create a package for:
+
 - Something that only one feature uses (keep it in `apps/tauri/src/features/`)
 - Something that manages business state (that belongs in features)
 

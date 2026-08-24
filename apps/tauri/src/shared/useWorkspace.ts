@@ -18,10 +18,7 @@
  */
 import { useCallback, useMemo } from "react";
 import type { TabModel } from "../features/tabs";
-import {
-  tabIdFromPath,
-  useTabsStore,
-} from "../features/tabs";
+import { tabIdFromPath, useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
 import { useVaultController, useVaultMutations } from "../features/vault";
 import { useSetting } from "../features/settings";
@@ -131,16 +128,19 @@ export function useWorkspaceController({
     onFileOpen,
   });
 
+  // Destructure so the callback depends on the stable method, not the
+  // controller object (which is re-created every render by design).
+  const { handleConfirmDelete } = controller;
   const handleConfirmDeleteWithTabs = useCallback(async () => {
     const deletedPaths = [...mutations.pendingDeletePaths];
-    await controller.handleConfirmDelete();
+    await handleConfirmDelete();
 
     const state = useTabsStore.getState();
     for (const path of deletedPaths) {
       const tabId = tabIdFromPath(path);
       state.closeTab(tabId, { force: true });
     }
-  }, [controller.handleConfirmDelete, mutations.pendingDeletePaths]);
+  }, [handleConfirmDelete, mutations.pendingDeletePaths]);
 
   return {
     controller,

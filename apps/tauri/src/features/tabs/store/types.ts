@@ -39,16 +39,10 @@ export interface TabsState {
   pinTab: (tabId: TabId) => void;
   unpinTab: (tabId: TabId) => void;
   togglePinTab: (tabId: TabId) => void;
-  closeTab: (
-    tabId: TabId,
-    options?: CloseTabOptions,
-  ) => void;
+  closeTab: (tabId: TabId, options?: CloseTabOptions) => void;
   closeOtherTabs: (tabId: TabId) => void;
   closeTabsToRight: (tabId: TabId) => void;
-  moveTabWithinPane: (
-    fromIndex: number,
-    toIndex: number,
-  ) => void;
+  moveTabWithinPane: (fromIndex: number, toIndex: number) => void;
   toWorkspaceSnapshot: () => TabsWorkspaceSnapshot;
   hydrateFromWorkspaceSnapshot: (snapshot: TabsWorkspaceSnapshot) => void;
   reset: () => void;

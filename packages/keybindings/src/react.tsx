@@ -7,7 +7,13 @@
  * use useKeybindingService() to call setContext() — they never import
  * the service directly.
  */
-import { createContext, useCallback, useContext, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  type ReactNode,
+} from "react";
 import { KeybindingService, keybindingService } from "./keybinding-service";
 
 const KeybindingContext = createContext<KeybindingService>(keybindingService);

@@ -24,30 +24,46 @@ function resolveActiveTab() {
   return tab;
 }
 
-commandService.registerCommand("tabs:close-active", () => {
-  const tab = resolveActiveTab();
-  if (tab) {
-    useTabsStore.getState().closeTab(tab.id, { force: true });
-  }
-}, () => resolveActiveTab() !== null);
+commandService.registerCommand(
+  "tabs:close-active",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().closeTab(tab.id, { force: true });
+    }
+  },
+  () => resolveActiveTab() !== null,
+);
 
-commandService.registerCommand("tabs:close-others", () => {
-  const tab = resolveActiveTab();
-  if (tab) {
-    useTabsStore.getState().closeOtherTabs(tab.id);
-  }
-}, () => resolveActiveTab() !== null);
+commandService.registerCommand(
+  "tabs:close-others",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().closeOtherTabs(tab.id);
+    }
+  },
+  () => resolveActiveTab() !== null,
+);
 
-commandService.registerCommand("tabs:close-right", () => {
-  const tab = resolveActiveTab();
-  if (tab) {
-    useTabsStore.getState().closeTabsToRight(tab.id);
-  }
-}, () => resolveActiveTab() !== null);
+commandService.registerCommand(
+  "tabs:close-right",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().closeTabsToRight(tab.id);
+    }
+  },
+  () => resolveActiveTab() !== null,
+);
 
-commandService.registerCommand("tabs:toggle-pin", () => {
-  const tab = resolveActiveTab();
-  if (tab) {
-    useTabsStore.getState().togglePinTab(tab.id);
-  }
-}, () => resolveActiveTab() !== null);
+commandService.registerCommand(
+  "tabs:toggle-pin",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().togglePinTab(tab.id);
+    }
+  },
+  () => resolveActiveTab() !== null,
+);

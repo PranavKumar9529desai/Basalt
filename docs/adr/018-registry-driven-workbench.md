@@ -3,6 +3,7 @@
 ## Status
 
 Accepted (2026-06-25)
+
 ## Context
 
 Basalt's goal is an Obsidian-class desktop Markdown workspace that eventually
@@ -45,14 +46,14 @@ directly.**
 All workbench code uses one vocabulary. Renames ride along with the phase
 that touches the code — no big-bang rename.
 
-| Term | Meaning | Replaces |
-|---|---|---|
-| **Workspace** | The whole main surface; owns the pane tree | `WorkspaceView` layout role |
-| **Ribbon** | Far-left vertical strip of quick actions | `ActivityBar` (VS Code term) |
-| **Side dock** | Left/right collapsible panel hosting views | `Sidebar` / `RightSidebar` |
-| **View** | A registered panel component identified by `type` (e.g. `file-explorer`, `backlinks`) | ad-hoc "panel"/"sidebar content" |
-| **Pane** | A split region of the workspace holding a tab group | `TabGroupFrame` / "group" |
-| **Leaf** | One tab's content, resolved from a registered leaf/view type | `PaneContent` switch logic |
+| Term          | Meaning                                                                               | Replaces                         |
+| ------------- | ------------------------------------------------------------------------------------- | -------------------------------- |
+| **Workspace** | The whole main surface; owns the pane tree                                            | `WorkspaceView` layout role      |
+| **Ribbon**    | Far-left vertical strip of quick actions                                              | `ActivityBar` (VS Code term)     |
+| **Side dock** | Left/right collapsible panel hosting views                                            | `Sidebar` / `RightSidebar`       |
+| **View**      | A registered panel component identified by `type` (e.g. `file-explorer`, `backlinks`) | ad-hoc "panel"/"sidebar content" |
+| **Pane**      | A split region of the workspace holding a tab group                                   | `TabGroupFrame` / "group"        |
+| **Leaf**      | One tab's content, resolved from a registered leaf/view type                          | `PaneContent` switch logic       |
 
 ### Phases (each builds on the last; each ships independently)
 

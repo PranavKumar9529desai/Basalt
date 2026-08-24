@@ -21,15 +21,15 @@ A full prose typography system was implemented across `packages/ui/src/styles/` 
 
 A seven-level heading scale (h1–h7) with a deliberate weight ladder and letter-spacing:
 
-| Level | Size | Weight | Letter-spacing |
-|---|---|---|---|
-| h1 | 2rem | 700 | −0.03em |
-| h2 | 1.5rem | 600 | −0.02em |
-| h3 | 1.25rem | 600 | −0.015em |
-| h4 | 1.125rem | 500 | −0.01em |
-| h5 | 1rem | 500 | 0 |
-| h6 | 0.875rem | 500 | 0 |
-| h7 | 0.75rem | 400 | 0 (explicit) |
+| Level | Size     | Weight | Letter-spacing |
+| ----- | -------- | ------ | -------------- |
+| h1    | 2rem     | 700    | −0.03em        |
+| h2    | 1.5rem   | 600    | −0.02em        |
+| h3    | 1.25rem  | 600    | −0.015em       |
+| h4    | 1.125rem | 500    | −0.01em        |
+| h5    | 1rem     | 500    | 0              |
+| h6    | 0.875rem | 500    | 0              |
+| h7    | 0.75rem  | 400    | 0 (explicit)   |
 
 Heading color tokens (`--sat-text-primary`, `--sat-text-muted`) provide a visual hierarchy: larger headings render darker, smaller headings render muted.
 

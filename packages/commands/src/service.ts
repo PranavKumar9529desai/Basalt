@@ -30,7 +30,9 @@ export class CommandService {
       return;
     }
     const IconComponent = resolveIcon(meta.icon);
-    const icon = IconComponent ? createElement(IconComponent, { size: 16 }) : undefined;
+    const icon = IconComponent
+      ? createElement(IconComponent, { size: 16 })
+      : undefined;
     this.register({ ...meta, icon, callback, checkCallback });
   }
 

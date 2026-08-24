@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "react",
+    "react-hooks",
+    "import",
+    "jsx-a11y"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "jsx-a11y/aria-role": "warn",
+    // Stale-closure protection — all findings fixed; keep enforced.
+    "react-hooks/exhaustive-deps": "error",
+    // React Compiler rules: project does not use React Compiler yet.
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/preserve-manual-memoization": "off",
+    "react/incompatible-library": "off",
+    "eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "crates/**",
+    "target/**",
+    "**/dist/**",
+    "**/.tauri/**",
+    "apps/tauri/src/routeTree.gen.ts",
+    "packages/theme/src/generated/**"
+  ]
+}

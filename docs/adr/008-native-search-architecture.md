@@ -35,6 +35,7 @@ These are two distinct tools with different engines, optimal for their respectiv
 - Production users: Quickwit, ParadeDB, Element.io
 
 **Alternatives considered:**
+
 - `milli` (MeiliSearch's engine) — archived as standalone crate March 2023, LMDB-only (always disk-backed, heavier), no pure-Rust path forward. Rejected.
 - `simsearch` — n-gram similarity, no BM25, no persistence, poor relevance for long documents. Rejected.
 
@@ -46,6 +47,7 @@ These are two distinct tools with different engines, optimal for their respectiv
 - License: MPL-2.0 (source disclosure only for modified crate files, does not affect Basalt's source)
 
 **Alternatives considered:**
+
 - `sublime_fuzzy` — unmaintained since 2020, superseded by nucleo. Rejected.
 - Tantivy for filenames too — segment overhead is worse than direct scoring for a list of < 50k strings. Rejected.
 
@@ -53,12 +55,12 @@ These are two distinct tools with different engines, optimal for their respectiv
 
 Four fields indexed per note:
 
-| Field | Type | Tokenizer | Stored | Notes |
-|---|---|---|---|---|
-| `path` | TEXT | `STRING` (raw) | Yes | Exact-match deletion key |
-| `title` | TEXT | `en_stem` | Yes | BM25 relevance; prefix matching at query time |
-| `body` | TEXT | `en_stem` | No | BM25 full-word relevance; stored=false keeps index small |
-| `tags` | TEXT | `en_stem` | Yes | Space-separated tags from frontmatter + inline `#tag` |
+| Field   | Type | Tokenizer      | Stored | Notes                                                    |
+| ------- | ---- | -------------- | ------ | -------------------------------------------------------- |
+| `path`  | TEXT | `STRING` (raw) | Yes    | Exact-match deletion key                                 |
+| `title` | TEXT | `en_stem`      | Yes    | BM25 relevance; prefix matching at query time            |
+| `body`  | TEXT | `en_stem`      | No     | BM25 full-word relevance; stored=false keeps index small |
+| `tags`  | TEXT | `en_stem`      | Yes    | Space-separated tags from frontmatter + inline `#tag`    |
 
 #### Tokenizer Strategy
 
@@ -69,11 +71,13 @@ All content fields use `en_stem` (English stemming). Prefix matching for search-
 `FuzzyTermQuery::new_prefix(term, 0, true)` uses tantivy's FST (finite state transducer) term dictionary to find all indexed tokens that start with the query prefix in O(prefix length) time. "packag" finds "package", "packages", "packaging" — no expensive scan, no index size blowup.
 
 Edge-ngram was evaluated and rejected:
+
 - On `body`, it multiplies index size by 5–10× across thousands of notes (every word "running" → ["r","ru","run","runn","runni","runnin","running"])
 - Two-tokenizer setups (ngram at index time, exact at query time) require separate `QueryParser` instances or manual `Term` construction anyway — equal complexity with worse index size
 - `FuzzyTermQuery::new_prefix` is tantivy's documented approach for search-as-you-type; it requires no schema changes
 
 **Query construction (per word in query):**
+
 ```
 word → lowercase
   → FuzzyTermQuery::new_prefix(title_term, 0, true) × 3.0 boost (BoostQuery)
@@ -94,6 +98,7 @@ Index written to `<app-data>/search-index/<vault-hash>/` using `MmapDirectory`. 
 3. Expose `SearchState` (tantivy `IndexReader` + nucleo scorer) in `AppState`
 
 On file change (via `notify` watcher already in `basalt_fs`):
+
 1. Delete stale document from tantivy writer
 2. Re-parse and add updated document
 3. Commit segment
@@ -125,12 +130,13 @@ Selecting a result from either modal: opens the note in the **current pane**, sc
 
 ## Consequences
 
-+ Sub-150ms full-text search on 5k notes — structurally impossible in Obsidian's JS runtime
-+ Instant file switching via nucleo — no perceived latency
-+ Incremental index updates: one file save = one tantivy segment commit, no full rebuild
-+ Index persists across launches — fast cold start even for 50k-note vaults
-+ Tag search is a first-class tantivy field query, not a grep
-- Tantivy adds ~2MB to binary size
-- MPL-2.0 license on nucleo requires source disclosure if the nucleo crate itself is modified (Basalt's own code is unaffected)
-- `AppState` gains a third field (`search`) alongside `vault` and `watcher` — must be initialized before any search command is callable; boot sequence needs a loading state
-- All tantivy index files must be excluded from vault sync (`.basalt/` directory, add to `.gitignore`)
+- Sub-150ms full-text search on 5k notes — structurally impossible in Obsidian's JS runtime
+- Instant file switching via nucleo — no perceived latency
+- Incremental index updates: one file save = one tantivy segment commit, no full rebuild
+- Index persists across launches — fast cold start even for 50k-note vaults
+- Tag search is a first-class tantivy field query, not a grep
+
+* Tantivy adds ~2MB to binary size
+* MPL-2.0 license on nucleo requires source disclosure if the nucleo crate itself is modified (Basalt's own code is unaffected)
+* `AppState` gains a third field (`search`) alongside `vault` and `watcher` — must be initialized before any search command is callable; boot sequence needs a loading state
+* All tantivy index files must be excluded from vault sync (`.basalt/` directory, add to `.gitignore`)

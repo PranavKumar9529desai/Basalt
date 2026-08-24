@@ -23,9 +23,6 @@ import { useEffect } from "react";
  * EditorView instance (e.g., via EditorHost's onViewReady callback).
  */
 export function useEditorCommands(view: EditorView | null) {
-  const register = commandService.register.bind(commandService);
-  const unregister = commandService.unregister.bind(commandService);
-
   useEffect(() => {
     if (!view) return;
 
@@ -189,13 +186,13 @@ export function useEditorCommands(view: EditorView | null) {
     ];
 
     commands.forEach((cmd) => {
-      register(cmd);
+      commandService.register(cmd);
     });
 
     return () => {
       commands.forEach((cmd) => {
-        unregister(cmd.id);
+        commandService.unregister(cmd.id);
       });
     };
-    }, [view]);
+  }, [view]);
 }

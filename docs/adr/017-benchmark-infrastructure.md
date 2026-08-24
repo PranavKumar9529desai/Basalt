@@ -75,18 +75,18 @@ Output: color-coded terminal table showing each benchmark's change with ± confi
 
 ### Benchmark targets
 
-| Benchmark | Crate | Measures |
-|---|---|---|
-| `parse_metadata_seq` | `basalt-parser` | Zero-AST scanner throughput on 1k files |
-| `index_walk` | `basalt-vault` | Full `collect_markdown_files` + `reindex_all` — wall-clock time and allocations |
-| `cache_roundtrip` | `basalt-vault` | `Cache::save()` + `Cache::load()` on 1k / 5k entries |
-| `file_watch_burst` | `basalt-vault` | Debounce + batch dispatch under synthetic fs event burst |
-| `index_docs` | `basalt-search` | Tantivy `IndexWriter::add_document` throughput |
-| `search_query` | `basalt-search` | `searcher.search()` P50/P95/P99 for prefix, fuzzy, and exact queries |
-| `search_reindex` | `basalt-search` | Full delete-all + rebuild index cycle |
-| `graph_insert` | `basalt-graph` | `NoteGraph::add_entry` — link rebuild cost per insert |
-| `graph_query` | `basalt-graph` | Backlink lookup latency |
-| `arena_growth` | `basalt-graph` | `StringArena` memory growth and allocation count vs entry count |
+| Benchmark            | Crate           | Measures                                                                        |
+| -------------------- | --------------- | ------------------------------------------------------------------------------- |
+| `parse_metadata_seq` | `basalt-parser` | Zero-AST scanner throughput on 1k files                                         |
+| `index_walk`         | `basalt-vault`  | Full `collect_markdown_files` + `reindex_all` — wall-clock time and allocations |
+| `cache_roundtrip`    | `basalt-vault`  | `Cache::save()` + `Cache::load()` on 1k / 5k entries                            |
+| `file_watch_burst`   | `basalt-vault`  | Debounce + batch dispatch under synthetic fs event burst                        |
+| `index_docs`         | `basalt-search` | Tantivy `IndexWriter::add_document` throughput                                  |
+| `search_query`       | `basalt-search` | `searcher.search()` P50/P95/P99 for prefix, fuzzy, and exact queries            |
+| `search_reindex`     | `basalt-search` | Full delete-all + rebuild index cycle                                           |
+| `graph_insert`       | `basalt-graph`  | `NoteGraph::add_entry` — link rebuild cost per insert                           |
+| `graph_query`        | `basalt-graph`  | Backlink lookup latency                                                         |
+| `arena_growth`       | `basalt-graph`  | `StringArena` memory growth and allocation count vs entry count                 |
 
 ## Rationale
 
@@ -97,10 +97,11 @@ Output: color-coded terminal table showing each benchmark's change with ± confi
 
 ## Consequences
 
-+ Every optimization from ADR-012 through ADR-018 will be measured with statistical confidence
-+ Adding a benchmark for new functionality costs ~10 lines of code — low enough to become habit
-+ `cargo bench` completes in ~2–3 minutes end-to-end
-+ Criterion HTML reports provide visual history even without CI
-- Running benchmarks is a manual step — regressions may go unnoticed until the developer remembers to bench
-- Fixture generation runs every bench invocation, adding ~5% overhead to iteration time
-- Each crate's `Cargo.toml` gains a `[dev-dependencies]` entry for `criterion` and `tempfile`
+- Every optimization from ADR-012 through ADR-018 will be measured with statistical confidence
+- Adding a benchmark for new functionality costs ~10 lines of code — low enough to become habit
+- `cargo bench` completes in ~2–3 minutes end-to-end
+- Criterion HTML reports provide visual history even without CI
+
+* Running benchmarks is a manual step — regressions may go unnoticed until the developer remembers to bench
+* Fixture generation runs every bench invocation, adding ~5% overhead to iteration time
+* Each crate's `Cargo.toml` gains a `[dev-dependencies]` entry for `criterion` and `tempfile`

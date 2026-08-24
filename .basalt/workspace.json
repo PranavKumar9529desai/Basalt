@@ -1,9 +1,7 @@
 {
   "tabsWorkspace": {
     "focusedGroupId": "group-root",
-    "groupOrder": [
-      "group-root"
-    ],
+    "groupOrder": ["group-root"],
     "groups": [
       {
         "activeTabId": "tab:/home/pranav/Documents/obsidian/Harness Engineering/Harness Engineering Material.md",

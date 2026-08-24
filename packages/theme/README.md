@@ -17,7 +17,7 @@ from JSON token definitions.
 import "@workspace/theme/tokens.css";
 
 // Use tokens in components:
-<div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]" />
+<div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]" />;
 
 // Switch themes by setting data-theme attribute:
 document.documentElement.setAttribute("data-theme", "catppuccin-mocha");
@@ -25,19 +25,19 @@ document.documentElement.setAttribute("data-theme", "catppuccin-mocha");
 
 ## Token Families
 
-| Prefix | Purpose |
-|---|---|
-| `--sat-surface-*` | Background surfaces (1, 2, 3) |
-| `--sat-text-*` | Text colors (primary, muted, inverse) |
-| `--sat-accent-*` | Accent / interactive colors |
-| `--sat-layout-*` | Layout chrome (borders, shadows, radii) |
-| `--sat-editor-*` | Editor-specific (headings, code blocks, etc.) |
-| `--sat-state-*` | Semantic states (success, warning, danger, info) |
-| `--sat-palette-*` | Raw palette values (used internally) |
-| `--sat-radius-*` | Border radius scale |
-| `--sat-spacing-*` | Spacing scale |
-| `--sat-shadow-*` | Box-shadow scale |
-| `--sat-font-*` | Font family tokens |
+| Prefix            | Purpose                                          |
+| ----------------- | ------------------------------------------------ |
+| `--sat-surface-*` | Background surfaces (1, 2, 3)                    |
+| `--sat-text-*`    | Text colors (primary, muted, inverse)            |
+| `--sat-accent-*`  | Accent / interactive colors                      |
+| `--sat-layout-*`  | Layout chrome (borders, shadows, radii)          |
+| `--sat-editor-*`  | Editor-specific (headings, code blocks, etc.)    |
+| `--sat-state-*`   | Semantic states (success, warning, danger, info) |
+| `--sat-palette-*` | Raw palette values (used internally)             |
+| `--sat-radius-*`  | Border radius scale                              |
+| `--sat-spacing-*` | Spacing scale                                    |
+| `--sat-shadow-*`  | Box-shadow scale                                 |
+| `--sat-font-*`    | Font family tokens                               |
 
 ## Structure
 

@@ -19,7 +19,8 @@ export function TabListFrame({
         className,
       )}
     >
-      {tabsBar}      <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      {tabsBar}{" "}
+      <div className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {children}
       </div>
     </div>

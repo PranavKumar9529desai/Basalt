@@ -62,16 +62,16 @@ features/tabs/hooks/useTabs.ts  ← internal, not imported cross-feature
 One concept = one word. These terms are reserved; do not introduce synonyms
 ("strip", "bar", "group", "session") for concepts that already have a name.
 
-| Term | Means | Canonical examples |
-|---|---|---|
-| **view** | A side-dock panel (ADR-018 / VS Code sense) | `viewRegistry`, `FileExplorerView`, `BacklinksView` |
-| **leaf** | The content type a tab renders | `leafRegistry`, `MarkdownLeaf`, `tab.leafType` |
-| **tab** | An open item in the tab strip | `TabModel`, `useTabsStore`, `WorkspaceTabsBar` |
-| **pane** | A tab container (currently exactly one) | `TabPane`, `ROOT_PANE_ID` |
-| **ribbon** | Far-left quick-access bar | `Ribbon`, `RibbonItem` |
-| **dock** | Collapsible side panel host | `SideDock` |
-| **header band** | The 40px top row of the workspace grid | `HeaderBandRule` |
-| **active note** | The note open in the focused tab | `useActiveNoteStore` |
+| Term            | Means                                       | Canonical examples                                  |
+| --------------- | ------------------------------------------- | --------------------------------------------------- |
+| **view**        | A side-dock panel (ADR-018 / VS Code sense) | `viewRegistry`, `FileExplorerView`, `BacklinksView` |
+| **leaf**        | The content type a tab renders              | `leafRegistry`, `MarkdownLeaf`, `tab.leafType`      |
+| **tab**         | An open item in the tab strip               | `TabModel`, `useTabsStore`, `WorkspaceTabsBar`      |
+| **pane**        | A tab container (currently exactly one)     | `TabPane`, `ROOT_PANE_ID`                           |
+| **ribbon**      | Far-left quick-access bar                   | `Ribbon`, `RibbonItem`                              |
+| **dock**        | Collapsible side panel host                 | `SideDock`                                          |
+| **header band** | The 40px top row of the workspace grid      | `HeaderBandRule`                                    |
+| **active note** | The note open in the focused tab            | `useActiveNoteStore`                                |
 
 Rules for every new component, hook, store, and file:
 
@@ -153,13 +153,13 @@ Exception: a feature may import **types only** from another feature's `types.ts`
 
 ### 2.4 File Count Budget per Feature
 
-| Aspect | Max | Why |
-|--------|-----|-----|
-| Hooks per feature | 4 | More means too many tiny abstractions |
-| Store slices per feature | 2 | Core + persistence. Not 5 files |
-| Barrel exports per index | 15 | Beyond that, the feature is too broad |
-| Lines per component | 200 | Beyond that, extract sub-components |
-| Lines per hook | 150 | Beyond that, split concerns |
+| Aspect                   | Max | Why                                   |
+| ------------------------ | --- | ------------------------------------- |
+| Hooks per feature        | 4   | More means too many tiny abstractions |
+| Store slices per feature | 2   | Core + persistence. Not 5 files       |
+| Barrel exports per index | 15  | Beyond that, the feature is too broad |
+| Lines per component      | 200 | Beyond that, extract sub-components   |
+| Lines per hook           | 150 | Beyond that, split concerns           |
 
 ---
 
@@ -269,16 +269,16 @@ import { Button } from "@workspace/ui/components/ui/button";
 
 When you encounter any of these, remove them — don't leave them for later:
 
-| Pattern | Why |
-|---------|-----|
-| Stale example files | `simple-component.tsx` — not used anywhere |
-| Duplicate component implementations | Two `scroll-area.tsx` files, one in `ui/` and one loose |
-| Dead stores | Store with no subscribers or only one subscriber that can use context |
-| Mirror stores | Zustand store that copies another hook's state |
-| Unused plugin/extension systems | `registerSection`/`unregisterSection` with no plugins |
-| Console.log fallbacks | `callback: () => { if (fn) fn(); else console.log(...) }` |
-| Re-export chains of >1 hop | `layout/index.tsx` that just re-exports from features |
-| Banner/box comment blocks | `// ----` ASCII headers + essays → replace with a 1–3 line doc comment on the code itself (§8) |
+| Pattern                             | Why                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Stale example files                 | `simple-component.tsx` — not used anywhere                                                     |
+| Duplicate component implementations | Two `scroll-area.tsx` files, one in `ui/` and one loose                                        |
+| Dead stores                         | Store with no subscribers or only one subscriber that can use context                          |
+| Mirror stores                       | Zustand store that copies another hook's state                                                 |
+| Unused plugin/extension systems     | `registerSection`/`unregisterSection` with no plugins                                          |
+| Console.log fallbacks               | `callback: () => { if (fn) fn(); else console.log(...) }`                                      |
+| Re-export chains of >1 hop          | `layout/index.tsx` that just re-exports from features                                          |
+| Banner/box comment blocks           | `// ----` ASCII headers + essays → replace with a 1–3 line doc comment on the code itself (§8) |
 
 ---
 
@@ -314,7 +314,9 @@ Never call `invoke()` N times in a loop when one batched call works.
 
 ```tsx
 const SettingsPanel = lazy(() => import("./SettingsPanel"));
-<Suspense fallback={null}><SettingsPanel /></Suspense>
+<Suspense fallback={null}>
+  <SettingsPanel />
+</Suspense>;
 ```
 
 ---
@@ -352,11 +354,11 @@ export function MarkdownLeaf({ tab }: { tab: WorkspaceTab }) {
 
 A comment answers a question the code raises but can't answer itself:
 
-| Write a comment that... | Example |
-|---|---|
-| Explains **why** this approach over the obvious alternative | `setState() not dispatch — history/cursor survive tab switches` |
-| States an **invariant** other code depends on | `vault://file-changed means external change only — self-writes suppressed in Rust` |
-| Names a **non-obvious constraint** | `debounced — stats are O(n), too slow per keystroke` |
+| Write a comment that...                                     | Example                                                                            |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Explains **why** this approach over the obvious alternative | `setState() not dispatch — history/cursor survive tab switches`                    |
+| States an **invariant** other code depends on               | `vault://file-changed means external change only — self-writes suppressed in Rust` |
+| Names a **non-obvious constraint**                          | `debounced — stats are O(n), too slow per keystroke`                               |
 
 Never narrate what the next line of code obviously does. If the comment
 restates the code, delete it.

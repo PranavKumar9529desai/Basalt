@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/basalt-types",
-    "crates/basalt-parser",
-    "crates/basalt-graph",
-    "crates/basalt-vault",
-    "crates/basalt-search",
-    "crates/basalt-wasm",
-    "apps/tauri/src-tauri",
+  "crates/basalt-types",
+  "crates/basalt-parser",
+  "crates/basalt-graph",
+  "crates/basalt-vault",
+  "crates/basalt-search",
+  "crates/basalt-wasm",
+  "apps/tauri/src-tauri",
 ]

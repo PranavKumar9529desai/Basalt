@@ -1,9 +1,6 @@
 import { viewRegistry, type ViewSide } from "@workspace/views";
 import { cn } from "@workspace/ui/lib/utils";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-} from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useState } from "react";
 import { SidebarPanel } from "@workspace/ui/components/sidebar";
 

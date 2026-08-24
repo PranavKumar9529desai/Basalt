@@ -55,12 +55,8 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
  * const theme = useSetting("theme");           // string
  * const behavior = useSetting("tabClickOpenBehavior"); // TabClickOpenBehavior
  */
-export function useSetting<K extends SettingsKey>(
-  key: K,
-): SettingsValues[K] {
-  return useSettingsStore(
-    (state) => state.values[key] as SettingsValues[K],
-  );
+export function useSetting<K extends SettingsKey>(key: K): SettingsValues[K] {
+  return useSettingsStore((state) => state.values[key] as SettingsValues[K]);
 }
 
 /**

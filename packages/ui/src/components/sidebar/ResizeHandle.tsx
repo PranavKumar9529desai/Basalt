@@ -14,7 +14,7 @@ export const ResizeHandle: FC<ResizeHandleProps> = ({
   side = "left",
 }) => {
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: Resize handle is strictly a visual/mouse interaction overlay.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- Resize handle is strictly a visual/mouse interaction overlay.
     <div
       onMouseDown={onMouseDown}
       className={cn(

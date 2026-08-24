@@ -1,8 +1,5 @@
 import { useActiveNoteStore } from "../features/editor";
-import {
-  getTabByPath,
-  useTabsStore,
-} from "../features/tabs";
+import { getTabByPath, useTabsStore } from "../features/tabs";
 import {
   findNoteByName,
   useVaultTree,
@@ -32,9 +29,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
 
   const activeNoteTab = useMemo(
     () =>
-      activeNote?.path
-        ? getTabByPath(pane, tabsRecord, activeNote.path)
-        : null,
+      activeNote?.path ? getTabByPath(pane, tabsRecord, activeNote.path) : null,
     [activeNote?.path, pane, tabsRecord],
   );
 

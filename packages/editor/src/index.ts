@@ -19,10 +19,7 @@ export {
   runTypingBenchmark,
 } from "./benchmark";
 export type { EditorExtensionGroups } from "./editor";
-export {
-  createEditorExtensionGroups,
-  createEditorExtensions,
-} from "./editor";
+export { createEditorExtensionGroups, createEditorExtensions } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
 export type { EditorConfig, FetchLinksFn, FetchTagsFn } from "./types";

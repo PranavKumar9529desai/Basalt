@@ -5,9 +5,11 @@ The primitive UI layer for Basalt. **Props in, DOM out. Zero business logic.**
 ## Responsibility
 
 All visual components that pass the three-layer litmus test:
+
 > "Can this render in an empty `index.html` with zero backend?"
 
 Components in this package MUST NOT:
+
 - Call `invoke()` or any Tauri IPC
 - Import from `@tauri-apps/*`
 - Import from `apps/tauri/`
@@ -15,6 +17,7 @@ Components in this package MUST NOT:
 - Import from feature-level packages
 
 They MAY contain:
+
 - Internal UI state (hover, open/close, scroll position)
 - Refs for DOM measurement
 - Event handlers that call prop callbacks
@@ -47,10 +50,10 @@ src/components/
 
 ### Convention: Folder vs Flat
 
-| Rule | When to use |
-|---|---|
+| Rule                             | When to use                                                |
+| -------------------------------- | ---------------------------------------------------------- |
 | **Folder** (`tabs/`, `sidebar/`) | Multi-file components (types, subcomponents, index barrel) |
-| **File** (`component.tsx`) | NOT used anymore — all components now use folders |
+| **File** (`component.tsx`)       | NOT used anymore — all components now use folders          |
 
 Every feature folder MUST have an `index.ts` barrel that re-exports the public API.
 
@@ -58,15 +61,15 @@ Every feature folder MUST have an `index.ts` barrel that re-exports the public A
 
 ```tsx
 // Import shadcn primitives from their full path:
-import { Button } from "@workspace/ui/components/ui/button"
-import { ScrollArea } from "@workspace/ui/components/ui/scroll-area"
+import { Button } from "@workspace/ui/components/ui/button";
+import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
 
 // Import feature-group components from their barrel:
-import { FileTree } from "@workspace/ui/components/file-tree"
-import { TabsBar } from "@workspace/ui/components/tabs"
+import { FileTree } from "@workspace/ui/components/file-tree";
+import { TabsBar } from "@workspace/ui/components/tabs";
 
 // Import utilities:
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@workspace/ui/lib/utils";
 ```
 
 ## Styling Rules

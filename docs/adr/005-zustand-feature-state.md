@@ -14,6 +14,7 @@ Redux was too heavy for the scope. Context + useReducer has poor performance for
 Use **Zustand** for feature-level state across the app.
 
 Rationale:
+
 - Already in use in `packages/editor/src/commands/store.ts` — consistency
 - Fine-grained selector subscriptions prevent unnecessary re-renders in large tab sets
 - Low boilerplate: actions and state live in one store definition
@@ -23,8 +24,9 @@ Each feature's store lives in `apps/tauri/src/features/<name>/store/` or `store.
 
 ## Consequences
 
-+ Minimal boilerplate vs Redux
-+ Selector-based subscriptions contain re-render blast radius during tab switching/drag
-+ Single import pattern: `useWorkspaceStore(state => state.tabs)` everywhere
-- Zustand doesn't enforce action patterns — discipline required to keep stores readable
-- Large stores can drift into a "god object"; features must keep their slice boundaries clean
+- Minimal boilerplate vs Redux
+- Selector-based subscriptions contain re-render blast radius during tab switching/drag
+- Single import pattern: `useWorkspaceStore(state => state.tabs)` everywhere
+
+* Zustand doesn't enforce action patterns — discipline required to keep stores readable
+* Large stores can drift into a "god object"; features must keep their slice boundaries clean

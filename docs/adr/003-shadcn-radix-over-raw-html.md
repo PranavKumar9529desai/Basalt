@@ -16,24 +16,27 @@ This applies to: buttons, inputs, dialogs, dropdowns, scroll areas, separators, 
 Only write raw Tailwind when no shadcn/Radix component covers the need (e.g., a custom graph canvas, a virtualized list container, a unique layout wrapper).
 
 **Wrong:**
+
 ```tsx
 <button className="px-4 py-2 bg-[var(--sat-accent-primary)] rounded">Save</button>
 <div className="overflow-y-auto h-full">{children}</div>
 ```
 
 **Right:**
+
 ```tsx
 import { Button } from "@workspace/ui/components/ui/button";
-<Button variant="default">Save</Button>
+<Button variant="default">Save</Button>;
 
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
-<ScrollArea className="h-full">{children}</ScrollArea>
+<ScrollArea className="h-full">{children}</ScrollArea>;
 ```
 
 ## Consequences
 
-+ Keyboard navigation and ARIA come for free
-+ Consistent behavior across the entire app
-+ Smaller surface area to maintain — shadcn handles the hard parts
-- Requires knowing what shadcn has before writing custom components
-- shadcn component APIs can be more verbose than a raw div for simple cases
+- Keyboard navigation and ARIA come for free
+- Consistent behavior across the entire app
+- Smaller surface area to maintain — shadcn handles the hard parts
+
+* Requires knowing what shadcn has before writing custom components
+* shadcn component APIs can be more verbose than a raw div for simple cases

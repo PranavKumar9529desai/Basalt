@@ -91,6 +91,7 @@ export function InputDialog({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="bg-[var(--sat-surface-1)] border-[var(--sat-layout-border)] text-[var(--sat-text-primary)] placeholder:text-[var(--sat-text-muted)]"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- Intentional: focus input when dialog opens
             autoFocus
           />
           {error && (

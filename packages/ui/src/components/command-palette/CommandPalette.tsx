@@ -77,6 +77,7 @@ export function CommandPalette({
           <CommandInput
             placeholder={placeholder ?? "Type a command..."}
             className="flex-1"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- Intentional: focus palette input on open
             autoFocus
           />
           <Button

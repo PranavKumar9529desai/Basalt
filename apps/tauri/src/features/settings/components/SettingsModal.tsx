@@ -46,6 +46,7 @@ export function SettingsModal() {
       />
       <div
         ref={dialogRef}
+        // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- Custom modal chrome; native <dialog> would change stacking/styling
         role="dialog"
         aria-modal="true"
         aria-label="Settings"

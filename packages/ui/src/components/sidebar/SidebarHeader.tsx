@@ -34,11 +34,7 @@ export const SidebarHeader: FC<SidebarHeaderProps> = memo(
             {title}
           </span>
         ) : null}
-        {title ? (
-          actionButtons
-        ) : (
-          <div className="mx-auto">{actionButtons}</div>
-        )}
+        {title ? actionButtons : <div className="mx-auto">{actionButtons}</div>}
         {trailing ? <div className="shrink-0 ml-1">{trailing}</div> : null}
       </div>
     );

@@ -6,8 +6,4 @@
 
 export { cn } from "./lib/utils";
 
-export {
-  useClickOutside,
-  useMediaQuery,
-  useResizeObserver,
-} from "./hooks";
+export { useClickOutside, useMediaQuery, useResizeObserver } from "./hooks";

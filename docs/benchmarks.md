@@ -22,35 +22,39 @@ cargo bench --manifest-path crates/basalt-graph/Cargo.toml
 ## What Each Benchmark Measures
 
 ### Parser (`basalt-parser`)
-| Name | Measures |
-|---|---|
+
+| Name                    | Measures                                                                   |
+| ----------------------- | -------------------------------------------------------------------------- |
 | `parse_metadata/seq_1k` | `extract_metadata` throughput on 1000 synthetic markdown files (CPU bound) |
 
 ### Vault (`basalt-vault`)
-| Name | Measures |
-|---|---|
+
+| Name                        | Measures                                                                    |
+| --------------------------- | --------------------------------------------------------------------------- |
 | `index_walk/real_vault/{N}` | Full directory walk + parse on your Obsidian vault (set `BENCH_VAULT_PATH`) |
-| `index_walk/synthetic/{N}` | Same on generated files at N = 50, 500, 5000 |
-| `cache_roundtrip/save/{N}` | `VaultCache::save` — serialize vault to JSON (disk write + serde) |
-| `cache_roundtrip/load/{N}` | `VaultCache::load` — deserialize JSON back (disk read + serde) |
+| `index_walk/synthetic/{N}`  | Same on generated files at N = 50, 500, 5000                                |
+| `cache_roundtrip/save/{N}`  | `VaultCache::save` — serialize vault to JSON (disk write + serde)           |
+| `cache_roundtrip/load/{N}`  | `VaultCache::load` — deserialize JSON back (disk read + serde)              |
 
 ### Search (`basalt-search`)
-| Name | Measures |
-|---|---|
-| `index_docs/index/{N}` | Tantivy `update_document` + `commit` for N files |
-| `search_query/search/{N}` | 5 queries (prefix, multi-word, miss) against a populated index |
-| `search_reindex/reindex/{N}` | Full update-all-documents cycle (open → add → commit) |
+
+| Name                         | Measures                                                       |
+| ---------------------------- | -------------------------------------------------------------- |
+| `index_docs/index/{N}`       | Tantivy `update_document` + `commit` for N files               |
+| `search_query/search/{N}`    | 5 queries (prefix, multi-word, miss) against a populated index |
+| `search_reindex/reindex/{N}` | Full update-all-documents cycle (open → add → commit)          |
 
 ### Graph (`basalt-graph`)
-| Name | Measures |
-|---|---|
-| `graph_insert/insert/{N}` | `NoteGraph::add_document` with 2 links each |
-| `graph_query/backlinks/{N}` | Backlink lookup throughput |
-| `graph_query/forward_links/{N}` | Forward link lookup throughput |
-| `graph_query/metadata/{N}` | Metadata cache lookup throughput |
-| `arena_growth/insert/{N}` | `StringArena::get_or_insert` — interning throughput |
-| `arena_growth/lookup_hit/{N}` | `get_id` on existing strings |
-| `arena_growth/lookup_miss/{N}` | `get_id` on missing strings |
+
+| Name                            | Measures                                            |
+| ------------------------------- | --------------------------------------------------- |
+| `graph_insert/insert/{N}`       | `NoteGraph::add_document` with 2 links each         |
+| `graph_query/backlinks/{N}`     | Backlink lookup throughput                          |
+| `graph_query/forward_links/{N}` | Forward link lookup throughput                      |
+| `graph_query/metadata/{N}`      | Metadata cache lookup throughput                    |
+| `arena_growth/insert/{N}`       | `StringArena::get_or_insert` — interning throughput |
+| `arena_growth/lookup_hit/{N}`   | `get_id` on existing strings                        |
+| `arena_growth/lookup_miss/{N}`  | `get_id` on missing strings                         |
 
 ## Output Interpretation
 
@@ -71,10 +75,10 @@ index_walk/real_vault/774
 
 ## Environment Variables
 
-| Variable | Effect |
-|---|---|
-| `BENCH_VAULT_PATH` | `index_walk` walks real files instead of synthetic — measures actual I/O patterns |
-| `CARGO_PROFILE_BENCH_DEBUG` | Set to `true` to disable debug symbol stripping for profiling |
+| Variable                    | Effect                                                                            |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `BENCH_VAULT_PATH`          | `index_walk` walks real files instead of synthetic — measures actual I/O patterns |
+| `CARGO_PROFILE_BENCH_DEBUG` | Set to `true` to disable debug symbol stripping for profiling                     |
 
 ## HTML Reports
 

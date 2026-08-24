@@ -58,6 +58,8 @@ export interface BootResult {
   settings: Record<string, unknown>;
   /** Per-vault workspace state from .basalt/workspace.json (Tier 3: vault-local) */
   workspace: Record<string, unknown>;
+  /** Rust boot phase durations in µs (TTI instrumentation, ADR-017). */
+  timings: Record<string, number>;
 }
 
 /**

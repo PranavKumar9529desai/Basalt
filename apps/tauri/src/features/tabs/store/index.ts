@@ -24,8 +24,4 @@ export const useTabsStore = create<TabsState>()((set, get, api) => ({
   ...createPersistenceSlice(set, get, api),
 }));
 
-export type {
-  CloseTabOptions,
-  OpenTabOptions,
-  TabsState,
-} from "./types";
+export type { CloseTabOptions, OpenTabOptions, TabsState } from "./types";

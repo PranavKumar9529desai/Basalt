@@ -111,6 +111,9 @@ export function MarkdownLeaf({ tab }: LeafProps) {
 
   // Built once — every EditorState (initial, per-tab, conflict reload) must
   // use this exact list.
+  /* eslint-disable react-hooks/exhaustive-deps -- this list must never change
+     after mount (every EditorState must share these exact extensions);
+     freshness of io/services/setSaveStatus flows through latest-refs. */
   const extensions: Extension[] = useMemo(
     () => [
       ...createEditorExtensions({
@@ -133,9 +136,9 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         scheduleStatsRef.current();
       }),
     ],
-    // All deps are stable — this list must never change after mount.
     [],
   );
+  /* eslint-enable react-hooks/exhaustive-deps */
   const extensionsRef = useLatestRef(extensions);
 
   // Stats are debounced and computed from the CM doc, not React state.

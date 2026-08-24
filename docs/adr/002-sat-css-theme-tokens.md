@@ -14,6 +14,7 @@ We also had a regression where a component used `bg-slate-900` directly and beca
 Every color in the app must come from a `--sat-*` CSS custom property. No exceptions.
 
 **Forbidden:**
+
 ```tsx
 <div className="bg-blue-600 text-white border-gray-700">
 <div className="bg-[#1e293b]">
@@ -21,11 +22,13 @@ Every color in the app must come from a `--sat-*` CSS custom property. No except
 ```
 
 **Required:**
+
 ```tsx
 <div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] border-[var(--sat-layout-border)]">
 ```
 
 Token families:
+
 - `--sat-surface-*` — background layers (1, 2, 3)
 - `--sat-text-*` — text (primary, secondary, muted, inverse)
 - `--sat-accent-*` — brand/action (primary, hover)
@@ -41,13 +44,14 @@ Theme definitions live in `packages/ui/src/styles/` and `packages/ui/theme/`.
 
 Tokens are defined in three layers in `packages/theme/tokens/`, processed by `packages/theme/build.ts`:
 
-| Layer | File | Purpose |
-|-------|------|---------|
-| **Base** | `base.json` | Raw values — hex colors, px sizes, font stacks. These are also the **default dark theme** values that populate `:root {}`. |
-| **Semantic** | `semantic.json` | Named roles — `surface.1 = {palette.surface1}`. Describes *what a token is for*, not what color it is. |
-| **Component** | `component.json` | Context-specific tokens — `editor.heading1`, `layout.border`. References semantic or base tokens. |
+| Layer         | File             | Purpose                                                                                                                    |
+| ------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Base**      | `base.json`      | Raw values — hex colors, px sizes, font stacks. These are also the **default dark theme** values that populate `:root {}`. |
+| **Semantic**  | `semantic.json`  | Named roles — `surface.1 = {palette.surface1}`. Describes _what a token is for_, not what color it is.                     |
+| **Component** | `component.json` | Context-specific tokens — `editor.heading1`, `layout.border`. References semantic or base tokens.                          |
 
 The build pipeline resolves `{key.path}` references across layers and emits:
+
 - `packages/theme/src/generated/tokens.css` — source of truth
 - `packages/ui/src/styles/globals.css` — synced copy for app import
 - `packages/theme/src/types.ts` — `TokenName` union type
@@ -86,6 +90,7 @@ Injected as a `<style>` tag at runtime, with `data-theme="my-theme"` set on `<ht
 The semantic layer becomes load-bearing here: users only need to override the ~10 semantic tokens (`--sat-surface-*`, `--sat-accent-*`, `--sat-text-*`, `--sat-layout-border`) and the component cascade handles the rest automatically. They do not need to know about the 80+ component-level tokens.
 
 Work required to enable user themes:
+
 1. A Tauri command to enumerate and read theme files from a user data directory (e.g. `~/.config/basalt/themes/`)
 2. Runtime `<style>` tag injection in `ThemeProvider`
 3. `ThemeProvider` extended to discover and register user themes alongside built-ins
@@ -93,10 +98,11 @@ Work required to enable user themes:
 
 ## Consequences
 
-+ Instant theme switching without React re-renders — CSS variable changes don't trigger VDOM diffing
-+ User themes are simple CSS files that override `--sat-*` variables under a `[data-theme="..."]` selector
-+ Community theme ecosystem becomes possible (like Obsidian's)
-+ The three-layer token system means theme authors only need to override semantic tokens — the component cascade handles the rest
-- Slightly more verbose class strings than raw Tailwind color utilities
-- Every new color decision requires adding or reusing a token (no quick one-offs)
-- Built-in themes require a rebuild; user themes will need the runtime injection path described above
+- Instant theme switching without React re-renders — CSS variable changes don't trigger VDOM diffing
+- User themes are simple CSS files that override `--sat-*` variables under a `[data-theme="..."]` selector
+- Community theme ecosystem becomes possible (like Obsidian's)
+- The three-layer token system means theme authors only need to override semantic tokens — the component cascade handles the rest
+
+* Slightly more verbose class strings than raw Tailwind color utilities
+* Every new color decision requires adding or reusing a token (no quick one-offs)
+* Built-in themes require a rebuild; user themes will need the runtime injection path described above

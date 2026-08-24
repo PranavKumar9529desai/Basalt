@@ -54,22 +54,22 @@ export function WorkspaceTabsBar({
   const onTabDragStart = useCallback(
     (tabId: string, event: DragEvent<HTMLElement>) =>
       tabDnD.handleTabDragStart(tabId, event),
-    [tabDnD.handleTabDragStart],
+    [tabDnD],
   );
   const onTabDragOver = useCallback(
     (_: string, event: DragEvent<HTMLElement>) =>
       tabDnD.handleTabDragOver(event),
-    [tabDnD.handleTabDragOver],
+    [tabDnD],
   );
   const onTabDrop = useCallback(
     (tabId: string, event: DragEvent<HTMLElement>, edge: "left" | "right") =>
       tabDnD.handleTabDropOnTab(tabId, event, edge),
-    [tabDnD.handleTabDropOnTab],
+    [tabDnD],
   );
   const onTabDragEnd = useCallback(
     (_: string, event: DragEvent<HTMLElement>) =>
       tabDnD.handleTabDragEnd(event),
-    [tabDnD.handleTabDragEnd],
+    [tabDnD],
   );
 
   return (

@@ -9,10 +9,7 @@ export function tabIdFromPath(path: string): TabId {
  * Check if a tab exists in the pane.
  * Returns the pane ID or null if the tab isn't open.
  */
-export function findPaneForTab(
-  pane: TabPane,
-  tabId: TabId,
-): TabPaneId | null {
+export function findPaneForTab(pane: TabPane, tabId: TabId): TabPaneId | null {
   return pane.tabIds.includes(tabId) ? pane.id : null;
 }
 

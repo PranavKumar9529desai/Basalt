@@ -42,7 +42,10 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
         // Use provided maxWidth or dynamically calculate minimum 300px space for the editor
         const computedMaxWidth =
           maxWidth ?? Math.max(minWidth, window.innerWidth - 300);
-        const clamped = Math.max(minWidth, Math.min(newWidth, computedMaxWidth));
+        const clamped = Math.max(
+          minWidth,
+          Math.min(newWidth, computedMaxWidth),
+        );
 
         setWidth(clamped);
         onWidthChange?.(clamped);
@@ -64,7 +67,7 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
       document.removeEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "";
     };
-  }, [isResizing, minWidth, maxWidth, onWidthChange]);
+  }, [isResizing, minWidth, maxWidth, onWidthChange, side]);
 
   if (collapsed) {
     return null;

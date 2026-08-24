@@ -7,7 +7,7 @@ import * as React from "react";
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: This is a visual grouping wrapper
+    /* eslint-disable jsx-a11y/prefer-tag-over-role -- This is a visual grouping wrapper */
     <div
       data-slot="input-group"
       role="group"
@@ -17,6 +17,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
+    /* eslint-enable jsx-a11y/prefer-tag-over-role */
   );
 }
 
@@ -47,8 +48,7 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: This is a visual grouping wrapper
-    // biome-ignore lint/a11y/useKeyWithClickEvents: Click handler is for focus delegation, not interaction
+    /* eslint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- Visual grouping wrapper; click handler is focus delegation */
     <div
       role="group"
       data-slot="input-group-addon"
@@ -62,6 +62,7 @@ function InputGroupAddon({
       }}
       {...props}
     />
+    /* eslint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */
   );
 }
 

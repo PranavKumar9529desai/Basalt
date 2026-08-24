@@ -14,7 +14,11 @@ zero feature-level logic.
 ```ts
 // The factory that assembles all editor extensions
 import { createEditorExtensions } from "@workspace/editor";
-import type { EditorConfig, FetchLinksFn, FetchTagsFn } from "@workspace/editor";
+import type {
+  EditorConfig,
+  FetchLinksFn,
+  FetchTagsFn,
+} from "@workspace/editor";
 
 // The context menu state capture extension (for feature-level context menus)
 import { contextMenuExtension } from "@workspace/editor";
@@ -24,6 +28,7 @@ import type { ContextMenuState } from "@workspace/editor";
 ### `createEditorExtensions(config: EditorConfig): Extension[]`
 
 Builds the full stack of CM6 extensions:
+
 - **Syntax**: markdown language + YAML frontmatter + ==highlight== + [[WikiLinks]]
 - **Styling**: custom editor theme (via `EditorView.theme()` + `HighlightStyle`)
 - **Live preview**: decorations for headings, blockquotes, code blocks, callouts,
@@ -77,12 +82,12 @@ src/
 
 ## Why this structure?
 
-| Directory | Contains | Not to be confused with |
-|---|---|---|
-| `syntax/` | Lezer parser extensions that add/change markdown syntax | — |
-| `preview/` | Visual decoration plugins that change how the editor *looks* | — |
-| `input/` | User interaction: keyboard, mouse, autocomplete | — |
-| `styling/` | CM6 `EditorView.theme()` + `HighlightStyle` | `packages/theme/` (SAT design tokens) |
+| Directory  | Contains                                                     | Not to be confused with               |
+| ---------- | ------------------------------------------------------------ | ------------------------------------- |
+| `syntax/`  | Lezer parser extensions that add/change markdown syntax      | —                                     |
+| `preview/` | Visual decoration plugins that change how the editor _looks_ | —                                     |
+| `input/`   | User interaction: keyboard, mouse, autocomplete              | —                                     |
+| `styling/` | CM6 `EditorView.theme()` + `HighlightStyle`                  | `packages/theme/` (SAT design tokens) |
 
 The name `styling/` was chosen over `themes/` to avoid confusion with
 `@workspace/theme` (the SAT CSS token system). The editor "theme" is a

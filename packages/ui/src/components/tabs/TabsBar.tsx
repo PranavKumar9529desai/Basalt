@@ -122,6 +122,8 @@ export function TabsBar({
     visibleTabCount,
   );
 
+  /* eslint-disable react-hooks/exhaustive-deps -- tabRefs/tabWidths are live
+     refs; recalculation is driven by the effects below (resize + tabs change). */
   const recalcOverflow = useCallback(() => {
     const container = containerRef.current;
     const dropdownWrapper = dropdownWrapperRef.current;
@@ -154,6 +156,7 @@ export function TabsBar({
 
     setVisibleTabCount(Math.max(1, Math.min(count, tabs.length)));
   }, [tabs, containerRef]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // ResizeObserver on the container
   useEffect(() => {
@@ -244,6 +247,7 @@ export function TabsBar({
     <div
       role="tablist"
       aria-label="Open tabs"
+      tabIndex={-1}
       // No z-index here: the bar background must stay BELOW the shell's
       // HeaderBandRule (z-10), while the active tab and chrome nubs (z-20)
       // carve through it. A z-index on this root would lift the opaque

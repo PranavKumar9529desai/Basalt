@@ -30,6 +30,9 @@ export function EditorHost({
   const parentRef = useRef<HTMLDivElement>(null);
   const onReadyRef = useLatestRef(onReady);
 
+  /* eslint-disable react-hooks/exhaustive-deps -- view is created ONCE on mount
+     by contract; document swaps happen via view.setState() by the owner.
+     onReady freshness is handled through onReadyRef. */
   useEffect(() => {
     if (!parentRef.current) return;
     const view = new EditorView({
@@ -38,15 +41,17 @@ export function EditorHost({
     });
     onReadyRef.current?.(view);
     return () => view.destroy();
-    // Mount once — document swaps happen via view.setState() by the owner.
-    // (deps intentionally empty)
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return (
     <div
       className={`flex h-full min-h-0 w-full flex-col bg-[var(--sat-editor-background,#0f172a)] ${className}`}
     >
-      <div ref={parentRef} className="relative flex-1 min-h-0 overflow-hidden" />
+      <div
+        ref={parentRef}
+        className="relative flex-1 min-h-0 overflow-hidden"
+      />
     </div>
   );
 }
