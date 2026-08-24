@@ -88,5 +88,11 @@
     "name": "Run Editor Typing Benchmark",
     "category": "App",
     "icon": "IconGauge"
+  },
+  {
+    "id": "dev:editor-benchmark-isolation",
+    "name": "Run Editor Typing Benchmark (Extension Isolation)",
+    "category": "App",
+    "icon": "IconGauge"
   }
 ]
