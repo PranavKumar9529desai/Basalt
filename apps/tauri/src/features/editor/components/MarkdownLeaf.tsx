@@ -129,6 +129,10 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         if (editorBenchmarkState.active) return;
         const t = tabRef.current;
         if (!t) return;
+        // Sync the per-tab cache with the edited state. Saves and stats read
+        // from statesRef — without this they'd write/compute against the
+        // pre-edit doc (save "succeeds" but persists stale content).
+        statesRef.current.set(t.id, u.state);
         dirtyRef.current.add(t.id);
         servicesRef.current.markTabDirty(t.id, true);
         setSaveStatusRef.current("unsaved");
@@ -147,7 +151,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
     statsTimerRef.current = setTimeout(() => {
       const t = tabRef.current;
-      const state = t ? statesRef.current.get(t.id) : undefined;
+      const state =
+        viewRef.current?.state ?? (t ? statesRef.current.get(t.id) : undefined);
       if (!state) return;
       const text = state.doc.toString();
       const trimmed = text.trim();
@@ -161,10 +166,20 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   const saveTab = useCallback(
     async (tabId: string) => {
       const meta = tabMetaRef.current.get(tabId);
-      const state = statesRef.current.get(tabId);
-      if (!meta || !state) return;
 
+      // Source of truth is the LIVE CM6 view for the focused tab; the
+      // statesRef cache is a restore snapshot for background tabs (kept in
+      // sync by the update listener below). Saving from the snapshot for the
+      // active tab would silently persist pre-edit content.
       const isActive = tabRef.current?.id === tabId;
+      const state =
+        (isActive ? viewRef.current?.state : undefined) ??
+        statesRef.current.get(tabId);
+      if (!meta || !state) return;
+      if (isActive && viewRef.current) {
+        statesRef.current.set(tabId, viewRef.current.state);
+      }
+
       if (isActive) setSaveStatus("saving");
       try {
         await ioRef.current.saveFile(meta.path, state.doc.toString());
