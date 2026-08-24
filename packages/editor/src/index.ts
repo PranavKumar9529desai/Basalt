@@ -8,13 +8,22 @@
 //   import type { EditorConfig } from "@workspace/editor"
 // ──────────────────────────────────────────────
 
-export { createEditorExtensions } from "./editor";
+export {
+  createEditorExtensionGroups,
+  createEditorExtensions,
+} from "./editor";
+export type { EditorExtensionGroups } from "./editor";
 export {
   editorBenchmarkState,
+  formatBenchmarkReport,
   generateMarkdownDoc,
+  runIsolationBenchmark,
   runTypingBenchmark,
 } from "./benchmark";
 export type {
+  BenchmarkReportRow,
+  IsolationBenchmarkSample,
+  IsolationVariant,
   TypingBenchmarkOptions,
   TypingBenchmarkSample,
 } from "./benchmark";

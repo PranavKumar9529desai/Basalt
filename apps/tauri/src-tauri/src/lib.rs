@@ -11,7 +11,7 @@ use commands::{
     autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note,
     delete_file, delete_paths, get_backlinks, get_settings, get_vault_tree, get_workspace,
     move_paths, open_file, open_files, open_vault_dialog, reindex_vault, save_file, save_files,
-    search_content, search_files, set_setting, set_vault, set_workspace_key,
+    search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -45,6 +45,7 @@ pub fn run() {
             move_paths,
             search_content,
             search_files,
+            write_dev_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

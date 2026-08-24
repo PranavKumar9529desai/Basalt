@@ -1,3 +1,4 @@
+import { EditorState, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 // ---------------------------------------------------------------------------
@@ -55,9 +56,10 @@ const WORDS = [
 function sentence(rand: () => number): string {
   const n = 8 + Math.floor(rand() * 12);
   const words: string[] = [];
-  for (let i = 0; i < n; i++) words.push(WORDS[Math.floor(rand() * WORDS.length)]);
+  for (let i = 0; i < n; i++)
+    words.push(WORDS[Math.floor(rand() * WORDS.length)]);
   const s = words.join(" ");
-  return s.charAt(0).toUpperCase() + s.slice(1) + ".";
+  return `${s.charAt(0).toUpperCase() + s.slice(1)}.`;
 }
 
 function block(rand: () => number, index: number): string {
@@ -72,7 +74,11 @@ function block(rand: () => number, index: number): string {
     case 3:
       return `> [!note] Callout ${index}\n> ${sentence(rand)}`;
     case 4:
-      return "```rust\nfn example_" + index + "() -> u32 {\n    40 + 2\n}\n```";
+      return `\`\`\`rust
+fn example_${index}() -> u32 {
+    40 + 2
+}
+\`\`\``;
     case 5:
       return `#tag${index} ==highlighted== and **bold** and *italic* text ${sentence(rand)}`;
     default:
@@ -122,6 +128,12 @@ export interface TypingBenchmarkOptions {
   /** Untimed keystrokes per size before measuring. Default 20. */
   warmup?: number;
   seed?: number;
+  /**
+   * Extension-isolation mode: temporarily swap the view to a fresh state
+   * with exactly these extensions (original state restored afterwards).
+   * Omit to benchmark the live state as-is.
+   */
+  extensions?: Extension[];
 }
 
 function percentile(sorted: number[], p: number): number {
@@ -146,12 +158,19 @@ export function runTypingBenchmark(
   const warmup = opts.warmup ?? 20;
   const seed = opts.seed ?? 0x9e3779b9;
 
-  const original = view.state.doc.toString();
-  const originalAnchor = view.state.selection.main.anchor;
+  const originalState = view.state;
+  const original = originalState.doc.toString();
+  const originalAnchor = originalState.selection.main.anchor;
   const results: TypingBenchmarkSample[] = [];
 
   editorBenchmarkState.active = true;
   try {
+    if (opts.extensions) {
+      view.setState(
+        EditorState.create({ doc: original, extensions: opts.extensions }),
+      );
+    }
+
     for (const size of sizes) {
       const doc = generateMarkdownDoc(size, seed);
 
@@ -192,12 +211,96 @@ export function runTypingBenchmark(
       });
     }
   } finally {
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: original },
-      selection: { anchor: Math.min(originalAnchor, original.length) },
-    });
+    if (opts.extensions) {
+      // Isolation mode: restore the full original state (extensions,
+      // undo history, selection) — a doc-only dispatch would leak the
+      // subset extension set into the live view.
+      view.setState(originalState);
+    } else {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: original },
+        selection: { anchor: Math.min(originalAnchor, original.length) },
+      });
+    }
     editorBenchmarkState.active = false;
   }
 
   return results;
+}
+
+// ── Extension isolation mode ─────────────────────────────────────────────
+
+/** One extension subset to measure, e.g. `{ name: "+live-preview", … }`. */
+export interface IsolationVariant {
+  name: string;
+  extensions: Extension[];
+}
+
+export interface IsolationBenchmarkSample extends TypingBenchmarkSample {
+  variant: string;
+}
+
+/**
+ * Run the typing benchmark once per extension variant and tag each result
+ * with the variant name. The live state is restored after every variant
+ * (and again at the end). Compare variants against `base` / `full` to name
+ * the per-keystroke culprit instead of guessing.
+ */
+export function runIsolationBenchmark(
+  view: EditorView,
+  variants: IsolationVariant[],
+  opts: TypingBenchmarkOptions = {},
+): IsolationBenchmarkSample[] {
+  const originalState = view.state;
+  const results: IsolationBenchmarkSample[] = [];
+  for (const variant of variants) {
+    for (const r of runTypingBenchmark(view, {
+      ...opts,
+      extensions: variant.extensions,
+    })) {
+      results.push({ ...r, variant: variant.name });
+    }
+  }
+  view.setState(originalState); // no-op safety net
+  return results;
+}
+
+// ── Report formatting (devtools-free output) ─────────────────────────────
+
+export type BenchmarkReportRow = TypingBenchmarkSample & {
+  variant?: string;
+};
+
+/**
+ * Format benchmark rows as a markdown table with run metadata — written to
+ * a temp file via `write_dev_report` so prod runs need no devtools open.
+ */
+export function formatBenchmarkReport(
+  title: string,
+  rows: BenchmarkReportRow[],
+): string {
+  const hasVariants = rows.some((r) => r.variant !== undefined);
+  const header = hasVariants
+    ? "| variant | sizeKB | setDoc | mean | p50 | p95 | max | samples |"
+    : "| sizeKB | setDoc | mean | p50 | p95 | max | samples |";
+  const rule = hasVariants
+    ? "|---|---|---|---|---|---|---|---|"
+    : "|---|---|---|---|---|---|---|";
+  const lines = rows.map((r) =>
+    hasVariants
+      ? `| ${r.variant} | ${(r.sizeBytes / 1024).toFixed(0)} | ${r.setDocMs.toFixed(1)} | ${r.meanMs.toFixed(2)} | ${r.p50Ms.toFixed(2)} | ${r.p95Ms.toFixed(2)} | ${r.maxMs.toFixed(2)} | ${r.samples} |`
+      : `| ${(r.sizeBytes / 1024).toFixed(0)} | ${r.setDocMs.toFixed(1)} | ${r.meanMs.toFixed(2)} | ${r.p50Ms.toFixed(2)} | ${r.p95Ms.toFixed(2)} | ${r.maxMs.toFixed(2)} | ${r.samples} |`,
+  );
+  return [
+    `# ${title}`,
+    "",
+    `- timestamp: ${new Date().toISOString()}`,
+    `- ua: ${navigator.userAgent}`,
+    `- frame budget: 16.67ms (p95 column is the number to watch)`,
+    "",
+    header,
+    rule,
+    ...lines,
+    "",
+  ].join("\n");
 }

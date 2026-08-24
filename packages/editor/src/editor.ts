@@ -17,7 +17,29 @@ import { highlightExtension } from "./syntax/highlight";
 import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
 import type { EditorConfig } from "./types";
 
-export function createEditorExtensions(config: EditorConfig): Extension[] {
+/**
+ * Editor extensions grouped by concern, so the benchmark harness can run
+ * against subsets (extension isolation mode) and attribute per-keystroke
+ * cost to a specific group.
+ */
+export interface EditorExtensionGroups {
+  /** Irreducible floor: markdown language + grammar extensions + theme + wrapping. */
+  base: Extension[];
+  /** Code block syntax highlighting. */
+  syntax: Extension[];
+  /** Typing helpers: task checkboxes, close brackets, backticks keymap. */
+  input: Extension[];
+  /** Live-preview mark hiding (headings, bold, …). */
+  livePreview: Extension[];
+  /** Wikilink/tag autocomplete suggestions. */
+  suggestions: Extension[];
+  /** Clickable link hover/click handling. */
+  links: Extension[];
+}
+
+export function createEditorExtensionGroups(
+  config: EditorConfig,
+): EditorExtensionGroups {
   const {
     onFetchLinks,
     onFetchTags,
@@ -32,27 +54,48 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     themeStack.push(CUSTOM_THEME);
   }
 
+  return {
+    base: [
+      markdown({
+        base: markdownLanguage,
+        codeLanguages: languages,
+        extensions: [
+          wikiLinkExtension,
+          highlightExtension,
+          yamlFrontmatterExtension,
+        ],
+      }),
+      ...themeStack,
+      EditorView.lineWrapping,
+    ],
+    syntax: [codeSyntaxHighlightingExtension()],
+    input: [
+      TASK_CHECKBOX_THEME,
+      taskListPlugin,
+      closeBrackets(),
+      keymap.of(backticksKeymap),
+    ],
+    livePreview: [LIVE_PREVIEW_THEME, livePreviewPlugin],
+    suggestions: [
+      SUGGESTIONS_THEME,
+      createSuggestionsPlugin(onFetchLinks, onFetchTags),
+    ],
+    links: [clickableLinksPlugin(onOpenLink)],
+  };
+}
+
+/**
+ * The full production extension stack. Order here is behavior — groups are
+ * composed in the same order the monolithic list used to be.
+ */
+export function createEditorExtensions(config: EditorConfig): Extension[] {
+  const g = createEditorExtensionGroups(config);
   return [
-    markdown({
-      base: markdownLanguage,
-      codeLanguages: languages,
-      extensions: [
-        wikiLinkExtension,
-        highlightExtension,
-        yamlFrontmatterExtension,
-      ],
-    }),
-    ...themeStack,
-    codeSyntaxHighlightingExtension(),
-    TASK_CHECKBOX_THEME,
-    taskListPlugin,
-    LIVE_PREVIEW_THEME,
-    livePreviewPlugin,
-    closeBrackets(),
-    keymap.of(backticksKeymap),
-    SUGGESTIONS_THEME,
-    createSuggestionsPlugin(onFetchLinks, onFetchTags),
-    clickableLinksPlugin(onOpenLink),
-    EditorView.lineWrapping,
+    ...g.base,
+    ...g.syntax,
+    ...g.input,
+    ...g.livePreview,
+    ...g.suggestions,
+    ...g.links,
   ];
 }

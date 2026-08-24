@@ -6,6 +6,7 @@
 > **READ FIRST:**
 > - [`CONVENTIONS.md`](./CONVENTIONS.md) — Authoritative coding standards (supersedes ADRs where they conflict)
 > - [`docs/adr/018-registry-driven-workbench.md`](docs/adr/018-registry-driven-workbench.md) — Current architectural direction
+> - [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md) — Active workstream handoff (what we're doing right now)
 
 ---
 

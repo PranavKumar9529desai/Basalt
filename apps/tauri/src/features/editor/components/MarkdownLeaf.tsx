@@ -1,18 +1,23 @@
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { commandService } from "@workspace/commands";
 import {
-  contextMenuExtension,
-  createEditorExtensions,
+  type BenchmarkReportRow,
   type ContextMenuState,
+  contextMenuExtension,
+  createEditorExtensionGroups,
+  createEditorExtensions,
   editorBenchmarkState,
+  formatBenchmarkReport,
+  runIsolationBenchmark,
   runTypingBenchmark,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
-import { useLeafServices, type LeafProps } from "@workspace/views";
 import { Button } from "@workspace/ui/components/ui/button";
-import { commandService } from "@workspace/commands";
+import { type LeafProps, useLeafServices } from "@workspace/views";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import type { FileChangeEvent, SaveStatus } from "../../vault/types";
 import { useLatestRef } from "../hooks/useLatestRef";
 import { useNoteIO } from "../hooks/useNoteIO";
@@ -60,30 +65,6 @@ function ConflictBanner({
   );
 }
 
-function SaveIndicator({ status }: { status: string }) {
-  const CONFIG: Record<string, { dot: string; label: string }> = {
-    saved: { dot: "bg-[var(--sat-state-success)]", label: "Saved" },
-    saving: {
-      dot: "bg-[var(--sat-state-warning)] animate-pulse",
-      label: "Saving…",
-    },
-    unsaved: { dot: "bg-[var(--sat-text-muted)]", label: "Unsaved" },
-    conflict: {
-      dot: "bg-[var(--sat-state-danger)] animate-pulse",
-      label: "Conflict",
-    },
-  };
-
-  const { dot, label } = CONFIG[status] ?? CONFIG.saved;
-
-  return (
-    <div className="flex items-center gap-1.5 text-xs text-[var(--sat-text-muted)] select-none">
-      <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
-      <span>{label}</span>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // MarkdownLeaf — the registered "markdown" leaf type (ADR-018 Phase 2).
 //
@@ -104,7 +85,10 @@ export function MarkdownLeaf({ tab }: LeafProps) {
 
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
   const [conflict, setConflict] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  // Write-only for now: the visual indicator is disabled so saves never
+  // trigger a React re-render in the typing path. Status strings surface
+  // through io.setStatus instead.
+  const [, setSaveStatus] = useState<SaveStatus>("saved");
   const [view, setView] = useState<EditorView | null>(null);
 
   const viewRef = useRef<EditorView | null>(null);
@@ -126,8 +110,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   const handleOpenLink = useCallback(
     (linkName: string) => {
       const s = servicesRef.current;
-      const target =
-        s.findNote(linkName) ?? s.findNote(`${linkName}.md`);
+      const target = s.findNote(linkName) ?? s.findNote(`${linkName}.md`);
       if (target) {
         s.openNote({ name: target.name, path: target.path });
       } else {
@@ -309,27 +292,79 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   }, [keybindingService]);
 
   // ── Dev: editor typing benchmark (ADR-017 frontend counterpart) ─────────
+  //
+  // Results go to a temp file via `write_dev_report` so prod runs need NO
+  // devtools open (devtools inflate measurements 2–5×). Console output is
+  // a convenience copy only.
 
   useEffect(() => {
     if (!view) return;
+
+    const report = async (title: string, rows: BenchmarkReportRow[]) => {
+      console.table(rows);
+      const md = formatBenchmarkReport(title, rows);
+      try {
+        const path = await invoke<string>("write_dev_report", {
+          fileName: "editor-benchmark.md",
+          contents: md,
+        });
+        ioRef.current.setStatus(`Benchmark written to ${path}`);
+      } catch (err) {
+        console.error("[MarkdownLeaf] report write failed:", err);
+        ioRef.current.setStatus(
+          "Benchmark done; report write failed (see console)",
+        );
+      }
+    };
+
     commandService.registerCommand("dev:editor-benchmark", () => {
       try {
-        const results = runTypingBenchmark(view);
-        console.table(results);
-        ioRef.current.setStatus(
-          `Editor bench — ${results
-            .map(
-              (r) =>
-                `${(r.sizeBytes / 1024).toFixed(0)}KB: p50 ${r.p50Ms.toFixed(2)}ms, p95 ${r.p95Ms.toFixed(2)}ms, max ${r.maxMs.toFixed(2)}ms`,
-            )
-            .join("  |  ")}  (details in console)`,
+        void report(
+          "Editor typing benchmark — full extension stack",
+          runTypingBenchmark(view),
         );
       } catch (err) {
         console.error("[MarkdownLeaf] benchmark failed:", err);
       }
     });
-    return () => commandService.unregister("dev:editor-benchmark");
-  }, [view, ioRef]);
+
+    commandService.registerCommand("dev:editor-benchmark-isolation", () => {
+      try {
+        // Fresh groups per run — never share plugin instances with states
+        // other than the ones they were built for.
+        const g = createEditorExtensionGroups({
+          onFetchLinks: io.onFetchLinks,
+          onFetchTags: io.onFetchTags,
+          onOpenLink: handleOpenLink,
+        });
+        const full = [
+          ...g.base,
+          ...g.syntax,
+          ...g.input,
+          ...g.livePreview,
+          ...g.suggestions,
+          ...g.links,
+        ];
+        const results = runIsolationBenchmark(view, [
+          { name: "base", extensions: g.base },
+          { name: "+syntax", extensions: [...g.base, ...g.syntax] },
+          { name: "+input", extensions: [...g.base, ...g.input] },
+          { name: "+live-preview", extensions: [...g.base, ...g.livePreview] },
+          { name: "+suggestions", extensions: [...g.base, ...g.suggestions] },
+          { name: "+links", extensions: [...g.base, ...g.links] },
+          { name: "full", extensions: full },
+        ]);
+        void report("Editor typing benchmark — extension isolation", results);
+      } catch (err) {
+        console.error("[MarkdownLeaf] isolation benchmark failed:", err);
+      }
+    });
+
+    return () => {
+      commandService.unregister("dev:editor-benchmark");
+      commandService.unregister("dev:editor-benchmark-isolation");
+    };
+  }, [view, io, ioRef, handleOpenLink]);
 
   // ── Flush on window blur / unmount ───────────────────────────────────────
 
@@ -452,7 +487,6 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       )}
       <div className="flex min-h-0 flex-1">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--sat-layout-divider)_70%,transparent)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
-          <SaveIndicator status={saveStatus} />
           <EditorComponent
             initialState={initialState}
             onReady={handleReady}

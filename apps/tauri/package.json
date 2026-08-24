@@ -8,6 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "build:linux": "tauri build",
+    "build:linux:deb": "tauri build --bundles deb",
+    "build:linux:rpm": "tauri build --bundles rpm",
+    "build:linux:appimage": "tauri build --bundles appimage",
     "build:mac:arm": "tauri build --target aarch64-apple-darwin",
     "build:mac:intel": "tauri build --target x86_64-apple-darwin",
     "build:mac": "bun run build:mac:arm && bun run build:mac:intel"
