@@ -4,6 +4,7 @@ import {
   PaletteShellInput,
 } from "@workspace/ui/components/palette-shell";
 import { Button } from "@workspace/ui/components/ui/button";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useSearchStore } from "../store";
@@ -47,19 +48,16 @@ function ResultRow({
   result,
   isSelected,
   onClick,
-  rowRef,
 }: {
   result: ContentResult;
   isSelected: boolean;
   onClick: () => void;
-  rowRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parts = result.path.split("/");
   const dir = parts.slice(0, -1).join("/");
 
   return (
     <Button
-      ref={rowRef}
       variant="ghost"
       tabIndex={-1}
       className={[
@@ -99,9 +97,20 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     searchSelectPrev,
   } = useSearchStore();
 
+  const parentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedRowRef = useRef<HTMLButtonElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  const rowVirtualizer = useVirtualizer({
+    count: searchResults.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64,
+    overscan: 10,
+    paddingStart: 4,
+    paddingEnd: 4,
+  });
 
   useEffect(() => {
     if (isSearchOpen) {
@@ -109,15 +118,15 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     }
   }, [isSearchOpen]);
 
-  // Scroll selected row into view without stealing focus from input.
+  // Keep the selected row visible without stealing focus from the input.
   useEffect(() => {
-    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
-  }, [searchSelectedIndex]);
+    rowVirtualizer.scrollToIndex(searchSelectedIndex, { align: "auto" });
+  }, [searchSelectedIndex, rowVirtualizer]);
 
   // Clean up pending debounce on unmount to avoid stale IPC calls.
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      clearTimeout(debounceRef.current);
     };
   }, []);
 
@@ -126,7 +135,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
       const q = e.target.value;
       setSearchQuery(q);
       // 150 ms debounce before firing tantivy
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => runSearch(q), 150);
     },
     [setSearchQuery, runSearch],
@@ -180,24 +189,43 @@ export function SearchModal({ onOpen }: SearchModalProps) {
         isLoading={isSearchLoading}
       />
 
-      <div className="max-h-[450px] overflow-y-auto px-2">
+      <div ref={parentRef} className="max-h-[450px] overflow-y-auto px-2">
         {searchResults.length === 0 && searchQuery && !isSearchLoading ? (
           <p className="px-4 py-4 text-sm text-muted-foreground">
             No results found
           </p>
         ) : (
-          searchResults.map((r, i) => (
-            <ResultRow
-              key={r.path}
-              result={r}
-              isSelected={i === searchSelectedIndex}
-              onClick={() => {
-                onOpen(r.path);
-                closeSearch();
-              }}
-              rowRef={i === searchSelectedIndex ? selectedRowRef : undefined}
-            />
-          ))
+          <div
+            style={{
+              height: rowVirtualizer.getTotalSize(),
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((vItem) => {
+              const r = searchResults[vItem.index];
+              return (
+                <div
+                  key={r.path}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
+                >
+                  <ResultRow
+                    result={r}
+                    isSelected={vItem.index === searchSelectedIndex}
+                    onClick={() => {
+                      onOpen(r.path);
+                      closeSearch();
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

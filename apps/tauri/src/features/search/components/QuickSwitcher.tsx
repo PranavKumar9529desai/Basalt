@@ -4,6 +4,7 @@ import {
   PaletteShellInput,
 } from "@workspace/ui/components/palette-shell";
 import { Button } from "@workspace/ui/components/ui/button";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useSearchStore } from "../store";
@@ -13,12 +14,10 @@ function ResultRow({
   result,
   isSelected,
   onClick,
-  rowRef,
 }: {
   result: FileResult;
   isSelected: boolean;
   onClick: () => void;
-  rowRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parts = result.path.split("/");
   const name = parts.pop() ?? result.path;
@@ -26,7 +25,6 @@ function ResultRow({
 
   return (
     <Button
-      ref={rowRef}
       variant="ghost"
       tabIndex={-1}
       className={[
@@ -63,8 +61,17 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     switcherSelectPrev,
   } = useSearchStore();
 
+  const parentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const selectedRowRef = useRef<HTMLButtonElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: switcherResults.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+    overscan: 10,
+    paddingStart: 4,
+    paddingEnd: 4,
+  });
 
   // Focus input when modal opens.
   useEffect(() => {
@@ -73,10 +80,10 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     }
   }, [isSwitcherOpen]);
 
-  // Scroll selected row into view without stealing focus from input.
+  // Keep the selected row visible without stealing focus from the input.
   useEffect(() => {
-    selectedRowRef.current?.scrollIntoView({ block: "nearest" });
-  }, [switcherSelectedIndex]);
+    rowVirtualizer.scrollToIndex(switcherSelectedIndex, { align: "auto" });
+  }, [switcherSelectedIndex, rowVirtualizer]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,24 +141,43 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         placeholder="Open file…"
       />
 
-      <div className="max-h-[320px] overflow-y-auto py-1 px-2">
+      <div ref={parentRef} className="max-h-[320px] overflow-y-auto px-2">
         {switcherResults.length === 0 && switcherQuery ? (
           <p className="px-4 py-3 text-sm text-muted-foreground">
             No files found
           </p>
         ) : (
-          switcherResults.map((r, i) => (
-            <ResultRow
-              key={r.path}
-              result={r}
-              isSelected={i === switcherSelectedIndex}
-              onClick={() => {
-                onOpen(r.path);
-                closeSwitcher();
-              }}
-              rowRef={i === switcherSelectedIndex ? selectedRowRef : undefined}
-            />
-          ))
+          <div
+            style={{
+              height: rowVirtualizer.getTotalSize(),
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((vItem) => {
+              const r = switcherResults[vItem.index];
+              return (
+                <div
+                  key={r.path}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
+                >
+                  <ResultRow
+                    result={r}
+                    isSelected={vItem.index === switcherSelectedIndex}
+                    onClick={() => {
+                      onOpen(r.path);
+                      closeSwitcher();
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

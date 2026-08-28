@@ -1,4 +1,5 @@
-import type { FC } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRef, type FC } from "react";
 import type { LinkSuggestion } from "../types";
 
 interface BacklinksSidebarProps {
@@ -15,6 +16,17 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   backlinks,
   onOpenNote,
 }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: backlinks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 34,
+    overscan: 10,
+    paddingStart: 4,
+    paddingEnd: 4,
+  });
+
   return (
     <div className="flex flex-col h-full bg-[var(--sat-surface-2)] overflow-hidden">
       {/* Header */}
@@ -52,7 +64,7 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-auto py-1">
+      <div ref={parentRef} className="flex-1 overflow-auto py-1">
         {backlinks.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
             <svg
@@ -83,49 +95,67 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
             </p>
           </div>
         ) : (
-          backlinks.map((path) => {
-            const note = pathToLinkSuggestion(path);
-            return (
-              <button
-                key={path}
-                type="button"
-                onClick={() => onOpenNote(note)}
-                title={path}
-                className="
-                  w-full text-left
-                  flex items-center gap-2
-                  px-3 py-1.5
-                  text-sm text-[var(--sat-text-primary)]
-                  hover:bg-[var(--sat-surface-3)]
-                  transition-colors truncate
-                "
-              >
-                {/* File icon */}
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden="true"
-                  className="shrink-0 text-[var(--sat-text-muted)]"
+          <div
+            style={{
+              height: rowVirtualizer.getTotalSize(),
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((vItem) => {
+              const path = backlinks[vItem.index];
+              const note = pathToLinkSuggestion(path);
+              return (
+                <div
+                  key={path}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${vItem.start}px)`,
+                  }}
                 >
-                  <path
-                    d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    fill="none"
-                  />
-                  <path
-                    d="M9.5 1.5V5.5H13.5"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className="truncate">{note.name}</span>
-              </button>
-            );
-          })
+                  <button
+                    type="button"
+                    onClick={() => onOpenNote(note)}
+                    title={path}
+                    className="
+                      w-full text-left
+                      flex items-center gap-2
+                      px-3 py-1.5
+                      text-sm text-[var(--sat-text-primary)]
+                      hover:bg-[var(--sat-surface-3)]
+                      transition-colors truncate
+                    "
+                  >
+                    {/* File icon */}
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                      className="shrink-0 text-[var(--sat-text-muted)]"
+                    >
+                      <path
+                        d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        fill="none"
+                      />
+                      <path
+                        d="M9.5 1.5V5.5H13.5"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="truncate">{note.name}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
