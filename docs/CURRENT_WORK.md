@@ -56,10 +56,14 @@ culprit extension to chase.
    (`37c5975`) re-benchmarked on prod: p95 = 4ms @ 100KB full stack meets the
    ≤ 4ms gate. Stretch (≤ 2ms) narrowly missed; accepted as diminishing
    returns. Perf campaign closed.
-4. **NEXT: Graph view** (NoteGraph panel) — first real _view_ registry
-   consumer. Register via `registerView()` in `app-shell/viewRegistrations.ts`
-   (no shell surgery). Compute lives in `crates/basalt-graph/`. Backlinks
-   sidebar already exists; graph is the missing piece.
+4. **NEXT: Graph view** (NoteGraph panel) — research + pre-implementation
+   proposal live in [`docs/graph-view/`](./graph-view/README.md): Obsidian
+   inventory, forum pain points, competitor analysis, phased scope, and the
+   architecture fork to settle first (Rust-IPC vs WASM-worker physics).
+   First real _view_ registry consumer. Register via `registerView()` in
+   `app-shell/viewRegistrations.ts` (no shell surgery). Compute lives in
+   `crates/basalt-graph/`. Backlinks sidebar already exists; graph is the
+   missing piece.
 5. Then: HTML renderer — first new _leaf_ registration (`leafRegistry`),
    also a pure `viewRegistrations.ts` addition.
 
