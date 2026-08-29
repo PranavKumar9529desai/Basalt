@@ -898,7 +898,7 @@ export function GraphView(_props: LeafProps) {
   return (
     <div
       ref={wrapRef}
-      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}
+      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", backgroundColor: "var(--sat-editor-background, #0f172a)" }}
     >
       <GraphControls
         colorMode={colorMode}
