@@ -32,7 +32,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                     |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                  |
 | Editor perf baseline (typing-latency harness)                       | ⏳ Next up                                      |
-| NoteGraph / backlinks panel                                         | ⏳ Backlinks sidebar exists; graph not started  |
+| Graph view (ADR-021)                                                 | 📋 Blueprint accepted; backlinks panel shipped, force graph not started |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
 
@@ -236,6 +236,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [018-registry-driven-workbench](docs/adr/018-registry-driven-workbench.md)               | ADR-018: Registry-Driven Workbench                                          |
 | [019-editor-decoration-pipeline](docs/adr/019-editor-decoration-pipeline.md)             | ADR-019: Editor Decoration Pipeline — Single-Pass Architecture              |
 | [020-desktop-tier-performance](docs/adr/020-desktop-tier-performance.md)                 | ADR-020: Desktop-Tier Performance Architecture                              |
+| [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)     | ADR-021: Graph View Architecture                                          |
 
 <!-- ADR_INDEX_END -->
 
@@ -259,3 +260,9 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add shared Rust domain types          | `crates/basalt-types/`                     |
 | Add graph/backlinks compute           | `crates/basalt-graph/`                     |
 | Add search/indexing compute           | `crates/basalt-search/`                    |
+
+---
+
+## Git Commit Rules
+
+- 🚫 **NEVER** add a `Co-Authored-By` trailer (or any auto-generated trailer such as `Co-Authored-By: ...`) to commit messages. This is a hard, user-mandated rule — commit messages must carry **no trailers**. When asked to commit, write the message body yourself and omit trailers entirely.
