@@ -62,11 +62,11 @@ function buildArrows(
   edges: Uint32Array,
   edgeCount: number,
   scale: number,
+  out: Float32Array,
 ): Float32Array {
   const r = (NODE_R + 2) / scale;
   const w = (NODE_R * 0.7 + 2) / scale;
   const n = Math.min(edgeCount, ARROW_EDGE_CAP);
-  const out = new Float32Array(n * 6);
   let o = 0;
   for (let e = 0; e < n * 2; e += 2) {
     const u = edges[e];
@@ -215,6 +215,7 @@ export function GraphView(_props: LeafProps) {
       labelCanvas.width = Math.round(cssW * dpr);
       labelCanvas.height = Math.round(cssH * dpr);
       labelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dirtyRef.current = true;
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -226,6 +227,7 @@ export function GraphView(_props: LeafProps) {
     workerRef.current = worker;
     worker.onmessage = (e: MessageEvent<GraphFrame>) => {
       frameRef.current = e.data;
+      dirtyRef.current = true;
     };
 
     (async () => {
@@ -381,6 +383,7 @@ export function GraphView(_props: LeafProps) {
           edges: Uint32Array.from(subEdges),
         });
       }
+      dirtyRef.current = true;
     };
     rebuildRef.current = rebuild;
 
@@ -421,6 +424,7 @@ export function GraphView(_props: LeafProps) {
       v.ox = w / 2 - ((minX + maxX) / 2) * v.scale;
       v.oy = h / 2 - ((minY + maxY) / 2) * v.scale;
       v.fitted = true;
+      dirtyRef.current = true;
     };
     // Fly the camera to a node (snap): center it and zoom to a readable scale.
     const centerOn = (full: number) => {
@@ -435,27 +439,13 @@ export function GraphView(_props: LeafProps) {
       v.scale = s;
       v.ox = w / 2 - x * s;
       v.oy = h / 2 - y * s;
+      dirtyRef.current = true;
     };
     centerOnRef.current = centerOn;
     const hitTest = (sx: number, sy: number): number => {
-      const f = frameRef.current;
-      const count = activeMapRef.current.length;
-      if (!f) return -1;
-      const p = f.positions;
-      let best = -1;
-      let bestD = 8 * 8;
-      for (let i = 0; i < count; i++) {
-        if (i * 2 + 1 >= p.length) break;
-        const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
-        const dx = px - sx;
-        const dy = py - sy;
-        const d = dx * dx + dy * dy;
-        if (d < bestD) {
-          bestD = d;
-          best = i;
-        }
-      }
-      return best;
+      // Grid is rebuilt each render (screen-space binning); reused while idle,
+      // so this is O(local cells) instead of O(node count) per mousemove.
+      return gridRef.current.query(sx, sy, 8);
     };
 
     // ---- pointer handlers ----
@@ -470,6 +460,7 @@ export function GraphView(_props: LeafProps) {
       v.ox = mx - (mx - v.ox) * (ns / v.scale);
       v.oy = my - (my - v.oy) * (ns / v.scale);
       v.scale = ns;
+      dirtyRef.current = true;
     };
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return; // ignore right/middle — context menu handles those
@@ -508,6 +499,7 @@ export function GraphView(_props: LeafProps) {
         const v = viewRef.current;
         v.ox += dx;
         v.oy += dy;
+        dirtyRef.current = true;
         panRef.current = { x: mx, y: my };
         return;
       }
@@ -535,6 +527,7 @@ export function GraphView(_props: LeafProps) {
         flagsDirtyRef.current = true;
         renderer.setHasHover(false);
         setHover(null);
+      if (hit !== prevHover) dirtyRef.current = true;
         glCanvas.style.cursor = "grab";
       }
     };
@@ -560,6 +553,10 @@ export function GraphView(_props: LeafProps) {
     const onLeave = () => {
       hoverRef.current = -1;
       setHover(null);
+      flagsRef.current.fill(0);
+      flagsDirtyRef.current = true;
+      renderer.setHasHover(false);
+      dirtyRef.current = true;
       panRef.current = null;
       dragRef.current = null;
     };
@@ -588,13 +585,12 @@ export function GraphView(_props: LeafProps) {
     let raf = 0;
     const draw = () => {
       const f = frameRef.current;
-      const w = glCanvas.clientWidth || 800;
-      const h = glCanvas.clientHeight || 600;
-      // Clear the 2D label overlay each frame.
-      labelCtx.clearRect(0, 0, w, h);
       const map = activeMapRef.current;
       const count = map.length;
-      if (f && count > 0) {
+      // Only redraw when something changed: a new sim frame, camera move,
+      // hover, resize, or rebuild. When the sim settles the worker stops
+      // posting frames, so an idle graph costs zero GPU/CPU work.
+      if (f && count > 0 && dirtyRef.current) {
         const p = f.positions;
         if (!viewRef.current.fitted) fit();
         const v = viewRef.current;
@@ -606,11 +602,31 @@ export function GraphView(_props: LeafProps) {
             renderer.setFlags(flagsRef.current);
             flagsDirtyRef.current = false;
           }
-          const arrows = buildArrows(p, activeEdgesRef.current, activeEdgesRef.current.length / 2, v.scale);
-          renderer.setArrows(arrows);
+          // Arrowheads depend on positions AND zoom; rebuild only when either changed.
+          if (f !== lastArrowFrameRef.current || v.scale !== lastArrowScaleRef.current) {
+            const n = Math.min(activeEdgesRef.current.length / 2, ARROW_EDGE_CAP);
+            if (arrowOutRef.current.length !== n * 6) {
+              arrowOutRef.current = new Float32Array(n * 6);
+            }
+            buildArrows(
+              p,
+              activeEdgesRef.current,
+              activeEdgesRef.current.length / 2,
+              v.scale,
+              arrowOutRef.current,
+            );
+            renderer.setArrows(arrowOutRef.current);
+            lastArrowFrameRef.current = f;
+            lastArrowScaleRef.current = v.scale;
+          }
           renderer.render();
+          // Bin nodes in screen space for O(local) hover hit-testing; reused while idle.
+          gridRef.current.build(p, count, toScreen);
         }
-        // Labels on the transparent 2D overlay.
+        // Labels on the transparent 2D overlay (only when zoomed past LABEL_SCALE).
+        const w = glCanvas.clientWidth || 800;
+        const h = glCanvas.clientHeight || 600;
+        labelCtx.clearRect(0, 0, w, h);
         const hov = hoverRef.current;
         const neighbors = hov >= 0 ? activeAdjRef.current[hov] : null;
         const showLabels = v.scale > LABEL_SCALE && count < LABEL_CAP;
@@ -627,6 +643,7 @@ export function GraphView(_props: LeafProps) {
           }
           labelCtx.globalAlpha = 1;
         }
+        dirtyRef.current = false;
       }
       raf = requestAnimationFrame(draw);
     };
