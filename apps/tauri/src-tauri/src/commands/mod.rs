@@ -14,4 +14,4 @@ pub use files::{
 };
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
 pub use search::{search_content, search_files};
-pub use vault::{get_vault_tree, open_vault_dialog, reindex_vault};
+pub use vault::{get_graph, get_vault_tree, open_vault_dialog, reindex_vault};

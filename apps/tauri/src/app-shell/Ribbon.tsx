@@ -4,10 +4,12 @@ import {
   IconLink,
   IconSearch,
   IconSettings,
+  IconSitemap,
 } from "@tabler/icons-react";
 import { Ribbon as RibbonUI } from "@workspace/ui/components/ribbon";
 import { useSearchStore } from "../features/search";
 import { useSettingsModalStore } from "../features/settings";
+import { useTabsStore } from "../features/tabs";
 
 interface RibbonProps {
   sidebarOpen: boolean;
@@ -32,6 +34,7 @@ export function Ribbon({
 }: RibbonProps) {
   const openSearch = useSearchStore((s) => s.openSearch);
   const openSettings = useSettingsModalStore((s) => s.open);
+  const openGraph = useTabsStore((s) => s.openView);
 
   const SidebarToggleIcon = sidebarOpen
     ? IconLayoutSidebarLeftCollapse
@@ -55,6 +58,12 @@ export function Ribbon({
       icon: <IconSearch size={20} stroke={1.5} />,
       label: "Search",
       onClick: openSearch,
+    },
+    {
+      id: "graph",
+      icon: <IconSitemap size={20} stroke={1.5} />,
+      label: "Open graph view",
+      onClick: () => openGraph("graph", { title: "Graph" }),
     },
   ];
 

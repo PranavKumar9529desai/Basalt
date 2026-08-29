@@ -1,3 +1,8 @@
+// Tauri's `#[tauri::command]` macro expansion hits `dependency_on_unit_never_type_fallback`
+// (a rust_2024_compatibility lint, deny-by-default on current rustc) for commands that
+// return a locally-defined struct. The generated wrapper is correct under the current
+// edition; this only silences the future-compat lint. Revisit when migrating to edition 2024.
+#![allow(dependency_on_unit_never_type_fallback)]
 mod app_state;
 mod cache;
 mod commands;
@@ -23,8 +28,8 @@ pub fn process_uptime_ms() -> Option<u64> {
 
 use commands::{
     autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note,
-    delete_file, delete_paths, get_backlinks, get_settings, get_vault_tree, get_workspace,
-    move_paths, open_file, open_files, open_vault_dialog, reindex_vault, save_file, save_files,
+    get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace,
+    move_paths, open_file, open_files, open_vault_dialog, reindex_vault, save_file, save_files, delete_file, delete_paths,
     search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
@@ -75,7 +80,7 @@ pub fn run() {
             open_files,
             save_file,
             save_files,
-            get_backlinks,
+            get_graph,
             autocomplete_links,
             autocomplete_tags,
             get_workspace,

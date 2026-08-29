@@ -49,6 +49,7 @@ function buildInitialState() {
 export interface CoreSlice {
   openInPreview: TabsState["openInPreview"];
   openPinned: TabsState["openPinned"];
+  openView: TabsState["openView"];
   activateTab: TabsState["activateTab"];
   closeTab: TabsState["closeTab"];
   closeOtherTabs: TabsState["closeOtherTabs"];
@@ -177,6 +178,37 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       persistVersion: get().persistVersion + 1,
     });
 
+    return incomingTabId;
+  },
+  openView: (leafType, options) => {
+    const activate = options?.activate ?? true;
+    const path = options?.path ?? `view://${leafType}`;
+    const incomingTabId = makeTabId(path) as TabId;
+    const existing =
+      get().tabs[incomingTabId] ??
+      Object.values(get().tabs).find((t) => t.path === path);
+    if (existing) {
+      if (activate) get().activateTab(existing.id);
+      return existing.id;
+    }
+    const current = get();
+    const tabs = { ...current.tabs };
+    const pane = { ...current.pane };
+    const timestamp = nowMs();
+    tabs[incomingTabId] = {
+      id: incomingTabId,
+      path,
+      title: options?.title ?? leafType,
+      leafType,
+      isPinned: true,
+      isPreview: false,
+      isDirty: false,
+      createdAt: timestamp,
+      lastAccessedAt: timestamp,
+    };
+    pane.tabIds = [...pane.tabIds, incomingTabId];
+    if (activate) pane.activeTabId = incomingTabId;
+    set({ tabs, pane, persistVersion: get().persistVersion + 1 });
     return incomingTabId;
   },
 

@@ -50,12 +50,12 @@ impl Default for SimParams {
         Self {
             repulsion: 100.0,
             spring_length: 40.0,
-            spring_strength: 0.04,
-            gravity: 0.005,
-            damping: 0.9,
+            spring_strength: 0.06,
+            gravity: 0.008,
+            damping: 0.85,
             theta: 2.0,
-            max_velocity: 30.0,
-            dt: 0.5,
+            max_velocity: 20.0,
+            dt: 0.35,
             center: [0.0, 0.0],
         }
     }
@@ -143,6 +143,10 @@ const EMPTY: i32 = -1;
 const MAX_DEPTH: u32 = 24;
 /// Sentinel for "not yet placed" in the BFS reorder remap buffer.
 const UNPLACED: usize = usize::MAX;
+/// Cooling: layout force is scaled by `alpha`, which decays each step so the
+/// graph settles and the render worker can stop ticking (Obsidian-style).
+const ALPHA_DECAY: f32 = 0.98;
+const ALPHA_MIN: f32 = 0.02;
 
 /// Force-directed simulator over a `LayoutGraph`.
 ///
@@ -165,6 +169,8 @@ pub struct ForceSim {
     /// Reusable remap buffer for the BFS reorder (avoids per-step allocation).
     reorder: Vec<usize>,
     params: SimParams,
+    /// Cooling factor: 1.0 at full force, decays toward ALPHA_MIN as it settles.
+    alpha: f32,
 }
 
 impl ForceSim {
@@ -202,8 +208,19 @@ impl ForceSim {
             stack: Vec::with_capacity(256),
             reorder: Vec::new(),
             params,
+            alpha: 1.0,
         }
     }
+    /// Current cooling factor (1.0 = full force, decays toward ALPHA_MIN).
+    pub fn alpha(&self) -> f32 {
+        self.alpha
+    }
+
+    /// Restart the simulation (drag a node, reopen the view, etc.).
+    pub fn reheat(&mut self) {
+        self.alpha = 1.0;
+    }
+
 
     #[inline]
     pub fn node_count(&self) -> usize {
@@ -241,6 +258,7 @@ impl ForceSim {
         self.build_tree();
         self.compute_forces();
         self.integrate();
+        self.alpha = (self.alpha * ALPHA_DECAY).max(ALPHA_MIN);
     }
 
     // --- Barnes-Hut tree -------------------------------------------------
@@ -536,11 +554,12 @@ impl ForceSim {
         let dt = self.params.dt;
         let damping = self.params.damping;
         let max_v = self.params.max_velocity;
+        let alpha = self.alpha;
         for i in 0..self.n {
             let ix = i * 2;
             let iy = i * 2 + 1;
-            let mut vx = self.vel[ix] * damping + self.acc[ix] * dt;
-            let mut vy = self.vel[iy] * damping + self.acc[iy] * dt;
+            let mut vx = self.vel[ix] * damping + self.acc[ix] * dt * alpha;
+            let mut vy = self.vel[iy] * damping + self.acc[iy] * dt * alpha;
             // Clamp speed to keep the integrator stable on close contacts.
             let speed2 = vx * vx + vy * vy;
             if speed2 > max_v * max_v {

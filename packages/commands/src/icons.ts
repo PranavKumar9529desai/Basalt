@@ -1,5 +1,6 @@
 import {
   IconFilePlus,
+  IconFolderOpen,
   IconGauge,
   IconFileSearch,
   IconLayoutBoardSplit,
@@ -9,12 +10,14 @@ import {
   IconSearch,
   IconSettings,
   IconTrash,
-  IconX,
+    IconX,
+    IconSitemap,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 const ICONS: Record<string, ComponentType<{ size?: number }>> = {
   IconFilePlus,
+  IconFolderOpen,
   IconGauge,
   IconFileSearch,
   IconLayoutBoardSplit,
@@ -24,7 +27,8 @@ const ICONS: Record<string, ComponentType<{ size?: number }>> = {
   IconSearch,
   IconSettings,
   IconTrash,
-  IconX,
+    IconX,
+    IconSitemap,
 };
 
 export function resolveIcon(

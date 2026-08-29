@@ -6,6 +6,7 @@ import {
   FileExplorerHeaderActions,
   FileExplorerView,
 } from "./views/FileExplorerView";
+import { GraphView } from "../graph/GraphView";
 
 /**
  * Boot-time view registrations (ADR-018).
@@ -38,4 +39,10 @@ leafRegistry.register({
   icon: IconFileText,
   extensions: [".md", ".markdown"],
   component: MarkdownLeaf,
+});
+leafRegistry.register({
+  type: "graph",
+  name: "Graph",
+  extensions: [],
+  component: GraphView,
 });

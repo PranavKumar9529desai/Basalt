@@ -2,8 +2,8 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { CommandProvider } from "@workspace/commands";
 import { KeybindingListener, KeybindingProvider } from "@workspace/keybindings";
 import { TooltipProvider } from "@workspace/ui/components/ui/tooltip";
-import { EditorCommandPalette } from "../features/editor/components/CommandPalette";
-import { StatusBar } from "../app-shell/StatusBar";
+import { EditorCommandPalette } from "../features/editor";
+import { StatusBar } from "../app-shell";
 
 export const Route = createRootRoute({
   component: () => (
