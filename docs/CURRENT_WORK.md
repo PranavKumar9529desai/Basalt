@@ -56,14 +56,15 @@ culprit extension to chase.
    (`37c5975`) re-benchmarked on prod: p95 = 4ms @ 100KB full stack meets the
    ≤ 4ms gate. Stretch (≤ 2ms) narrowly missed; accepted as diminishing
    returns. Perf campaign closed.
-4. **NEXT: Graph view** (NoteGraph panel) — research + pre-implementation
-   proposal live in [`docs/graph-view/`](./graph-view/README.md): Obsidian
-   inventory, forum pain points, competitor analysis, phased scope, and the
-   architecture fork to settle first (Rust-IPC vs WASM-worker physics).
-   First real _view_ registry consumer. Register via `registerView()` in
-   `app-shell/viewRegistrations.ts` (no shell surgery). Compute lives in
-   `crates/basalt-graph/`. Backlinks sidebar already exists; graph is the
-   missing piece.
+4. ~~Graph view (NoteGraph panel)~~ ✅ DONE — implemented as a **leaf**
+   (registered in `leafRegistry`, not `viewRegistry` — it is tab content,
+   Obsidian-style). Frontend lives in `apps/tauri/src/features/graph/`
+   (leaf `GraphView.tsx` + `GraphWorker.ts` + `graph_sim.wasm` co-located in
+   `components/`, `spatialGrid.ts` at the feature root, `index.ts` as the
+   only import surface). Renderer in `packages/graph/`, compute in
+   `crates/basalt-graph/`. Decoupled via `useLeafServices` (activeNote /
+   openPinned) — no direct feature-store imports. `graph:open` command
+   folded into `shared/tabCommands.ts`.
 5. Then: HTML renderer — first new _leaf_ registration (`leafRegistry`),
    also a pure `viewRegistrations.ts` addition.
 
@@ -130,6 +131,9 @@ culprit extension to chase.
   panel imports in `app-shell`. New panels = registration entries only.
 - Header band z-contract: `HeaderBandRule` (was `StripSeparator`) z-10 <
   active tab + nubs z-20; section backgrounds z-auto.
+- Graph leaf (`features/graph`) reads cross-feature state **only** through
+  `useLeafServices` (`activeNote`, `openPinned`); it must never import
+  `features/editor` or `features/tabs` stores directly.
 
 ### Naming overhaul (2026-08-24, lexicon anchored to ADR-018 / VS Code)
 
@@ -190,3 +194,47 @@ if the main thread is busy.
 `bun run dev` first. If smooth at 25k, keep the main-thread render. Adopt the
 render worker only if input jank appears at larger vaults (100k+) or main-
 thread contention shows up. If adopted, capture as ADR-022.
+
+### Restructure (2026-08-30)
+
+Frontend graph code moved out of the stray `apps/tauri/src/graph/` into a
+proper feature: `apps/tauri/src/features/graph/` (leaf `GraphView.tsx` +
+`GraphWorker.ts` + `graph_sim.wasm` co-located in `components/`,
+`spatialGrid.ts` at the feature root, `index.ts` as the only import
+surface). `GraphView` previously imported `features/editor` +
+`features/tabs` stores directly (violating the no-cross-feature-imports
+rule); it now reads `activeNote` and `openPinned` through
+`useLeafServices` (the shell injects them — the same seam `MarkdownLeaf`
+uses). The `graph:open` command (calls `tabs.openView`) moved to
+`shared/tabCommands.ts`, the designated cross-feature command-wiring file;
+the stray `graph/commands.ts` was deleted. Renderer (`packages/graph/`) and
+compute (`crates/basalt-graph/`) are unchanged.
+
+### Wasm build wiring (2026-08-30)
+
+`apps/tauri/src/features/graph/components/graph_sim.wasm` is a GENERATED
+artifact, not hand-written. It is the `wasm32-unknown-unknown` release build
+of `crates/graph-wasm` (cdylib over `basalt-graph`), copied into the
+frontend by `scripts/build-graph-wasm.sh`. Regenerate after any graph-Rust
+change with `bun run build:wasm`; prove the output with `bun run verify:wasm`
+(runs `crates/graph-wasm/verify.mjs`, which drives the C-ABI surface for both
+the `graph_seed` and `graph_build` paths). The crate's real output name is
+`graph_sim_wasm.wasm`; the script renames it to `graph_sim.wasm` to match the
+`?init` import in `GraphWorker.ts`.
+
+### GraphView split + BacklinksView consistency (2026-08-30)
+
+`GraphView.tsx` (was ~857 lines) split its pure-presentational UI into two
+child components in `features/graph/components/`: `GraphControls` (filter bar,
+local-graph toggle/depth, Center, orphans/attachments toggles) and
+`GraphContextMenu` (right-click Open / Open in New Tab / Center in Graph /
+Open Local Graph). `GraphView` keeps the canvas, hover label, and
+interaction/render-loop effects — those are bound to the WebGL2 loop, so they
+were intentionally left in place. Both children are prop-driven and hold zero
+state.
+
+`BacklinksView.tsx` (app-shell) no longer imports `features/editor` directly:
+its `activeNoteBacklinks` now flows through `useWorkspaceContext()` (the same
+sanctioned seam the graph leaf uses). `WorkspaceContextValue` now exposes
+`activeNoteBacklinks` alongside the previously-added `activeNote`. The last
+direct `features/editor` consumer in app-shell is gone.

@@ -9,13 +9,11 @@
 // GL canvas stays pure geometry (ADR-021: WebGL2, never Canvas2D).
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Button } from "@workspace/ui/components/ui/button";
-import { Input } from "@workspace/ui/components/ui/input";
 import { useLeafServices, type LeafProps } from "@workspace/views";
 import { GraphRenderer } from "@workspace/graph";
-import { useActiveNoteStore } from "../features/editor";
-import { useTabsStore } from "../features/tabs";
-import { SpatialGrid } from "./spatialGrid";
+import { SpatialGrid } from "../spatialGrid";
+import { GraphControls } from "./GraphControls";
+import { GraphContextMenu } from "./GraphContextMenu";
 
 type GraphNodeMeta = {
   path: string;
@@ -106,7 +104,7 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 export function GraphView(_props: LeafProps) {
   const services = useLeafServices();
-  const activeNotePath = useActiveNoteStore((s) => s.activeNote?.path ?? null);
+  const activeNotePath = services.activeNote?.path ?? null;
 
   const glRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLCanvasElement>(null);
@@ -679,7 +677,26 @@ export function GraphView(_props: LeafProps) {
   const openInNewTab = (full: number) => {
     const path = pathsRef.current[full];
     if (!path) return;
-    useTabsStore.getState().openPinned({ path, title: basename(path) });
+    services.openPinned({ path, title: basename(path) });
+  };
+  const handleMenuOpen = (full: number) => {
+    const path = pathsRef.current[full];
+    if (path) services.openNote(path);
+    setMenu(null);
+  };
+  const handleMenuOpenInNewTab = (full: number) => {
+    openInNewTab(full);
+    setMenu(null);
+  };
+  const handleMenuCenter = (full: number) => {
+    centerOnRef.current(full);
+    setMenu(null);
+  };
+  const handleMenuLocalGraph = (full: number) => {
+    const path = pathsRef.current[full];
+    if (path) setLocalRoot(path);
+    setLocal(true);
+    setMenu(null);
   };
 
   return (
@@ -687,67 +704,19 @@ export function GraphView(_props: LeafProps) {
       ref={wrapRef}
       style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: 8,
-          left: 8,
-          right: 8,
-          display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
-          alignItems: "center",
-          zIndex: 10,
-        }}
-      >
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter: tag:foo  path:docs  name  (space = AND)"
-          style={{ flex: "1 1 240px", minWidth: 180 }}
-        />
-        <Button variant="outline" size="sm" onClick={() => setLocal((l) => !l)}>
-          {local ? "Local: on" : "Local: off"}
-        </Button>
-        {local && (
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              color: "#c9d1d9",
-              fontSize: 12,
-            }}
-          >
-            Depth
-            <input
-              type="range"
-              min={1}
-              max={5}
-              value={localDepth}
-              onChange={(e) => setLocalDepth(Number(e.target.value))}
-            />
-            {localDepth}
-          </label>
-        )}
-        <Button variant="outline" size="sm" onClick={centerActive}>
-          Center
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowOrphans((o) => !o)}
-        >
-          {showOrphans ? "Orphans ✓" : "Orphans"}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAttach((a) => !a)}
-        >
-          {showAttach ? "Attach ✓" : "Attach"}
-        </Button>
-      </div>
+      <GraphControls
+        query={query}
+        onQueryChange={setQuery}
+        local={local}
+        onToggleLocal={() => setLocal((l) => !l)}
+        localDepth={localDepth}
+        onLocalDepthChange={setLocalDepth}
+        onCenter={centerActive}
+        showOrphans={showOrphans}
+        onToggleOrphans={() => setShowOrphans((o) => !o)}
+        showAttach={showAttach}
+        onToggleAttach={() => setShowAttach((a) => !a)}
+      />
       <canvas
         ref={glRef}
         style={{
@@ -788,72 +757,13 @@ export function GraphView(_props: LeafProps) {
           {hover.title}
         </div>
       )}
-      {menu && (
-        <div
-          style={{
-            position: "absolute",
-            left: menu.x + 2,
-            top: menu.y + 2,
-            zIndex: 20,
-            background: "#161b22",
-            border: "1px solid #30363d",
-            borderRadius: 6,
-            padding: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            minWidth: 168,
-          }}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start w-full"
-            onClick={() => {
-              const path = pathsRef.current[menu.full];
-              if (path) services.openNote(path);
-              setMenu(null);
-            }}
-          >
-            Open
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start w-full"
-            onClick={() => {
-              openInNewTab(menu.full);
-              setMenu(null);
-            }}
-          >
-            Open in New Tab
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start w-full"
-            onClick={() => {
-              centerOnRef.current(menu.full);
-              setMenu(null);
-            }}
-          >
-            Center in Graph
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start w-full"
-            onClick={() => {
-              const path = pathsRef.current[menu.full];
-              if (path) setLocalRoot(path);
-              setLocal(true);
-              setMenu(null);
-            }}
-          >
-            Open Local Graph
-          </Button>
-        </div>
-      )}
+      <GraphContextMenu
+        menu={menu}
+        onOpen={handleMenuOpen}
+        onOpenInNewTab={handleMenuOpenInNewTab}
+        onCenter={handleMenuCenter}
+        onOpenLocalGraph={handleMenuLocalGraph}
+      />
     </div>
   );
 }

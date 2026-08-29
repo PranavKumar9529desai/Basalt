@@ -5,7 +5,6 @@ import "./App.css";
 import "../../../packages/ui/src/styles/globals.css";
 import "../../../packages/ui/src/styles/editor.css";
 import { ThemeProvider } from "./app-shell/ThemeProvider";
-import "./graph/commands";
 import { ttiMark } from "./app-shell/tti";
 
 // TTI: first executable mark. Note: ES module imports hoist above this, so

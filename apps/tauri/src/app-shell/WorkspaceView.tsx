@@ -114,19 +114,23 @@ function WorkspaceShell({
       openNote: ws.openNote,
       markTabDirty: tabs.markTabDirty,
       findNote: ws.findNote,
+      activeNote: ws.activeNote,
       getOpenTabIds,
       getOpenTabPaths,
       getTabInfo,
       onTabStructureChanged,
+      openPinned: tabs.openPinned,
     }),
     [
       ws.openNote,
       tabs.markTabDirty,
       ws.findNote,
+      ws.activeNote,
       getOpenTabIds,
       getOpenTabPaths,
       getTabInfo,
       onTabStructureChanged,
+      tabs.openPinned,
     ],
   );
 
@@ -151,7 +155,7 @@ function WorkspaceShell({
     [leafServices],
   );
 
-  // Vault commands — need controller data from the context.
+  // Vault commands — need controller / mutation data from the context.
   useEffect(() => {
     commandService.registerCommand(
       "app:new-file",
@@ -161,11 +165,18 @@ function WorkspaceShell({
       "app:delete-file",
       ws.controller.handleDeleteFromCommands,
     );
+    // Standalone vault command. Not surfaced in Settings (settings UI not
+    // built yet) — registered here because it needs runtime mutation data.
+    commandService.registerCommand(
+      "vault:pick-and-set",
+      ws.mutations.pickAndSetVault,
+    );
     return () => {
       commandService.unregister("app:new-file");
       commandService.unregister("app:delete-file");
+      commandService.unregister("vault:pick-and-set");
     };
-  }, [ws.controller.createNoteInstant, ws.controller.handleDeleteFromCommands]);
+  }, [ws.controller.createNoteInstant, ws.controller.handleDeleteFromCommands, ws.mutations.pickAndSetVault]);
 
   // Sidebar width persistence (debounced).
   const widthDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

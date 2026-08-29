@@ -6,7 +6,7 @@ import {
   FileExplorerHeaderActions,
   FileExplorerView,
 } from "./views/FileExplorerView";
-import { GraphView } from "../graph/GraphView";
+import { GraphView } from "../features/graph";
 
 /**
  * Boot-time view registrations (ADR-018).

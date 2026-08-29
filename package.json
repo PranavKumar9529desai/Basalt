@@ -11,8 +11,11 @@
     "lint:fix": "oxlint --fix",
     "lint:typed": "oxlint --type-aware",
     "format": "oxfmt",
+    "check:size": "bun scripts/check-size.ts",
     "check": "bun run lint && bun run format",
-    "clear-cache": "bash scripts/clear-cache.sh"
+    "clear-cache": "bash scripts/clear-cache.sh",
+    "build:wasm": "bash scripts/build-graph-wasm.sh",
+    "verify:wasm": "node crates/graph-wasm/verify.mjs"
   },
   "devDependencies": {
     "bun-types": "latest",

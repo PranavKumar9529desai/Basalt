@@ -32,7 +32,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                     |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                  |
 | Editor perf baseline (typing-latency harness)                       | ⏳ Next up                                      |
-| Graph view (ADR-021)                                                 | 📋 Blueprint accepted; backlinks panel shipped, force graph not started |
+| Graph view (ADR-021) | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
 
@@ -115,7 +115,7 @@ apps/tauri/src/
 │   ├── useWorkspace.ts     (useWorkspaceController)
 │   └── tabCommands.ts
 ├── features/               ← Business logic (zero cross-feature imports)
-│   ├── editor/  search/  settings/  tabs/  vault/
+│  ├── editor/  search/  settings/  tabs/  vault/  graph/
 ├── routes/                 ← TanStack Router (2 routes max)
 └── main.tsx
 ```
@@ -237,6 +237,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [019-editor-decoration-pipeline](docs/adr/019-editor-decoration-pipeline.md)             | ADR-019: Editor Decoration Pipeline — Single-Pass Architecture              |
 | [020-desktop-tier-performance](docs/adr/020-desktop-tier-performance.md)                 | ADR-020: Desktop-Tier Performance Architecture                              |
 | [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)     | ADR-021: Graph View Architecture                                          |
+| [022-frontmatter-engine](docs/adr/022-frontmatter-engine.md)                    | ADR-022: Frontmatter Engine — Structured, Typed, First-Class Properties       |
 
 <!-- ADR_INDEX_END -->
 
@@ -250,6 +251,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add a shadcn primitive                | `packages/ui/src/components/ui/`           |
 | Add tab/pane business logic           | `apps/tauri/src/features/tabs/`            |
 | Add editor business logic             | `apps/tauri/src/features/editor/`          |
+| Add graph view/leaf UI + engine | `apps/tauri/src/features/graph/`            |
 | Add vault/sidebar business logic      | `apps/tauri/src/features/vault/`           |
 | Add search business logic             | `apps/tauri/src/features/search/`          |
 | Wire sidebar + tabs + editor together | `apps/tauri/src/shared/`                   |
