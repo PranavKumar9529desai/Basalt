@@ -1,16 +1,18 @@
 // Real vault note-link graph rendered as a full workbench leaf (ADR-018).
-// Feeds `get_graph` to the wasm force sim (GraphWorker), then draws on a 2D
-// canvas with Obsidian-style interactions + controls: hover-highlight,
-// click-to-open, right-click context menu, wheel zoom, drag-pan, node drag,
-// filter bar (tag:/path:/ operators), color groups (by tag, then folder),
-// local-graph mode from the active note (or a chosen root) with a depth
-// control, directional arrows, and display toggles (orphans / attachments /
-// text-fade). Center-on-note flies the camera to a node.
+// Feeds `get_graph` to the wasm force sim (GraphWorker), then draws on a WebGL2
+// canvas (packages/graph) with Obsidian-style interactions + controls:
+// hover-highlight, click-to-open, right-click context menu, wheel zoom,
+// drag-pan, node drag, filter bar (tag:/path:/ operators), color groups (by
+// tag, then folder), local-graph mode from the active note (or a chosen root)
+// with a depth control, directional arrows, and display toggles (orphans /
+// attachments / text-fade). Text labels use a transparent 2D overlay so the
+// GL canvas stays pure geometry (ADR-021: WebGL2, never Canvas2D).
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
 import { useLeafServices, type LeafProps } from "@workspace/views";
+import { GraphRenderer } from "@workspace/graph";
 import { useActiveNoteStore } from "../features/editor";
 import { useTabsStore } from "../features/tabs";
 
@@ -36,6 +38,7 @@ const MAX_SCALE = 12;
 const LABEL_SCALE = 1.4; // show node labels once zoomed past this
 const LABEL_CAP = 1500; // skip labels above this many visible nodes
 const CENTER_SCALE = 2.2; // zoom level used when flying to a node
+const ARROW_EDGE_CAP = 20000; // skip per-frame arrowheads past this many edges
 
 const PALETTE = [
   "#4cc2ff",
@@ -50,13 +53,65 @@ const PALETTE = [
   "#f687b3",
 ];
 
+// Build a triangle (3 verts) at the target end of each edge for arrowheads.
+// `r`/`w` are the tip offset and half-width in world units (so they shrink
+// with zoom, staying proportional to the constant-size node glyph).
+function buildArrows(
+  positions: Float32Array,
+  edges: Uint32Array,
+  edgeCount: number,
+  scale: number,
+): Float32Array {
+  const r = (NODE_R + 2) / scale;
+  const w = (NODE_R * 0.7 + 2) / scale;
+  const n = Math.min(edgeCount, ARROW_EDGE_CAP);
+  const out = new Float32Array(n * 6);
+  let o = 0;
+  for (let e = 0; e < n * 2; e += 2) {
+    const u = edges[e];
+    const v = edges[e + 1];
+    const ux = positions[u * 2];
+    const uy = positions[u * 2 + 1];
+    const vx = positions[v * 2];
+    const vy = positions[v * 2 + 1];
+    let dx = vx - ux;
+    let dy = vy - uy;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+    const px = -dy;
+    const py = dx;
+    const tx = vx - dx * r;
+    const ty = vy - dy * r;
+    const lx = tx + px * w;
+    const ly = ty + py * w;
+    const rx = tx - px * w;
+    const ry = ty - py * w;
+    out[o++] = tx;
+    out[o++] = ty;
+    out[o++] = lx;
+    out[o++] = ly;
+    out[o++] = rx;
+    out[o++] = ry;
+  }
+  return out;
+}
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const h = hex.replace("#", "");
+  const n = parseInt(h, 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+};
+
 export function GraphView(_props: LeafProps) {
   const services = useLeafServices();
   const activeNotePath = useActiveNoteStore((s) => s.activeNote?.path ?? null);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const glRef = useRef<HTMLCanvasElement>(null);
+  const labelRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const workerRef = useRef<Worker | null>(null);
+  const rendererRef = useRef<GraphRenderer | null>(null);
 
   // Full-graph data (set once on load).
   const pathsRef = useRef<string[]>([]);
@@ -79,6 +134,9 @@ export function GraphView(_props: LeafProps) {
   const hoverRef = useRef(-1);
   const rebuildRef = useRef<() => void>(() => {});
   const centerOnRef = useRef<(full: number) => void>(() => {});
+  // Per-subset hover flag buffer for the renderer (written on hover, uploaded when dirty).
+  const flagsRef = useRef<Float32Array>(new Float32Array(0));
+  const flagsDirtyRef = useRef(false);
   // Live mirrors of control state so the mount-only rebuild() reads current values.
   const queryRef = useRef("");
   const localRef = useRef(false);
@@ -105,11 +163,6 @@ export function GraphView(_props: LeafProps) {
   queryRef.current = query;
   localRef.current = local;
   showOrphansRef.current = showOrphans;
-  showAttachRef.current = showAttach;
-  activeNotePathRef.current = activeNotePath;
-  localDepthRef.current = localDepth;
-  localRootRef.current = localRoot;
-
   // ---- helpers ----
   const colorFor = (full: number): string => {
     if (attachRef.current[full]) return "#8b949e";
@@ -133,23 +186,33 @@ export function GraphView(_props: LeafProps) {
   const basename = (p: string) => p.split("/").pop() ?? p;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const glCanvas = glRef.current;
+    const labelCanvas = labelRef.current;
     const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!glCanvas || !labelCanvas || !wrap) return;
+    const gl = glCanvas.getContext("webgl2");
+    if (!gl) {
+      console.error("[graph] WebGL2 unavailable — graph requires WebGL2");
+      return;
+    }
+    const labelCtx = labelCanvas.getContext("2d");
+    if (!labelCtx) return;
+
+    const renderer = new GraphRenderer(glCanvas);
+    rendererRef.current = renderer;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
-      const cssW = canvas.clientWidth || 800;
-      const cssH = canvas.clientHeight || 600;
-      canvas.width = Math.round(cssW * dpr);
-      canvas.height = Math.round(cssH * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const cssW = glCanvas.clientWidth || 800;
+      const cssH = glCanvas.clientHeight || 600;
+      renderer.resize(cssW, cssH, dpr);
+      labelCanvas.width = Math.round(cssW * dpr);
+      labelCanvas.height = Math.round(cssH * dpr);
+      labelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+    ro.observe(glCanvas);
 
     const worker = new Worker(new URL("./GraphWorker.ts", import.meta.url), {
       type: "module",
@@ -287,6 +350,24 @@ export function GraphView(_props: LeafProps) {
       activeAdjRef.current = subAdj;
       viewRef.current.fitted = false;
 
+      // Rebuild renderer color + reset hover flags for the new subset.
+      const cols = new Float32Array(map.length * 3);
+      for (let i = 0; i < map.length; i++) {
+        const [r, g, b] = hexToRgb(colorFor(map[i]));
+        cols[i * 3] = r;
+        cols[i * 3 + 1] = g;
+        cols[i * 3 + 2] = b;
+      }
+      renderer.setColors(cols);
+      renderer.setEdges(Uint32Array.from(subEdges), subEdges.length / 2);
+      if (flagsRef.current.length !== map.length) {
+        flagsRef.current = new Float32Array(map.length);
+      } else {
+        flagsRef.current.fill(0);
+      }
+      flagsDirtyRef.current = true;
+      renderer.setHasHover(false);
+
       if (!syntheticRef.current) {
         worker.postMessage({
           action: "build",
@@ -324,8 +405,8 @@ export function GraphView(_props: LeafProps) {
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
-      const w = canvas.clientWidth || 800;
-      const h = canvas.clientHeight || 600;
+      const w = glCanvas.clientWidth || 800;
+      const h = glCanvas.clientHeight || 600;
       const pad = 40;
       const bw = Math.max(1e-6, maxX - minX);
       const bh = Math.max(1e-6, maxY - minY);
@@ -341,8 +422,8 @@ export function GraphView(_props: LeafProps) {
       if (!f || full * 2 + 1 >= f.positions.length) return;
       const x = f.positions[full * 2];
       const y = f.positions[full * 2 + 1];
-      const w = canvas.clientWidth || 800;
-      const h = canvas.clientHeight || 600;
+      const w = glCanvas.clientWidth || 800;
+      const h = glCanvas.clientHeight || 600;
       const v = viewRef.current;
       const s = Math.max(v.scale, CENTER_SCALE);
       v.scale = s;
@@ -374,7 +455,7 @@ export function GraphView(_props: LeafProps) {
     // ---- pointer handlers ----
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
+      const rect = glCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       const v = viewRef.current;
@@ -387,21 +468,21 @@ export function GraphView(_props: LeafProps) {
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return; // ignore right/middle — context menu handles those
       setMenu(null);
-      const rect = canvas.getBoundingClientRect();
+      const rect = glCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       downRef.current = { x: mx, y: my };
       const hit = hitTest(mx, my);
       if (hit >= 0) {
         dragRef.current = { index: hit, moved: false };
-        canvas.style.cursor = "grabbing";
+        glCanvas.style.cursor = "grabbing";
       } else {
         panRef.current = { x: mx, y: my };
-        canvas.style.cursor = "grabbing";
+        glCanvas.style.cursor = "grabbing";
       }
     };
     const onMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
+      const rect = glCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       if (dragRef.current) {
@@ -431,15 +512,28 @@ export function GraphView(_props: LeafProps) {
         const f = frameRef.current!;
         const [px, py] = toScreen(f.positions[hit * 2], f.positions[hit * 2 + 1]);
         const full = activeMapRef.current[hit];
+        const nb = activeAdjRef.current[hit];
+        // Hover flags: hovered = 1, neighbor = 2, else 0.
+        const fl = flagsRef.current;
+        if (fl.length === activeMapRef.current.length) {
+          for (let i = 0; i < fl.length; i++) {
+            fl[i] = i === hit ? 1 : nb.includes(i) ? 2 : 0;
+          }
+        }
+        flagsDirtyRef.current = true;
+        renderer.setHasHover(true);
         setHover({ x: px, y: py, title: pathsRef.current[full] ?? "" });
-        canvas.style.cursor = "pointer";
+        glCanvas.style.cursor = "pointer";
       } else if (prevHover >= 0) {
+        flagsRef.current.fill(0);
+        flagsDirtyRef.current = true;
+        renderer.setHasHover(false);
         setHover(null);
-        canvas.style.cursor = "grab";
+        glCanvas.style.cursor = "grab";
       }
     };
     const onUp = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
+      const rect = glCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       if (dragRef.current) {
@@ -455,7 +549,7 @@ export function GraphView(_props: LeafProps) {
       }
       panRef.current = null;
       downRef.current = null;
-      canvas.style.cursor = "grab";
+      glCanvas.style.cursor = "grab";
     };
     const onLeave = () => {
       hoverRef.current = -1;
@@ -466,7 +560,7 @@ export function GraphView(_props: LeafProps) {
     // Right-click a node -> context menu (Open / Open in New Tab / Center / Local).
     const onContext = (e: MouseEvent) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
+      const rect = glCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       const hit = hitTest(mx, my);
@@ -477,92 +571,56 @@ export function GraphView(_props: LeafProps) {
       }
     };
 
-    canvas.addEventListener("wheel", onWheel, { passive: false });
-    canvas.addEventListener("mousedown", onDown);
+    glCanvas.addEventListener("wheel", onWheel, { passive: false });
+    glCanvas.addEventListener("mousedown", onDown);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
-    canvas.addEventListener("mouseleave", onLeave);
-    canvas.addEventListener("contextmenu", onContext);
+    glCanvas.addEventListener("mouseleave", onLeave);
+    glCanvas.addEventListener("contextmenu", onContext);
 
-    // ---- draw loop (always runs; worker only updates positions while hot) ----
+    // ---- draw loop ----
     let raf = 0;
     const draw = () => {
       const f = frameRef.current;
-      const w = canvas.clientWidth || 800;
-      const h = canvas.clientHeight || 600;
-      ctx.fillStyle = "#0d1117";
-      ctx.fillRect(0, 0, w, h);
+      const w = glCanvas.clientWidth || 800;
+      const h = glCanvas.clientHeight || 600;
+      // Clear the 2D label overlay each frame.
+      labelCtx.clearRect(0, 0, w, h);
       const map = activeMapRef.current;
       const count = map.length;
       if (f && count > 0) {
         const p = f.positions;
         if (!viewRef.current.fitted) fit();
         const v = viewRef.current;
+        const renderer = rendererRef.current;
+        if (renderer) {
+          renderer.setPositions(p);
+          renderer.setView({ scale: v.scale, ox: v.ox, oy: v.oy });
+          if (flagsDirtyRef.current) {
+            renderer.setFlags(flagsRef.current);
+            flagsDirtyRef.current = false;
+          }
+          const arrows = buildArrows(p, activeEdgesRef.current, activeEdgesRef.current.length / 2, v.scale);
+          renderer.setArrows(arrows);
+          renderer.render();
+        }
+        // Labels on the transparent 2D overlay.
         const hov = hoverRef.current;
         const neighbors = hov >= 0 ? activeAdjRef.current[hov] : null;
-        const edges = activeEdgesRef.current;
         const showLabels = v.scale > LABEL_SCALE && count < LABEL_CAP;
-
-        // arrows + edges
-        ctx.lineWidth = 1;
-        for (let e = 0; e < edges.length; e += 2) {
-          const u = edges[e];
-          const vv = edges[e + 1];
-          if (u * 2 + 1 >= p.length || vv * 2 + 1 >= p.length) continue;
-          const [ux, uy] = toScreen(p[u * 2], p[u * 2 + 1]);
-          const [vx, vy] = toScreen(p[vv * 2], p[vv * 2 + 1]);
-          const active = hov < 0 || u === hov || vv === hov;
-          ctx.strokeStyle = hov < 0
-            ? "rgba(120,140,170,0.22)"
-            : active
-              ? "rgba(120,200,255,0.6)"
-              : "rgba(120,140,170,0.06)";
-          ctx.beginPath();
-          ctx.moveTo(ux, uy);
-          ctx.lineTo(vx, vy);
-          ctx.stroke();
-          // arrowhead at the target end
-          if (hov < 0 || active) {
-            const ang = Math.atan2(vy - uy, vx - ux);
-            const tipX = vx - Math.cos(ang) * (NODE_R + 1);
-            const tipY = vy - Math.sin(ang) * (NODE_R + 1);
-            const size = 4;
-            ctx.fillStyle = hov < 0 ? "rgba(120,140,170,0.5)" : "rgba(120,200,255,0.8)";
-            ctx.beginPath();
-            ctx.moveTo(tipX, tipY);
-            ctx.lineTo(
-              tipX - size * Math.cos(ang - 0.4),
-              tipY - size * Math.sin(ang - 0.4),
-            );
-            ctx.lineTo(
-              tipX - size * Math.cos(ang + 0.4),
-              tipY - size * Math.sin(ang + 0.4),
-            );
-            ctx.closePath();
-            ctx.fill();
+        if (showLabels) {
+          labelCtx.font = "10px system-ui, sans-serif";
+          labelCtx.fillStyle = "#c9d1d9";
+          for (let i = 0; i < count; i++) {
+            if (i * 2 + 1 >= p.length) break;
+            const full = map[i];
+            const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
+            const dim = hov >= 0 && i !== hov && !(neighbors && neighbors.includes(i));
+            labelCtx.globalAlpha = hov < 0 ? 1 : dim ? 0.25 : 1;
+            labelCtx.fillText(basename(pathsRef.current[full] ?? ""), px + NODE_R + 2, py + 3);
           }
+          labelCtx.globalAlpha = 1;
         }
-
-        // nodes
-        for (let i = 0; i < count; i++) {
-          if (i * 2 + 1 >= p.length) break;
-          const full = map[i];
-          const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
-          const dim =
-            hov >= 0 && i !== hov && !(neighbors && neighbors.includes(i));
-          ctx.globalAlpha = hov < 0 ? 1 : dim ? 0.25 : 1;
-          ctx.fillStyle = colorFor(full);
-          ctx.beginPath();
-          ctx.arc(px, py, NODE_R, 0, Math.PI * 2);
-          ctx.fill();
-          if (showLabels && !dim) {
-            ctx.globalAlpha = Math.min(1, (v.scale - LABEL_SCALE) * 1.5);
-            ctx.fillStyle = "#c9d1d9";
-            ctx.font = "10px system-ui, sans-serif";
-            ctx.fillText(basename(pathsRef.current[full] ?? ""), px + NODE_R + 2, py + 3);
-          }
-        }
-        ctx.globalAlpha = 1;
       }
       raf = requestAnimationFrame(draw);
     };
@@ -572,12 +630,13 @@ export function GraphView(_props: LeafProps) {
       ro.disconnect();
       cancelAnimationFrame(raf);
       worker.terminate();
-      canvas.removeEventListener("wheel", onWheel);
-      canvas.removeEventListener("mousedown", onDown);
+      renderer.dispose();
+      glCanvas.removeEventListener("wheel", onWheel);
+      glCanvas.removeEventListener("mousedown", onDown);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
-      canvas.removeEventListener("mouseleave", onLeave);
-      canvas.removeEventListener("contextmenu", onContext);
+      glCanvas.removeEventListener("mouseleave", onLeave);
+      glCanvas.removeEventListener("contextmenu", onContext);
     };
   }, [services]);
 
@@ -667,13 +726,25 @@ export function GraphView(_props: LeafProps) {
         </Button>
       </div>
       <canvas
-        ref={canvasRef}
+        ref={glRef}
         style={{
-          display: "block",
+          position: "absolute",
+          inset: 0,
           width: "100%",
           height: "100%",
           background: "#0d1117",
+          display: "block",
           cursor: "grab",
+        }}
+      />
+      <canvas
+        ref={labelRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
         }}
       />
       {hover && (
