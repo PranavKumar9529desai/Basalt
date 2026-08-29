@@ -8,11 +8,17 @@ type ProbeExports = {
   probe_magic(): number;
 };
 
-let instance: ProbeExports | null = null;
+let instance: WebAssembly.Instance | null = null;
+let ex: ProbeExports | null = null;
 
 self.onmessage = async (e: MessageEvent<{ a: number; b: number }>) => {
-  if (!instance) instance = (await init()) as unknown as ProbeExports;
+  if (!instance) {
+    // vite-plugin-wasm's `?init` resolves to the WebAssembly.Instance; the
+    // C-ABI functions live on `instance.exports`.
+    instance = (await init()) as unknown as WebAssembly.Instance;
+    ex = (instance.exports as unknown as ProbeExports) ?? (instance as unknown as ProbeExports);
+  }
   const a = e.data?.a ?? 2;
   const b = e.data?.b ?? 40;
-  self.postMessage({ ok: true, result: instance.probe_add(a, b), magic: instance.probe_magic() });
+  self.postMessage({ ok: true, result: ex!.probe_add(a, b), magic: ex!.probe_magic() });
 };
