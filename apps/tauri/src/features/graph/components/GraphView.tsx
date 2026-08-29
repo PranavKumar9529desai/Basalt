@@ -12,6 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useLeafServices, type LeafProps } from "@workspace/views";
 import { GraphRenderer } from "@workspace/graph";
 import { SpatialGrid } from "../spatialGrid";
+import { computeNodeSize } from "../nodeScale";
 import { GraphControls } from "./GraphControls";
 import { GraphContextMenu } from "./GraphContextMenu";
 
@@ -19,6 +20,7 @@ type GraphNodeMeta = {
   path: string;
   tags: string[];
   is_attachment: boolean;
+  is_tag: boolean;
 };
 type GraphSnapshot = {
   node_count: number;
@@ -116,6 +118,7 @@ export function GraphView(_props: LeafProps) {
   const pathsRef = useRef<string[]>([]);
   const tagsRef = useRef<string[][]>([]);
   const attachRef = useRef<boolean[]>([]);
+  const isTagRef = useRef<boolean[]>([]);
   const edgesRef = useRef<Uint32Array>(new Uint32Array(0));
   const adjRef = useRef<number[][]>([]);
   const syntheticRef = useRef(false);
@@ -136,6 +139,10 @@ export function GraphView(_props: LeafProps) {
   // Per-subset hover flag buffer for the renderer (written on hover, uploaded when dirty).
   const flagsRef = useRef<Float32Array>(new Float32Array(0));
   const flagsDirtyRef = useRef(false);
+  // Per-subset drawn sizes (CSS px diameter) and the underlying importance
+  // array (link degree / tag note-count) they are derived from.
+  const sizesRef = useRef<Float32Array>(new Float32Array(0));
+  const scaleInputsRef = useRef<Float32Array>(new Float32Array(0));
   // Live mirrors of control state so the mount-only rebuild() reads current values.
   const queryRef = useRef("");
   const localRef = useRef(false);
@@ -160,7 +167,7 @@ export function GraphView(_props: LeafProps) {
   const [hover, setHover] = useState<{ x: number; y: number; title: string } | null>(
     null,
   );
-  const [menu, setMenu] = useState<{ x: number; y: number; full: number } | null>(
+  const [menu, setMenu] = useState<{ x: number; y: number; full: number; isTag: boolean } | null>(
     null,
   );
   // Keep the mirrors in sync with the rendered state.
@@ -169,6 +176,12 @@ export function GraphView(_props: LeafProps) {
   showOrphansRef.current = showOrphans;
   // ---- helpers ----
   const colorFor = (full: number): string => {
+    if (isTagRef.current[full]) {
+      const p = pathsRef.current[full] ?? "";
+      let h = 0;
+      for (const c of p) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+      return PALETTE[h % PALETTE.length];
+    }
     if (attachRef.current[full]) return "#8b949e";
     const ts = tagsRef.current[full];
     if (ts && ts.length) {
@@ -235,6 +248,7 @@ export function GraphView(_props: LeafProps) {
         pathsRef.current = g.nodes.map((n) => n.path);
         tagsRef.current = g.nodes.map((n) => n.tags);
         attachRef.current = g.nodes.map((n) => n.is_attachment);
+        isTagRef.current = g.nodes.map((n) => n.is_tag);
         edgesRef.current = Uint32Array.from(g.edges);
         syntheticRef.current = false;
         const adj: number[][] = Array.from({ length: g.nodes.length }, () => []);
@@ -245,6 +259,18 @@ export function GraphView(_props: LeafProps) {
           adj[v].push(u);
         }
         adjRef.current = adj;
+
+        // Sizing importance = number of *note* neighbors. Notes size by link
+        // degree; the Rust-emitted tag nodes size by their note count. Tag→tag
+        // (parent/child) edges don't inflate either.
+        const isTag = isTagRef.current;
+        const scaleInputs = new Float32Array(g.nodes.length);
+        for (let i = 0; i < g.nodes.length; i++) {
+          let d = 0;
+          for (const j of adj[i]) if (!isTag[j]) d++;
+          scaleInputs[i] = d;
+        }
+        scaleInputsRef.current = scaleInputs;
         console.log(
           `[graph] real vault graph: ${g.node_count} nodes, ${g.edges.length / 2} edges`,
         );
@@ -256,6 +282,8 @@ export function GraphView(_props: LeafProps) {
         attachRef.current = Array.from({ length: n }, () => false);
         edgesRef.current = new Uint32Array(0);
         adjRef.current = Array.from({ length: n }, () => []);
+        scaleInputsRef.current = new Float32Array(n);
+        isTagRef.current = Array.from({ length: n }, () => false);
         worker.postMessage({ action: "start", n, degree: 3 });
         console.log("[graph] no vault graph — synthetic fallback");
       }
@@ -282,6 +310,13 @@ export function GraphView(_props: LeafProps) {
         else textToks.push(t);
       }
       const passFilter = (i: number): boolean => {
+        const isTag = isTagRef.current[i];
+        if (isTag) {
+          // Tags participate only via tag: queries; no active filter shows them.
+          if (tagToks.length === 0 && pathToks.length === 0 && textToks.length === 0) return true;
+          if (tagToks.length) return tagToks.every((tok) => paths[i].toLowerCase().includes(tok));
+          return false;
+        }
         const p = paths[i].toLowerCase();
         const name = basename(p).replace(/\.md$/, "");
         if (pathToks.length && !pathToks.every((tok) => p.includes(tok))) return false;
@@ -339,6 +374,15 @@ export function GraphView(_props: LeafProps) {
         fullToSub.set(full, sub);
         map.push(full);
       });
+
+      // Per-node diameter from sizing importance (degree now; tag count in Phase 2).
+      const subSizes = new Float32Array(map.length);
+      const imp = scaleInputsRef.current;
+      for (let sub = 0; sub < map.length; sub++) {
+        subSizes[sub] = computeNodeSize(imp[map[sub]]);
+      }
+      sizesRef.current = subSizes;
+      renderer.setSizes(subSizes);
       const subEdges: number[] = [];
       for (let e = 0; e < fullEdges.length; e += 2) {
         const u = fullToSub.get(fullEdges[e]);
@@ -443,7 +487,7 @@ export function GraphView(_props: LeafProps) {
     const hitTest = (sx: number, sy: number): number => {
       // Grid is rebuilt each render (screen-space binning); reused while idle,
       // so this is O(local cells) instead of O(node count) per mousemove.
-      return gridRef.current.query(sx, sy, 8);
+      return gridRef.current.query(sx, sy, 8, sizesRef.current, viewRef.current.scale);
     };
 
     // ---- pointer handlers ----
@@ -518,7 +562,8 @@ export function GraphView(_props: LeafProps) {
         }
         flagsDirtyRef.current = true;
         renderer.setHasHover(true);
-        setHover({ x: px, y: py, title: pathsRef.current[full] ?? "" });
+        const title = isTagRef.current[full] ? `#${pathsRef.current[full] ?? ""}` : (pathsRef.current[full] ?? "");
+        setHover({ x: px, y: py, title });
         glCanvas.style.cursor = "pointer";
       } else if (prevHover >= 0) {
         flagsRef.current.fill(0);
@@ -540,7 +585,11 @@ export function GraphView(_props: LeafProps) {
         if (!moved && wasClick) {
           const full = activeMapRef.current[dragRef.current.index];
           const title = pathsRef.current[full];
-          if (title) services.openNote(title);
+          if (isTagRef.current[full]) {
+            setQuery(`tag:${title}`);
+          } else if (title) {
+            services.openNote(title);
+          }
         }
         dragRef.current = null;
       }
@@ -566,7 +615,7 @@ export function GraphView(_props: LeafProps) {
       const my = e.clientY - rect.top;
       const hit = hitTest(mx, my);
       if (hit >= 0) {
-        setMenu({ x: mx, y: my, full: activeMapRef.current[hit] });
+        setMenu({ x: mx, y: my, full: activeMapRef.current[hit], isTag: isTagRef.current[activeMapRef.current[hit]] });
       } else {
         setMenu(null);
       }
@@ -637,7 +686,8 @@ export function GraphView(_props: LeafProps) {
             const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
             const dim = hov >= 0 && i !== hov && !(neighbors && neighbors.includes(i));
             labelCtx.globalAlpha = hov < 0 ? 1 : dim ? 0.25 : 1;
-            labelCtx.fillText(basename(pathsRef.current[full] ?? ""), px + NODE_R + 2, py + 3);
+            const lbl = isTagRef.current[full] ? `#${pathsRef.current[full] ?? ""}` : basename(pathsRef.current[full] ?? "");
+            labelCtx.fillText(lbl, px + NODE_R + 2, py + 3);
           }
           labelCtx.globalAlpha = 1;
         }
@@ -759,10 +809,15 @@ export function GraphView(_props: LeafProps) {
       )}
       <GraphContextMenu
         menu={menu}
+        isTag={menu?.isTag ?? false}
         onOpen={handleMenuOpen}
         onOpenInNewTab={handleMenuOpenInNewTab}
         onCenter={handleMenuCenter}
         onOpenLocalGraph={handleMenuLocalGraph}
+        onFilter={(full) => {
+          setQuery(`tag:${pathsRef.current[full]}`);
+          setMenu(null);
+        }}
       />
     </div>
   );

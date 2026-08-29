@@ -91,8 +91,8 @@ export class SpatialGrid {
     }
   }
 
-  /** Nearest node within `radius` screen px of (qx, qy), or -1. */
-  query(qx: number, qy: number, radius: number): number {
+  /** Nearest node whose own radius (or `radius` fallback) contains (qx, qy), or -1. */
+  query(qx: number, qy: number, radius: number, sizes?: Float32Array | null, scale = 1): number {
     if (this.count === 0) return -1;
     const cellSize = this.cellSize;
     const cx = Math.floor((qx - this.minX) / cellSize);
@@ -108,7 +108,7 @@ export class SpatialGrid {
     const items = this.items;
     const cellStart = this.cellStart;
     let best = -1;
-    let bestD = radius * radius;
+    let bestD = sizes ? Infinity : radius * radius;
     for (let gy = gy0; gy <= gy1; gy++) {
       for (let gx = gx0; gx <= gx1; gx++) {
         const c = gx + gy * cols;
@@ -119,7 +119,8 @@ export class SpatialGrid {
           const dx = screen[i * 2] - qx;
           const dy = screen[i * 2 + 1] - qy;
           const d = dx * dx + dy * dy;
-          if (d < bestD) {
+          const r = sizes ? Math.min(22, Math.max(2, sizes[i] * scale)) * 0.5 : radius;
+          if (d < r * r && d < bestD) {
             bestD = d;
             best = i;
           }

@@ -12,7 +12,6 @@
 // CSS pixels. The clip-space transform divides by the CSS resolution, so DPR
 // only affects point size (device pixels).
 
-const NODE_R = 2.6; // node radius in screen px (matches GraphView)
 
 export interface GraphTransform {
   scale: number;
@@ -28,7 +27,7 @@ uniform vec2 uResolution;
 uniform float uScale;
 uniform vec2 uOffset;
 uniform float uDpr;
-uniform float uPointSize;
+layout(location = 3) in float aSize;
 out vec3 vColor;
 out float vFlag;
 void main() {
@@ -36,7 +35,7 @@ void main() {
   vec2 clip = (screen / uResolution) * 2.0 - 1.0;
   clip.y = -clip.y;
   gl_Position = vec4(clip, 0.0, 1.0);
-  gl_PointSize = clamp(uPointSize * uScale, 2.0, 14.0) * uDpr;
+  gl_PointSize = clamp(aSize * uScale, 2.0, 22.0) * uDpr;
   vColor = aColor;
   vFlag = aFlag;
 }`;
@@ -147,6 +146,7 @@ export class GraphRenderer {
   private posBuf: WebGLBuffer;
   private colorBuf: WebGLBuffer;
   private flagBuf: WebGLBuffer;
+  private sizeBuf: WebGLBuffer;
   private edgeIdxBuf: WebGLBuffer;
   private arrowBuf: WebGLBuffer;
   private vaoScene: WebGLVertexArrayObject;
@@ -168,13 +168,11 @@ export class GraphRenderer {
   private uSceneScale: WebGLUniformLocation | null;
   private uSceneOffset: WebGLUniformLocation | null;
   private uSceneDpr: WebGLUniformLocation | null;
-  private uScenePointSize: WebGLUniformLocation | null;
   private uSceneHasHover: WebGLUniformLocation | null;
   private uLineRes: WebGLUniformLocation | null;
   private uLineScale: WebGLUniformLocation | null;
   private uLineOffset: WebGLUniformLocation | null;
   private uLineDpr: WebGLUniformLocation | null;
-  private uLinePointSize: WebGLUniformLocation | null;
   private uLineHasHover: WebGLUniformLocation | null;
   private uArrowRes: WebGLUniformLocation | null;
   private uArrowScale: WebGLUniformLocation | null;
@@ -213,6 +211,7 @@ export class GraphRenderer {
     this.posBuf = gl.createBuffer()!;
     this.colorBuf = gl.createBuffer()!;
     this.flagBuf = gl.createBuffer()!;
+    this.sizeBuf = gl.createBuffer()!;
     this.edgeIdxBuf = gl.createBuffer()!;
     this.arrowBuf = gl.createBuffer()!;
 
@@ -229,13 +228,11 @@ export class GraphRenderer {
     this.uSceneScale = gl.getUniformLocation(this.progScene, "uScale");
     this.uSceneOffset = gl.getUniformLocation(this.progScene, "uOffset");
     this.uSceneDpr = gl.getUniformLocation(this.progScene, "uDpr");
-    this.uScenePointSize = gl.getUniformLocation(this.progScene, "uPointSize");
     this.uSceneHasHover = gl.getUniformLocation(this.progScene, "uHasHover");
     this.uLineRes = gl.getUniformLocation(this.progSceneLines, "uResolution");
     this.uLineScale = gl.getUniformLocation(this.progSceneLines, "uScale");
     this.uLineOffset = gl.getUniformLocation(this.progSceneLines, "uOffset");
     this.uLineDpr = gl.getUniformLocation(this.progSceneLines, "uDpr");
-    this.uLinePointSize = gl.getUniformLocation(this.progSceneLines, "uPointSize");
     this.uLineHasHover = gl.getUniformLocation(this.progSceneLines, "uHasHover");
     this.uArrowRes = gl.getUniformLocation(this.progArrows, "uResolution");
     this.uArrowScale = gl.getUniformLocation(this.progArrows, "uScale");
@@ -256,6 +253,9 @@ export class GraphRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.flagBuf);
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuf);
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
     return vao;
   }
@@ -273,6 +273,9 @@ export class GraphRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.flagBuf);
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuf);
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.edgeIdxBuf);
     gl.bindVertexArray(null);
     return vao;
@@ -304,6 +307,12 @@ export class GraphRenderer {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.flagBuf);
     gl.bufferData(gl.ARRAY_BUFFER, flags, gl.DYNAMIC_DRAW);
+  }
+
+  setSizes(sizes: Float32Array): void {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
   }
 
   setEdges(edges: Uint32Array, edgeCount: number): void {
@@ -345,7 +354,6 @@ export class GraphRenderer {
     gl.uniform1f(this.uSceneScale, v.scale);
     gl.uniform2f(this.uSceneOffset, v.ox, v.oy);
     gl.uniform1f(this.uSceneDpr, this.dpr);
-    gl.uniform1f(this.uScenePointSize, NODE_R * 2);
     gl.uniform1f(this.uSceneHasHover, this.hasHover ? 1 : 0);
     gl.bindVertexArray(this.vaoScene);
     gl.drawArrays(gl.POINTS, 0, this.nodeCount);
@@ -357,7 +365,6 @@ export class GraphRenderer {
       gl.uniform1f(this.uLineScale, v.scale);
       gl.uniform2f(this.uLineOffset, v.ox, v.oy);
       gl.uniform1f(this.uLineDpr, this.dpr);
-      gl.uniform1f(this.uLinePointSize, NODE_R * 2);
       gl.uniform1f(this.uLineHasHover, this.hasHover ? 1 : 0);
       gl.bindVertexArray(this.vaoEdges);
       gl.drawElements(gl.LINES, this.edgeCount * 2, gl.UNSIGNED_INT, 0);
@@ -386,6 +393,7 @@ export class GraphRenderer {
     gl.deleteBuffer(this.posBuf);
     gl.deleteBuffer(this.colorBuf);
     gl.deleteBuffer(this.flagBuf);
+    gl.deleteBuffer(this.sizeBuf);
     gl.deleteBuffer(this.edgeIdxBuf);
     gl.deleteBuffer(this.arrowBuf);
     gl.deleteVertexArray(this.vaoScene);

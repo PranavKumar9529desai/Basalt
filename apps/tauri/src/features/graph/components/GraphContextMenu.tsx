@@ -9,20 +9,24 @@ export interface GraphMenuTarget {
 
 interface GraphContextMenuProps {
   menu: GraphMenuTarget | null;
+  isTag?: boolean;
   onOpen: (full: number) => void;
   onOpenInNewTab: (full: number) => void;
   onCenter: (full: number) => void;
   onOpenLocalGraph: (full: number) => void;
+  onFilter: (full: number) => void;
 }
 
 // Right-click node menu. Pure presentational — `GraphView` supplies the
 // callbacks (which close over refs/services and clear the menu).
 export const GraphContextMenu: FC<GraphContextMenuProps> = ({
   menu,
+  isTag,
   onOpen,
   onOpenInNewTab,
   onCenter,
   onOpenLocalGraph,
+  onFilter,
 }) => {
   if (!menu) return null;
   return (
@@ -42,38 +46,41 @@ export const GraphContextMenu: FC<GraphContextMenuProps> = ({
         minWidth: 168,
       }}
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-start w-full"
-        onClick={() => onOpen(menu.full)}
-      >
-        Open
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-start w-full"
-        onClick={() => onOpenInNewTab(menu.full)}
-      >
-        Open in New Tab
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-start w-full"
-        onClick={() => onCenter(menu.full)}
-      >
-        Center in Graph
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-start w-full"
-        onClick={() => onOpenLocalGraph(menu.full)}
-      >
-        Open Local Graph
-      </Button>
+      {isTag ? (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onFilter(menu.full)}
+          >
+            Filter by tag
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onCenter(menu.full)}
+          >
+            Center in Graph
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpen(menu.full)}>
+            Open
+          </Button>
+          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpenInNewTab(menu.full)}>
+            Open in New Tab
+          </Button>
+          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onCenter(menu.full)}>
+            Center in Graph
+          </Button>
+          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpenLocalGraph(menu.full)}>
+            Open Local Graph
+          </Button>
+        </>
+      )}
     </div>
   );
 };
