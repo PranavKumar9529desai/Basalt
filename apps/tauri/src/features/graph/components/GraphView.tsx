@@ -26,6 +26,7 @@ type GraphSnapshot = {
   node_count: number;
   nodes: GraphNodeMeta[];
   edges: number[];
+  edge_weights: number[];
 };
 type GraphFrame = {
   positions: Float32Array;
@@ -138,6 +139,7 @@ export function GraphView(_props: LeafProps) {
   const attachRef = useRef<boolean[]>([]);
   const isTagRef = useRef<boolean[]>([]);
   const edgesRef = useRef<Uint32Array>(new Uint32Array(0));
+  const edgeWeightsRef = useRef<Float32Array>(new Float32Array(0));
   const adjRef = useRef<number[][]>([]);
   const syntheticRef = useRef(false);
 
@@ -276,6 +278,7 @@ export function GraphView(_props: LeafProps) {
         attachRef.current = g.nodes.map((n) => n.is_attachment);
         isTagRef.current = g.nodes.map((n) => n.is_tag);
         edgesRef.current = Uint32Array.from(g.edges);
+        edgeWeightsRef.current = Float32Array.from(g.edge_weights ?? []);
         syntheticRef.current = false;
         const adj: number[][] = Array.from({ length: g.nodes.length }, () => []);
         for (let e = 0; e < g.edges.length; e += 2) {
@@ -307,6 +310,7 @@ export function GraphView(_props: LeafProps) {
         tagsRef.current = Array.from({ length: n }, () => []);
         attachRef.current = Array.from({ length: n }, () => false);
         edgesRef.current = new Uint32Array(0);
+        edgeWeightsRef.current = new Float32Array(0);
         adjRef.current = Array.from({ length: n }, () => []);
         scaleInputsRef.current = new Float32Array(n);
         isTagRef.current = Array.from({ length: n }, () => false);
@@ -410,10 +414,15 @@ export function GraphView(_props: LeafProps) {
       sizesRef.current = subSizes;
       renderer.setSizes(subSizes);
       const subEdges: number[] = [];
+      const subEdgeWeights: number[] = [];
+      const fullW = edgeWeightsRef.current;
       for (let e = 0; e < fullEdges.length; e += 2) {
         const u = fullToSub.get(fullEdges[e]);
         const v = fullToSub.get(fullEdges[e + 1]);
-        if (u !== undefined && v !== undefined) subEdges.push(u, v);
+        if (u !== undefined && v !== undefined) {
+          subEdges.push(u, v);
+          subEdgeWeights.push(fullW[e >> 1] ?? 1);
+        }
       }
       const subAdj: number[][] = map.map(() => []);
       for (let e = 0; e < subEdges.length; e += 2) {
@@ -436,6 +445,7 @@ export function GraphView(_props: LeafProps) {
       }
       renderer.setColors(cols);
       renderer.setEdges(Uint32Array.from(subEdges), subEdges.length / 2);
+      renderer.setEdgeWeights(Float32Array.from(subEdgeWeights));
       if (flagsRef.current.length !== map.length) {
         flagsRef.current = new Float32Array(map.length);
       } else {

@@ -1,7 +1,7 @@
 // WebGL2 renderer for the note-link graph (ADR-021, Phase 3).
 //
 // Framework-agnostic: given a canvas + typed-array scene buffers it draws
-// nodes (gl.POINTS), edges (gl.LINES) and directional arrowheads (gl.TRIANGLES)
+// nodes (gl.POINTS), edges (instanced gl.TRIANGLES quads) and directional arrowheads (gl.TRIANGLES)
 // and is expected to sustain >=60fps at >=25k nodes. No React, no Tauri, no
 // business state — it renders purely from position buffers (the packages/
 // litmus). The simulation positions are uploaded every frame; colors/edges on
@@ -54,19 +54,41 @@ void main() {
   frag = vec4(vColor * a, a);
 }`;
 
-const FRAG_LINES = `#version 300 es
+const VERT_EDGE = `#version 300 es
+layout(location = 0) in vec2 aCorner;
+layout(location = 1) in vec4 aEndpoints; // ax, ay, bx, by (world space)
+layout(location = 2) in float aWeight;
+uniform vec2 uResolution;
+uniform float uScale;
+uniform vec2 uOffset;
+uniform float uDpr;
+out float vWeight;
+void main() {
+  vec2 sA = aEndpoints.xy * uScale + uOffset;
+  vec2 sB = aEndpoints.zw * uScale + uOffset;
+  vec2 dir = sB - sA;
+  float len = length(dir);
+  vec2 n = len > 0.0 ? vec2(-dir.y, dir.x) / len : vec2(0.0, 1.0);
+  float w = clamp(1.2 + 0.7 * aWeight, 1.0, 6.0) * uDpr;
+  vec2 base = mix(sA, sB, (aCorner.x + 1.0) * 0.5);
+  vec2 screen = base + n * (aCorner.y * w * 0.5);
+  vec2 clip = (screen / uResolution) * 2.0 - 1.0;
+  clip.y = -clip.y;
+  gl_Position = vec4(clip, 0.0, 1.0);
+  vWeight = aWeight;
+}`;
+
+const FRAG_EDGE = `#version 300 es
 precision mediump float;
-in vec3 vColor;
-in float vFlag;
+in float vWeight;
 uniform float uHasHover;
 out vec4 frag;
 void main() {
-  // Edge alpha interpolates between endpoints, so an edge touching the hovered
-  // node flares bright and fades toward its dim neighbor.
-  float a = (uHasHover > 0.5)
-    ? ((vFlag > 0.5) ? 0.6 : 0.06)
-    : 0.22;
-  frag = vec4(vColor * a, a);
+  // Heavier edges read slightly more opaque; all edges dim while a node is
+  // hovered so the focused node's connections stand out.
+  float a = clamp(0.28 + 0.09 * vWeight, 0.28, 0.6);
+  a *= (uHasHover > 0.5 ? 0.55 : 1.0);
+  frag = vec4(0.5, 0.6, 0.78, a);
 }`;
 
 const VERT_ARROW = `#version 300 es
@@ -141,13 +163,17 @@ export class GraphRenderer {
   private gl: WebGL2RenderingContext;
   private canvas: HTMLCanvasElement;
   private progScene: WebGLProgram;
-  private progSceneLines: WebGLProgram;
+  private progEdge: WebGLProgram;
   private progArrows: WebGLProgram;
   private posBuf: WebGLBuffer;
   private colorBuf: WebGLBuffer;
   private flagBuf: WebGLBuffer;
   private sizeBuf: WebGLBuffer;
-  private edgeIdxBuf: WebGLBuffer;
+  private edgeEndpointsBuf: WebGLBuffer;
+  private edgeWeightBuf: WebGLBuffer;
+  private edgeCornerBuf: WebGLBuffer;
+  private edgePairs: Uint32Array = new Uint32Array(0);
+  private edgeEndpoints: Float32Array = new Float32Array(0);
   private arrowBuf: WebGLBuffer;
   private vaoScene: WebGLVertexArrayObject;
   private vaoEdges: WebGLVertexArrayObject;
@@ -169,11 +195,11 @@ export class GraphRenderer {
   private uSceneOffset: WebGLUniformLocation | null;
   private uSceneDpr: WebGLUniformLocation | null;
   private uSceneHasHover: WebGLUniformLocation | null;
-  private uLineRes: WebGLUniformLocation | null;
-  private uLineScale: WebGLUniformLocation | null;
-  private uLineOffset: WebGLUniformLocation | null;
-  private uLineDpr: WebGLUniformLocation | null;
-  private uLineHasHover: WebGLUniformLocation | null;
+  private uEdgeRes: WebGLUniformLocation | null;
+  private uEdgeScale: WebGLUniformLocation | null;
+  private uEdgeOffset: WebGLUniformLocation | null;
+  private uEdgeDpr: WebGLUniformLocation | null;
+  private uEdgeHasHover: WebGLUniformLocation | null;
   private uArrowRes: WebGLUniformLocation | null;
   private uArrowScale: WebGLUniformLocation | null;
   private uArrowOffset: WebGLUniformLocation | null;
@@ -205,14 +231,22 @@ export class GraphRenderer {
     this.progScene = link(gl, VERT_SCENE, FRAG_POINTS);
     // Re-link the LINE fragment variant against the same scene vertex shader;
     // attribute locations (0,1,2) are identical so the VAOs are shared.
-    this.progSceneLines = link(gl, VERT_SCENE, FRAG_LINES);
+    this.progEdge = link(gl, VERT_EDGE, FRAG_EDGE);
     this.progArrows = link(gl, VERT_ARROW, FRAG_ARROW);
 
     this.posBuf = gl.createBuffer()!;
     this.colorBuf = gl.createBuffer()!;
     this.flagBuf = gl.createBuffer()!;
     this.sizeBuf = gl.createBuffer()!;
-    this.edgeIdxBuf = gl.createBuffer()!;
+    this.edgeEndpointsBuf = gl.createBuffer()!;
+    this.edgeWeightBuf = gl.createBuffer()!;
+    this.edgeCornerBuf = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeCornerBuf);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1]),
+      gl.STATIC_DRAW,
+    );
     this.arrowBuf = gl.createBuffer()!;
 
     this.vaoScene = this.buildSceneVao();
@@ -229,11 +263,11 @@ export class GraphRenderer {
     this.uSceneOffset = gl.getUniformLocation(this.progScene, "uOffset");
     this.uSceneDpr = gl.getUniformLocation(this.progScene, "uDpr");
     this.uSceneHasHover = gl.getUniformLocation(this.progScene, "uHasHover");
-    this.uLineRes = gl.getUniformLocation(this.progSceneLines, "uResolution");
-    this.uLineScale = gl.getUniformLocation(this.progSceneLines, "uScale");
-    this.uLineOffset = gl.getUniformLocation(this.progSceneLines, "uOffset");
-    this.uLineDpr = gl.getUniformLocation(this.progSceneLines, "uDpr");
-    this.uLineHasHover = gl.getUniformLocation(this.progSceneLines, "uHasHover");
+    this.uEdgeRes = gl.getUniformLocation(this.progEdge, "uResolution");
+    this.uEdgeScale = gl.getUniformLocation(this.progEdge, "uScale");
+    this.uEdgeOffset = gl.getUniformLocation(this.progEdge, "uOffset");
+    this.uEdgeDpr = gl.getUniformLocation(this.progEdge, "uDpr");
+    this.uEdgeHasHover = gl.getUniformLocation(this.progEdge, "uHasHover");
     this.uArrowRes = gl.getUniformLocation(this.progArrows, "uResolution");
     this.uArrowScale = gl.getUniformLocation(this.progArrows, "uScale");
     this.uArrowOffset = gl.getUniformLocation(this.progArrows, "uOffset");
@@ -264,19 +298,20 @@ export class GraphRenderer {
     const gl = this.gl;
     const vao = gl.createVertexArray()!;
     gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
+    // Per-vertex corner of the rectangle (-1..1 on each axis).
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeCornerBuf);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuf);
+    // Per-instance endpoint positions (ax, ay, bx, by), refreshed each frame.
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeEndpointsBuf);
     gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.flagBuf);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribDivisor(1, 1);
+    // Per-instance connection weight (drives thickness + opacity).
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeWeightBuf);
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuf);
-    gl.enableVertexAttribArray(3);
-    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.edgeIdxBuf);
+    gl.vertexAttribDivisor(2, 1);
     gl.bindVertexArray(null);
     return vao;
   }
@@ -295,6 +330,7 @@ export class GraphRenderer {
     this.nodeCount = positions.length >> 1;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
     gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+    if (this.edgeCount > 0) this.updateEdgeEndpoints(positions);
   }
 
   setColors(colors: Float32Array): void {
@@ -316,10 +352,37 @@ export class GraphRenderer {
   }
 
   setEdges(edges: Uint32Array, edgeCount: number): void {
-    const gl = this.gl;
+    this.edgePairs = edges;
     this.edgeCount = edgeCount;
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.edgeIdxBuf);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, edges, gl.STATIC_DRAW);
+    if (this.edgeEndpoints.length !== edgeCount * 4) {
+      this.edgeEndpoints = new Float32Array(edgeCount * 4);
+    }
+  }
+
+  setEdgeWeights(weights: Float32Array): void {
+    if (this.edgeCount > 0) {
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeWeightBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, weights, gl.STATIC_DRAW);
+    }
+  }
+
+  private updateEdgeEndpoints(positions: Float32Array): void {
+    const n = this.edgeCount;
+    if (n === 0) return;
+    const buf = this.edgeEndpoints;
+    const pairs = this.edgePairs;
+    for (let e = 0; e < n; e++) {
+      const u = pairs[e * 2];
+      const v = pairs[e * 2 + 1];
+      buf[e * 4] = positions[u * 2];
+      buf[e * 4 + 1] = positions[u * 2 + 1];
+      buf[e * 4 + 2] = positions[v * 2];
+      buf[e * 4 + 3] = positions[v * 2 + 1];
+    }
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeEndpointsBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, buf, gl.DYNAMIC_DRAW);
   }
 
   setArrows(arrows: Float32Array): void {
@@ -348,6 +411,20 @@ export class GraphRenderer {
     if (this.nodeCount === 0) return;
 
     const v = this.view;
+
+    // Edges (instanced variable-width quads; weight drives thickness). Drawn
+    // first so nodes sit on top of their connections.
+    if (this.edgeCount > 0) {
+      gl.useProgram(this.progEdge);
+      gl.uniform2f(this.uEdgeRes, this.cssW, this.cssH);
+      gl.uniform1f(this.uEdgeScale, v.scale);
+      gl.uniform2f(this.uEdgeOffset, v.ox, v.oy);
+      gl.uniform1f(this.uEdgeDpr, this.dpr);
+      gl.uniform1f(this.uEdgeHasHover, this.hasHover ? 1 : 0);
+      gl.bindVertexArray(this.vaoEdges);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.edgeCount);
+    }
+
     // Nodes (points) + hover highlight.
     gl.useProgram(this.progScene);
     gl.uniform2f(this.uSceneRes, this.cssW, this.cssH);
@@ -357,18 +434,6 @@ export class GraphRenderer {
     gl.uniform1f(this.uSceneHasHover, this.hasHover ? 1 : 0);
     gl.bindVertexArray(this.vaoScene);
     gl.drawArrays(gl.POINTS, 0, this.nodeCount);
-
-    // Edges (lines) — same geometry, line fragment shader.
-    if (this.edgeCount > 0) {
-      gl.useProgram(this.progSceneLines);
-      gl.uniform2f(this.uLineRes, this.cssW, this.cssH);
-      gl.uniform1f(this.uLineScale, v.scale);
-      gl.uniform2f(this.uLineOffset, v.ox, v.oy);
-      gl.uniform1f(this.uLineDpr, this.dpr);
-      gl.uniform1f(this.uLineHasHover, this.hasHover ? 1 : 0);
-      gl.bindVertexArray(this.vaoEdges);
-      gl.drawElements(gl.LINES, this.edgeCount * 2, gl.UNSIGNED_INT, 0);
-    }
 
     // Directional arrowheads.
     if (this.showArrows && this.arrowVertCount > 0) {
@@ -394,13 +459,15 @@ export class GraphRenderer {
     gl.deleteBuffer(this.colorBuf);
     gl.deleteBuffer(this.flagBuf);
     gl.deleteBuffer(this.sizeBuf);
-    gl.deleteBuffer(this.edgeIdxBuf);
+    gl.deleteBuffer(this.edgeEndpointsBuf);
+    gl.deleteBuffer(this.edgeWeightBuf);
+    gl.deleteBuffer(this.edgeCornerBuf);
     gl.deleteBuffer(this.arrowBuf);
     gl.deleteVertexArray(this.vaoScene);
     gl.deleteVertexArray(this.vaoEdges);
     gl.deleteVertexArray(this.vaoArrows);
     gl.deleteProgram(this.progScene);
-    gl.deleteProgram(this.progSceneLines);
+    gl.deleteProgram(this.progEdge);
     gl.deleteProgram(this.progArrows);
   }
 }

@@ -95,6 +95,7 @@ pub struct GraphSnapshot {
     /// Flat directed pairs `[src0, dst0, src1, dst1, ...]` by dense id.
     /// Springs are treated as undirected; arrows render the `src -> dst` direction.
     pub edges: Vec<u32>,
+    pub edge_weights: Vec<f32>,
 }
 
 /// Snapshot of the vault's note-link graph for the force simulation.
@@ -185,7 +186,7 @@ pub(crate) fn build_graph_snapshot(
         }
     }
 
-    let mut edges: Vec<u32> = Vec::new();
+    let mut pair_counts: HashMap<u64, u32> = HashMap::new();
     for (src_id, targets) in &vault.graph.forward_links {
         let Some(&u) = dense.get(src_id) else { continue };
         for t in targets {
@@ -212,16 +213,64 @@ pub(crate) fn build_graph_snapshot(
                 if u == v {
                     continue;
                 }
-                edges.push(u);
-                edges.push(v);
+                let key = (u as u64) << 32 | (v as u64);
+                *pair_counts.entry(key).or_insert(0) += 1;
             }
         }
+    }
+
+    // Connection strength between two endpoints = number of resolved links
+    // between them plus the count of tags they share. Co-tagged notes therefore
+    // read as stronger edges even when they only meet through a shared tag hub.
+    let shared_tags = |a: usize, b: usize| -> u32 {
+        if a >= nodes.len() || b >= nodes.len() {
+            return 0;
+        }
+        let (ta, tb) = (&nodes[a].tags, &nodes[b].tags);
+        if ta.is_empty() || tb.is_empty() {
+            return 0;
+        }
+        let mut sa: Vec<&String> = ta.iter().collect();
+        let mut sb: Vec<&String> = tb.iter().collect();
+        sa.sort();
+        sb.sort();
+        let (mut i, mut j) = (0usize, 0usize);
+        let mut c = 0u32;
+        while i < sa.len() && j < sb.len() {
+            if sa[i] == sb[j] {
+                c += 1;
+                i += 1;
+                j += 1;
+            } else if sa[i] < sb[j] {
+                i += 1;
+            } else {
+                j += 1;
+            }
+        }
+        c
+    };
+
+    // Deterministic order: sort deduped pairs by (src, dst).
+    let mut pairs: Vec<(u32, u32)> = pair_counts
+        .keys()
+        .map(|k| (((*k >> 32) as u32), (*k & 0xffff_ffff) as u32))
+        .collect();
+    pairs.sort();
+    let mut edges: Vec<u32> = Vec::with_capacity(pairs.len() * 2);
+    let mut edge_weights: Vec<f32> = Vec::with_capacity(pairs.len());
+    for (u, v) in pairs {
+        edges.push(u);
+        edges.push(v);
+        let links = pair_counts[&(((u as u64) << 32 | (v as u64)))];
+        let w = links + shared_tags(u as usize, v as usize);
+        edge_weights.push(w as f32);
     }
 
     Ok(GraphSnapshot {
         node_count: nodes.len() as u32,
         nodes,
         edges,
+        edge_weights,
     })
 }
 
@@ -330,6 +379,44 @@ mod tests {
         // node_count matches the emitted node vector.
         assert_eq!(snap.node_count as usize, snap.nodes.len());
 
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_graph_snapshot_weights_shared_tags_and_links() {
+        let root = unique_temp_dir();
+        let a = root.join("a.md");
+        let b = root.join("b.md");
+        fs::write(&a, "# A\n").unwrap();
+        fs::write(&b, "# B\n").unwrap();
+        let mut vault = Vault::new();
+        let mut ma = FileMetadata::new();
+        ma.tags = vec!["x".to_string(), "y".to_string()];
+        vault.graph.add_document(a.to_str().unwrap(), ma, &mut vault.arena);
+        let mut mb = FileMetadata::new();
+        mb.tags = vec!["x".to_string(), "y".to_string()];
+        vault.graph.add_document(b.to_str().unwrap(), mb, &mut vault.arena);
+        // Force a direct link a -> b so we can assert link + shared-tag strength.
+        let a_id = vault.arena.get_id(a.to_str().unwrap()).expect("a interned");
+        let b_id = vault.arena.get_id(b.to_str().unwrap()).expect("b interned");
+        vault.graph.forward_links.insert(a_id, std::collections::HashSet::from([b_id]));
+        let snap = build_graph_snapshot(&vault, &root).unwrap();
+        let note_idx =
+            |suffix: &str| snap.nodes.iter().position(|n| !n.is_tag && n.path.ends_with(suffix));
+        let a_idx = note_idx("a.md").expect("a.md node present");
+        let b_idx = note_idx("b.md").expect("b.md node present");
+        let pair_w = snap
+            .edges
+            .chunks_exact(2)
+            .map(|c| (c[0], c[1]))
+            .zip(&snap.edge_weights)
+            .find(|((u, v), _)| {
+                (*u == a_idx as u32 && *v == b_idx as u32)
+                    || (*u == b_idx as u32 && *v == a_idx as u32)
+            });
+        let w = pair_w.map(|(_, wt)| *wt).unwrap_or(0.0);
+        // One direct link + two shared tags = 3.
+        assert_eq!(w, 3.0, "a<->b weight = links + shared tags");
         let _ = fs::remove_dir_all(&root);
     }
 }
