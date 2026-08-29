@@ -146,3 +146,47 @@ view = side-dock panel, leaf = tab content type. Renamed:
 `useTabIO`, `SaveIndicator`, `ThemeSelect`, `useCommandStore`, duplicate ui
 `useTabDnD`, unwired `useWorkspaceTabHandlers` returns. Banner comments
 replaced with doc comments per CONVENTIONS §8.
+
+---
+
+## Graph view — perf pass (branch `feat/graph-view`, not yet merged to main)
+
+Built the note-link graph as a WebGL2 + Canvas2D hybrid (ADR-021). Sim runs in
+`GraphWorker.ts` (WASM force layout, off the UI thread). Perf pass completed:
+
+| Commit    | What                                                                                                                                                                                                                                                                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `21b7877` | O(local) hover hit-test via `SpatialGrid` (replaces O(node-count) scan per `mousemove`); arrow rebuild throttled to new frame / zoom change, written into a reused `Float32Array`; render-on-dirty gate so a settled, idle graph does zero GPU/CPU work. `spatialGrid.test.ts` (vitest, 9 cases) added. |
+| `f45ede6` | `packages/graph/README.md` — documents renderer decisions (hybrid, buffer-orphaning vs `bufferSubData`, premultiplied-alpha, shared VAOs, coordinate convention, API).                                                                                                              |
+
+Verified: `tsc --noEmit` + `oxlint` + `bun run lint` clean; 9/9 unit tests pass.
+
+### Open decision — OffscreenCanvas render worker (DEFERRED to next session)
+
+**Question:** move the WebGL2 draw out of the main thread into a render worker
+(`canvas.transferControlToOffscreen()` → worker `getContext("webgl2")`),
+leaving the UI thread for input/DOM only.
+
+**Why it's attractive:** the UI thread never blocks on a GPU draw; input,
+scroll, and React stay smooth under render load, and rendering continues even
+if the main thread is busy.
+
+**Why we deferred it:**
+- Sim is *already* off-thread (GraphWorker). The expensive physics isn't on the
+  UI thread.
+- The render itself is 3 draw calls (points/lines/arrows) and is dirty-gated,
+  so an idle graph is free and a 25k-node draw is well under one frame budget.
+  Main-thread render is fine at this scale.
+- Real added cost: a second worker, forwarding pointer events + view state
+  across the thread boundary, harder WebGL-in-worker debugging, and different
+  context-loss handling.
+- **Blocker to verify first — Tauri/Linux webview support.** OffscreenCanvas-
+  in-worker with WebGL2 needs a supporting webview. WebView2 (Windows) and
+  recent WKWebView (macOS, Safari 16.4+) are fine; **webkit2gtk on Linux
+  (Tauri's Linux webview) has historically had partial/off worker-GL support**
+  and must be confirmed on the target machine before adopting.
+
+**Recommendation:** measure main-thread input latency at full vault scale via
+`bun run dev` first. If smooth at 25k, keep the main-thread render. Adopt the
+render worker only if input jank appears at larger vaults (100k+) or main-
+thread contention shows up. If adopted, capture as ADR-022.
