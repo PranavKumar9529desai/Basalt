@@ -827,6 +827,13 @@ export function GraphView(_props: LeafProps) {
     setLocal(true);
     setMenu(null);
   };
+  const handleMenuExpand = (full: number) => {
+    const path = pathsRef.current[full];
+    if (path) setLocalRoot(path);
+    setLocal(true);
+    setLocalDepth((d) => Math.min(d + 1, 4));
+    setMenu(null);
+  };
 
   return (
     <div
@@ -913,6 +920,7 @@ export function GraphView(_props: LeafProps) {
         onOpenInNewTab={handleMenuOpenInNewTab}
         onCenter={handleMenuCenter}
         onOpenLocalGraph={handleMenuLocalGraph}
+        onExpand={handleMenuExpand}
         onFilter={(full) => {
           setQuery(`tag:${pathsRef.current[full]}`);
           setMenu(null);

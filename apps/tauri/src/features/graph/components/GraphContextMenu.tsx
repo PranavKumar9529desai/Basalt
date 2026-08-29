@@ -15,6 +15,7 @@ interface GraphContextMenuProps {
   onCenter: (full: number) => void;
   onOpenLocalGraph: (full: number) => void;
   onFilter: (full: number) => void;
+  onExpand: (full: number) => void;
 }
 
 // Right-click node menu. Pure presentational — `GraphView` supplies the
@@ -27,6 +28,7 @@ export const GraphContextMenu: FC<GraphContextMenuProps> = ({
   onCenter,
   onOpenLocalGraph,
   onFilter,
+  onExpand,
 }) => {
   if (!menu) return null;
   return (
@@ -78,6 +80,9 @@ export const GraphContextMenu: FC<GraphContextMenuProps> = ({
           </Button>
           <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpenLocalGraph(menu.full)}>
             Open Local Graph
+          </Button>
+          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onExpand(menu.full)}>
+            Expand neighborhood
           </Button>
         </>
       )}
