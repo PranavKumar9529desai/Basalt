@@ -13,7 +13,7 @@ import { useLeafServices, type LeafProps } from "@workspace/views";
 import { GraphRenderer } from "@workspace/graph";
 import { SpatialGrid } from "../spatialGrid";
 import { computeNodeSize } from "../nodeScale";
-import { GraphControls } from "./GraphControls";
+import { GraphControls, type GraphColorMode } from "./GraphControls";
 import { GraphContextMenu } from "./GraphContextMenu";
 
 type GraphNodeMeta = {
@@ -43,18 +43,6 @@ const LABEL_CAP = 1500; // skip labels above this many visible nodes
 const CENTER_SCALE = 2.2; // zoom level used when flying to a node
 const ARROW_EDGE_CAP = 20000; // skip per-frame arrowheads past this many edges
 
-const PALETTE = [
-  "#4cc2ff",
-  "#ff7eb6",
-  "#ffd166",
-  "#06d6a0",
-  "#b794f6",
-  "#f6ad55",
-  "#63b3ed",
-  "#fc8181",
-  "#68d391",
-  "#f687b3",
-];
 
 // Build a triangle (3 verts) at the target end of each edge for arrowheads.
 // `r`/`w` are the tip offset and half-width in world units (so they shrink
@@ -100,10 +88,60 @@ function buildArrows(
   return out;
 }
 
-const hexToRgb = (hex: string): [number, number, number] => {
-  const h = hex.replace("#", "");
-  const n = parseInt(h, 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+interface ThemeColors {
+  note: [number, number, number];
+  attachment: [number, number, number];
+  tag: [number, number, number][];
+  edge: [number, number, number];
+  label: string;
+}
+const FALLBACK_COLORS: ThemeColors = {
+  note: [0.54, 0.58, 0.6],
+  attachment: [0.54, 0.58, 0.6],
+  tag: [
+    [0.3, 0.76, 1],
+    [0.25, 0.73, 0.31],
+    [0.82, 0.6, 0.13],
+    [0.97, 0.32, 0.29],
+    [0.34, 0.65, 1],
+    [0.9, 0.93, 0.95],
+  ],
+  edge: [0.54, 0.58, 0.6],
+  label: "#c9d1d9",
+};
+const readThemeColors = (): ThemeColors => {
+  const tmp = document.createElement("canvas").getContext("2d")!;
+  const cs = getComputedStyle(document.documentElement);
+  const resolve = (name: string, fallback: string): [number, number, number] => {
+    tmp.fillStyle = "#000";
+    tmp.fillStyle = cs.getPropertyValue(name).trim() || fallback;
+    const norm = tmp.fillStyle;
+    if (norm.startsWith("#")) {
+      const n = parseInt(norm.slice(1), 16);
+      return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+    }
+    const m = norm.match(/[\d.]+/g);
+    return m ? [Number(m[0]) / 255, Number(m[1]) / 255, Number(m[2]) / 255] : [0, 0, 0];
+  };
+  const resolveCss = (name: string, fallback: string): string => {
+    tmp.fillStyle = "#000";
+    tmp.fillStyle = cs.getPropertyValue(name).trim() || fallback;
+    return tmp.fillStyle;
+  };
+  return {
+    note: resolve("--sat-text-muted", "#8b949e"),
+    attachment: resolve("--sat-text-muted", "#8b949e"),
+    tag: [
+      resolve("--sat-accent-primary", "#4cc2ff"),
+      resolve("--sat-state-success", "#3fb950"),
+      resolve("--sat-state-warning", "#d29922"),
+      resolve("--sat-state-danger", "#f85149"),
+      resolve("--sat-state-info", "#58a6ff"),
+      resolve("--sat-text-primary", "#e6edf3"),
+    ],
+    edge: resolve("--sat-text-muted", "#8b949e"),
+    label: resolveCss("--sat-text-primary", "#e6edf3"),
+  };
 };
 
 // Plain-text excerpt for hover preview: drop frontmatter, strip common markdown
@@ -143,6 +181,8 @@ export function GraphView(_props: LeafProps) {
   const edgeWeightsRef = useRef<Float32Array>(new Float32Array(0));
   const clusterRef = useRef<Uint32Array>(new Uint32Array(0));
   const clusterCountRef = useRef(1);
+  const colorModeRef = useRef<GraphColorMode>("single");
+  const themeColorsRef = useRef<ThemeColors>(FALLBACK_COLORS);
   const adjRef = useRef<number[][]>([]);
   const syntheticRef = useRef(false);
 
@@ -186,6 +226,7 @@ export function GraphView(_props: LeafProps) {
   const [showAttach, setShowAttach] = useState(true);
   const [localDepth, setLocalDepth] = useState(2);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
+  const [colorMode, setColorMode] = useState<GraphColorMode>("single");
   const [loaded, setLoaded] = useState(false);
   const [hover, setHover] = useState<{
     x: number;
@@ -203,37 +244,54 @@ export function GraphView(_props: LeafProps) {
   );
   // Keep the mirrors in sync with the rendered state.
   queryRef.current = query;
-  localRef.current = local;
-  showOrphansRef.current = showOrphans;
-  // ---- helpers ----
-  const colorFor = (full: number): string => {
+  colorModeRef.current = colorMode;
+  useEffect(() => {
+    colorModeRef.current = colorMode;
+    rebuildRef.current?.();
+  }, [colorMode]);
+  useEffect(() => {
+    const ro = new MutationObserver(() => {
+      themeColorsRef.current = readThemeColors();
+      rendererRef.current?.setEdgeColor(themeColorsRef.current.edge);
+      rebuildRef.current?.();
+    });
+    ro.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
+    return () => ro.disconnect();
+  }, []);
+  const colorFor = (full: number): [number, number, number] => {
+    const tc = themeColorsRef.current;
+    const mode = colorModeRef.current;
     if (isTagRef.current[full]) {
       const p = pathsRef.current[full] ?? "";
       let h = 0;
       for (const c of p) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-      return PALETTE[h % PALETTE.length];
+      return tc.tag[h % tc.tag.length];
     }
-    if (attachRef.current[full]) return "#8b949e";
-    if (clusterCountRef.current > 1) {
+    if (attachRef.current[full]) return tc.attachment;
+    if (mode === "single") return tc.note;
+    if (mode === "cluster" && clusterCountRef.current > 1) {
       const c = clusterRef.current[full] ?? 0;
-      return PALETTE[c % PALETTE.length];
+      return tc.tag[c % tc.tag.length];
     }
-    const ts = tagsRef.current[full];
-    if (ts && ts.length) {
-      let h = 0;
-      for (const c of ts[0]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-      return PALETTE[h % PALETTE.length];
+    if (mode === "tag") {
+      const ts = tagsRef.current[full];
+      if (ts && ts.length) {
+        let h = 0;
+        for (const c of ts[0]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+        return tc.tag[h % tc.tag.length];
+      }
     }
-    // No tags: color by top-level folder so sibling notes share a hue.
-    const p = pathsRef.current[full] ?? "";
-    const seg = p.split("/");
-    const folder = seg.length > 1 ? seg[0] : "";
-    if (folder) {
-      let h = 0;
-      for (const c of folder) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-      return PALETTE[h % PALETTE.length];
+    if (mode === "folder") {
+      const p = pathsRef.current[full] ?? "";
+      const seg = p.split("/");
+      const folder = seg.length > 1 ? seg[0] : "";
+      if (folder) {
+        let h = 0;
+        for (const c of folder) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+        return tc.tag[h % tc.tag.length];
+      }
     }
-    return "#4cc2ff";
+    return tc.note;
   };
   const basename = (p: string) => p.split("/").pop() ?? p;
 
@@ -252,6 +310,8 @@ export function GraphView(_props: LeafProps) {
 
     const renderer = new GraphRenderer(glCanvas);
     rendererRef.current = renderer;
+        themeColorsRef.current = readThemeColors();
+        renderer.setEdgeColor(themeColorsRef.current.edge);
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -447,10 +507,10 @@ export function GraphView(_props: LeafProps) {
       // Rebuild renderer color + reset hover flags for the new subset.
       const cols = new Float32Array(map.length * 3);
       for (let i = 0; i < map.length; i++) {
-        const [r, g, b] = hexToRgb(colorFor(map[i]));
-        cols[i * 3] = r;
-        cols[i * 3 + 1] = g;
-        cols[i * 3 + 2] = b;
+        const c = colorFor(map[i]);
+        cols[i * 3] = c[0];
+        cols[i * 3 + 1] = c[1];
+        cols[i * 3 + 2] = c[2];
       }
       renderer.setColors(cols);
       renderer.setEdges(Uint32Array.from(subEdges), subEdges.length / 2);
@@ -758,7 +818,7 @@ export function GraphView(_props: LeafProps) {
         const showLabels = v.scale > LABEL_SCALE && count < LABEL_CAP;
         if (showLabels) {
           labelCtx.font = "10px system-ui, sans-serif";
-          labelCtx.fillStyle = "#c9d1d9";
+          labelCtx.fillStyle = themeColorsRef.current.label;
           for (let i = 0; i < count; i++) {
             if (i * 2 + 1 >= p.length) break;
             const full = map[i];
@@ -841,6 +901,8 @@ export function GraphView(_props: LeafProps) {
       style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}
     >
       <GraphControls
+        colorMode={colorMode}
+        onColorModeChange={setColorMode}
         query={query}
         onQueryChange={setQuery}
         local={local}
@@ -883,8 +945,8 @@ export function GraphView(_props: LeafProps) {
             top: hover.y + 10,
             maxWidth: 280,
             padding: "6px 8px",
-            background: "rgba(20,24,33,0.95)",
-            color: "#e6edf3",
+            background: "var(--sat-surface-1)",
+            color: "var(--sat-text-primary)",
             fontSize: 12,
             borderRadius: 6,
             pointerEvents: "none",

@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
+export type GraphColorMode = "single" | "tag" | "folder" | "cluster";
 
 interface GraphControlsProps {
   query: string;
@@ -14,6 +15,8 @@ interface GraphControlsProps {
   onToggleOrphans: () => void;
   showAttach: boolean;
   onToggleAttach: () => void;
+  colorMode: GraphColorMode;
+  onColorModeChange: (m: GraphColorMode) => void;
 }
 
 // Graph toolbar: filter bar (tag:/path:/ operators), local-graph toggle +
@@ -31,6 +34,8 @@ export const GraphControls: FC<GraphControlsProps> = ({
   onToggleOrphans,
   showAttach,
   onToggleAttach,
+  colorMode,
+  onColorModeChange,
 }) => {
   return (
     <div
@@ -85,6 +90,23 @@ export const GraphControls: FC<GraphControlsProps> = ({
       <Button variant="outline" size="sm" onClick={onToggleAttach}>
         {showAttach ? "Attach ✓" : "Attach"}
       </Button>
+      <select
+        value={colorMode}
+        onChange={(e) => onColorModeChange(e.target.value as GraphColorMode)}
+        style={{
+          background: "var(--sat-surface-2, #21262d)",
+          color: "var(--sat-text-primary, #e6edf3)",
+          border: "1px solid var(--sat-layout-border, #30363d)",
+          borderRadius: 6,
+          fontSize: 12,
+          padding: "2px 6px",
+        }}
+      >
+        <option value="single">Color: single</option>
+        <option value="tag">Color: tag</option>
+        <option value="folder">Color: folder</option>
+        <option value="cluster">Color: cluster</option>
+      </select>
     </div>
   );
 };

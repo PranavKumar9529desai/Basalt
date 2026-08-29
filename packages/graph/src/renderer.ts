@@ -69,7 +69,7 @@ void main() {
   vec2 dir = sB - sA;
   float len = length(dir);
   vec2 n = len > 0.0 ? vec2(-dir.y, dir.x) / len : vec2(0.0, 1.0);
-  float w = clamp(1.2 + 0.7 * aWeight, 1.0, 6.0) * uDpr;
+  float w = clamp(1.0 + 0.35 * aWeight, 1.0, 2.2) * uDpr;
   vec2 base = mix(sA, sB, (aCorner.x + 1.0) * 0.5);
   vec2 screen = base + n * (aCorner.y * w * 0.5);
   vec2 clip = (screen / uResolution) * 2.0 - 1.0;
@@ -82,13 +82,14 @@ const FRAG_EDGE = `#version 300 es
 precision mediump float;
 in float vWeight;
 uniform float uHasHover;
+uniform vec3 uEdgeColor;
 out vec4 frag;
 void main() {
   // Heavier edges read slightly more opaque; all edges dim while a node is
   // hovered so the focused node's connections stand out.
-  float a = clamp(0.28 + 0.09 * vWeight, 0.28, 0.6);
+  float a = clamp(0.14 + 0.07 * vWeight, 0.14, 0.38);
   a *= (uHasHover > 0.5 ? 0.55 : 1.0);
-  frag = vec4(0.5, 0.6, 0.78, a);
+  frag = vec4(uEdgeColor, a);
 }`;
 
 const VERT_ARROW = `#version 300 es
@@ -172,6 +173,8 @@ export class GraphRenderer {
   private edgeEndpointsBuf: WebGLBuffer;
   private edgeWeightBuf: WebGLBuffer;
   private edgeCornerBuf: WebGLBuffer;
+  private edgeColor: [number, number, number] = [0.5, 0.6, 0.78];
+  private uEdgeColor: WebGLUniformLocation | null = null;
   private edgePairs: Uint32Array = new Uint32Array(0);
   private edgeEndpoints: Float32Array = new Float32Array(0);
   private arrowBuf: WebGLBuffer;
@@ -267,6 +270,7 @@ export class GraphRenderer {
     this.uEdgeScale = gl.getUniformLocation(this.progEdge, "uScale");
     this.uEdgeOffset = gl.getUniformLocation(this.progEdge, "uOffset");
     this.uEdgeDpr = gl.getUniformLocation(this.progEdge, "uDpr");
+    this.uEdgeColor = gl.getUniformLocation(this.progEdge, "uEdgeColor");
     this.uEdgeHasHover = gl.getUniformLocation(this.progEdge, "uHasHover");
     this.uArrowRes = gl.getUniformLocation(this.progArrows, "uResolution");
     this.uArrowScale = gl.getUniformLocation(this.progArrows, "uScale");
@@ -403,6 +407,9 @@ export class GraphRenderer {
   setShowArrows(v: boolean): void {
     this.showArrows = v;
   }
+  setEdgeColor(c: [number, number, number]): void {
+    this.edgeColor = c;
+  }
 
   render(): void {
     const gl = this.gl;
@@ -421,6 +428,7 @@ export class GraphRenderer {
       gl.uniform2f(this.uEdgeOffset, v.ox, v.oy);
       gl.uniform1f(this.uEdgeDpr, this.dpr);
       gl.uniform1f(this.uEdgeHasHover, this.hasHover ? 1 : 0);
+      gl.uniform3fv(this.uEdgeColor, this.edgeColor);
       gl.bindVertexArray(this.vaoEdges);
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.edgeCount);
     }
