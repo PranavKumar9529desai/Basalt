@@ -104,6 +104,24 @@ const hexToRgb = (hex: string): [number, number, number] => {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
+// Plain-text excerpt for hover preview: drop frontmatter, strip common markdown
+// markers, collapse whitespace, cap length. Keeps the preview cheap (no CM6).
+const EXCERPT_MAX = 600;
+const noteExcerpt = (md: string): string => {
+  const body = md.replace(/^---\n[\s\S]*?\n---\n?/, "");
+  const cleaned = body
+    .replace(/`{1,3}[^`]*`{1,3}/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_~>`]/g, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+  return cleaned.length > EXCERPT_MAX
+    ? cleaned.slice(0, EXCERPT_MAX).replace(/\s+\S*$/, "") + "…"
+    : cleaned;
+};
 export function GraphView(_props: LeafProps) {
   const services = useLeafServices();
   const activeNotePath = services.activeNote?.path ?? null;
@@ -164,9 +182,17 @@ export function GraphView(_props: LeafProps) {
   const [localDepth, setLocalDepth] = useState(2);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [hover, setHover] = useState<{ x: number; y: number; title: string } | null>(
-    null,
-  );
+  const [hover, setHover] = useState<{
+    x: number;
+    y: number;
+    title: string;
+    full: number;
+    isTag: boolean;
+  } | null>(null);
+  const [preview, setPreview] = useState<{ excerpt: string } | null>(null);
+  const excerptCacheRef = useRef<Map<string, string>>(new Map());
+  const hoverFetchRef = useRef(0);
+  const hoverFullRef = useRef(-1);
   const [menu, setMenu] = useState<{ x: number; y: number; full: number; isTag: boolean } | null>(
     null,
   );
@@ -562,15 +588,46 @@ export function GraphView(_props: LeafProps) {
         }
         flagsDirtyRef.current = true;
         renderer.setHasHover(true);
-        const title = isTagRef.current[full] ? `#${pathsRef.current[full] ?? ""}` : (pathsRef.current[full] ?? "");
-        setHover({ x: px, y: py, title });
+        const isTag = isTagRef.current[full];
+        const title = isTag ? `#${pathsRef.current[full] ?? ""}` : (pathsRef.current[full] ?? "");
+        setHover({ x: px, y: py, title, full, isTag });
+        if (isTag) {
+          hoverFullRef.current = -1;
+          setPreview(null);
+        } else if (hoverFullRef.current !== full) {
+          hoverFullRef.current = full;
+          const path = pathsRef.current[full] ?? "";
+          const cached = excerptCacheRef.current.get(path);
+          if (cached !== undefined) {
+            setPreview({ excerpt: cached });
+          } else {
+            const token = ++hoverFetchRef.current;
+            window.setTimeout(() => {
+              if (token !== hoverFetchRef.current) return;
+              invoke<string>("open_file", { path })
+                .then((text) => {
+                  if (token !== hoverFetchRef.current) return;
+                  const ex = noteExcerpt(text);
+                  excerptCacheRef.current.set(path, ex);
+                  setPreview({ excerpt: ex });
+                })
+                .catch(() => {
+                  if (token !== hoverFetchRef.current) return;
+                  setPreview({ excerpt: "" });
+                });
+            }, 120);
+          }
+        }
         glCanvas.style.cursor = "pointer";
       } else if (prevHover >= 0) {
         flagsRef.current.fill(0);
         flagsDirtyRef.current = true;
         renderer.setHasHover(false);
         setHover(null);
-      if (hit !== prevHover) dirtyRef.current = true;
+        setPreview(null);
+        hoverFullRef.current = -1;
+        hoverFetchRef.current++;
+        if (hit !== prevHover) dirtyRef.current = true;
         glCanvas.style.cursor = "grab";
       }
     };
@@ -600,6 +657,9 @@ export function GraphView(_props: LeafProps) {
     const onLeave = () => {
       hoverRef.current = -1;
       setHover(null);
+      setPreview(null);
+      hoverFullRef.current = -1;
+      hoverFetchRef.current++;
       flagsRef.current.fill(0);
       flagsDirtyRef.current = true;
       renderer.setHasHover(false);
@@ -795,16 +855,36 @@ export function GraphView(_props: LeafProps) {
             position: "absolute",
             left: hover.x + 10,
             top: hover.y + 10,
-            padding: "2px 6px",
-            background: "rgba(20,24,33,0.9)",
+            maxWidth: 280,
+            padding: "6px 8px",
+            background: "rgba(20,24,33,0.95)",
             color: "#e6edf3",
             fontSize: 12,
-            borderRadius: 4,
+            borderRadius: 6,
             pointerEvents: "none",
-            whiteSpace: "nowrap",
+            whiteSpace: "pre-wrap",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.45)",
+            zIndex: 5,
           }}
         >
-          {hover.title}
+          <div style={{ fontWeight: 600, marginBottom: hover.isTag || !preview ? 0 : 4 }}>
+            {hover.title}
+          </div>
+          {!hover.isTag && preview && preview.excerpt && (
+            <div
+              style={{
+                opacity: 0.85,
+                lineHeight: 1.45,
+                maxHeight: 120,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 6,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {preview.excerpt}
+            </div>
+          )}
         </div>
       )}
       <GraphContextMenu
