@@ -1,13 +1,15 @@
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import wasm from "vite-plugin-wasm";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [TanStackRouterVite(), react()],
+plugins: [TanStackRouterVite(), react(), wasm()],
+    worker: { format: "es" },
 
   build: {
     // Desktop app: chunks load from local disk, no HTTP cache concerns.

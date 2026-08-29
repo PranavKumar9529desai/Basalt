@@ -5,6 +5,8 @@ import "./App.css";
 import "../../../packages/ui/src/styles/globals.css";
 import "../../../packages/ui/src/styles/editor.css";
 import { ThemeProvider } from "./app-shell/ThemeProvider";
+import { GraphSpike } from "./graph/GraphSpike";
+import { GraphCanvasProof } from "./graph/GraphCanvasProof";
 import { ttiMark } from "./app-shell/tti";
 
 // TTI: first executable mark. Note: ES module imports hoist above this, so
@@ -29,6 +31,8 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      {import.meta.env.DEV && <GraphSpike />}
+      {import.meta.env.DEV && <GraphCanvasProof />}
     </ThemeProvider>
   </React.StrictMode>,
 );
