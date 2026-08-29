@@ -1,7 +1,5 @@
 import { SidebarActionButtons } from "@workspace/ui/components/sidebar";
 import {
-  IconArrowsSort,
-  IconChevronUp,
   IconFilePlus,
   IconFolderPlus,
 } from "@tabler/icons-react";
@@ -36,7 +34,7 @@ export function FileExplorerView() {
 
 /**
  * Header actions for the file explorer, rendered inside the dock's
- * header strip while this view is active.
+ * header band while this view is active.
  */
 export function FileExplorerHeaderActions() {
   const { controller } = useWorkspaceContext();
@@ -53,18 +51,6 @@ export function FileExplorerHeaderActions() {
       icon: <IconFolderPlus size={16} stroke={1.5} />,
       label: "New folder",
       onClick: controller.startFolderInline,
-    },
-    {
-      id: "sort",
-      icon: <IconArrowsSort size={16} stroke={1.5} />,
-      label: "Sort",
-      onClick: () => console.log("Sort toggled"),
-    },
-    {
-      id: "collapse-all",
-      icon: <IconChevronUp size={16} stroke={1.5} />,
-      label: "Collapse all",
-      onClick: () => console.log("Collapse all clicked"),
     },
   ];
 

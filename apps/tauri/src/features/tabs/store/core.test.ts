@@ -1,24 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { create, type StoreApi, type UseBoundStore } from "zustand";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { TabId, TabModel } from "../types";
+import type { TabsState, TabPane } from "./types";
 
 import { createCoreSlice } from "./core";
+import { createPersistenceSlice } from "./persistence";
 import { ROOT_PANE_ID } from "../constants";
-import type { TabId, TabModel } from "../types";
-import type { TabPane, TabsState } from "./types";
 
-// The core slice imports the runtime `leafRegistry` from @workspace/views.
-// For a fast, isolated unit test we stub it; leafTypeForPath falls back to
-// "markdown" anyway, so behavior is unchanged.
 vi.mock("@workspace/views", () => ({
   leafRegistry: { leafTypeForPath: () => "markdown" },
 }));
 
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
-// Build a store from the core slice only — no persistence layer, no Tauri IPC.
-// `createCoreSlice` is a subset of TabsState (it lacks toWorkspaceSnapshot /
-// hydrateFromWorkspaceSnapshot), so we assert the combined shape.
-function createTestStore() {
+function createTestStore(): TestStore {
   return create<TabsState>()((set, get, api) =>
     ({
       tabs: {} as Record<TabId, TabModel>,
@@ -30,6 +25,7 @@ function createTestStore() {
       } as TabPane,
       persistVersion: 0,
       ...createCoreSlice(set, get, api),
+      ...createPersistenceSlice(set, get, api),
     }) as unknown as TabsState,
   );
 }
@@ -40,178 +36,253 @@ describe("tabs core slice", () => {
     store = createTestStore();
   });
 
-  const open = (path: string, title?: string) => ({ path, title });
-
-  it("openInPreview creates a preview tab, sets it active, returns stable id", () => {
-    const id = store.getState().openInPreview(open("notes/a.md", "A"));
-    expect(id).toBe("tab:notes/a.md");
-    const s = store.getState();
-    expect(s.tabs[id]).toMatchObject({
-      path: "notes/a.md",
-      isPreview: true,
-      isPinned: false,
+  describe("openInPreview", () => {
+    it("creates a preview tab with the path-derived id and correct shape", () => {
+      const id = store.getState().openInPreview({ path: "docs/intro.md" });
+      expect(id).toBe("tab:docs/intro.md");
+      const tab = store.getState().tabs[id];
+      expect(tab).toMatchObject({
+        id,
+        path: "docs/intro.md",
+        title: "intro",
+        leafType: "markdown",
+        isPinned: false,
+        isPreview: true,
+        isDirty: false,
+      });
+      expect(store.getState().pane.previewTabId).toBe(id);
+      expect(store.getState().pane.activeTabId).toBe(id);
     });
-    expect(s.pane.activeTabId).toBe(id);
-    expect(s.pane.previewTabId).toBe(id);
-    expect(s.pane.tabIds).toEqual([id]);
+
+    it("uses an explicit title when provided", () => {
+      const id = store.getState().openInPreview({ path: "docs/intro.md", title: "Introduction" });
+      expect(store.getState().tabs[id].title).toBe("Introduction");
+    });
+
+    it("replaces a non-dirty preview tab instead of duplicating", () => {
+      store.getState().openInPreview({ path: "a.md" });
+      store.getState().openInPreview({ path: "b.md" });
+      expect(Object.keys(store.getState().tabs)).toHaveLength(1);
+      expect(Object.values(store.getState().tabs)[0].path).toBe("b.md");
+    });
+
+    it("promotes a dirty preview tab to pinned rather than discarding it", () => {
+      const id1 = store.getState().openInPreview({ path: "a.md" });
+      store.getState().markTabDirty(id1, true);
+      store.getState().openInPreview({ path: "b.md" });
+      const ids = Object.keys(store.getState().tabs);
+      expect(ids).toHaveLength(2);
+      expect(store.getState().tabs[id1].isPinned).toBe(true);
+      expect(store.getState().tabs[id1].isPreview).toBe(false);
+      const preview = Object.values(store.getState().tabs).find((t) => t.isPreview);
+      expect(preview?.path).toBe("b.md");
+    });
+
+    it("is idempotent for an already-open path (no duplicate tab)", () => {
+      const id1 = store.getState().openInPreview({ path: "a.md" });
+      const id2 = store.getState().openInPreview({ path: "a.md" });
+      expect(id2).toBe(id1);
+      expect(Object.keys(store.getState().tabs)).toHaveLength(1);
+    });
+
+    it("re-finds a moved tab by path and keeps its original id (stranding guard)", () => {
+      const id1 = store.getState().openInPreview({ path: "docs/old.md" });
+      store.getState().updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
+      expect(store.getState().tabs[id1].path).toBe("docs/new.md");
+
+      // Opening the note at its new path must resolve to the SAME tab id,
+      // not create a second `tab:docs/new.md`.
+      const id2 = store.getState().openInPreview({ path: "docs/new.md" });
+      expect(id2).toBe(id1);
+      expect(Object.keys(store.getState().tabs)).toHaveLength(1);
+    });
+
+    it("does not change activeTabId when activate is false", () => {
+      const id = store.getState().openInPreview({ path: "a.md" }, { activate: false });
+      expect(store.getState().pane.activeTabId).toBe(null);
+      expect(store.getState().pane.previewTabId).toBe(id);
+    });
   });
 
-  it("openInPreview reuses an existing tab for the same path", () => {
-    const id1 = store.getState().openInPreview(open("notes/a.md"));
-    const id2 = store.getState().openInPreview(open("notes/a.md"));
-    expect(id2).toBe(id1);
-    expect(store.getState().pane.tabIds.length).toBe(1);
+  describe("openPinned", () => {
+    it("creates a pinned, non-preview tab", () => {
+      const id = store.getState().openPinned({ path: "a.md" });
+      const tab = store.getState().tabs[id];
+      expect(tab.isPinned).toBe(true);
+      expect(tab.isPreview).toBe(false);
+      expect(store.getState().pane.activeTabId).toBe(id);
+      expect(store.getState().pane.previewTabId).toBe(null);
+    });
+
+    it("promotes an existing tab to pinned instead of duplicating", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().openPinned({ path: "a.md" });
+      expect(store.getState().tabs[id].isPinned).toBe(true);
+      expect(store.getState().tabs[id].isPreview).toBe(false);
+      expect(Object.keys(store.getState().tabs)).toHaveLength(1);
+    });
   });
 
-  it("opening a second note evicts a non-dirty preview", () => {
-    const a = store.getState().openInPreview(open("notes/a.md"));
-    const b = store.getState().openInPreview(open("notes/b.md"));
-    const s = store.getState();
-    expect(s.pane.tabIds).toEqual([b]);
-    expect(s.tabs[a]).toBeUndefined();
-    expect(s.pane.previewTabId).toBe(b);
+  describe("activateTab", () => {
+    it("no-ops for an unknown id", () => {
+      store.getState().activateTab("nope");
+      expect(store.getState().pane.activeTabId).toBe(null);
+    });
+
+    it("sets activeTabId for an open tab", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      expect(store.getState().pane.activeTabId).toBe(id);
+    });
+
+    it("no-ops when the tab is already active", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().activateTab(id);
+      expect(store.getState().pane.activeTabId).toBe(id);
+    });
+
+    it("no-ops for a tab no longer in the pane", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openPinned({ path: "b.md" });
+      store.getState().closeTab(a);
+      store.getState().activateTab(a);
+      expect(store.getState().pane.activeTabId).toBe(b);
+    });
   });
 
-  it("openInPreview with activate:false keeps the current active tab", () => {
-    // Pin a so it is not a preview; opening b as a preview must not evict a.
-    const a = store.getState().openPinned(open("notes/a.md"));
-    const b = store
-      .getState()
-      .openInPreview(open("notes/b.md"), { activate: false });
-    const s = store.getState();
-    expect(s.pane.tabIds).toEqual([a, b]);
-    expect(s.pane.activeTabId).toBe(a);
-    expect(s.pane.previewTabId).toBe(b);
+  describe("closeTab", () => {
+    it("preserves a dirty tab when force is false", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().markTabDirty(id, true);
+      store.getState().closeTab(id, { force: false });
+      expect(store.getState().tabs[id]).toBeDefined();
+    });
+
+    it("closes a dirty tab when force is true (the default)", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().markTabDirty(id, true);
+      store.getState().closeTab(id);
+      expect(store.getState().tabs[id]).toBeUndefined();
+    });
+
+    it("repoints activeTabId to the remaining tab after close", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openInPreview({ path: "b.md" });
+      store.getState().activateTab(b);
+      store.getState().closeTab(b);
+      expect(store.getState().tabs[b]).toBeUndefined();
+      expect(store.getState().pane.activeTabId).toBe(a);
+    });
   });
 
-  it("openPinned creates a pinned, non-preview tab", () => {
-    const id = store.getState().openPinned(open("notes/p.md"));
-    const t = store.getState().tabs[id];
-    expect(t?.isPinned).toBe(true);
-    expect(t?.isPreview).toBe(false);
+  describe("closeOtherTabs", () => {
+    it("keeps only the target tab and activates it", () => {
+      store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openPinned({ path: "b.md" });
+      store.getState().openPinned({ path: "c.md" });
+      store.getState().closeOtherTabs(b);
+      expect(Object.keys(store.getState().tabs)).toEqual([b]);
+      expect(store.getState().pane.activeTabId).toBe(b);
+    });
   });
 
-  it("activateTab switches active", () => {
-    store.getState().openPinned(open("notes/a.md"), { activate: false });
-    store.getState().openPinned(open("notes/b.md"), { activate: false });
-    store.getState().activateTab("tab:notes/a.md");
-    expect(store.getState().pane.activeTabId).toBe("tab:notes/a.md");
+  describe("closeTabsToRight", () => {
+    it("closes every tab after the target index", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      store.getState().openPinned({ path: "b.md" });
+      store.getState().openPinned({ path: "c.md" });
+      store.getState().closeTabsToRight(a);
+      expect(Object.keys(store.getState().tabs)).toEqual([a]);
+      expect(store.getState().pane.activeTabId).toBe(a);
+    });
   });
 
-  it("closeTab removes the tab and clears pane references", () => {
-    const a = store.getState().openPinned(open("notes/a.md"));
-    const b = store
-      .getState()
-      .openPinned(open("notes/b.md"), { activate: false });
-    store.getState().closeTab(a);
-    const s = store.getState();
-    expect(s.tabs[a]).toBeUndefined();
-    expect(s.pane.tabIds).toEqual([b]);
-    expect(s.pane.activeTabId).toBe(b);
+  describe("markTabDirty", () => {
+    it("flips dirty state", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().markTabDirty(id, true);
+      expect(store.getState().tabs[id].isDirty).toBe(true);
+      store.getState().markTabDirty(id, false);
+      expect(store.getState().tabs[id].isDirty).toBe(false);
+    });
   });
 
-  it("closeTab refuses a dirty tab unless forced", () => {
-    const a = store.getState().openInPreview(open("notes/a.md"));
-    store.getState().markTabDirty(a, true);
-    store.getState().closeTab(a, { force: false });
-    expect(store.getState().tabs[a]).toBeDefined();
-    store.getState().closeTab(a, { force: true });
-    expect(store.getState().tabs[a]).toBeUndefined();
+  describe("setTabTitle", () => {
+    it("updates the title and bumps persistVersion", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      const v0 = store.getState().persistVersion;
+      store.getState().setTabTitle(id, "Renamed");
+      expect(store.getState().tabs[id].title).toBe("Renamed");
+      expect(store.getState().persistVersion).toBe(v0 + 1);
+    });
+
+    it("is a no-op when the title is unchanged", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().setTabTitle(id, "a");
+      const v1 = store.getState().persistVersion;
+      store.getState().setTabTitle(id, "a");
+      expect(store.getState().persistVersion).toBe(v1);
+    });
   });
 
-  it("closeOtherTabs keeps only the target", () => {
-    const a = store
-      .getState()
-      .openPinned(open("a.md"), { activate: false });
-    const b = store
-      .getState()
-      .openPinned(open("b.md"), { activate: false });
-    const c = store
-      .getState()
-      .openPinned(open("c.md"), { activate: false });
-    store.getState().closeOtherTabs(c);
-    const s = store.getState();
-    expect(s.pane.tabIds).toEqual([c]);
-    expect(s.tabs[c]).toBeDefined();
-    expect(s.tabs[a]).toBeUndefined();
-    expect(s.tabs[b]).toBeUndefined();
+  describe("pin / unpin / togglePinTab", () => {
+    it("pins, unpins, and toggles", () => {
+      const id = store.getState().openInPreview({ path: "a.md" });
+      store.getState().pinTab(id);
+      expect(store.getState().tabs[id].isPinned).toBe(true);
+      expect(store.getState().tabs[id].isPreview).toBe(false);
+      expect(store.getState().pane.previewTabId).toBe(null);
+      store.getState().unpinTab(id);
+      expect(store.getState().tabs[id].isPinned).toBe(false);
+      store.getState().togglePinTab(id);
+      expect(store.getState().tabs[id].isPinned).toBe(true);
+      store.getState().togglePinTab(id);
+      expect(store.getState().tabs[id].isPinned).toBe(false);
+    });
   });
 
-  it("closeTabsToRight drops only trailing tabs", () => {
-    const a = store
-      .getState()
-      .openPinned(open("a.md"), { activate: false });
-    const b = store
-      .getState()
-      .openPinned(open("b.md"), { activate: false });
-    store.getState().openPinned(open("c.md"), { activate: false });
-    store.getState().closeTabsToRight(b);
-    const s = store.getState();
-    expect(s.pane.tabIds).toEqual([a, b]);
-    expect(s.tabs[a]).toBeDefined();
-    expect(s.tabs[b]).toBeDefined();
+  describe("moveTabWithinPane", () => {
+    it("reorders tabIds and ignores invalid / no-op moves", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openPinned({ path: "b.md" });
+      const c = store.getState().openPinned({ path: "c.md" });
+      store.getState().moveTabWithinPane(0, 2);
+      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      store.getState().moveTabWithinPane(0, 0);
+      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      store.getState().moveTabWithinPane(-1, 1);
+      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      store.getState().moveTabWithinPane(0, 99);
+      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+    });
   });
 
-  it("pin / unpin / togglePin", () => {
-    const a = store.getState().openInPreview(open("a.md"));
-    store.getState().pinTab(a);
-    expect(store.getState().tabs[a]?.isPinned).toBe(true);
-    expect(store.getState().tabs[a]?.isPreview).toBe(false);
-    store.getState().unpinTab(a);
-    expect(store.getState().tabs[a]?.isPinned).toBe(false);
-    store.getState().togglePinTab(a);
-    expect(store.getState().tabs[a]?.isPinned).toBe(true);
+  describe("updateTabPaths", () => {
+    it("repoints path + title while preserving the tab id and bumps version", () => {
+      const id = store.getState().openInPreview({ path: "docs/old.md" });
+      const v0 = store.getState().persistVersion;
+      store.getState().updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
+      expect(store.getState().tabs[id].path).toBe("docs/new.md");
+      expect(store.getState().tabs[id].title).toBe("new");
+      expect(store.getState().tabs[id].id).toBe(id);
+      expect(store.getState().persistVersion).toBe(v0 + 1);
+    });
+
+    it("is a no-op (no version bump) when nothing matches", () => {
+      store.getState().openInPreview({ path: "docs/old.md" });
+      const v1 = store.getState().persistVersion;
+      store.getState().updateTabPaths([{ from: "nope.md", to: "x.md" }]);
+      expect(store.getState().persistVersion).toBe(v1);
+    });
   });
 
-  it("moveTabWithinPane reorders", () => {
-    const a = store
-      .getState()
-      .openPinned(open("a.md"), { activate: false });
-    const b = store
-      .getState()
-      .openPinned(open("b.md"), { activate: false });
-    const c = store
-      .getState()
-      .openPinned(open("c.md"), { activate: false });
-    store.getState().moveTabWithinPane(0, 2);
-    expect(store.getState().pane.tabIds).toEqual([b, c, a]);
-  });
-
-  it("moveTabWithinPane ignores out-of-range and no-op moves", () => {
-    store.getState().openPinned(open("a.md"), { activate: false });
-    store.getState().openPinned(open("b.md"), { activate: false });
-    const before = store.getState().pane.tabIds;
-    store.getState().moveTabWithinPane(0, 99);
-    expect(store.getState().pane.tabIds).toEqual(before);
-    store.getState().moveTabWithinPane(0, 0);
-    expect(store.getState().pane.tabIds).toEqual(before);
-  });
-
-  it("updateTabPaths repoints path + title, preserves id and dirty state", () => {
-    const a = store.getState().openInPreview(open("old/a.md", "A"));
-    store.getState().markTabDirty(a, true);
-    store.getState().updateTabPaths([{ from: "old/a.md", to: "new/a.md" }]);
-    // The tab keeps its path-derived id; only path + title are repointed.
-    const t = store.getState().tabs[a];
-    expect(t).toBeDefined();
-    expect(t?.path).toBe("new/a.md");
-    expect(t?.title).toBe("a");
-    expect(t?.isDirty).toBe(true);
-  });
-
-  it("setTabTitle updates title and bumps persistVersion", () => {
-    const a = store.getState().openInPreview(open("a.md", "A"));
-    const v0 = store.getState().persistVersion;
-    store.getState().setTabTitle(a, "Renamed");
-    expect(store.getState().tabs[a]?.title).toBe("Renamed");
-    expect(store.getState().persistVersion).toBe(v0 + 1);
-  });
-
-  it("reset returns to initial state", () => {
-    store.getState().openInPreview(open("a.md"));
-    store.getState().reset();
-    expect(store.getState().pane.tabIds).toEqual([]);
-    expect(Object.keys(store.getState().tabs)).toEqual([]);
-    expect(store.getState().persistVersion).toBe(0);
+  describe("reset", () => {
+    it("returns to the empty initial state", () => {
+      store.getState().openPinned({ path: "a.md" });
+      store.getState().reset();
+      expect(Object.keys(store.getState().tabs)).toHaveLength(0);
+      expect(store.getState().pane.tabIds).toEqual([]);
+      store.getState().moveTabWithinPane(0, 99);
+      expect(store.getState().pane.previewTabId).toBe(null);
+    });
   });
 });

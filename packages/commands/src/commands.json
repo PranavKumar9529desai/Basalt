@@ -42,30 +42,6 @@
     "icon": "IconPinned"
   },
   {
-    "id": "tabs:split-right",
-    "name": "Split Right and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-left",
-    "name": "Split Left and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-up",
-    "name": "Split Up and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
-    "id": "tabs:split-down",
-    "name": "Split Down and Move Tab",
-    "category": "Tabs",
-    "icon": "IconLayoutBoardSplit"
-  },
-  {
     "id": "search:open",
     "name": "Search Vault",
     "category": "Search",
@@ -94,5 +70,17 @@
     "name": "Run Editor Typing Benchmark (Extension Isolation)",
     "category": "App",
     "icon": "IconGauge"
+  },
+  {
+    "id": "vault:pick-and-set",
+    "name": "Change Vault Location",
+    "category": "Vault",
+    "icon": "IconFolderOpen"
+  },
+  {
+    "id": "graph:open",
+    "name": "Open Graph View",
+    "category": "View",
+    "icon": "IconSitemap"
   }
 ]

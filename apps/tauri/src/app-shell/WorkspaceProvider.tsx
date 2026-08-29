@@ -20,6 +20,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     tree;
 
   const activeNote = useActiveNoteStore((s) => s.activeNote);
+  const activeNoteBacklinks = useActiveNoteStore((s) => s.activeNoteBacklinks);
   const pane = useTabsStore((s) => s.pane);
   const tabsRecord = useTabsStore((s) => s.tabs);
   const openInPreview = useTabsStore((s) => s.openInPreview);
@@ -59,10 +60,10 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   // search, and any view that needs "open this note". Title resolves from
   // the tree, falling back to the path's basename.
   const openNote = useCallback(
-    (path: string) => {
+    (path: string, line?: number) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
       const name = node?.name ?? path.split("/").pop() ?? path;
-      const tabId = openInPreview({ path, title: name });
+      const tabId = openInPreview({ path, title: name, line });
       setTabTitle(tabId, name);
     },
     [treeNodes, openInPreview, setTabTitle],
@@ -73,6 +74,8 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     ...tree,
     ...workspace,
     activeNoteTab,
+    activeNote,
+    activeNoteBacklinks,
     findNote,
     openNote,
   };

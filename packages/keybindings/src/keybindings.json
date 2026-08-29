@@ -4,6 +4,7 @@
   { "key": "CmdOrCtrl+F", "command": "search:open" },
   { "key": "CmdOrCtrl+O", "command": "switcher:open" },
   { "key": "CmdOrCtrl+,", "command": "app:open-settings" },
+  { "key": "CmdOrCtrl+G", "command": "graph:open" },
   { "key": "CmdOrCtrl+B", "command": "editor:bold", "when": "editorFocused" },
   { "key": "CmdOrCtrl+I", "command": "editor:italic", "when": "editorFocused" },
   {

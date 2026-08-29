@@ -6,8 +6,8 @@ use anyhow::Result;
 use basalt_vault::Vault;
 
 use crate::nucleo_scorer::NucleoScorer;
-use crate::tantivy::{extract_snippets, TantivyIndex};
-use basalt_types::{ContentResult, FileResult};
+use crate::tantivy::{extract_file_matches, TantivyIndex};
+use basalt_types::{FileMatch, FileResult, SearchContentResult};
 
 /// How long the index may hold uncommitted in-memory updates before the
 /// next flush writes them to disk. Commits create a new tantivy segment
@@ -112,27 +112,45 @@ impl SearchState {
         })
     }
 
-    /// BM25 full-text search. Reads matched note bodies from disk to build snippets.
-    /// Flushes pending updates first so results always reflect saved state.
-    pub fn search_content(&mut self, query: &str, limit: usize) -> Vec<ContentResult> {
+    /// BM25 full-text search. Reads matched note bodies from disk to build
+    /// line-level matches for the preview pane. Returns the display files plus
+    /// `total_hits` — the total number of matching lines across the top
+    /// `COUNT_WINDOW` BM25 documents (exact unless more than that many files
+    /// match, which is rare). Flushes pending updates first.
+    pub fn search_content(&mut self, query: &str, limit: usize) -> SearchContentResult {
         let _ = self.flush_pending();
-        let mut results = match self.tantivy.search(query, limit) {
+        const COUNT_WINDOW: usize = 100;
+        const MAX_MATCHES_PER_FILE: usize = 30;
+        const CONTEXT_LINES: usize = 4;
+        let terms: Vec<&str> = query.split_whitespace().collect();
+
+        let docs = match self.tantivy.search(query, COUNT_WINDOW) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("[search] tantivy error: {e}");
-                return vec![];
+                return SearchContentResult {
+                    total_hits: 0,
+                    files: vec![],
+                };
             }
         };
 
-        let terms: Vec<&str> = query.split_whitespace().collect();
-
-        for result in &mut results {
-            if let Ok(body) = std::fs::read_to_string(&result.path) {
-                result.snippets = extract_snippets(&body, &terms, 3);
+        let mut total_hits: u32 = 0;
+        let mut files: Vec<FileMatch> = Vec::with_capacity(limit.min(docs.len()));
+        for (i, mut file) in docs.into_iter().enumerate() {
+            if let Ok(body) = std::fs::read_to_string(&file.path) {
+                let matches =
+                    extract_file_matches(&body, &terms, MAX_MATCHES_PER_FILE, CONTEXT_LINES);
+                total_hits += matches.len() as u32;
+                if i < limit {
+                    file.text = body;
+                    file.matches = matches;
+                    files.push(file);
+                }
             }
         }
 
-        results
+        SearchContentResult { total_hits, files }
     }
 
     /// Fuzzy file-name search via nucleo. Requires `&mut self` because
@@ -226,17 +244,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let vault = Vault::new();
         let mut state = SearchState::open_or_create(dir.path(), &vault, &HashMap::new()).unwrap();
+        let note_path = dir.path().join("rust.md");
+        let body = "Rust is a systems language with a borrow checker.";
+        std::fs::write(&note_path, body).unwrap();
         state
-            .update_document(
-                "/vault/rust.md",
-                "Rust is a systems language with a borrow checker.",
-                "rust",
-            )
+            .update_document(note_path.to_str().unwrap(), body, "rust")
             .unwrap();
         state.commit().unwrap();
         let results = state.search_content("borrow", 5);
-        assert!(!results.is_empty());
-        assert_eq!(results[0].path, "/vault/rust.md");
+        assert!(!results.files.is_empty());
+        assert_eq!(results.files[0].path, note_path.to_str().unwrap());
+        assert!(!results.files[0].matches.is_empty());
+        assert_eq!(results.files[0].matches[0].line_number, 1);
     }
 
     #[test]

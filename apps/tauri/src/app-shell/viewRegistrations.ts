@@ -1,11 +1,14 @@
-import { IconFileText, IconFolder, IconLink } from "@tabler/icons-react";
+import { IconFileText, IconFolder, IconLink, IconList } from "@tabler/icons-react";
 import { leafRegistry, viewRegistry } from "@workspace/views";
 import { MarkdownLeaf } from "../features/editor";
 import { BacklinksView } from "./views/BacklinksView";
+
+import { PropertiesView } from "./views/PropertiesView";
 import {
   FileExplorerHeaderActions,
   FileExplorerView,
 } from "./views/FileExplorerView";
+import { GraphView } from "../features/graph";
 
 /**
  * Boot-time view registrations (ADR-018).
@@ -32,10 +35,24 @@ viewRegistry.register({
   component: BacklinksView,
 });
 
+viewRegistry.register({
+  type: "properties",
+  name: "Properties",
+  icon: IconList,
+  side: "right",
+  component: PropertiesView,
+});
+
 leafRegistry.register({
   type: "markdown",
   name: "Markdown",
   icon: IconFileText,
   extensions: [".md", ".markdown"],
   component: MarkdownLeaf,
+});
+leafRegistry.register({
+  type: "graph",
+  name: "Graph",
+  extensions: [],
+  component: GraphView,
 });

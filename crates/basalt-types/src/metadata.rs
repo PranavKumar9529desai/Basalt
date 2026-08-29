@@ -11,6 +11,9 @@ pub struct FileMetadata {
     pub frontmatter: Option<serde_yaml_ng::Value>,
     pub tags: Vec<String>,
     pub links: Vec<String>,
+    /// Property names declared as `aliases:` in frontmatter (Obsidian alternate
+    /// note names). Extracted from the parsed YAML so the app can surface them.
+    pub aliases: Vec<String>,
 
     // UI tracking data uses UTF-16 code unit offsets for CodeMirror
     pub tag_locations: Vec<(String, Span)>,
@@ -25,6 +28,7 @@ impl FileMetadata {
             frontmatter: None,
             tags: Vec::new(),
             links: Vec::new(),
+            aliases: Vec::new(),
             tag_locations: Vec::new(),
             link_locations: Vec::new(),
             headings: Vec::new(),

@@ -1,15 +1,20 @@
 use aho_corasick::AhoCorasick;
 
-use basalt_types::{Highlight, Snippet};
+use basalt_types::{ContextLine, Highlight, LineMatch};
 
-/// Build up to `max` highlighted snippets by scanning `body` for `query_terms`.
+/// Build up to `max_matches` line-level matches by scanning `body` for `query_terms`.
 ///
-/// Matches are collected in a single pass, then grouped into non-overlapping
-/// context windows (±60 chars around each match). Matches that fall inside the
-/// same window are merged into one `Snippet` with multiple `Highlight` entries,
-/// so searching "some page" correctly highlights *both* words in the same excerpt
-/// instead of only the first one found.
-pub fn extract_snippets(body: &str, query_terms: &[&str], max: usize) -> Vec<Snippet> {
+/// Every line containing a term becomes a [`LineMatch`] with the term positions
+/// marked in `highlights` (character offsets within the line) and up to
+/// `context_lines` surrounding lines captured in `context_before` / `context_after`.
+/// This is the data the LazyVim-style preview pane needs: the matched line plus
+/// the text around it, so the reader sees the term in context without opening the file.
+pub fn extract_file_matches(
+    body: &str,
+    query_terms: &[&str],
+    max_matches: usize,
+    context_lines: usize,
+) -> Vec<LineMatch> {
     if query_terms.is_empty() || body.is_empty() {
         return vec![];
     }
@@ -18,133 +23,134 @@ pub fn extract_snippets(body: &str, query_terms: &[&str], max: usize) -> Vec<Sni
         .ascii_case_insensitive(true)
         .build(query_terms)
     {
-        Ok(a) => a,
+        Ok(ac) => ac,
         Err(_) => return vec![],
     };
 
-    // Step 1: collect all match byte ranges in document order.
-    let all_matches: Vec<(usize, usize)> =
-        ac.find_iter(body).map(|m| (m.start(), m.end())).collect();
-
-    if all_matches.is_empty() {
-        return vec![];
-    }
-
-    // Step 2: group matches into non-overlapping context windows.
-    //
-    // For each match compute a ±CONTEXT char window clamped to char boundaries.
-    // If the new window overlaps the current cluster's window, extend the cluster.
-    // Otherwise close the cluster as a Snippet and start a new one.
-    const CONTEXT: usize = 60;
-
-    let mut snippets: Vec<Snippet> = Vec::new();
-    let mut cluster_start: usize = 0;
-    let mut cluster_end: usize = 0;
-    let mut cluster_hits: Vec<(usize, usize)> = Vec::new();
-
-    for (i, &(mstart, mend)) in all_matches.iter().enumerate() {
-        let ctx_start = snap_to_char_start(body, mstart.saturating_sub(CONTEXT));
-        let ctx_end = snap_to_char_end(body, (mend + CONTEXT).min(body.len()));
-
-        if i == 0 {
-            cluster_start = ctx_start;
-            cluster_end = ctx_end;
-            cluster_hits.push((mstart, mend));
-        } else if ctx_start < cluster_end {
-            // Overlaps current cluster — extend and accumulate.
-            cluster_end = cluster_end.max(ctx_end);
-            cluster_hits.push((mstart, mend));
-        } else {
-            // No overlap — emit the current cluster, start a new one.
-            emit_snippet(body, cluster_start, cluster_end, &cluster_hits, &mut snippets);
-            if snippets.len() >= max {
-                return snippets;
-            }
-            cluster_start = ctx_start;
-            cluster_end = ctx_end;
-            cluster_hits.clear();
-            cluster_hits.push((mstart, mend));
-        }
-    }
-
-    // Emit the final cluster.
-    if snippets.len() < max {
-        emit_snippet(body, cluster_start, cluster_end, &cluster_hits, &mut snippets);
-    }
-
-    snippets
-}
-
-fn emit_snippet(
-    body: &str,
-    ctx_start: usize,
-    ctx_end: usize,
-    hits: &[(usize, usize)],
-    out: &mut Vec<Snippet>,
-) {
-    let text = body[ctx_start..ctx_end].to_string();
-    let highlights = hits
-        .iter()
-        .map(|&(s, e)| Highlight {
-            start: s - ctx_start,
-            end: e - ctx_start,
-        })
+    // Split on '\n', stripping a single trailing '\r' so CRLF files behave.
+    let lines: Vec<&str> = body
+        .split('\n')
+        .map(|l| if l.ends_with('\r') { &l[..l.len() - 1] } else { l })
         .collect();
-    out.push(Snippet { text, highlights });
-}
 
-/// Walk backward from `pos` to the nearest char boundary.
-fn snap_to_char_start(s: &str, pos: usize) -> usize {
-    (0..=pos).rev().find(|&i| s.is_char_boundary(i)).unwrap_or(0)
-}
+    let mut out = Vec::new();
+    for (idx, line) in lines.iter().enumerate() {
+        if out.len() >= max_matches {
+            break;
+        }
+        // Map each byte boundary to its character index for highlight ranges.
+        // AhoCorasick returns byte ranges; `m.start()`/`m.end()` land on char
+        // boundaries, so find the exact char index of that byte.
+        let char_byte: Vec<usize> = line.char_indices().map(|(b, _)| b).collect();
+        let byte_to_char = |b: usize| -> usize {
+            char_byte.iter().position(|&cb| cb == b).unwrap_or(char_byte.len())
+        };
+        let hits: Vec<(usize, usize)> =
+            ac.find_iter(line).map(|m| (m.start(), m.end())).collect();
+        if hits.is_empty() {
+            continue;
+        }
 
-/// Walk forward from `pos` to the nearest char boundary.
-fn snap_to_char_end(s: &str, pos: usize) -> usize {
-    (pos..=s.len()).find(|&i| s.is_char_boundary(i)).unwrap_or(s.len())
+        let highlights: Vec<Highlight> = hits
+            .iter()
+            .map(|&(s, e)| Highlight {
+                start: byte_to_char(s),
+                end: byte_to_char(e),
+            })
+            .collect();
+
+        let line_no = idx + 1;
+        let start = idx.saturating_sub(context_lines);
+        let context_before: Vec<ContextLine> = (start..idx)
+            .map(|i| ContextLine {
+                line_number: i + 1,
+                text: lines[i].to_string(),
+            })
+            .collect();
+        let end = (idx + 1 + context_lines).min(lines.len());
+        let context_after: Vec<ContextLine> = ((idx + 1)..end)
+            .map(|i| ContextLine {
+                line_number: i + 1,
+                text: lines[i].to_string(),
+            })
+            .collect();
+
+        out.push(LineMatch {
+            line_number: line_no,
+            text: line.to_string(),
+            highlights,
+            context_before,
+            context_after,
+        });
+    }
+
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// Slice `s` by character (not byte) offsets — mirrors how the JS frontend
+    /// calls `String.prototype.slice`, and is the contract `highlights` use.
+    fn char_sub(s: &str, start: usize, end: usize) -> String {
+        s.chars().skip(start).take(end - start).collect()
+    }
+
     #[test]
-    fn test_single_term_one_snippet() {
+    fn test_single_term_one_match() {
         let body = "The quick brown fox jumps over the lazy dog. Rust is fast.";
-        let snippets = extract_snippets(body, &["rust"], 2);
-        assert_eq!(snippets.len(), 1);
-        assert!(snippets[0].text.to_lowercase().contains("rust"));
-        assert_eq!(snippets[0].highlights.len(), 1);
+        let matches = extract_file_matches(body, &["rust"], 5, 2);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].line_number, 1);
+        assert_eq!(matches[0].highlights.len(), 1);
+        let h = &matches[0].highlights[0];
+        assert_eq!(char_sub(&matches[0].text, h.start, h.end), "Rust");
     }
 
     #[test]
-    fn test_two_adjacent_terms_merged_into_one_snippet() {
+    fn test_two_terms_in_one_line_two_highlights() {
         let body = "We need to install some packages on this machine.";
-        // "some" and "pack" both appear close together — must produce ONE snippet
-        // with TWO highlights, not two snippets with one highlight each.
-        let snippets = extract_snippets(body, &["some", "pack"], 3);
-        assert_eq!(snippets.len(), 1, "adjacent matches should merge into one snippet");
-        assert_eq!(snippets[0].highlights.len(), 2, "both terms should be highlighted");
+        let matches = extract_file_matches(body, &["some", "pack"], 5, 2);
+        assert_eq!(matches.len(), 1, "both terms share one line → one match");
+        assert_eq!(matches[0].highlights.len(), 2, "both terms highlighted");
     }
 
     #[test]
-    fn test_distant_terms_produce_separate_snippets() {
-        // Two matches far apart (more than 2×CONTEXT chars) → two snippets.
-        let padding = " ".repeat(200);
-        let body = format!("alpha{padding}beta");
-        let snippets = extract_snippets(&body, &["alpha", "beta"], 3);
-        assert_eq!(snippets.len(), 2);
+    fn test_context_lines_captured() {
+        let body = "a\nb\nTARGET\nc\nd\ne";
+        let matches = extract_file_matches(body, &["target"], 5, 2);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].line_number, 3);
+        assert_eq!(matches[0].context_before.len(), 2);
+        assert_eq!(matches[0].context_before[0].line_number, 1);
+        assert_eq!(matches[0].context_before[1].text, "b");
+        assert_eq!(matches[0].context_after.len(), 2);
+        assert_eq!(matches[0].context_after[0].text, "c");
+        assert_eq!(matches[0].context_after[1].line_number, 5);
     }
 
     #[test]
-    fn test_max_limit_respected() {
-        let body = "a b a b a b a b a b";
-        let snippets = extract_snippets(body, &["a"], 2);
-        assert!(snippets.len() <= 2);
+    fn test_max_matches_respected() {
+        let body = "a x a x a x a x a x";
+        let matches = extract_file_matches(body, &["x"], 2, 1);
+        assert!(matches.len() <= 2);
     }
 
     #[test]
     fn test_empty_inputs() {
-        assert!(extract_snippets("", &["rust"], 3).is_empty());
-        assert!(extract_snippets("hello world", &[], 3).is_empty());
+        assert!(extract_file_matches("", &["rust"], 5, 2).is_empty());
+        assert!(extract_file_matches("hello world", &[], 5, 2).is_empty());
+    }
+
+    #[test]
+    fn test_multi_byte_highlight_offsets_are_char_based() {
+        // "Rust" is preceded by a 2-byte char (é). The byte offset of 'R' would be 6,
+        // but the char offset must be 5 so the JS frontend slices it correctly.
+        let body = "café Rust";
+        let matches = extract_file_matches(body, &["rust"], 5, 0);
+        assert_eq!(matches.len(), 1);
+        let h = &matches[0].highlights[0];
+        assert_eq!(char_sub(&matches[0].text, h.start, h.end), "Rust");
     }
 }

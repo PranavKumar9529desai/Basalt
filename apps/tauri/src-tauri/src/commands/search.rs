@@ -1,4 +1,4 @@
-use basalt_types::{ContentResult, FileResult};
+use basalt_types::{FileMatch, FileResult, SearchContentResult};
 use tauri::State;
 
 use crate::app_state::AppState;
@@ -8,7 +8,7 @@ pub fn search_content(
     state: State<'_, AppState>,
     query: String,
     limit: Option<usize>,
-) -> Result<Vec<ContentResult>, String> {
+) -> Result<SearchContentResult, String> {
     // Write lock: the query flushes pending index updates first.
     let mut search = state
         .search

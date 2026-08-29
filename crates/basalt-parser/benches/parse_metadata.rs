@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
-use basalt_parser::extract_metadata;
+use basalt_parser::{extract_metadata, parse_frontmatter};
 
 const TAGS: &[&str] = &[
     "project", "meeting", "idea", "todo", "reference", "archive", "draft",
@@ -40,8 +40,36 @@ fn bench_parse_metadata(c: &mut Criterion) {
             }
         })
     });
+    group.bench_function("parse_frontmatter_1k", |b| {
+        b.iter(|| {
+            for doc in &docs {
+                black_box(parse_frontmatter(doc));
+            }
+        })
+    });
     group.finish();
 }
 
-criterion_group!(benches, bench_parse_metadata);
+fn bench_parse_metadata_25k(c: &mut Criterion) {
+    let docs = generate_docs(25000);
+    let mut group = c.benchmark_group("parse_metadata_25k");
+    group.throughput(Throughput::Elements(docs.len() as u64));
+    group.bench_function("seq_25k", |b| {
+        b.iter(|| {
+            for doc in &docs {
+                black_box(extract_metadata(doc));
+            }
+        })
+    });
+    group.bench_function("parse_frontmatter_25k", |b| {
+        b.iter(|| {
+            for doc in &docs {
+                black_box(parse_frontmatter(doc));
+            }
+        })
+    });
+    group.finish();
+}
+
+criterion_group!(benches, bench_parse_metadata, bench_parse_metadata_25k);
 criterion_main!(benches);

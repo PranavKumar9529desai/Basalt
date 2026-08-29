@@ -11,6 +11,7 @@ import {
   createEditorExtensions,
   editorBenchmarkState,
   formatBenchmarkReport,
+  getFrontmatterBlockSpan,
   runIsolationBenchmark,
   runTypingBenchmark,
 } from "@workspace/editor";
@@ -21,6 +22,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FileChangeEvent, SaveStatus } from "../../vault/types";
 import { useLatestRef } from "../hooks/useLatestRef";
 import { useNoteIO } from "../hooks/useNoteIO";
+import { pruneClosedTabCaches } from "../pruneCache";
+
+import { refreshFrontmatter, setActiveFrontmatterEditor } from "../frontmatter";
 import { useActiveNoteStore } from "../store";
 import { EditorHost } from "./EditorHost";
 import { EditorContextMenu } from "./EditorContextMenu";
@@ -120,6 +124,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         onFetchLinks: io.onFetchLinks,
         onFetchTags: io.onFetchTags,
         onOpenLink: handleOpenLink,
+        parseFrontmatter: io.parseFrontmatter,
       }),
       contextMenuExtension(setMenuState),
       EditorView.updateListener.of((u) => {
@@ -138,6 +143,15 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         setSaveStatusRef.current("unsaved");
         scheduleSaveRef.current();
         scheduleStatsRef.current();
+        const span = getFrontmatterBlockSpan(u.view);
+        const fmEnd = span ? span.end : 0;
+        // ADR-022 rule 3: only reparse when the change touches the
+        // frontmatter region (or the user is creating one at the top).
+        const inFm =
+          fmEnd > 0
+            ? u.changes.touchesRange(0, fmEnd)
+            : u.state.doc.sliceString(0, 3) === "---";
+        if (inFm) refreshFrontmatter(u.view, u.state.doc.toString());
       }),
     ],
     [],
@@ -215,39 +229,40 @@ export function MarkdownLeaf({ tab }: LeafProps) {
   // EditorStates (full documents + undo history) linger until remount.
   // Dirty tabs flush-save BEFORE their state is dropped: closeTab(force)
   // doesn't save, and the autosave timer only covers the active tab.
+  // Logic extracted to pruneClosedTabCaches (see ./pruneCache) for testing.
   useEffect(() => {
     return services.onTabStructureChanged(() => {
-      const openIds = services.getOpenTabIds();
-      const openPaths = services.getOpenTabPaths();
-      // Refresh metadata first: a move repoints a tab's path in place
-      // (stable id), so cached {path} snapshots can be stale for background
-      // tabs that are about to be flush-saved or pruned below.
-      for (const id of statesRef.current.keys()) {
-        const info = services.getTabInfo(id);
-        if (!info) continue;
-        const meta = tabMetaRef.current.get(id);
-        if (!meta || meta.path !== info.path || meta.name !== info.title) {
-          tabMetaRef.current.set(id, { path: info.path, name: info.title });
-        }
-      }
-      for (const id of statesRef.current.keys()) {
-        // Match on path as well as id: if a future rename/move feature
-        // rekeys tabs (id derives from path), the old id disappears while
-        // the note itself is still open — pruning it would drop live state.
-        const meta = tabMetaRef.current.get(id);
-        if (openIds.has(id) || (meta && openPaths.has(meta.path))) continue;
-        if (dirtyRef.current.has(id)) void saveTab(id);
-        statesRef.current.delete(id);
-        scrollRef.current.delete(id);
-        dirtyRef.current.delete(id);
-      }
-      for (const [id, meta] of tabMetaRef.current) {
-        if (!openIds.has(id) && !openPaths.has(meta.path)) {
-          tabMetaRef.current.delete(id);
-        }
-      }
+      pruneClosedTabCaches(
+        {
+          states: statesRef.current,
+          scroll: scrollRef.current,
+          dirty: dirtyRef.current,
+          tabMeta: tabMetaRef.current,
+        },
+        services,
+        saveTab,
+      );
     });
   }, [services, saveTab]);
+
+  // Keep the properties panel pointed at the active editor for surgical edits.
+  useEffect(() => {
+    setActiveFrontmatterEditor(view);
+  }, [view]);
+
+  // Doc swap, never remount.
+  // Reveal a 1-based line in the active editor (search jump-to-line).
+  const revealLine = useCallback((line: number) => {
+    const view = viewRef.current;
+    if (!view) return;
+    const total = view.state.doc.lines;
+    if (total === 0) return;
+    const target = view.state.doc.line(Math.max(1, Math.min(line, total)));
+    view.dispatch({
+      selection: { anchor: target.from },
+      effects: EditorView.scrollIntoView(target.from, { y: "center" }),
+    });
+  }, []);
 
   // Doc swap, never remount.
   const showTab = useCallback(
@@ -261,6 +276,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         view.setState(cached);
         view.scrollDOM.scrollTop = scrollRef.current.get(t.id) ?? 0;
         setSaveStatus(dirtyRef.current.has(t.id) ? "unsaved" : "saved");
+        if (t.line) revealLine(t.line);
         return;
       }
 
@@ -275,14 +291,16 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           extensions: extensionsRef.current,
         });
         statesRef.current.set(t.id, state);
-        view.setState(state);
+      view.setState(state);
+      refreshFrontmatter(view, text);
         view.scrollDOM.scrollTop = 0;
+        if (t.line) revealLine(t.line);
       } catch (err) {
         console.error("[MarkdownLeaf] open_file failed:", err);
         ioRef.current.setStatus(`Open error: ${String(err)}`);
       }
     },
-    [extensionsRef, ioRef, tabRef],
+    [extensionsRef, ioRef, tabRef, revealLine],
   );
 
   useEffect(() => {
@@ -306,7 +324,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
       .setActiveNote({ path: t.path, name: t.title });
     void ioRef.current.refreshBacklinks(t.path);
     void showTab(t);
-  }, [tab.id, tab.path, showTab, saveTab, ioRef, tabRef]);
+  }, [tab.id, tab.path, tab.line, showTab, saveTab, ioRef, tabRef]);
 
   const handleReady = useCallback(
     (view: EditorView) => {
@@ -378,6 +396,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           onFetchLinks: io.onFetchLinks,
           onFetchTags: io.onFetchTags,
           onOpenLink: handleOpenLink,
+          parseFrontmatter: io.parseFrontmatter,
         });
         const full = [
           ...g.base,
@@ -386,6 +405,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           ...g.livePreview,
           ...g.suggestions,
           ...g.links,
+
+          ...g.frontmatter,
         ];
         const results = runIsolationBenchmark(view, [
           { name: "base", extensions: g.base },
@@ -394,6 +415,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           { name: "+live-preview", extensions: [...g.base, ...g.livePreview] },
           { name: "+suggestions", extensions: [...g.base, ...g.suggestions] },
           { name: "+links", extensions: [...g.base, ...g.links] },
+
+          { name: "+frontmatter", extensions: [...g.base, ...g.frontmatter] },
           { name: "full", extensions: full },
         ]);
         void report("Editor typing benchmark — extension isolation", results);
@@ -534,7 +557,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         menuState={menuState}
         onMenuStateChange={setMenuState}
         view={view}
-        onSearch={(query) => console.log("Searching for:", query)}
+        onSearch={() => commandService.execute("search:open")}
       />
     </>
   );

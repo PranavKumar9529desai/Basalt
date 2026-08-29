@@ -45,7 +45,7 @@ interface WorkspaceOverlaysProps {
     onMenuDelete: () => void;
   };
   onConfirmDelete: () => void;
-  onSearchOpen: (path: string) => void;
+  onSearchOpen: (path: string, line?: number) => void;
 }
 
 export function WorkspaceOverlays({

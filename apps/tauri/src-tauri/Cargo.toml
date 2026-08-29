@@ -24,8 +24,11 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 basalt-types = { path = "../../../crates/basalt-types" }
+basalt-graph = { path = "../../../crates/basalt-graph" }
 basalt-vault = { path = "../../../crates/basalt-vault" }
 basalt-search = { path = "../../../crates/basalt-search" }
+
+basalt-parser = { path = "../../../crates/basalt-parser" }
 chrono = "0.4"
 
 [profile.release]

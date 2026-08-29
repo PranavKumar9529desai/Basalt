@@ -4,7 +4,7 @@ export { WorkspaceTabsBar } from "./components/WorkspaceTabsBar";
 export { useTabDnD } from "./hooks/useTabDnD";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { useTabs } from "./hooks/useTabs";
-export { getTabByPath, findPaneForTab, tabIdFromPath } from "./selectors";
+export { getTabByPath } from "./selectors";
 export type { CloseTabOptions, OpenTabOptions, TabsState } from "./store";
 export { useTabsStore } from "./store";
 export type {

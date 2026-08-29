@@ -1,19 +1,17 @@
-import { useActiveNoteStore } from "../../features/editor";
 import { BacklinksSidebar } from "../../features/vault";
 import { useWorkspaceContext } from "../WorkspaceProvider";
 
 /**
  * Backlinks view — the right dock's registered view (ADR-018).
- * Reads the focused note's backlinks directly from the editor store
- * and opens notes through the workspace context.
+ * Reads the focused note's backlinks and opens notes through the
+ * workspace context (the sanctioned cross-feature seam).
  */
 export function BacklinksView() {
-  const backlinks = useActiveNoteStore((s) => s.activeNoteBacklinks);
-  const { openNote } = useWorkspaceContext();
+  const { activeNoteBacklinks, openNote } = useWorkspaceContext();
 
   return (
     <BacklinksSidebar
-      backlinks={backlinks}
+      backlinks={activeNoteBacklinks}
       onOpenNote={({ path }) => openNote(path)}
     />
   );

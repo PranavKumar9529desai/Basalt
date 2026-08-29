@@ -22,3 +22,7 @@ harness = false
 [[bench]]
 name = "arena_growth"
 harness = false
+
+[[bench]]
+name = "graph_step"
+harness = false

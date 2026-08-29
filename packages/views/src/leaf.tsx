@@ -10,6 +10,8 @@ export interface LeafTabInfo {
   id: string;
   path: string;
   title: string;
+  /** Transient: line to reveal once on open (search jump-to-line). Not persisted. */
+  line?: number;
 }
 
 export interface LeafProps {
@@ -43,6 +45,10 @@ export interface LeafServices {
   /** Fires after structural tab mutations (open/close/pin/rename). Returns
    * an unsubscribe function. Ephemeral changes (dirty/active) don't fire. */
   onTabStructureChanged: (cb: () => void) => () => void;
+  /** Active note {path,name} (or null) — graph's local-graph root. */
+  activeNote: { path: string; name: string } | null;
+  /** Open a note as a pinned (non-preview) tab — graph node "open in new tab". */
+  openPinned: (note: { path: string; title?: string }, options?: { activate?: boolean }) => string;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

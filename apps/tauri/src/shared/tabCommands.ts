@@ -12,8 +12,7 @@
  */
 import { commandService } from "@workspace/commands";
 import { useActiveNoteStore } from "../features/editor";
-import { getTabByPath } from "../features/tabs/selectors";
-import { useTabsStore } from "../features/tabs/store";
+import { getTabByPath, useTabsStore } from "../features/tabs";
 
 function resolveActiveTab() {
   const selected = useActiveNoteStore.getState().activeNote;
@@ -67,3 +66,7 @@ commandService.registerCommand(
   },
   () => resolveActiveTab() !== null,
 );
+
+commandService.registerCommand("graph:open", () => {
+  useTabsStore.getState().openView("graph", { title: "Graph" });
+});

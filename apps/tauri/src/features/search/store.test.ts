@@ -1,19 +1,38 @@
+import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { invoke } from "@tauri-apps/api/core";
+import type { FileMatch, FileResult } from "./types";
 
 import { useSearchStore } from "./store";
-import type { ContentResult, FileResult } from "./types";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
-const mockedInvoke = vi.mocked(invoke);
+const content = (path: string, title: string): FileMatch => ({
+  path,
+  title,
+  score: 1,
+  text: "",
+  matches: [
+    {
+      lineNumber: 1,
+      text: "match line",
+      highlights: [],
+      contextBefore: [],
+      contextAfter: [],
+    },
+  ],
+});
 
-const DEFAULTS = {
+const file = (path: string, title: string): FileResult => ({ path, title, score: 1 });
+
+const initial = {
   isSearchOpen: false,
   searchQuery: "",
-  searchResults: [] as ContentResult[],
+  searchResults: [] as FileMatch[],
+  searchTotalHits: 0,
   isSearchLoading: false,
   searchSelectedIndex: 0,
   isSwitcherOpen: false,
@@ -22,127 +41,156 @@ const DEFAULTS = {
   switcherSelectedIndex: 0,
 };
 
-beforeEach(() => {
-  useSearchStore.setState({ ...DEFAULTS });
-  mockedInvoke.mockReset();
-  // openSwitcher fires invoke(...).then(...) without awaiting; the mock must
-  // return a resolved promise or the .then chain throws.
-  mockedInvoke.mockResolvedValue([]);
-});
+describe("useSearchStore", () => {
+  beforeEach(() => {
+    useSearchStore.setState(initial);
+    vi.mocked(invoke).mockReset();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
 
-describe("search store", () => {
-  it("openSearch opens and resets the search surface", () => {
-    useSearchStore.setState({
-      searchQuery: "old",
-      searchResults: [{ path: "x", title: "X", score: 0, snippets: [] }],
+  describe("search modal", () => {
+    it("openSearch opens and resets all search state", () => {
+      useSearchStore.setState({ isSearchLoading: true, searchSelectedIndex: 3 });
+      useSearchStore.getState().openSearch();
+      expect(useSearchStore.getState().isSearchOpen).toBe(true);
+      expect(useSearchStore.getState().searchQuery).toBe("");
+      expect(useSearchStore.getState().searchResults).toEqual([]);
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
+      expect(useSearchStore.getState().isSearchLoading).toBe(false);
     });
-    useSearchStore.getState().openSearch();
-    const s = useSearchStore.getState();
-    expect(s.isSearchOpen).toBe(true);
-    expect(s.searchQuery).toBe("");
-    expect(s.searchResults).toEqual([]);
-    expect(s.searchSelectedIndex).toBe(0);
-  });
 
-  it("closeSearch closes", () => {
-    useSearchStore.getState().openSearch();
-    useSearchStore.getState().closeSearch();
-    expect(useSearchStore.getState().isSearchOpen).toBe(false);
-  });
-
-  it("setSearchQuery resets the selected index", () => {
-    useSearchStore.setState({ searchSelectedIndex: 3 });
-    useSearchStore.getState().setSearchQuery("foo");
-    expect(useSearchStore.getState().searchQuery).toBe("foo");
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
-  });
-
-  it("runSearch with empty query clears results without invoking", async () => {
-    useSearchStore.setState({
-      searchResults: [{ path: "x", title: "X", score: 0, snippets: [] }],
+    it("closeSearch only flips the open flag", () => {
+      useSearchStore.getState().openSearch();
+      useSearchStore.getState().closeSearch();
+      expect(useSearchStore.getState().isSearchOpen).toBe(false);
     });
-    await useSearchStore.getState().runSearch("   ");
-    expect(mockedInvoke).not.toHaveBeenCalled();
-    expect(useSearchStore.getState().searchResults).toEqual([]);
-    expect(useSearchStore.getState().isSearchLoading).toBe(false);
-  });
 
-  it("runSearch invokes search_content and stores results", async () => {
-    const results = [
-      { path: "a.md", title: "A", score: 0, snippets: [] },
-    ] as ContentResult[];
-    mockedInvoke.mockResolvedValue(results);
-    await useSearchStore.getState().runSearch("term");
-    expect(mockedInvoke).toHaveBeenCalledWith("search_content", {
-      query: "term",
-      limit: 20,
+    it("setSearchQuery updates the query and resets the selected index", () => {
+      useSearchStore.setState({ searchSelectedIndex: 4 });
+      useSearchStore.getState().setSearchQuery("hello");
+      expect(useSearchStore.getState().searchQuery).toBe("hello");
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
     });
-    expect(useSearchStore.getState().searchResults).toEqual(results);
-    expect(useSearchStore.getState().isSearchLoading).toBe(false);
-  });
 
-  it("runSearch surfaces errors without throwing", async () => {
-    mockedInvoke.mockRejectedValue(new Error("boom"));
-    await useSearchStore.getState().runSearch("term");
-    expect(useSearchStore.getState().isSearchLoading).toBe(false);
-    expect(useSearchStore.getState().searchResults).toEqual([]);
-  });
+    it("runSearch gates on empty/whitespace queries and never invokes", async () => {
+      await useSearchStore.getState().runSearch("   ");
+      expect(vi.mocked(invoke)).not.toHaveBeenCalled();
+      expect(useSearchStore.getState().searchResults).toEqual([]);
+      expect(useSearchStore.getState().isSearchLoading).toBe(false);
+    });
 
-  it("searchSelectNext/Prev clamp to bounds", () => {
-    const results = [
-      { path: "a", title: "a", score: 0, snippets: [] },
-      { path: "b", title: "b", score: 0, snippets: [] },
-      { path: "c", title: "c", score: 0, snippets: [] },
-    ] as ContentResult[];
-    useSearchStore.setState({ searchResults: results, searchSelectedIndex: 0 });
-    useSearchStore.getState().searchSelectNext();
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(1);
-    useSearchStore.getState().searchSelectNext();
-    useSearchStore.getState().searchSelectNext();
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(2);
-    useSearchStore.getState().searchSelectPrev();
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(1);
-    useSearchStore.getState().searchSelectPrev();
-    useSearchStore.getState().searchSelectPrev();
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
-  });
+    it("runSearch invokes search_content with limit 20 and stores results", async () => {
+      vi.mocked(invoke).mockResolvedValue({
+        files: [content("a.md", "A")],
+        totalHits: 5,
+      });
+      await useSearchStore.getState().runSearch("needle");
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("search_content", {
+        query: "needle",
+        limit: 20,
+      });
+      expect(useSearchStore.getState().searchResults).toEqual([content("a.md", "A")]);
+      expect(useSearchStore.getState().searchTotalHits).toBe(5);
+      expect(useSearchStore.getState().isSearchLoading).toBe(false);
+    });
 
-  it("searchSelectNext is a no-op on empty results", () => {
-    useSearchStore.setState({ searchResults: [], searchSelectedIndex: 0 });
-    useSearchStore.getState().searchSelectNext();
-    expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
-  });
+    it("runSearch clears the loading flag and keeps results on error", async () => {
+      useSearchStore.setState({
+        searchResults: [content("old.md", "Old")],
+      });
+      vi.mocked(invoke).mockRejectedValue(new Error("boom"));
+      await useSearchStore.getState().runSearch("x");
+      expect(useSearchStore.getState().isSearchLoading).toBe(false);
+      expect(useSearchStore.getState().searchResults).toEqual([content("old.md", "Old")]);
+    });
 
-  it("openSwitcher triggers a file preload and opens the surface", () => {
-    useSearchStore.getState().openSwitcher();
-    expect(useSearchStore.getState().isSwitcherOpen).toBe(true);
-    expect(mockedInvoke).toHaveBeenCalledWith("search_files", {
-      query: "",
-      limit: 20,
+    it("searchSelectNext is a no-op with no results", () => {
+      useSearchStore.getState().searchSelectNext();
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
+    });
+
+    it("searchSelectNext clamps at the last result", () => {
+      useSearchStore.setState({
+        searchResults: [content("a", "A"), content("b", "B"), content("c", "C")],
+        searchSelectedIndex: 1,
+      });
+      useSearchStore.getState().searchSelectNext();
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(2);
+      useSearchStore.getState().searchSelectNext();
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(2);
+    });
+
+    it("searchSelectPrev clamps at 0", () => {
+      useSearchStore.setState({ searchResults: [content("a", "A")], searchSelectedIndex: 1 });
+      useSearchStore.getState().searchSelectPrev();
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
+      useSearchStore.getState().searchSelectPrev();
+      expect(useSearchStore.getState().searchSelectedIndex).toBe(0);
     });
   });
 
-  it("runSwitcher invokes search_files and stores results", async () => {
-    const files = [{ path: "a.md" }] as FileResult[];
-    mockedInvoke.mockResolvedValue(files);
-    await useSearchStore.getState().runSwitcher("q");
-    expect(mockedInvoke).toHaveBeenCalledWith("search_files", {
-      query: "q",
-      limit: 20,
+  describe("quick switcher", () => {
+    it("openSwitcher opens, resets, and preloads files via search_files", async () => {
+      vi.mocked(invoke).mockResolvedValue([file("f.md", "F")]);
+      await act(async () => useSearchStore.getState().openSwitcher());
+      expect(useSearchStore.getState().isSwitcherOpen).toBe(true);
+      expect(useSearchStore.getState().switcherQuery).toBe("");
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("search_files", {
+        query: "",
+        limit: 20,
+      });
+      expect(useSearchStore.getState().switcherResults).toEqual([file("f.md", "F")]);
     });
-    expect(useSearchStore.getState().switcherResults).toEqual(files);
-    expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
-  });
 
-  it("switcherSelectNext/Prev clamp to bounds", () => {
-    const files = [{ path: "a" }, { path: "b" }] as FileResult[];
-    useSearchStore.setState({ switcherResults: files, switcherSelectedIndex: 0 });
-    useSearchStore.getState().switcherSelectNext();
-    expect(useSearchStore.getState().switcherSelectedIndex).toBe(1);
-    useSearchStore.getState().switcherSelectNext();
-    expect(useSearchStore.getState().switcherSelectedIndex).toBe(1);
-    useSearchStore.getState().switcherSelectPrev();
-    useSearchStore.getState().switcherSelectPrev();
-    expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+    it("closeSwitcher flips the open flag", () => {
+      useSearchStore.setState({ isSwitcherOpen: true });
+      useSearchStore.getState().closeSwitcher();
+      expect(useSearchStore.getState().isSwitcherOpen).toBe(false);
+    });
+
+    it("setSwitcherQuery updates the query", () => {
+      useSearchStore.getState().setSwitcherQuery("foo");
+      expect(useSearchStore.getState().switcherQuery).toBe("foo");
+    });
+
+    it("runSwitcher invokes search_files and resets the selected index", async () => {
+      useSearchStore.setState({ switcherSelectedIndex: 3 });
+      vi.mocked(invoke).mockResolvedValue([file("a.md", "A"), file("b.md", "B")]);
+      await useSearchStore.getState().runSwitcher("a");
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("search_files", {
+        query: "a",
+        limit: 20,
+      });
+      expect(useSearchStore.getState().switcherResults).toEqual([
+        file("a.md", "A"),
+        file("b.md", "B"),
+      ]);
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+    });
+
+    it("runSwitcher keeps results on error", async () => {
+      useSearchStore.setState({ switcherResults: [file("old.md", "Old")] });
+      vi.mocked(invoke).mockRejectedValue(new Error("boom"));
+      await useSearchStore.getState().runSwitcher("x");
+      expect(useSearchStore.getState().switcherResults).toEqual([file("old.md", "Old")]);
+    });
+
+    it("switcherSelectNext clamps at the last result", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a", "A"), file("b", "B")],
+        switcherSelectedIndex: 0,
+      });
+      useSearchStore.getState().switcherSelectNext();
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(1);
+      useSearchStore.getState().switcherSelectNext();
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(1);
+    });
+
+    it("switcherSelectPrev clamps at 0", () => {
+      useSearchStore.setState({ switcherResults: [file("a", "A")], switcherSelectedIndex: 1 });
+      useSearchStore.getState().switcherSelectPrev();
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+    });
   });
 });

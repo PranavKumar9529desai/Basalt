@@ -4,6 +4,8 @@ export type TabPaneId = string;
 export interface OpenableTabInput {
   path: string;
   title?: string;
+  /** Optional 1-based line to reveal when the tab opens (search jump-to-line). */
+  line?: number;
 }
 
 export interface TabModel {
@@ -17,6 +19,8 @@ export interface TabModel {
   isDirty: boolean;
   createdAt: number;
   lastAccessedAt: number;
+  /** Transient: line to reveal once on open. Not persisted. */
+  line?: number;
 }
 
 export interface TabPane {

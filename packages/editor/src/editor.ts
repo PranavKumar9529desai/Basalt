@@ -15,7 +15,9 @@ import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { yamlFrontmatterExtension } from "./syntax/frontmatter";
 import { highlightExtension } from "./syntax/highlight";
 import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
+import { frontmatterModelPlugin, frontmatterParserFacet } from "./frontmatter-model";
 import type { EditorConfig } from "./types";
+
 
 /**
  * Editor extensions grouped by concern, so the benchmark harness can run
@@ -35,6 +37,8 @@ export interface EditorExtensionGroups {
   suggestions: Extension[];
   /** Clickable link hover/click handling. */
   links: Extension[];
+  /** Live frontmatter model + diagnostics (ADR-022 rule 3). */
+  frontmatter: Extension[];
 }
 
 export function createEditorExtensionGroups(
@@ -81,6 +85,9 @@ export function createEditorExtensionGroups(
       createSuggestionsPlugin(onFetchLinks, onFetchTags),
     ],
     links: [clickableLinksPlugin(onOpenLink)],
+    frontmatter: config.parseFrontmatter
+      ? [frontmatterParserFacet.of(config.parseFrontmatter), ...frontmatterModelPlugin]
+      : [],
   };
 }
 
@@ -97,5 +104,6 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     ...g.livePreview,
     ...g.suggestions,
     ...g.links,
+    ...g.frontmatter,
   ];
 }

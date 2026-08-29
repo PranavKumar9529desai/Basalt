@@ -17,6 +17,28 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
             let frontmatter_str = &input[4..actual_end];
             if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
                 meta.frontmatter = Some(yaml);
+                // ADR-022 rule 1: make frontmatter properties first-class.
+                // Extract wikilinks / tags / aliases declared inside the block
+                // so they reach the graph, backlinks and search index.
+                if let Some(fm) = &meta.frontmatter {
+                    let mut fm_links: Vec<String> = Vec::new();
+                    let mut fm_tags: Vec<String> = Vec::new();
+                    let mut fm_aliases: Vec<String> = Vec::new();
+                    crate::frontmatter::walk_fm(fm, &mut fm_links, &mut fm_tags, &mut fm_aliases);
+                    for l in fm_links {
+                        if !meta.links.contains(&l) {
+                            meta.links.push(l);
+                        }
+                    }
+                    for t in fm_tags {
+                        if !meta.tags.contains(&t) {
+                            meta.tags.push(t);
+                        }
+                    }
+                    for a in fm_aliases {
+                        meta.aliases.push(a);
+                    }
+                }
             }
             let after_frontmatter = actual_end + 4;
             if input.len() > after_frontmatter {
