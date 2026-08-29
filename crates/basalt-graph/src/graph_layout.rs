@@ -24,7 +24,7 @@ use std::collections::HashMap;
 /// Tunable physics constants. Defaults chosen for a stable, quickly-settling
 /// layout at 25k nodes; revisit during Phase-2 visual tuning.
 #[derive(Debug, Clone)]
-pub struct SimParams {
+pub struct GraphParams {
     /// Repulsion strength (Coulomb-style, scaled by node mass).
     pub repulsion: f32,
     /// Rest length of an edge spring.
@@ -45,7 +45,7 @@ pub struct SimParams {
     pub center: [f32; 2],
 }
 
-impl Default for SimParams {
+impl Default for GraphParams {
     fn default() -> Self {
         Self {
             repulsion: 100.0,
@@ -69,6 +69,10 @@ pub struct LayoutGraph {
     pub edges: Vec<(u32, u32)>,
     /// Combined in+out degree per node (used as inertia mass).
     pub degree: Vec<u32>,
+    /// Per-node kind: `0` = note, `1` = tag. Parallel to the dense node order.
+    /// Lets the renderer style/filter tags and the local graph traverse through
+    /// them (see docs/tag-graph-connections.md).
+    pub node_types: Vec<u8>,
 }
 
 impl LayoutGraph {
@@ -76,7 +80,9 @@ impl LayoutGraph {
     /// arena ids into `0..n`. Nodes are the union of every note that has
     /// outgoing links and every note referenced as a link target (so dangling
     /// link targets appear as nodes, matching Obsidian with "existing files
-    /// only" off). Edges are the forward links.
+    /// only" off) **plus every tag node** (notes link to the tags they carry,
+    /// and nested tags link parent->child, so the tag tree is present). Edges are
+    /// the forward links.
     pub fn from_note_graph(g: &NoteGraph) -> Self {
         let mut ids: Vec<NodeId> = g
             .forward_links
@@ -106,18 +112,25 @@ impl LayoutGraph {
             }
         }
 
+        let node_types = ids
+            .iter()
+            .map(|id| if g.tag_nodes.contains(id) { 1 } else { 0 })
+            .collect::<Vec<_>>();
+
         Self {
             node_count: ids.len(),
             edges,
             degree,
+            node_types,
         }
     }
 
-    pub fn new(node_count: usize, edges: Vec<(u32, u32)>, degree: Vec<u32>) -> Self {
+    pub fn new(node_count: usize, edges: Vec<(u32, u32)>, degree: Vec<u32>, node_types: Vec<u8>) -> Self {
         Self {
             node_count,
             edges,
             degree,
+            node_types,
         }
     }
 }
@@ -154,7 +167,7 @@ const ALPHA_MIN: f32 = 0.02;
 /// arrays. `step()` advances one fixed timestep; `positions()` returns the
 /// buffer for rendering. The same dense index space is shared with `edges()`,
 /// so the renderer can draw a line from `edges[i].0` to `edges[i].1` directly.
-pub struct ForceSim {
+pub struct ForceGraph {
     n: usize,
     pos: Vec<f32>,
     vel: Vec<f32>,
@@ -168,15 +181,15 @@ pub struct ForceSim {
     stack: Vec<usize>,
     /// Reusable remap buffer for the BFS reorder (avoids per-step allocation).
     reorder: Vec<usize>,
-    params: SimParams,
+    params: GraphParams,
     /// Cooling factor: 1.0 at full force, decays toward ALPHA_MIN as it settles.
     alpha: f32,
 }
 
-impl ForceSim {
+impl ForceGraph {
     /// Create a simulator and seed positions on a phyllotaxis (sunflower)
     /// spiral so nodes start evenly spread (no collapsed, deep-tree transient).
-    pub fn new(layout: &LayoutGraph, params: SimParams) -> Self {
+    pub fn new(layout: &LayoutGraph, params: GraphParams) -> Self {
         let n = layout.node_count;
         let mut pos = vec![0.0f32; n * 2];
         let vel = vec![0.0f32; n * 2];
@@ -497,7 +510,7 @@ impl ForceSim {
 
     /// Barnes-Hut repulsion acceleration on body `bi` at `(xi, yi)`.
     /// Self-less so the caller can borrow `quads` immutably and `stack`
-    /// mutably at the same time (disjoint fields of `ForceSim`).
+    /// mutably at the same time (disjoint fields of `ForceGraph`).
     fn repulsion_at(
         quads: &[Quad],
         bi: u32,
@@ -629,33 +642,55 @@ mod tests {
     }
 
     #[test]
-    fn simulation_stays_finite_and_bounded() {
+    fn graph_stays_finite_and_bounded() {
         let g = synthetic_graph(500, 3);
         let lg = LayoutGraph::from_note_graph(&g);
-        let mut sim = ForceSim::new(&lg, SimParams::default());
+        let mut graph = ForceGraph::new(&lg, GraphParams::default());
         for _ in 0..200 {
-            sim.step();
+            graph.step();
         }
-        for &p in sim.positions() {
+        for &p in graph.positions() {
             assert!(p.is_finite(), "position became non-finite: {p}");
             assert!(p.abs() < 1e6, "position diverged: {p}");
         }
     }
 
     #[test]
-    fn simulation_settles_over_time() {
+    fn graph_settles_over_time() {
         let g = synthetic_graph(300, 3);
         let lg = LayoutGraph::from_note_graph(&g);
-        let mut sim = ForceSim::new(&lg, SimParams::default());
+        let mut graph = ForceGraph::new(&lg, GraphParams::default());
         for _ in 0..10 {
-            sim.step();
+            graph.step();
         }
-        let early = sim.avg_speed();
+        let early = graph.avg_speed();
         for _ in 0..400 {
-            sim.step();
+            graph.step();
         }
-        let late = sim.avg_speed();
+        let late = graph.avg_speed();
         assert!(late < early, "graph did not settle: early={early}, late={late}");
         assert!(late.is_finite());
+    }
+    #[test]
+    fn layout_graph_tags_marked_as_tag_nodes() {
+        let mut graph = NoteGraph::new();
+        let mut arena = StringArena::new();
+        let meta = FileMetadata {
+            tags: vec!["area/sub".to_string()],
+            ..FileMetadata::new()
+        };
+        graph.add_document("note.md", meta, &mut arena);
+
+        let lg = LayoutGraph::from_note_graph(&graph);
+        // note.md + #area + #area/sub = 3 nodes
+        assert_eq!(lg.node_count, 3);
+        assert!(
+            lg.node_types.iter().any(|&t| t == 1),
+            "expected a tag node"
+        );
+        assert!(
+            lg.node_types.iter().any(|&t| t == 0),
+            "expected a note node"
+        );
     }
 }

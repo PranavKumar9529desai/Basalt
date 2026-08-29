@@ -1,5 +1,5 @@
 // Real vault note-link graph rendered as a full workbench leaf (ADR-018).
-// Feeds `get_graph` to the wasm force sim (GraphWorker), then draws on a WebGL2
+// Feeds `get_graph` to the wasm force graph (GraphWorker), then draws on a WebGL2
 // canvas (packages/graph) with Obsidian-style interactions + controls:
 // hover-highlight, click-to-open, right-click context menu, wheel zoom,
 // drag-pan, node drag, filter bar (tag:/path:/ operators), color groups (by
@@ -15,6 +15,7 @@ import { useLeafServices, type LeafProps } from "@workspace/views";
 import { GraphRenderer } from "@workspace/graph";
 import { useActiveNoteStore } from "../features/editor";
 import { useTabsStore } from "../features/tabs";
+import { SpatialGrid } from "./spatialGrid";
 
 type GraphNodeMeta = {
   path: string;
@@ -145,6 +146,11 @@ export function GraphView(_props: LeafProps) {
   const activeNotePathRef = useRef<string | null>(null);
   const localDepthRef = useRef(2);
   const localRootRef = useRef<string | null>(null);
+  const gridRef = useRef(new SpatialGrid());
+  const arrowOutRef = useRef(new Float32Array(0));
+  const lastArrowFrameRef = useRef<GraphFrame | null>(null);
+  const lastArrowScaleRef = useRef(1);
+  const dirtyRef = useRef(true);
 
   const [query, setQuery] = useState("");
   const [local, setLocal] = useState(false);
@@ -257,7 +263,7 @@ export function GraphView(_props: LeafProps) {
     })();
 
     // Build the visible (filtered / local / display-gated) subset and (re)seed
-    // the worker sim with it.
+    // the worker graph with it.
     const rebuild = () => {
       const paths = pathsRef.current;
       if (!paths.length) return;

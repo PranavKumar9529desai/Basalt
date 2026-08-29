@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
-// Phase-2 proof worker: loads the Rust->wasm force sim, ticks it off the main
+// Phase-2 proof worker: loads the Rust->wasm force graph, ticks it off the main
 // thread, and posts position buffers back for the canvas to draw.
 //
-// Obsidian-style cooling: the sim decays `alpha` each step; once it settles
+// Obsidian-style cooling: the graph decays `alpha` each step; once it settles
 // (alpha < ~0.03) this worker STOPS ticking so the graph doesn't bounce forever.
 // Interactions (node drag / reheat) restart the loop via `graph_reheat` /
 // `graph_set_position`.

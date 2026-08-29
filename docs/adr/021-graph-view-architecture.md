@@ -48,11 +48,11 @@ community, and the weaknesses our competitive research surfaced:
   (`graph_query`, `arena_growth`, `graph_insert`).
 - `crates/basalt-wasm` already exists as the WASM bridge.
 - ADR-020 pre-authorized the graph stack: **move 3** (binary IPC for
-  node/edge dumps), **move 4** (WASM force sim in a Web Worker, WebGL render,
+  node/edge dumps), **move 4** (WASM force graph in a Web Worker, WebGL render,
   zero React per frame), **move 5** (windowed virtualization), **move 6**
   (channel event streams). This ADR promotes those into a concrete blueprint.
 
-The solved, benchmarked pattern is Rust → WASM graph core + Web Worker sim +
+The solved, benchmarked pattern is Rust → WASM graph core + Web Worker graph +
 GPU render: `@invariantcontinuum/graph` ("Rust core compiled to WASM… layout
 engine inside a Web Worker"), and `hylograph-wasm` reports **3–4× speedup over
 D3.js at 10k+ nodes**. We own the crate already.
@@ -62,7 +62,7 @@ D3.js at 10k+ nodes**. We own the crate already.
 ### Governing principle
 
 **The graph view is a GPU-rendered, Rust-owned visualization.** Rust
-(`basalt-graph`) owns the model and the force simulation; the simulation runs
+(`basalt-graph`) owns the model and the force graphulation; the simulation runs
 off the main thread in a Web Worker; positions stream to a WebGL2/WebGPU
 renderer as typed arrays; React never touches per-frame data.
 
@@ -73,11 +73,11 @@ Canvas2D.
 ### Four tiers (aligned to the four-layer rule)
 
 ```
-crates/basalt-graph     model + force sim (Rust, native + WASM)
+crates/basalt-graph     model + force graph (Rust, native + WASM)
         │  wasm-bindgen
-crates/basalt-wasm      JS/WASM bridge: build graph, sim_step() -> Float32Array
+crates/basalt-wasm      JS/WASM bridge: build graph, graph_step() -> Float32Array
         │  loaded in
-packages/graph          SIM WORKER (wasm sim tick) + WEBGL2/WebGPU RENDERER
+packages/graph          GRAPH WORKER (wasm graph tick) + WEBGL2/WebGPU RENDERER
         │  postMessage (transferable typed arrays)
 features/graph          React view, filters, selection, mode; registers via ADR-018
         │  viewRegistry.register(...)
@@ -91,13 +91,13 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
    (reuses the backlink pipeline that already feeds `get_backlinks`). Reuse the
    existing arena + `fuzzy` query paths.
 2. **Bridge tier — `crates/basalt-wasm` (extend).** Expose graph construction
-   and `sim_step()` returning `Float32Array` position buffers (SharedArrayBuffer
+   and `graph_step()` returning `Float32Array` position buffers (SharedArrayBuffer
    where COOP/COEP allow zero-copy). Already scaffolded.
 3. **Engine tier — new `packages/graph` (primitive).** A Web Worker hosting the
-   wasm sim ticks it and posts transferable position arrays; a **WebGL2**
+   wasm graph ticks it and posts transferable position arrays; a **WebGL2**
    renderer draws instanced points + lines. **No Tauri, no business state** —
    renders in an empty `index.html` given position buffers (passes the
-   packages/ litmus). WebGPU compute is the stretch path for the sim itself at
+   packages/ litmus). WebGPU compute is the stretch path for the graph itself at
    the 25k+ tier (fallback to WebGL2). **Zero React per frame.**
 4. **Feature tier — new `apps/tauri/src/features/graph`.** The React view
    component, filter UI, hover/selection, mode switch. Registers via
@@ -144,14 +144,14 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
 
 ### Phases (each ships independently)
 
-1. Force-sim module in `basalt-graph` + Criterion benches at 5k and 25k.
-2. `basalt-wasm` bridge + sim Web Worker + WebGL2 renderer (`packages/graph`);
+1. Force-graph module in `basalt-graph` + Criterion benches at 5k and 25k.
+2. `basalt-wasm` bridge + graph Web Worker + WebGL2 renderer (`packages/graph`);
    render the full vault graph at 60fps.
 3. Registered `graph` view (ADR-018) + open-on-click + binary IPC dump (move 3).
 4. Filters (tag-frequency, relative/neighbor, property, directionality) +
    queryable neighborhood + orphan detection.
 5. Physics polish: drag momentum, animated filter transitions, inertia pan/zoom.
-6. (Stretch) WebGPU compute sim + spatial whiteboard mode.
+6. (Stretch) WebGPU compute graph + spatial whiteboard mode.
 
 ### Non-goals
 
@@ -175,8 +175,8 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
 
 ## Verification
 
-- **Criterion benches** in `crates/basalt-graph/benches`: `sim_step` time at 5k
-  and 25k fixtures must stay within a 60fps budget (≤16.6ms sim + post per
+- **Criterion benches** in `crates/basalt-graph/benches`: `graph_step` time at 5k
+  and 25k fixtures must stay within a 60fps budget (≤16.6ms graph + post per
   frame). 25k tier required (AGENTS.md rule).
 - **Browser FPS harness:** render the full 25k vault graph; measure sustained
   frame time. Target ≥60fps; cite Obsidian's lag reports as the comparison

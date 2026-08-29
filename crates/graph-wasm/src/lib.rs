@@ -1,4 +1,4 @@
-//! Minimal WASM bridge for the graph force simulation (ADR-021 Phase 2 proof).
+//! Minimal WASM bridge for the graph force layout (ADR-021 Phase 2 proof).
 //!
 //! Exposes a C-ABI surface consumed by `GraphWorker.ts` via
 //! vite-plugin-wasm `?init` (same path as `crates/graph-wasm-probe`). Build with
@@ -12,18 +12,18 @@
 //!   The worker writes the edge bytes into wasm linear memory, so this path has
 //!   zero JS-side graph construction.
 
-use basalt_graph::{ForceSim, LayoutGraph, SimParams};
+use basalt_graph::{ForceGraph, LayoutGraph, GraphParams};
 use std::cell::RefCell;
 
-struct SimState {
-    sim: ForceSim,
+struct GraphState {
+    graph: ForceGraph,
     /// Edge list as `(u, v)` pairs; laid out contiguously so `graph_edges_ptr`
     /// reads as a flat `u32` array of length `edge_count * 2`.
     edges: Vec<(u32, u32)>,
 }
 
 thread_local! {
-    static STATE: RefCell<Option<SimState>> = RefCell::new(None);
+    static STATE: RefCell<Option<GraphState>> = RefCell::new(None);
 }
 
 /// Bump buffer for edges written from JS via `graph_alloc_edges`. Lives in wasm
@@ -74,9 +74,9 @@ pub extern "C" fn graph_seed(n: u32, degree: u32, seed: u32) {
         }
     }
 
-    let layout = LayoutGraph::new(n_usize, edges.clone(), degree_count);
-    let sim = ForceSim::new(&layout, SimParams::default());
-    STATE.with(|s| *s.borrow_mut() = Some(SimState { sim, edges }));
+    let layout = LayoutGraph::new(n_usize, edges.clone(), degree_count, vec![0u8; n_usize]);
+    let graph = ForceGraph::new(&layout, GraphParams::default());
+    STATE.with(|s| *s.borrow_mut() = Some(GraphState { graph, edges }));
 }
 
 /// Build the simulator from a real graph: `edges_ptr` points to a flat `u32`
@@ -96,24 +96,24 @@ pub extern "C" fn graph_build(node_count: u32, edges_ptr: *const u32, edge_count
         degree[v as usize] += 1;
         i += 2;
     }
-    let layout = LayoutGraph::new(node_count as usize, edges.clone(), degree);
-    let sim = ForceSim::new(&layout, SimParams::default());
-    STATE.with(|s| *s.borrow_mut() = Some(SimState { sim, edges }));
+    let layout = LayoutGraph::new(node_count as usize, edges.clone(), degree, vec![0u8; node_count as usize]);
+    let graph = ForceGraph::new(&layout, GraphParams::default());
+    STATE.with(|s| *s.borrow_mut() = Some(GraphState { graph, edges }));
 }
 
-/// Advance the simulation one fixed timestep (forces scaled by the cooling alpha).
+/// Advance the layout one fixed timestep (forces scaled by the cooling alpha).
 #[no_mangle]
 pub extern "C" fn graph_step() {
     STATE.with(|s| {
         if let Some(st) = s.borrow_mut().as_mut() {
-            st.sim.step();
+            st.graph.step();
         }
     });
 }
 
 #[no_mangle]
 pub extern "C" fn graph_node_count() -> u32 {
-    STATE.with(|s| s.borrow().as_ref().map(|st| st.sim.node_count() as u32).unwrap_or(0))
+    STATE.with(|s| s.borrow().as_ref().map(|st| st.graph.node_count() as u32).unwrap_or(0))
 }
 
 #[no_mangle]
@@ -128,7 +128,7 @@ pub extern "C" fn graph_positions_ptr() -> *const f32 {
     STATE.with(|s| {
         s.borrow()
             .as_ref()
-            .map(|st| st.sim.positions().as_ptr())
+            .map(|st| st.graph.positions().as_ptr())
             .unwrap_or(std::ptr::null())
     })
 }
@@ -149,15 +149,15 @@ pub extern "C" fn graph_edges_ptr() -> *const u32 {
 /// layout settles. The worker stops ticking once this drops below ~0.03.
 #[no_mangle]
 pub extern "C" fn graph_alpha() -> f32 {
-    STATE.with(|s| s.borrow().as_ref().map(|st| st.sim.alpha()).unwrap_or(0.0))
+    STATE.with(|s| s.borrow().as_ref().map(|st| st.graph.alpha()).unwrap_or(0.0))
 }
 
-/// Restart the simulation (e.g. after a node drag) so it re-settles.
+/// Restart the layout (e.g. after a node drag) so it re-settles.
 #[no_mangle]
 pub extern "C" fn graph_reheat() {
     STATE.with(|s| {
         if let Some(st) = s.borrow_mut().as_mut() {
-            st.sim.reheat();
+            st.graph.reheat();
         }
     });
 }
@@ -167,7 +167,7 @@ pub extern "C" fn graph_reheat() {
 pub extern "C" fn graph_set_position(index: u32, x: f32, y: f32) {
     STATE.with(|s| {
         if let Some(st) = s.borrow_mut().as_mut() {
-            st.sim.set_position(index as usize, x, y);
+            st.graph.set_position(index as usize, x, y);
         }
     });
 }

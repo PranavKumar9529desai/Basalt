@@ -57,4 +57,4 @@ function assertFiniteAndMoving(label, before, after) {
   assertFiniteAndMoving("build", before, readPositions(N));
 }
 
-console.log("OK: wasm sim produces finite, evolving positions for both seed and build");
+console.log("OK: wasm graph produces finite, evolving positions for both seed and build");
