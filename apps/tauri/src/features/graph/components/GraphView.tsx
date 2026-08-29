@@ -21,6 +21,7 @@ type GraphNodeMeta = {
   tags: string[];
   is_attachment: boolean;
   is_tag: boolean;
+  cluster: number;
 };
 type GraphSnapshot = {
   node_count: number;
@@ -140,6 +141,8 @@ export function GraphView(_props: LeafProps) {
   const isTagRef = useRef<boolean[]>([]);
   const edgesRef = useRef<Uint32Array>(new Uint32Array(0));
   const edgeWeightsRef = useRef<Float32Array>(new Float32Array(0));
+  const clusterRef = useRef<Uint32Array>(new Uint32Array(0));
+  const clusterCountRef = useRef(1);
   const adjRef = useRef<number[][]>([]);
   const syntheticRef = useRef(false);
 
@@ -211,6 +214,10 @@ export function GraphView(_props: LeafProps) {
       return PALETTE[h % PALETTE.length];
     }
     if (attachRef.current[full]) return "#8b949e";
+    if (clusterCountRef.current > 1) {
+      const c = clusterRef.current[full] ?? 0;
+      return PALETTE[c % PALETTE.length];
+    }
     const ts = tagsRef.current[full];
     if (ts && ts.length) {
       let h = 0;
@@ -279,6 +286,8 @@ export function GraphView(_props: LeafProps) {
         isTagRef.current = g.nodes.map((n) => n.is_tag);
         edgesRef.current = Uint32Array.from(g.edges);
         edgeWeightsRef.current = Float32Array.from(g.edge_weights ?? []);
+        clusterRef.current = Uint32Array.from(g.nodes.map((n) => n.cluster));
+        clusterCountRef.current = new Set(clusterRef.current).size;
         syntheticRef.current = false;
         const adj: number[][] = Array.from({ length: g.nodes.length }, () => []);
         for (let e = 0; e < g.edges.length; e += 2) {

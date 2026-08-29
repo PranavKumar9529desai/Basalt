@@ -85,6 +85,9 @@ pub struct GraphNodeMeta {
     /// True for tag-tree nodes (e.g. `project/alpha`); styled/filtered
     /// separately from notes. See docs/tag-graph-connections.md.
     pub is_tag: bool,
+    /// Connected-component id (union-find over the snapshot graph); lets the
+    /// frontend auto-color clusters without re-deriving topology on the client.
+    pub cluster: u32,
 }
 
 #[derive(Serialize)]
@@ -114,6 +117,15 @@ pub struct GraphSnapshot {
 /// `get_graph` command is a thin wrapper over this. Tag-tree semantics live in
 /// `docs/tag-graph-connections.md` (notes link to exact tags; nested tags
 /// parent->child).
+
+/// Union-find root lookup with path compression.
+fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
+    while parent[x as usize] != x {
+        parent[x as usize] = parent[parent[x as usize] as usize];
+        x = parent[x as usize];
+    }
+    x
+}
 pub(crate) fn build_graph_snapshot(
     vault: &Vault,
     vault_path: &Path,
@@ -166,6 +178,7 @@ pub(crate) fn build_graph_snapshot(
             tags,
             is_attachment: !p.ends_with(".md"),
             is_tag: false,
+            cluster: 0,
         });
         dense.insert(id, i as u32);
     }
@@ -182,6 +195,7 @@ pub(crate) fn build_graph_snapshot(
                 tags: vec![],
                 is_attachment: false,
                 is_tag: true,
+                cluster: 0,
             });
         }
     }
@@ -264,6 +278,28 @@ pub(crate) fn build_graph_snapshot(
         let links = pair_counts[&(((u as u64) << 32 | (v as u64)))];
         let w = links + shared_tags(u as usize, v as usize);
         edge_weights.push(w as f32);
+    }
+    // Connected-component id per node so the frontend can auto-color clusters.
+    let mut parent: Vec<u32> = (0..nodes.len() as u32).collect();
+    for e in (0..edges.len()).step_by(2) {
+        let a = edges[e];
+        let b = edges[e + 1];
+        let ra = cc_find(&mut parent, a);
+        let rb = cc_find(&mut parent, b);
+        if ra != rb {
+            parent[ra as usize] = rb;
+        }
+    }
+    let mut root_to_id: HashMap<u32, u32> = HashMap::new();
+    let mut next_id = 0u32;
+    for i in 0..nodes.len() as u32 {
+        let r = cc_find(&mut parent, i);
+        let id = *root_to_id.entry(r).or_insert_with(|| {
+            let id = next_id;
+            next_id += 1;
+            id
+        });
+        nodes[i as usize].cluster = id;
     }
 
     Ok(GraphSnapshot {
@@ -417,6 +453,40 @@ mod tests {
         let w = pair_w.map(|(_, wt)| *wt).unwrap_or(0.0);
         // One direct link + two shared tags = 3.
         assert_eq!(w, 3.0, "a<->b weight = links + shared tags");
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_graph_snapshot_cluster_ids_separate_disconnected_notes() {
+        let root = unique_temp_dir();
+        let a = root.join("a.md");
+        let b = root.join("b.md");
+        fs::write(&a, "# A\n").unwrap();
+        fs::write(&b, "# B\n").unwrap();
+        let mut vault = Vault::new();
+        let mut ma = FileMetadata::new();
+        ma.tags = vec!["p".to_string()];
+        vault.graph.add_document(a.to_str().unwrap(), ma, &mut vault.arena);
+        let mut mb = FileMetadata::new();
+        mb.tags = vec!["q".to_string()];
+        vault.graph.add_document(b.to_str().unwrap(), mb, &mut vault.arena);
+        let snap = build_graph_snapshot(&vault, &root).unwrap();
+        let a_idx = snap
+            .nodes
+            .iter()
+            .position(|n| !n.is_tag && n.path.ends_with("a.md"))
+            .unwrap();
+        let b_idx = snap
+            .nodes
+            .iter()
+            .position(|n| !n.is_tag && n.path.ends_with("b.md"))
+            .unwrap();
+        // No link and no shared tag => distinct connected components.
+        assert_ne!(
+            snap.nodes[a_idx].cluster,
+            snap.nodes[b_idx].cluster,
+            "disconnected notes => distinct clusters"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 }
