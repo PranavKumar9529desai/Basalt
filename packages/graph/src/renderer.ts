@@ -101,8 +101,20 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   gl.compileShader(sh);
   if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
     const log = gl.getShaderInfoLog(sh);
+    const err = gl.getError();
+    const lost = gl.isContextLost();
+    const firstLine = src.split("\n")[0];
+    const detail = [
+      "GraphRenderer shader compile failed",
+      `  firstLine: ${firstLine}`,
+      `  infoLog: ${log ?? "<null>"}`,
+      `  glError: ${err}`,
+      `  contextLost: ${lost}`,
+      `  source:\n${src}`,
+    ].join("\n");
+    console.error(detail);
     gl.deleteShader(sh);
-    throw new Error(`GraphRenderer shader compile failed: ${log}`);
+    throw new Error(detail);
   }
   return sh;
 }
@@ -114,12 +126,18 @@ function link(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram 
   gl.linkProgram(p);
   if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
     const log = gl.getProgramInfoLog(p);
+    const err = gl.getError();
+    const detail = [
+      "GraphRenderer program link failed",
+      `  infoLog: ${log ?? "<null>"}`,
+      `  glError: ${err}`,
+    ].join("\n");
+    console.error(detail);
     gl.deleteProgram(p);
-    throw new Error(`GraphRenderer program link failed: ${log}`);
+    throw new Error(detail);
   }
   return p;
 }
-
 export class GraphRenderer {
   private gl: WebGL2RenderingContext;
   private canvas: HTMLCanvasElement;
@@ -168,6 +186,20 @@ export class GraphRenderer {
     if (!gl) throw new Error("GraphRenderer: WebGL2 is not available");
     this.gl = gl;
     this.canvas = canvas;
+
+    // Diagnostic probe: a "webgl2" context can be returned even when the
+    // underlying driver only accepts GLSL ES 1.00 — which makes #version 300 es
+    // fail to compile with a null info log. Surface the truth before linking.
+    const isWebGL2 =
+      typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
+    console.error("[graph] WebGL2 context probe", {
+      isWebGL2,
+      version: String(gl.getParameter(gl.VERSION)),
+      shadingLanguage: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)),
+      renderer: String(gl.getParameter(gl.RENDERER)),
+      vendor: String(gl.getParameter(gl.VENDOR)),
+      contextLost: gl.isContextLost(),
+    });
 
     this.progScene = link(gl, VERT_SCENE, FRAG_POINTS);
     // Re-link the LINE fragment variant against the same scene vertex shader;
