@@ -14,7 +14,15 @@ interface VaultClipboardState {
   timestamp: number | null;
 }
 
-function useVaultClipboardState() {
+export interface VaultClipboardApi {
+  clipboard: VaultClipboardState;
+  hasItems: boolean;
+  setCutItems: (items: VaultClipboardItem[]) => void;
+  clearClipboard: () => void;
+  isCutPath: (path: string) => boolean;
+}
+
+function useVaultClipboardState(): VaultClipboardApi {
   const [clipboard, setClipboard] = useState<VaultClipboardState>({
     operation: null,
     items: [],
@@ -62,7 +70,19 @@ interface VaultContextMenuState {
   isMultiSelect: boolean;
 }
 
-function useVaultContextMenuState() {
+export interface VaultContextMenuApi {
+  menuState: VaultContextMenuState;
+  isOpen: boolean;
+  openForNode: (
+    node: FlatTreeNode,
+    e: React.MouseEvent,
+    isMultiSelect: boolean,
+  ) => void;
+  openForRoot: (e: React.MouseEvent) => void;
+  closeMenu: () => void;
+}
+
+function useVaultContextMenuState(): VaultContextMenuApi {
   const [menuState, setMenuState] = useState<VaultContextMenuState>({
     anchor: null,
     target: null,
@@ -101,7 +121,25 @@ function useVaultContextMenuState() {
   };
 }
 
-function useVaultSelectionState() {
+export interface VaultSelectionApi {
+  selectedIds: Set<string>;
+  anchorId: string | null;
+  focusedId: string | null;
+  handleSelect: (
+    node: FileNode,
+    modifiers: {
+      metaKey?: boolean;
+      ctrlKey?: boolean;
+      shiftKey?: boolean;
+    },
+    visibleNodes: FlatTreeNode[],
+  ) => void;
+  setSelection: (ids: Set<string>) => void;
+  clearSelection: () => void;
+  setFocusedId: (id: string) => void;
+}
+
+function useVaultSelectionState(): VaultSelectionApi {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -188,9 +226,11 @@ export interface UseVaultControllerOptions {
   toggleFolder: (relPath: string) => void;
   refreshTree: () => Promise<void>;
   onFileOpen?: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
-  /** Fired after a successful move/paste with the sources and destination.
+  /**
+   * Fired after a successful move/paste with the sources and destination.
    * Cross-feature wiring (e.g. repointing open tabs) belongs to the caller
-   * — this hook must stay tabs-free. */
+   * — this hook must stay tabs-free.
+   */
   onPathsMoved?: (sourcePaths: string[], destinationRelPath: string) => void;
 }
 
@@ -216,29 +256,34 @@ export interface UseVaultControllerReturn {
   onMenuCut: () => void;
   onMenuPaste: () => Promise<void>;
   onMenuDelete: () => void;
-  selection: ReturnType<typeof useVaultSelectionState>;
-  contextMenu: ReturnType<typeof useVaultContextMenuState>;
+  selection: VaultSelectionApi;
+  contextMenu: VaultContextMenuApi;
 }
 
 /**
  * Single controller hook for the file tree: merges selection, clipboard,
- * context-menu, and file-operation logic that was previously four hooks.
+ * context-menu, and file-operation logic. Kept cohesive (one responsibility —
+ * file-tree interaction) rather than fragmented by line count; the three state
+ * sub-hooks below are private to this controller.
  */
-export function useVaultController({
-  treeNodes,
-  visibleNodes,
-  vaultPath,
-  editor,
-  mutations,
-  openFolder,
-  toggleFolder,
-  refreshTree,
-  onFileOpen,
-  onPathsMoved,
-}: UseVaultControllerOptions): UseVaultControllerReturn {
+export function useVaultController(
+  options: UseVaultControllerOptions,
+): UseVaultControllerReturn {
   const selection = useVaultSelectionState();
   const clipboard = useVaultClipboardState();
   const contextMenu = useVaultContextMenuState();
+  const {
+    treeNodes,
+    visibleNodes,
+    vaultPath,
+    editor,
+    mutations,
+    openFolder,
+    toggleFolder,
+    refreshTree,
+    onFileOpen,
+    onPathsMoved,
+  } = options;
 
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
   const lastFileClickRef = useRef<{ path: string; atMs: number } | null>(null);

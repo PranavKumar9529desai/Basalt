@@ -22,4 +22,20 @@ export type { EditorExtensionGroups } from "./editor";
 export { createEditorExtensionGroups, createEditorExtensions } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
-export type { EditorConfig, FetchLinksFn, FetchTagsFn } from "./types";
+export type {
+  EditorConfig,
+  FetchLinksFn,
+  FetchTagsFn,
+  FrontmatterModel,
+  FrontmatterEntry,
+  FrontmatterValue,
+  FrontmatterDiagnostic,
+  FrontmatterDiagnosticKind,
+  ParseFrontmatterFn,
+} from "./types";
+export {
+  getFrontmatterModel,
+  getFrontmatterBlockSpan,
+  frontmatterModelPlugin,
+  requestFrontmatterReparse,
+} from "./frontmatter-model";

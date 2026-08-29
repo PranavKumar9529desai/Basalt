@@ -314,17 +314,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "basalt-wasm"
-version = "0.1.0"
-dependencies = [
- "basalt-graph",
- "basalt-parser",
- "basalt-types",
- "serde-wasm-bindgen",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3807,17 +3796,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_core"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4401,6 +4379,8 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 name = "tauri"
 version = "0.1.0"
 dependencies = [
+ "basalt-graph",
+ "basalt-parser",
  "basalt-search",
  "basalt-types",
  "basalt-vault",

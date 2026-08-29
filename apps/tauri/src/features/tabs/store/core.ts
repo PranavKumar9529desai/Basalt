@@ -86,6 +86,11 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       }
     }
     if (existingTab) {
+      if (typeof note.line === "number") {
+        set((s) => ({
+          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], line: note.line } },
+        }));
+      }
       if (activate) get().activateTab(targetId);
       return targetId;
     }
@@ -117,6 +122,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       isDirty: false,
       createdAt: timestamp,
       lastAccessedAt: timestamp,
+      line: note.line,
     };
 
     pane.tabIds = [...pane.tabIds, incomingTabId];
@@ -167,6 +173,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       isDirty: false,
       createdAt: timestamp,
       lastAccessedAt: timestamp,
+      line: note.line,
     };
 
     pane.tabIds = [...pane.tabIds, incomingTabId];

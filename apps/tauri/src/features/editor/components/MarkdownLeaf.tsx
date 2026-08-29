@@ -11,6 +11,7 @@ import {
   createEditorExtensions,
   editorBenchmarkState,
   formatBenchmarkReport,
+  getFrontmatterBlockSpan,
   runIsolationBenchmark,
   runTypingBenchmark,
 } from "@workspace/editor";
@@ -22,6 +23,8 @@ import type { FileChangeEvent, SaveStatus } from "../../vault/types";
 import { useLatestRef } from "../hooks/useLatestRef";
 import { useNoteIO } from "../hooks/useNoteIO";
 import { pruneClosedTabCaches } from "../pruneCache";
+
+import { refreshFrontmatter, setActiveFrontmatterEditor } from "../frontmatter";
 import { useActiveNoteStore } from "../store";
 import { EditorHost } from "./EditorHost";
 import { EditorContextMenu } from "./EditorContextMenu";
@@ -121,6 +124,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         onFetchLinks: io.onFetchLinks,
         onFetchTags: io.onFetchTags,
         onOpenLink: handleOpenLink,
+        parseFrontmatter: io.parseFrontmatter,
       }),
       contextMenuExtension(setMenuState),
       EditorView.updateListener.of((u) => {
@@ -139,6 +143,15 @@ export function MarkdownLeaf({ tab }: LeafProps) {
         setSaveStatusRef.current("unsaved");
         scheduleSaveRef.current();
         scheduleStatsRef.current();
+        const span = getFrontmatterBlockSpan(u.view);
+        const fmEnd = span ? span.end : 0;
+        // ADR-022 rule 3: only reparse when the change touches the
+        // frontmatter region (or the user is creating one at the top).
+        const inFm =
+          fmEnd > 0
+            ? u.changes.touchesRange(0, fmEnd)
+            : u.state.doc.sliceString(0, 3) === "---";
+        if (inFm) refreshFrontmatter(u.view, u.state.doc.toString());
       }),
     ],
     [],
@@ -232,6 +245,11 @@ export function MarkdownLeaf({ tab }: LeafProps) {
     });
   }, [services, saveTab]);
 
+  // Keep the properties panel pointed at the active editor for surgical edits.
+  useEffect(() => {
+    setActiveFrontmatterEditor(view);
+  }, [view]);
+
   // Doc swap, never remount.
   // Reveal a 1-based line in the active editor (search jump-to-line).
   const revealLine = useCallback((line: number) => {
@@ -273,7 +291,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           extensions: extensionsRef.current,
         });
         statesRef.current.set(t.id, state);
-        view.setState(state);
+      view.setState(state);
+      refreshFrontmatter(view, text);
         view.scrollDOM.scrollTop = 0;
         if (t.line) revealLine(t.line);
       } catch (err) {
@@ -377,6 +396,7 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           onFetchLinks: io.onFetchLinks,
           onFetchTags: io.onFetchTags,
           onOpenLink: handleOpenLink,
+          parseFrontmatter: io.parseFrontmatter,
         });
         const full = [
           ...g.base,
@@ -385,6 +405,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           ...g.livePreview,
           ...g.suggestions,
           ...g.links,
+
+          ...g.frontmatter,
         ];
         const results = runIsolationBenchmark(view, [
           { name: "base", extensions: g.base },
@@ -393,6 +415,8 @@ export function MarkdownLeaf({ tab }: LeafProps) {
           { name: "+live-preview", extensions: [...g.base, ...g.livePreview] },
           { name: "+suggestions", extensions: [...g.base, ...g.suggestions] },
           { name: "+links", extensions: [...g.base, ...g.links] },
+
+          { name: "+frontmatter", extensions: [...g.base, ...g.frontmatter] },
           { name: "full", extensions: full },
         ]);
         void report("Editor typing benchmark — extension isolation", results);

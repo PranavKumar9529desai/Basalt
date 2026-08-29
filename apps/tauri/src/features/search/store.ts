@@ -1,12 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 
-import type { ContentResult, FileResult } from "./types";
+import type { FileMatch, FileResult, SearchContentResult } from "./types";
+/** Total number of matching lines across all files (the flattened result set). */
+const countMatches = (results: FileMatch[]): number =>
+  results.reduce((n, f) => n + f.matches.length, 0);
 
 interface SearchStore {
   isSearchOpen: boolean;
   searchQuery: string;
-  searchResults: ContentResult[];
+  searchResults: FileMatch[];
+  searchTotalHits: number;
   isSearchLoading: boolean;
   searchSelectedIndex: number;
 
@@ -33,6 +37,7 @@ interface SearchStore {
 export const useSearchStore = create<SearchStore>()((set, get) => ({
   isSearchOpen: false,
   searchQuery: "",
+  searchTotalHits: 0,
   searchResults: [],
   isSearchLoading: false,
   searchSelectedIndex: 0,
@@ -57,11 +62,16 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     }
     set({ isSearchLoading: true });
     try {
-      const results = await invoke<ContentResult[]>("search_content", {
+      const res = await invoke<SearchContentResult>("search_content", {
         query,
         limit: 20,
       });
-      set({ searchResults: results, isSearchLoading: false });
+      set({
+        searchResults: res.files,
+        searchTotalHits: res.totalHits,
+        searchSelectedIndex: 0,
+        isSearchLoading: false,
+      });
     } catch (err) {
       console.error("[search] search_content error:", err);
       set({ isSearchLoading: false });
@@ -70,12 +80,10 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
 
   searchSelectNext: () => {
     const { searchSelectedIndex, searchResults } = get();
-    if (searchResults.length === 0) return;
+    const total = countMatches(searchResults);
+    if (total === 0) return;
     set({
-      searchSelectedIndex: Math.min(
-        searchSelectedIndex + 1,
-        searchResults.length - 1,
-      ),
+      searchSelectedIndex: Math.min(searchSelectedIndex + 1, total - 1),
     });
   },
   searchSelectPrev: () => {

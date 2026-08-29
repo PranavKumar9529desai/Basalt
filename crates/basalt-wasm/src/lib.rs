@@ -1,5 +1,5 @@
 use basalt_graph::search_commands;
-use basalt_parser::{extract_metadata, process_markdown};
+use basalt_parser::{extract_metadata, parse_frontmatter, process_markdown};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -20,6 +20,10 @@ impl Basalt {
     pub fn extract_metadata(&self, input: &str) -> Result<JsValue, JsValue> {
         let meta = extract_metadata(input);
         serde_wasm_bindgen::to_value(&meta).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+    pub fn parse_frontmatter(&self, input: &str) -> Result<JsValue, JsValue> {
+        let model = parse_frontmatter(input);
+        serde_wasm_bindgen::to_value(&model).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
     pub fn fuzzy_search_commands(

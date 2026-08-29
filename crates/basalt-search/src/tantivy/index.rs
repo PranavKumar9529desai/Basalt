@@ -7,7 +7,7 @@ use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query};
 use tantivy::schema::Value;
 use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument, Term};
 
-use basalt_types::ContentResult;
+use basalt_types::FileMatch;
 
 use super::schema::build_schema;
 
@@ -133,7 +133,7 @@ impl TantivyIndex {
     /// Each word in the query is treated as a prefix via `FuzzyTermQuery::new_prefix`
     /// — "packag" finds "package", "ne" finds "new"/"next"/"note" etc. All words
     /// must appear (AND), each word is OR'd across title (3× boost), body, and tags.
-    pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<ContentResult>> {
+    pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<FileMatch>> {
         let searcher = self.reader.searcher();
 
         let words: Vec<String> = query_str
@@ -189,11 +189,12 @@ impl TantivyIndex {
                 .unwrap_or("")
                 .to_string();
 
-            results.push(ContentResult {
+            results.push(FileMatch {
                 path,
                 title,
                 score,
-                snippets: vec![],
+                text: String::new(),
+                matches: vec![],
             });
         }
 

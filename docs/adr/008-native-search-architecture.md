@@ -106,11 +106,14 @@ On file change (via `notify` watcher already in `basalt_fs`):
 ### Tauri IPC Commands (v1)
 
 ```
-search_content(query: String, limit: u32) -> Vec<ContentResult>
+search_content(query: String, limit: u32) -> Vec<FileMatch>
 search_files(query: String, limit: u32) -> Vec<FileResult>
 ```
 
-`ContentResult` carries: `path`, `title`, `score`, `snippets: Vec<Snippet>` (pre-highlighted excerpt strings from aho-corasick scan of matched document bodies).
+`FileMatch` carries: `path`, `title`, `score`, and `matches: Vec<LineMatch>`. Each
+`LineMatch` is one matching line with `line_number`, the full `text`, character-offset
+`highlights`, and up to `CONTEXT_LINES` (`ContextLine`s) of neighbouring context
+before/after — enough for a LazyVim-style preview pane without a second IPC call.
 
 ### Result Interaction
 

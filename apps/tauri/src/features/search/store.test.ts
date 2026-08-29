@@ -2,7 +2,7 @@ import { act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { invoke } from "@tauri-apps/api/core";
-import type { ContentResult, FileResult } from "./types";
+import type { FileMatch, FileResult } from "./types";
 
 import { useSearchStore } from "./store";
 
@@ -10,11 +10,20 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
-const content = (path: string, title: string): ContentResult => ({
+const content = (path: string, title: string): FileMatch => ({
   path,
   title,
   score: 1,
-  snippets: [],
+  text: "",
+  matches: [
+    {
+      lineNumber: 1,
+      text: "match line",
+      highlights: [],
+      contextBefore: [],
+      contextAfter: [],
+    },
+  ],
 });
 
 const file = (path: string, title: string): FileResult => ({ path, title, score: 1 });
@@ -22,7 +31,8 @@ const file = (path: string, title: string): FileResult => ({ path, title, score:
 const initial = {
   isSearchOpen: false,
   searchQuery: "",
-  searchResults: [] as ContentResult[],
+  searchResults: [] as FileMatch[],
+  searchTotalHits: 0,
   isSearchLoading: false,
   searchSelectedIndex: 0,
   isSwitcherOpen: false,
@@ -70,13 +80,17 @@ describe("useSearchStore", () => {
     });
 
     it("runSearch invokes search_content with limit 20 and stores results", async () => {
-      vi.mocked(invoke).mockResolvedValue([content("a.md", "A")]);
+      vi.mocked(invoke).mockResolvedValue({
+        files: [content("a.md", "A")],
+        totalHits: 5,
+      });
       await useSearchStore.getState().runSearch("needle");
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("search_content", {
         query: "needle",
         limit: 20,
       });
       expect(useSearchStore.getState().searchResults).toEqual([content("a.md", "A")]);
+      expect(useSearchStore.getState().searchTotalHits).toBe(5);
       expect(useSearchStore.getState().isSearchLoading).toBe(false);
     });
 
