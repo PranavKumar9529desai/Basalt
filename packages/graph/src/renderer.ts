@@ -58,11 +58,13 @@ const VERT_EDGE = `#version 300 es
 layout(location = 0) in vec2 aCorner;
 layout(location = 1) in vec4 aEndpoints; // ax, ay, bx, by (world space)
 layout(location = 2) in float aWeight;
+layout(location = 3) in float aEdgeFlag;
 uniform vec2 uResolution;
 uniform float uScale;
 uniform vec2 uOffset;
 uniform float uDpr;
 out float vWeight;
+out float vEdgeFlag;
 void main() {
   vec2 sA = aEndpoints.xy * uScale + uOffset;
   vec2 sB = aEndpoints.zw * uScale + uOffset;
@@ -76,19 +78,23 @@ void main() {
   clip.y = -clip.y;
   gl_Position = vec4(clip, 0.0, 1.0);
   vWeight = aWeight;
+  vEdgeFlag = aEdgeFlag;
 }`;
 
 const FRAG_EDGE = `#version 300 es
 precision mediump float;
 in float vWeight;
+in float vEdgeFlag;
 uniform float uHasHover;
 uniform vec3 uEdgeColor;
 out vec4 frag;
 void main() {
-  // Heavier edges read slightly more opaque; all edges dim while a node is
-  // hovered so the focused node's connections stand out.
+  // When a node is hovered, only its connections stay bright; every other
+  // edge fades so the focused node's neighborhood stands out.
   float a = clamp(0.14 + 0.07 * vWeight, 0.14, 0.38);
-  a *= (uHasHover > 0.5 ? 0.55 : 1.0);
+  if (uHasHover > 0.5) {
+    a = vEdgeFlag > 0.5 ? clamp(0.22 + 0.12 * vWeight, 0.22, 0.5) : a * 0.3;
+  }
   frag = vec4(uEdgeColor, a);
 }`;
 
@@ -173,6 +179,7 @@ export class GraphRenderer {
   private edgeEndpointsBuf: WebGLBuffer;
   private edgeWeightBuf: WebGLBuffer;
   private edgeCornerBuf: WebGLBuffer;
+  private edgeFlagBuf!: WebGLBuffer;
   private edgeColor: [number, number, number] = [0.5, 0.6, 0.78];
   private uEdgeColor: WebGLUniformLocation | null = null;
   private edgePairs: Uint32Array = new Uint32Array(0);
@@ -299,6 +306,7 @@ export class GraphRenderer {
   }
 
   private buildEdgeVao(): WebGLVertexArrayObject {
+    this.edgeFlagBuf = this.gl.createBuffer()!;
     const gl = this.gl;
     const vao = gl.createVertexArray()!;
     gl.bindVertexArray(vao);
@@ -316,6 +324,11 @@ export class GraphRenderer {
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
     gl.vertexAttribDivisor(2, 1);
+    // Per-instance hover flag: 1 when this edge touches the hovered node.
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeFlagBuf);
+    gl.enableVertexAttribArray(3);
+    gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribDivisor(3, 1);
     gl.bindVertexArray(null);
     return vao;
   }
@@ -346,6 +359,11 @@ export class GraphRenderer {
   setFlags(flags: Float32Array): void {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.flagBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, flags, gl.DYNAMIC_DRAW);
+  }
+  setEdgeFlags(flags: Float32Array): void {
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.edgeFlagBuf);
     gl.bufferData(gl.ARRAY_BUFFER, flags, gl.DYNAMIC_DRAW);
   }
 
@@ -470,6 +488,7 @@ export class GraphRenderer {
     gl.deleteBuffer(this.edgeEndpointsBuf);
     gl.deleteBuffer(this.edgeWeightBuf);
     gl.deleteBuffer(this.edgeCornerBuf);
+    gl.deleteBuffer(this.edgeFlagBuf);
     gl.deleteBuffer(this.arrowBuf);
     gl.deleteVertexArray(this.vaoScene);
     gl.deleteVertexArray(this.vaoEdges);

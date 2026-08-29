@@ -202,6 +202,9 @@ export function GraphView(_props: LeafProps) {
   // Per-subset hover flag buffer for the renderer (written on hover, uploaded when dirty).
   const flagsRef = useRef<Float32Array>(new Float32Array(0));
   const flagsDirtyRef = useRef(false);
+  const edgeFlagsRef = useRef<Float32Array>(new Float32Array(0));
+  const edgeFlagsDirtyRef = useRef(false);
+  const hoverEdgeFullRef = useRef(-1);
   // Per-subset drawn sizes (CSS px diameter) and the underlying importance
   // array (link degree / tag note-count) they are derived from.
   const sizesRef = useRef<Float32Array>(new Float32Array(0));
@@ -501,6 +504,8 @@ export function GraphView(_props: LeafProps) {
 
       activeMapRef.current = map;
       activeEdgesRef.current = Uint32Array.from(subEdges);
+      edgeFlagsRef.current = new Float32Array(subEdges.length / 2);
+      edgeFlagsDirtyRef.current = true;
       activeAdjRef.current = subAdj;
       viewRef.current.fitted = false;
 
@@ -667,6 +672,17 @@ export function GraphView(_props: LeafProps) {
         }
         flagsDirtyRef.current = true;
         renderer.setHasHover(true);
+        if (hit !== hoverEdgeFullRef.current) {
+          hoverEdgeFullRef.current = hit;
+          const ef = edgeFlagsRef.current;
+          if (ef.length === activeEdgesRef.current.length / 2) {
+            const edges = activeEdgesRef.current;
+            for (let e = 0; e < edges.length; e += 2) {
+              ef[e / 2] = edges[e] === hit || edges[e + 1] === hit ? 1 : 0;
+            }
+            edgeFlagsDirtyRef.current = true;
+          }
+        }
         const isTag = isTagRef.current[full];
         const title = isTag ? `#${pathsRef.current[full] ?? ""}` : (pathsRef.current[full] ?? "");
         setHover({ x: px, y: py, title, full, isTag });
@@ -701,6 +717,9 @@ export function GraphView(_props: LeafProps) {
       } else if (prevHover >= 0) {
         flagsRef.current.fill(0);
         flagsDirtyRef.current = true;
+        edgeFlagsRef.current.fill(0);
+        edgeFlagsDirtyRef.current = true;
+        hoverEdgeFullRef.current = -1;
         renderer.setHasHover(false);
         setHover(null);
         setPreview(null);
@@ -741,6 +760,9 @@ export function GraphView(_props: LeafProps) {
       hoverFetchRef.current++;
       flagsRef.current.fill(0);
       flagsDirtyRef.current = true;
+      edgeFlagsRef.current.fill(0);
+      edgeFlagsDirtyRef.current = true;
+      hoverEdgeFullRef.current = -1;
       renderer.setHasHover(false);
       dirtyRef.current = true;
       panRef.current = null;
@@ -787,6 +809,10 @@ export function GraphView(_props: LeafProps) {
           if (flagsDirtyRef.current) {
             renderer.setFlags(flagsRef.current);
             flagsDirtyRef.current = false;
+          }
+          if (edgeFlagsDirtyRef.current) {
+            renderer.setEdgeFlags(edgeFlagsRef.current);
+            edgeFlagsDirtyRef.current = false;
           }
           // Arrowheads depend on positions AND zoom; rebuild only when either changed.
           if (f !== lastArrowFrameRef.current || v.scale !== lastArrowScaleRef.current) {
