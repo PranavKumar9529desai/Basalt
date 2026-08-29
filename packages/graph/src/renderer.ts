@@ -391,6 +391,5 @@ export class GraphRenderer {
     gl.deleteProgram(this.progScene);
     gl.deleteProgram(this.progSceneLines);
     gl.deleteProgram(this.progArrows);
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
   }
 }
