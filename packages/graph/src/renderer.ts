@@ -52,7 +52,7 @@ void main() {
   vec2 d = gl_PointCoord - vec2(0.5);
   if (dot(d, d) > 0.25) discard;
   float a = (uHasHover > 0.5 && vFlag < 0.5) ? 0.22 : 1.0;
-  frag = vec4(vColor, a);
+  frag = vec4(vColor * a, a);
 }`;
 
 const FRAG_LINES = `#version 300 es
@@ -67,7 +67,7 @@ void main() {
   float a = (uHasHover > 0.5)
     ? ((vFlag > 0.5) ? 0.6 : 0.06)
     : 0.22;
-  frag = vec4(vColor, a);
+  frag = vec4(vColor * a, a);
 }`;
 
 const VERT_ARROW = `#version 300 es
@@ -87,7 +87,7 @@ precision mediump float;
 uniform vec4 uArrowColor;
 out vec4 frag;
 void main() {
-  frag = uArrowColor;
+  frag = vec4(uArrowColor.rgb * uArrowColor.a, uArrowColor.a);
 }`;
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
@@ -200,6 +200,9 @@ export class GraphRenderer {
       vendor: String(gl.getParameter(gl.VENDOR)),
       contextLost: gl.isContextLost(),
     });
+    // Premultiplied-alpha compositing: transparent clear + dimmed hover edges blend correctly.
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
     this.progScene = link(gl, VERT_SCENE, FRAG_POINTS);
     // Re-link the LINE fragment variant against the same scene vertex shader;
@@ -288,7 +291,7 @@ export class GraphRenderer {
     const gl = this.gl;
     this.nodeCount = positions.length >> 1;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
-    gl.deleteProgram(this.progArrows);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
   }
 
   setColors(colors: Float32Array): void {
@@ -331,7 +334,7 @@ export class GraphRenderer {
 
   render(): void {
     const gl = this.gl;
-    gl.clearColor(0.051, 0.067, 0.09, 1.0); // #0d1117
+    gl.clearColor(0, 0, 0, 0); // transparent — geometry only; app theme shows through
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (this.nodeCount === 0) return;
 
