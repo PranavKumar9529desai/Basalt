@@ -160,7 +160,7 @@ pub fn get_graph(state: State<AppState>) -> Result<GraphSnapshot, String> {
             .map(|m| m.tags.clone())
             .unwrap_or_default();
         nodes.push(GraphNodeMeta {
-            path: rel.clone(),
+            path: p.clone(),
             tags,
             is_attachment: !p.ends_with(".md"),
         });

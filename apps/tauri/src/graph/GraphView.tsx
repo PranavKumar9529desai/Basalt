@@ -1,15 +1,18 @@
 // Real vault note-link graph rendered as a full workbench leaf (ADR-018).
 // Feeds `get_graph` to the wasm force sim (GraphWorker), then draws on a 2D
 // canvas with Obsidian-style interactions + controls: hover-highlight,
-// click-to-open, wheel zoom, drag-pan, node drag, filter bar (tag:/path:
-// operators), color groups by tag, local-graph mode from the active note,
-// directional arrows, and display toggles (orphans / attachments / text-fade).
+// click-to-open, right-click context menu, wheel zoom, drag-pan, node drag,
+// filter bar (tag:/path:/ operators), color groups (by tag, then folder),
+// local-graph mode from the active note (or a chosen root) with a depth
+// control, directional arrows, and display toggles (orphans / attachments /
+// text-fade). Center-on-note flies the camera to a node.
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
 import { useLeafServices, type LeafProps } from "@workspace/views";
 import { useActiveNoteStore } from "../features/editor";
+import { useTabsStore } from "../features/tabs";
 
 type GraphNodeMeta = {
   path: string;
@@ -32,6 +35,7 @@ const MIN_SCALE = 0.02;
 const MAX_SCALE = 12;
 const LABEL_SCALE = 1.4; // show node labels once zoomed past this
 const LABEL_CAP = 1500; // skip labels above this many visible nodes
+const CENTER_SCALE = 2.2; // zoom level used when flying to a node
 
 const PALETTE = [
   "#4cc2ff",
@@ -74,19 +78,27 @@ export function GraphView(_props: LeafProps) {
   const downRef = useRef<{ x: number; y: number } | null>(null);
   const hoverRef = useRef(-1);
   const rebuildRef = useRef<() => void>(() => {});
+  const centerOnRef = useRef<(full: number) => void>(() => {});
   // Live mirrors of control state so the mount-only rebuild() reads current values.
   const queryRef = useRef("");
   const localRef = useRef(false);
   const showOrphansRef = useRef(true);
   const showAttachRef = useRef(true);
   const activeNotePathRef = useRef<string | null>(null);
+  const localDepthRef = useRef(2);
+  const localRootRef = useRef<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [local, setLocal] = useState(false);
   const [showOrphans, setShowOrphans] = useState(true);
   const [showAttach, setShowAttach] = useState(true);
+  const [localDepth, setLocalDepth] = useState(2);
+  const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [hover, setHover] = useState<{ x: number; y: number; title: string } | null>(
+    null,
+  );
+  const [menu, setMenu] = useState<{ x: number; y: number; full: number } | null>(
     null,
   );
   // Keep the mirrors in sync with the rendered state.
@@ -95,6 +107,8 @@ export function GraphView(_props: LeafProps) {
   showOrphansRef.current = showOrphans;
   showAttachRef.current = showAttach;
   activeNotePathRef.current = activeNotePath;
+  localDepthRef.current = localDepth;
+  localRootRef.current = localRoot;
 
   // ---- helpers ----
   const colorFor = (full: number): string => {
@@ -103,6 +117,15 @@ export function GraphView(_props: LeafProps) {
     if (ts && ts.length) {
       let h = 0;
       for (const c of ts[0]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+      return PALETTE[h % PALETTE.length];
+    }
+    // No tags: color by top-level folder so sibling notes share a hue.
+    const p = pathsRef.current[full] ?? "";
+    const seg = p.split("/");
+    const folder = seg.length > 1 ? seg[0] : "";
+    if (folder) {
+      let h = 0;
+      for (const c of folder) h = (h * 31 + c.charCodeAt(0)) >>> 0;
       return PALETTE[h % PALETTE.length];
     }
     return "#4cc2ff";
@@ -211,14 +234,15 @@ export function GraphView(_props: LeafProps) {
         visible.push(i);
       }
 
-      // Local graph: keep only nodes within BFS depth of the active note.
+      // Local graph: keep only nodes within BFS depth of the root note.
       let finalVisible = visible;
       if (localRef.current) {
         const anp = activeNotePathRef.current;
-        if (anp) {
-          const root = paths.indexOf(anp);
+        const rootPath = localRootRef.current ?? anp;
+        if (rootPath) {
+          const root = paths.indexOf(rootPath);
           if (root >= 0) {
-            const depth = 2;
+            const depth = localDepthRef.current;
             const dist = new Map<number, number>();
             const q = [root];
             dist.set(root, 0);
@@ -311,6 +335,21 @@ export function GraphView(_props: LeafProps) {
       v.oy = h / 2 - ((minY + maxY) / 2) * v.scale;
       v.fitted = true;
     };
+    // Fly the camera to a node (snap): center it and zoom to a readable scale.
+    const centerOn = (full: number) => {
+      const f = frameRef.current;
+      if (!f || full * 2 + 1 >= f.positions.length) return;
+      const x = f.positions[full * 2];
+      const y = f.positions[full * 2 + 1];
+      const w = canvas.clientWidth || 800;
+      const h = canvas.clientHeight || 600;
+      const v = viewRef.current;
+      const s = Math.max(v.scale, CENTER_SCALE);
+      v.scale = s;
+      v.ox = w / 2 - x * s;
+      v.oy = h / 2 - y * s;
+    };
+    centerOnRef.current = centerOn;
     const hitTest = (sx: number, sy: number): number => {
       const f = frameRef.current;
       const count = activeMapRef.current.length;
@@ -346,6 +385,8 @@ export function GraphView(_props: LeafProps) {
       v.scale = ns;
     };
     const onDown = (e: MouseEvent) => {
+      if (e.button !== 0) return; // ignore right/middle — context menu handles those
+      setMenu(null);
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
@@ -422,12 +463,26 @@ export function GraphView(_props: LeafProps) {
       panRef.current = null;
       dragRef.current = null;
     };
+    // Right-click a node -> context menu (Open / Open in New Tab / Center / Local).
+    const onContext = (e: MouseEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const hit = hitTest(mx, my);
+      if (hit >= 0) {
+        setMenu({ x: mx, y: my, full: activeMapRef.current[hit] });
+      } else {
+        setMenu(null);
+      }
+    };
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("mousedown", onDown);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     canvas.addEventListener("mouseleave", onLeave);
+    canvas.addEventListener("contextmenu", onContext);
 
     // ---- draw loop (always runs; worker only updates positions while hot) ----
     let raf = 0;
@@ -522,6 +577,7 @@ export function GraphView(_props: LeafProps) {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       canvas.removeEventListener("mouseleave", onLeave);
+      canvas.removeEventListener("contextmenu", onContext);
     };
   }, [services]);
 
@@ -529,7 +585,20 @@ export function GraphView(_props: LeafProps) {
   useEffect(() => {
     const t = setTimeout(() => rebuildRef.current(), 120);
     return () => clearTimeout(t);
-  }, [query, showOrphans, showAttach, local, activeNotePath, loaded]);
+  }, [query, showOrphans, showAttach, local, localDepth, localRoot, activeNotePath, loaded]);
+
+  const centerActive = () => {
+    const p = activeNotePathRef.current;
+    if (!p) return;
+    const full = pathsRef.current.indexOf(p);
+    if (full >= 0) centerOnRef.current(full);
+  };
+
+  const openInNewTab = (full: number) => {
+    const path = pathsRef.current[full];
+    if (!path) return;
+    useTabsStore.getState().openPinned({ path, title: basename(path) });
+  };
 
   return (
     <div
@@ -545,6 +614,7 @@ export function GraphView(_props: LeafProps) {
           display: "flex",
           gap: 6,
           flexWrap: "wrap",
+          alignItems: "center",
           zIndex: 10,
         }}
       >
@@ -556,6 +626,30 @@ export function GraphView(_props: LeafProps) {
         />
         <Button variant="outline" size="sm" onClick={() => setLocal((l) => !l)}>
           {local ? "Local: on" : "Local: off"}
+        </Button>
+        {local && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              color: "#c9d1d9",
+              fontSize: 12,
+            }}
+          >
+            Depth
+            <input
+              type="range"
+              min={1}
+              max={5}
+              value={localDepth}
+              onChange={(e) => setLocalDepth(Number(e.target.value))}
+            />
+            {localDepth}
+          </label>
+        )}
+        <Button variant="outline" size="sm" onClick={centerActive}>
+          Center
         </Button>
         <Button
           variant="outline"
@@ -598,6 +692,72 @@ export function GraphView(_props: LeafProps) {
           }}
         >
           {hover.title}
+        </div>
+      )}
+      {menu && (
+        <div
+          style={{
+            position: "absolute",
+            left: menu.x + 2,
+            top: menu.y + 2,
+            zIndex: 20,
+            background: "#161b22",
+            border: "1px solid #30363d",
+            borderRadius: 6,
+            padding: 4,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 168,
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => {
+              const path = pathsRef.current[menu.full];
+              if (path) services.openNote(path);
+              setMenu(null);
+            }}
+          >
+            Open
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => {
+              openInNewTab(menu.full);
+              setMenu(null);
+            }}
+          >
+            Open in New Tab
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => {
+              centerOnRef.current(menu.full);
+              setMenu(null);
+            }}
+          >
+            Center in Graph
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => {
+              const path = pathsRef.current[menu.full];
+              if (path) setLocalRoot(path);
+              setLocal(true);
+              setMenu(null);
+            }}
+          >
+            Open Local Graph
+          </Button>
         </div>
       )}
     </div>
