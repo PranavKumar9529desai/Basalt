@@ -91,7 +91,12 @@ void main() {
 }`;
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
-  const sh = gl.createShader(type)!;
+  const sh = gl.createShader(type);
+  if (!sh) {
+    throw new Error(
+      "GraphRenderer: createShader returned null — WebGL2 context is lost (StrictMode remount on a reused canvas?)",
+    );
+  }
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
   if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
@@ -251,7 +256,7 @@ export class GraphRenderer {
     const gl = this.gl;
     this.nodeCount = positions.length >> 1;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+    gl.deleteProgram(this.progArrows);
   }
 
   setColors(colors: Float32Array): void {
