@@ -29,6 +29,7 @@ export interface FileTreeContextMenuProps {
   onNewFolder: () => void;
   onCut: () => void;
   onPaste: () => void;
+  onRename: () => void;
   onDelete: () => void;
 }
 
@@ -43,6 +44,7 @@ export function FileTreeContextMenu({
   onNewFolder,
   onCut,
   onPaste,
+  onRename,
   onDelete,
 }: FileTreeContextMenuProps) {
   const menuAnchor = useMemo(() => {
@@ -133,7 +135,7 @@ export function FileTreeContextMenu({
                 </span>
                 Open in New Window
               </ContextMenuItem>
-              <ContextMenuItem disabled>
+              <ContextMenuItem disabled={isRoot} onClick={onRename}>
                 <span className="inline-flex min-w-4 items-center justify-center">
                   <IconPencil size={14} />
                 </span>

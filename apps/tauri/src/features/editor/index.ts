@@ -1,15 +1,13 @@
 import "./commands";
 
 export { EditorCommandPalette } from "./components/CommandPalette";
-export { MarkdownLeaf } from "./components/MarkdownLeaf";
+export { MarkdownEditorView } from "./components/MarkdownEditorView";
 export { useActiveNoteStore } from "./store";
 
 export {
   parseFrontmatter,
-  useFrontmatter,
-  refreshFrontmatter,
   serializeFrontmatterValue,
   surgicalEdit,
   editFrontmatter,
-  setActiveFrontmatterEditor,
+  initFrontmatterWasm,
 } from "./frontmatter";

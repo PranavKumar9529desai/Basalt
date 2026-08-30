@@ -30,7 +30,17 @@ export const createPersistenceSlice: StateCreator<
           previewTabId: state.pane.previewTabId,
         },
       ],
-      tabs: Object.values(state.tabs).map((tab) => ({ ...tab })),
+      tabs: Object.values(state.tabs).map((tab) => ({
+        id: tab.id,
+        path: tab.path,
+        title: tab.title,
+        leafType: tab.leafType,
+        isPinned: tab.isPinned,
+        isPreview: tab.isPreview,
+        isDirty: tab.isDirty,
+        createdAt: tab.createdAt,
+        lastAccessedAt: tab.lastAccessedAt,
+      })),
     };
   },
 

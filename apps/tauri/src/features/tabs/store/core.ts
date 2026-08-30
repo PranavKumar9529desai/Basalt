@@ -91,6 +91,14 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], line: note.line } },
         }));
       }
+      if (note.renameOnOpen) {
+        set((s) => ({
+          tabs: {
+            ...s.tabs,
+            [targetId]: { ...s.tabs[targetId], renameOnOpen: true },
+          },
+        }));
+      }
       if (activate) get().activateTab(targetId);
       return targetId;
     }
@@ -123,6 +131,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       createdAt: timestamp,
       lastAccessedAt: timestamp,
       line: note.line,
+      renameOnOpen: note.renameOnOpen,
     };
 
     pane.tabIds = [...pane.tabIds, incomingTabId];
@@ -153,6 +162,14 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       }
     }
     if (existingTab) {
+      if (note.renameOnOpen) {
+        set((s) => ({
+          tabs: {
+            ...s.tabs,
+            [targetId]: { ...s.tabs[targetId], renameOnOpen: true },
+          },
+        }));
+      }
       get().pinTab(targetId);
       if (activate) get().activateTab(targetId);
       return targetId;
@@ -174,6 +191,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       createdAt: timestamp,
       lastAccessedAt: timestamp,
       line: note.line,
+      renameOnOpen: note.renameOnOpen,
     };
 
     pane.tabIds = [...pane.tabIds, incomingTabId];

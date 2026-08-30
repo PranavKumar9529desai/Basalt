@@ -15,8 +15,17 @@ import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { yamlFrontmatterExtension } from "./syntax/frontmatter";
 import { highlightExtension } from "./syntax/highlight";
 import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
-import { frontmatterModelPlugin, frontmatterParserFacet } from "./frontmatter-model";
+import {
+  frontmatterBlockWidgetGroup,
+  frontmatterDimMode,
+} from "./block-widgets/frontmatter";
 import type { EditorConfig } from "./types";
+const basaltMarkdownExtensions = [
+  wikiLinkExtension,
+  highlightExtension,
+  yamlFrontmatterExtension,
+];
+
 
 
 /**
@@ -37,8 +46,9 @@ export interface EditorExtensionGroups {
   suggestions: Extension[];
   /** Clickable link hover/click handling. */
   links: Extension[];
-  /** Live frontmatter model + diagnostics (ADR-022 rule 3). */
-  frontmatter: Extension[];
+  /** Block widgets (ADR-022 rule 14): the inline Properties panel et al. Rendered
+   * from live-preview's single walk; this group supplies specs + injected deps. */
+  blockWidgets: Extension[];
 }
 
 export function createEditorExtensionGroups(
@@ -63,11 +73,7 @@ export function createEditorExtensionGroups(
       markdown({
         base: markdownLanguage,
         codeLanguages: languages,
-        extensions: [
-          wikiLinkExtension,
-          highlightExtension,
-          yamlFrontmatterExtension,
-        ],
+        extensions: basaltMarkdownExtensions,
       }),
       ...themeStack,
       EditorView.lineWrapping,
@@ -85,9 +91,14 @@ export function createEditorExtensionGroups(
       createSuggestionsPlugin(onFetchLinks, onFetchTags),
     ],
     links: [clickableLinksPlugin(onOpenLink)],
-    frontmatter: config.parseFrontmatter
-      ? [frontmatterParserFacet.of(config.parseFrontmatter), ...frontmatterModelPlugin]
-      : [],
+    blockWidgets: [
+      ...frontmatterBlockWidgetGroup({
+        parseFrontmatter: config.parseFrontmatter,
+        editFrontmatter: config.editFrontmatter,
+        onFetchTags: onFetchTags,
+        onFetchLinks: onFetchLinks,
+      }),
+    ],
   };
 }
 
@@ -104,6 +115,28 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
     ...g.livePreview,
     ...g.suggestions,
     ...g.links,
-    ...g.frontmatter,
+    ...g.blockWidgets,
+  ];
+}
+/**
+ * Markdown extensions for a read-only preview pane (search results, etc.).
+ * Mirrors the `base` group's grammar without the interactive editor extras.
+ * Registers the frontmatter block widget in read-only "dim" mode, so previews
+ * keep the tinted-YAML presentation without a parser or an interactive panel.
+ */
+export function markdownPreviewExtensions(): Extension[] {
+  return [
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: languages,
+      extensions: basaltMarkdownExtensions,
+    }),
+    codeSyntaxHighlightingExtension(),
+    ...LIVE_PREVIEW_THEME,
+    ...livePreviewPlugin,
+    // Dim-mode frontmatter only: no parser, no interactive panel.
+    ...frontmatterBlockWidgetGroup({}),
+    frontmatterDimMode,
+    EditorView.lineWrapping,
   ];
 }

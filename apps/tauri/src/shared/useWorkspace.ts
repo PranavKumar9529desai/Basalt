@@ -17,6 +17,8 @@
  * useWorkspaceContext() — never instantiate a second time.
  */
 import { useCallback, useMemo } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { RenameResult } from "@workspace/views";
 import type { TabModel } from "../features/tabs";
 import { useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
@@ -26,15 +28,37 @@ import { useSetting } from "../features/settings";
 interface NoteSelection {
   path: string;
   name: string;
+  /** Transient: enter the note's title-rename flow on open (note creation). */
+  renameOnOpen?: boolean;
 }
 
 interface EditorInterface {
   activeNote: NoteSelection | null;
   activeNoteTab: TabModel | null;
-  openInPreview: (opts: { path: string; title: string }) => string;
+  openInPreview: (opts: {
+    path: string;
+    title: string;
+    renameOnOpen?: boolean;
+  }) => string;
   openPinned: (opts: { path: string; title: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
   closeTab: (tabId: string, opts: { force: boolean }) => void;
+}
+
+/** Backend `rename_note` / `rename_path` result. `moved` only exists on
+ *  folder renames (every relocated .md document, old → new absolute pair). */
+interface RenameNodeResult {
+  path: string;
+  name: string;
+  updated_files: string[];
+  moved?: Array<[string, string]>;
+}
+
+/** A tree item targeted for rename (see `RenameTarget` in the vault feature). */
+interface RenameNodeTarget {
+  path: string;
+  name: string;
+  isFolder: boolean;
 }
 
 interface Props {
@@ -72,8 +96,12 @@ export function useWorkspaceController({
 
   // loadNote only depends on stable store actions — never changes.
   const loadNote = useCallback(
-    (note: { path: string; name: string }) => {
-      const tabId = openInPreview({ path: note.path, title: note.name });
+    (note: { path: string; name: string; renameOnOpen?: boolean }) => {
+      const tabId = openInPreview({
+        path: note.path,
+        title: note.name,
+        renameOnOpen: note.renameOnOpen,
+      });
       setTabTitle(tabId, note.name);
     },
     [openInPreview, setTabTitle],
@@ -142,6 +170,57 @@ export function useWorkspaceController({
     [vaultPath],
   );
 
+  // Tree context-menu rename: notes go through rename_note (wikilink rewrite
+  // by stem); folders and attachments through rename_path (folder renames
+  // rewrite vault-relative path links and move every nested document). After
+  // the backend returns, refresh the tree, repoint any open tab tracking the
+  // renamed path (`moved` covers every document that relocated), and open the
+  // freshly-named folder so the sidebar lands on the renamed item.
+  const renameNode = useCallback(
+    async (
+      target: RenameNodeTarget,
+      newName: string,
+    ): Promise<RenameResult> => {
+      try {
+        const isNote =
+          !target.isFolder && target.name.toUpperCase().endsWith(".MD");
+        const result: RenameNodeResult = isNote
+          ? await invoke<RenameNodeResult>("rename_note", {
+              path: target.path,
+              newName,
+            })
+          : await invoke<RenameNodeResult>("rename_path", {
+              path: target.path,
+              newName,
+            });
+
+        await refreshTree();
+
+        const state = useTabsStore.getState();
+        const moves: Array<{ from: string; to: string }> = [
+          { from: target.path, to: result.path },
+        ];
+        if (result.moved) {
+          moves.push(...result.moved.map(([from, to]) => ({ from, to })));
+        }
+        if (moves.length > 0) state.updateTabPaths(moves);
+
+        if (target.isFolder && vaultPath) {
+          const prefix = `${vaultPath}/`;
+          const rel = result.path.startsWith(prefix)
+            ? result.path.slice(prefix.length)
+            : result.path;
+          if (rel) openFolder(rel);
+        }
+        return { ok: true, path: result.path };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: message };
+      }
+    },
+    [refreshTree, vaultPath, openFolder],
+  );
+
   const controller = useVaultController({
     treeNodes,
     visibleNodes,
@@ -153,6 +232,7 @@ export function useWorkspaceController({
     refreshTree,
     onFileOpen,
     onPathsMoved: handlePathsMoved,
+    onRenameNode: renameNode,
   });
 
   // Destructure so the callback depends on the stable method, not the
@@ -172,11 +252,37 @@ export function useWorkspaceController({
     }
   }, [handleConfirmDelete, mutations.pendingDeletePaths]);
 
+  // Inline-title rename: invoke the Rust rename (rewrites wikilinks in other
+  // notes), refresh the tree so the new name appears, and repoint the tab's
+  // path in place (id stays stable → leaf editor caches and dirty state
+  // survive). The new absolute path comes from the backend result.
+  const renameNote = useCallback(
+    async (tab: { id: string; path: string }, newName: string): Promise<RenameResult> => {
+      try {
+        const result = await invoke<{
+          path: string;
+          name: string;
+          updated_files: string[];
+        }>("rename_note", { path: tab.path, newName });
+        await refreshTree();
+        const state = useTabsStore.getState();
+        state.updateTabPaths([{ from: tab.path, to: result.path }]);
+        return { ok: true, path: result.path };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: message };
+      }
+    },
+    [refreshTree],
+  );
+
   return {
     controller,
     mutations,
     contextMenu: controller.contextMenu,
     selection: controller.selection,
     handleConfirmDeleteWithTabs,
+    renameNote,
+    renameNode,
   };
 }

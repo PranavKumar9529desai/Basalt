@@ -38,6 +38,40 @@
     "popoverActiveText": "{palette.popoverActiveText}",
     "taskAccent": "{palette.taskAccent}"
   },
+  "graph": {
+    "background": "{editor.background}",
+    "node": "{text.muted}",
+    "tag": "{state.success}",
+    "attachment": "{text.muted}",
+    "edge": "{text.muted}",
+    "label": "{text.primary}",
+    "hoverFill": "{accent.primary}",
+    "hoverRing": "{text.primary}",
+    "hoverEdge": "{accent.primary}"
+  },
+  "syntax": {
+    "keyword": "{palette.codeKeyword}",
+    "string": "{palette.codeString}",
+    "number": "{palette.codeNumber}",
+    "comment": "{palette.codeComment}",
+    "function": "{palette.codeFunction}",
+    "type": "{palette.codeType}",
+    "variable": "{palette.codeVariable}",
+    "operator": "{palette.codeOperator}",
+    "atom": "{palette.codeNumber}",
+    "property": "{palette.codeVariable}",
+    "tag": "{palette.codeVariable}",
+    "attribute": "{palette.codeNumber}",
+    "punctuation": "{palette.codeOperator}",
+    "regexp": "{palette.codeString}",
+    "doc": "{palette.codeComment}",
+    "macro": "{palette.codeKeyword}",
+    "meta": "{palette.codeComment}",
+    "link": "{palette.codeFunction}",
+    "changed": "{palette.codeType}",
+    "deleted": "{palette.codeVariable}",
+    "inserted": "{palette.codeString}"
+  },
   "control": {
     "focusRing": "{focus.ring}"
   }

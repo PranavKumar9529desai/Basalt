@@ -29,7 +29,8 @@ pub fn process_uptime_ms() -> Option<u64> {
 use commands::{
     autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note, parse_frontmatter,
     get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace,
-    move_paths, open_file, open_files, open_vault_dialog, reindex_vault, save_file, save_files, delete_file, delete_paths,
+    move_paths, open_file, open_files, open_vault_dialog, reindex_vault, rename_note, rename_path,
+    save_file, save_files, delete_file, delete_paths,
     search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
@@ -80,6 +81,7 @@ pub fn run() {
             open_files,
             save_file,
             save_files,
+            get_backlinks,
             get_graph,
             autocomplete_links,
             autocomplete_tags,
@@ -91,6 +93,8 @@ pub fn run() {
             delete_file,
             delete_paths,
             move_paths,
+            rename_note,
+            rename_path,
             search_content,
             search_files,
             write_dev_report,

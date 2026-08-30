@@ -66,7 +66,7 @@ export const GraphControls: FC<GraphControlsProps> = ({
             display: "flex",
             alignItems: "center",
             gap: 4,
-            color: "#c9d1d9",
+            color: "var(--sat-text-primary, #e6edf3)",
             fontSize: 12,
           }}
         >

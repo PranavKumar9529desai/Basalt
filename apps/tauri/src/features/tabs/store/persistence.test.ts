@@ -50,6 +50,18 @@ describe("tabs persistence", () => {
     expect(snap.panes?.[0].activeTabId).toBeNull();
   });
 
+  it("never serializes transient fields (line, renameOnOpen)", () => {
+    store
+      .getState()
+      .openPinned({ path: "a.md", line: 12, renameOnOpen: true });
+    const snap = store.getState().toWorkspaceSnapshot();
+    const serialized = snap.tabs[0];
+    expect(serialized).not.toHaveProperty("line");
+    expect(serialized).not.toHaveProperty("renameOnOpen");
+    // leafType IS persisted (graph tabs must survive restart).
+    expect(serialized).toHaveProperty("leafType", "markdown");
+  });
+
   it("round-trips: snapshot -> reset -> hydrate restores state", () => {
     const a = store.getState().openPinned({ path: "a.md" }, { activate: false });
     const b = store.getState().openPinned({ path: "b.md" }, { activate: false });

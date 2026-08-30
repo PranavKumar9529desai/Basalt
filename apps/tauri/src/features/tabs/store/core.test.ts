@@ -59,6 +59,21 @@ describe("tabs core slice", () => {
       expect(store.getState().tabs[id].title).toBe("Introduction");
     });
 
+    it("carries the transient renameOnOpen flag set by note creation", () => {
+      const id = store.getState().openPinned({
+        path: "dir/new.md",
+        renameOnOpen: true,
+      });
+      expect(store.getState().tabs[id].renameOnOpen).toBe(true);
+    });
+
+    it("re-applies renameOnOpen when an existing tab is reopened with the flag", () => {
+      const id = store.getState().openPinned({ path: "new.md" });
+      expect(store.getState().tabs[id].renameOnOpen).toBeUndefined();
+      store.getState().openPinned({ path: "new.md", renameOnOpen: true });
+      expect(store.getState().tabs[id].renameOnOpen).toBe(true);
+    });
+
     it("replaces a non-dirty preview tab instead of duplicating", () => {
       store.getState().openInPreview({ path: "a.md" });
       store.getState().openInPreview({ path: "b.md" });

@@ -1,0 +1,21 @@
+[package]
+name = "frontmatter-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+basalt-parser = { path = "../basalt-parser" }
+basalt-types = { path = "../basalt-types" }
+serde_json = "1"
+
+# Standalone workspace so `cargo build --target wasm32-unknown-unknown` here
+# does not pull the whole repo workspace (which cannot build for wasm).
+# Mirrors crates/graph-wasm (ADR-009 hyphenated single-responsibility crates).
+[profile.release]
+opt-level = "z"
+lto = true
+
+[workspace]

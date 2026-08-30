@@ -1,14 +1,19 @@
-import { IconFileText, IconFolder, IconLink, IconList } from "@tabler/icons-react";
+import { lazy } from "react";
+import { IconFileText, IconFolder, IconLink } from "@tabler/icons-react";
 import { leafRegistry, viewRegistry } from "@workspace/views";
-import { MarkdownLeaf } from "../features/editor";
+import { MarkdownEditorView } from "../features/editor";
 import { BacklinksView } from "./views/BacklinksView";
 
-import { PropertiesView } from "./views/PropertiesView";
 import {
   FileExplorerHeaderActions,
   FileExplorerView,
 } from "./views/FileExplorerView";
-import { GraphView } from "../features/graph";
+
+// Graph is the only leaf that pulls in WebGL + a wasm force-sim worker — keep
+// it out of the startup bundle (ADR-007: lazy-load non-critical panels).
+const GraphView = lazy(() =>
+  import("../features/graph").then((m) => ({ default: m.GraphView })),
+);
 
 /**
  * Boot-time view registrations (ADR-018).
@@ -35,20 +40,12 @@ viewRegistry.register({
   component: BacklinksView,
 });
 
-viewRegistry.register({
-  type: "properties",
-  name: "Properties",
-  icon: IconList,
-  side: "right",
-  component: PropertiesView,
-});
-
 leafRegistry.register({
   type: "markdown",
   name: "Markdown",
   icon: IconFileText,
   extensions: [".md", ".markdown"],
-  component: MarkdownLeaf,
+  component: MarkdownEditorView,
 });
 leafRegistry.register({
   type: "graph",

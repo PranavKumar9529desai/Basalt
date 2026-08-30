@@ -21,6 +21,22 @@ const baseTheme = EditorView.theme({
     padding: "24px max(32px, 5%)",
     fontFamily: "var(--sat-font-sans)",
   },
+  // Scroller-injected inline title (ADR-023): the scroller is a flex row by
+  // default; column direction stacks the title slot above the content so it
+  // scrolls with the document. `.cm-content` snaps to full scroller width the
+  // way flexGrow in the row axis did. Selection/cursor layers are absolutely
+  // positioned and direction-agnostic, so virtualization is unaffected.
+  "&[data-basalt-title] .cm-scroller": {
+    flexDirection: "column",
+  },
+  "&[data-basalt-title] .cm-scroller > .cm-content": {
+    width: "100%",
+  },
+  ".cm-scroller-title": {
+    flex: "0 0 auto",
+    width: "100%",
+    boxSizing: "border-box",
+  },
   ".cm-content": {
     fontFamily: "inherit",
   },

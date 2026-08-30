@@ -42,6 +42,7 @@ interface WorkspaceOverlaysProps {
     onMenuNewFolder: () => void;
     onMenuCut: () => void;
     onMenuPaste: () => Promise<void>;
+    onMenuRename: () => void;
     onMenuDelete: () => void;
   };
   onConfirmDelete: () => void;
@@ -70,6 +71,7 @@ export function WorkspaceOverlays({
         onNewFolder={controller.onMenuNewFolder}
         onCut={controller.onMenuCut}
         onPaste={controller.onMenuPaste}
+        onRename={controller.onMenuRename}
         onDelete={controller.onMenuDelete}
       />
 

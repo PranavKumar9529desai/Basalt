@@ -19,11 +19,13 @@ export {
   runTypingBenchmark,
 } from "./benchmark";
 export type { EditorExtensionGroups } from "./editor";
-export { createEditorExtensionGroups, createEditorExtensions } from "./editor";
+export { createEditorExtensionGroups, createEditorExtensions, markdownPreviewExtensions } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
 export type {
   EditorConfig,
+  FrontmatterEditFn,
+  FrontmatterFetch,
   FetchLinksFn,
   FetchTagsFn,
   FrontmatterModel,
@@ -34,8 +36,19 @@ export type {
   ParseFrontmatterFn,
 } from "./types";
 export {
-  getFrontmatterModel,
-  getFrontmatterBlockSpan,
-  frontmatterModelPlugin,
-  requestFrontmatterReparse,
-} from "./frontmatter-model";
+  getBlockWidgetModel,
+  requestPreviewRebuild,
+} from "./preview/live-preview";
+export type { BlockWidgetSpec } from "./block-widgets/registry";
+export {
+  blockWidgetModeFacet,
+  blockWidgetSpecsFacet,
+  registerBlockWidget,
+} from "./block-widgets/registry";
+export {
+  frontmatterBlockWidgetGroup,
+  frontmatterDimMode,
+  FRONTMATTER_WIDGET_THEME,
+} from "./block-widgets/frontmatter";
+
+export { attachScrollHeader } from "./scroll-header";

@@ -323,7 +323,11 @@ describe("useVaultController", () => {
       await act(async () => result.current.createNoteInstant());
       expect(mutations.createUntitledNote).toHaveBeenCalledWith("dir");
       expect(openFolder).toHaveBeenCalledWith("dir");
-      expect(editor.loadNote).toHaveBeenCalledWith({ name: "new", path: "dir/new.md" });
+      expect(editor.loadNote).toHaveBeenCalledWith({
+        name: "new",
+        path: "dir/new.md",
+        renameOnOpen: true,
+      });
       expect(refreshTree).toHaveBeenCalled();
     });
   });

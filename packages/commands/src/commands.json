@@ -72,6 +72,12 @@
     "icon": "IconGauge"
   },
   {
+    "id": "dev:search-benchmark",
+    "name": "Run Search Modal Benchmark",
+    "category": "App",
+    "icon": "IconGauge"
+  },
+  {
     "id": "vault:pick-and-set",
     "name": "Change Vault Location",
     "category": "Vault",

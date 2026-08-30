@@ -25,7 +25,15 @@
     "popoverMuted": "#94a3b8",
     "popoverActiveBg": "#2d2d35",
     "popoverActiveText": "#ffffff",
-    "taskAccent": "#22c55e"
+    "taskAccent": "#22c55e",
+    "codeKeyword": "#c678dd",
+    "codeString": "#98c379",
+    "codeNumber": "#d19a66",
+    "codeComment": "#5c6370",
+    "codeFunction": "#61afef",
+    "codeType": "#e5c07b",
+    "codeVariable": "#e06c75",
+    "codeOperator": "#abb2bf"
   },
   "radius": {
     "sm": "4px",

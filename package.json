@@ -14,7 +14,8 @@
     "check:size": "bun scripts/check-size.ts",
     "check": "bun run lint && bun run format",
     "clear-cache": "bash scripts/clear-cache.sh",
-    "build:wasm": "bash scripts/build-graph-wasm.sh",
+    "build:wasm": "bash scripts/build-graph-wasm.sh && bash scripts/build-frontmatter-wasm.sh",
+    "build:wasm:frontmatter": "bash scripts/build-frontmatter-wasm.sh",
     "verify:wasm": "node crates/graph-wasm/verify.mjs"
   },
   "devDependencies": {

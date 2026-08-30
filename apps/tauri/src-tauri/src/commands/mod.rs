@@ -11,8 +11,8 @@ pub use boot::{boot, set_vault};
 pub use dev::write_dev_report;
 pub use files::{
     autocomplete_links, autocomplete_tags, create_folder, create_note, create_untitled_note,
-    delete_file, delete_paths, get_backlinks, move_paths, open_file, open_files, save_file,
-    save_files,
+    delete_file, delete_paths, get_backlinks, move_paths, open_file, open_files, rename_note,
+    rename_path, save_file, save_files,
 };
 
 pub use frontmatter::parse_frontmatter;

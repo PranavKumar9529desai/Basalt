@@ -15,6 +15,7 @@ export type {
   LeafProps,
   LeafServices,
   LeafTabInfo,
+  RenameResult,
 } from "./leaf";
 export { ViewRegistry, viewRegistry } from "./registry";
 export type {

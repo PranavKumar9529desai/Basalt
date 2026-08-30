@@ -1,8 +1,13 @@
 import type { EditorState } from "@codemirror/state";
 
 /**
- * Per-tab editor caches owned by MarkdownLeaf. Extracted from the component so
- * the prune-on-close logic is unit-testable without a CodeMirror render.
+ * Per-tab editor caches owned by MarkdownEditorView. Extracted from the
+ * component so the prune-on-close logic is unit-testable without a
+ * CodeMirror render.
+ *
+ * Why prune at all: dropping a closed tab's `states` entry (a full
+ * EditorState — document text plus undo history) frees it instead of
+ * letting every note you've ever opened linger for the session.
  *
  * - `states` holds the live EditorState per tab (undo/cursor/scroll survive tab
  *   switches)
@@ -18,7 +23,7 @@ export interface TabCaches<T = EditorState> {
   tabMeta: Map<string, { path: string; name: string }>;
 }
 
-/** Read-only view of the tab structure MarkdownLeaf asks the workspace for. */
+/** Read-only view of the tab structure MarkdownEditorView asks the workspace for. */
 export interface TabStructureSource {
   getOpenTabIds(): Set<string>;
   getOpenTabPaths(): Set<string>;

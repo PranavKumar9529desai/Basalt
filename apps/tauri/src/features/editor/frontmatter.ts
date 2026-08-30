@@ -1,56 +1,25 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { EditorView } from "@codemirror/view";
 import {
   type FrontmatterModel,
   type FrontmatterValue,
   type ParseFrontmatterFn,
-  getFrontmatterModel,
-  requestFrontmatterReparse,
+  getBlockWidgetModel,
 } from "@workspace/editor";
-import { create } from "zustand";
+import { parseFrontmatterSync } from "./frontmatter-wasm";
 
-type TimerHandle = number;
+// Re-export the loader so MarkdownEditorView can await wasm before
+// building EditorStates.
+export { initFrontmatterWasm } from "./frontmatter-wasm";
 
-// Synchronous cache keyed by document text. The editor model plugin calls
-// `parseFrontmatter` synchronously on every frontmatter-region transaction;
-// we return the most recently computed model for that text (updated
-// asynchronously via `refreshFrontmatter`). ADR-022 rule 2: parser is
-// Rust-owned and injected — never a second JS YAML parser (ADR-007).
-const cache: Record<string, FrontmatterModel> = {};
-
-export const parseFrontmatter: ParseFrontmatterFn = (text) => cache[text] ?? null;
-
-interface FrontmatterState {
-  model: FrontmatterModel | null;
-  setModel: (model: FrontmatterModel | null) => void;
-}
-
-export const useFrontmatter = create<FrontmatterState>((set) => ({
-  model: null,
-  setModel: (model) => set({ model }),
-}));
-
-let refreshTimer: TimerHandle | undefined;
-
-/** Async-refresh the cached model for `text` and push it into the editor. */
-export function refreshFrontmatter(
-  view: EditorView,
-  text: string,
-  debounceMs = 120,
-): void {
-  window.clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(() => {
-    void invoke<FrontmatterModel>("parse_frontmatter", { text })
-      .then((model) => {
-        cache[text] = model;
-        useFrontmatter.getState().setModel(model);
-        requestFrontmatterReparse(view);
-      })
-      .catch((err) =>
-        console.error("[frontmatter] parse_frontmatter failed:", err),
-      );
-  }, debounceMs);
-}
+/**
+ * Injected synchronous parser for `packages/editor` (ADR-022 rule 2): the
+ * Rust/WASM engine, called inside the decoration state field — never a JS
+ * YAML re-implementation (ADR-007). All editor state now flows through the
+ * per-view model (ADR-022 rule 10); there is no module-global cache or
+ * mirror store on the feature side anymore.
+ */
+export const parseFrontmatter: ParseFrontmatterFn = (text) =>
+  parseFrontmatterSync(text);
 
 export function serializeFrontmatterValue(value: FrontmatterValue): string {
   if (typeof value === "string") return '""';
@@ -66,24 +35,20 @@ export function serializeFrontmatterValue(value: FrontmatterValue): string {
   return '""';
 }
 
-let activeView: EditorView | null = null;
-
-/** Track the active editor so the properties panel can drive edits. */
-export function setActiveFrontmatterEditor(view: EditorView | null): void {
-  activeView = view;
-}
-
 /**
  * Surgically edit a frontmatter property in place (ADR-022 rule 4): replace
  * only the value span, or insert a new line before the closing fence. Never
  * re-serializes the whole block, so formatting/CRLF elsewhere are preserved.
+ * The model comes from the (per-view) model the editor keeps fresh on the
+ * same transaction — no global "active view" indirection.
  */
 export function surgicalEdit(
   view: EditorView,
   key: string,
   value?: FrontmatterValue,
+  newKey?: string,
 ): void {
-  const model = getFrontmatterModel(view);
+  const model = getBlockWidgetModel<FrontmatterModel>(view, "frontmatter");
   if (!model) return;
   const entry = model.entries.find((e) => e.key === key);
 
@@ -98,29 +63,38 @@ export function surgicalEdit(
 
   const serialized = serializeFrontmatterValue(value);
   if (entry) {
-    view.dispatch({
-      changes: {
-        from: entry.valueSpan.start,
-        to: entry.valueSpan.end,
-        insert: serialized,
-      },
-    });
+    const changes: { from: number; to: number; insert: string }[] = [];
+    if (newKey && newKey !== entry.key) {
+      // Rename: replace the key span (the key text only, not the colon).
+      changes.push({ from: entry.keySpan.start, to: entry.keySpan.end, insert: newKey });
+    }
+    changes.push({ from: entry.valueSpan.start, to: entry.valueSpan.end, insert: serialized });
+    view.dispatch({ changes });
     return;
   }
 
   if (!model.blockSpan) {
     // No block yet — create one so the properties panel can add from scratch.
     view.dispatch({
-      changes: { from: 0, insert: `---\n${key}: ${serialized}\n---\n\n` },
+      changes: { from: 0, insert: `---\n${newKey ?? key}: ${serialized}\n---\n\n` },
     });
     return;
   }
   view.dispatch({
-    changes: { from: model.blockSpan.end, insert: `${key}: ${serialized}\n` },
+    changes: { from: model.blockSpan.end, insert: `${newKey ?? key}: ${serialized}\n` },
   });
 }
 
-/** Edit a property on the active editor (used by the properties panel). */
-export function editFrontmatter(key: string, value?: FrontmatterValue): void {
-  if (activeView) surgicalEdit(activeView, key, value);
+/** Edit a property on the given editor view (injected into `packages/editor`
+ * as `EditorConfig.editFrontmatter`). `value` undefined removes the property;
+ * `newKey` renames an existing key. The editor model re-parses synchronously
+ * in the same transaction, so the panel/inline widget re-render with the new
+ * value — no raw-YAML flash (ADR-022 rule 2). */
+export function editFrontmatter(
+  view: EditorView,
+  key: string,
+  value?: FrontmatterValue,
+  newKey?: string,
+): void {
+  surgicalEdit(view, key, value, newKey);
 }

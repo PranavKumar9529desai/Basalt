@@ -20,10 +20,14 @@ vi.mock("../features/settings", () => ({
 vi.mock("../features/tabs", () => ({
   useTabsStore: { getState: vi.fn() },
 }));
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(),
+}));
 
 import { useVaultMutations, useVaultController } from "../features/vault";
 import { useSetting } from "../features/settings";
 import { useTabsStore } from "../features/tabs";
+import { invoke } from "@tauri-apps/api/core";
 
 interface EditorInterface {
   activeNote: { path: string; name: string } | null;
@@ -45,7 +49,7 @@ type MockEditor = Omit<
 
 interface CapturedControllerOpts {
   editor: {
-    loadNote: (note: { path: string; name: string }) => void;
+    loadNote: (note: { path: string; name: string; renameOnOpen?: boolean }) => void;
     closeNote: () => void;
   };
   onFileOpen: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
@@ -98,6 +102,8 @@ function setup(opts: SetupOpts = {}) {
     closeTab,
   } as unknown as TabsState);
 
+  const refreshTree = vi.fn().mockResolvedValue(undefined);
+
   const { result } = renderHook(() =>
     useWorkspaceController({
       vaultPath: opts.vaultPath === undefined ? "/vault" : opts.vaultPath,
@@ -105,13 +111,13 @@ function setup(opts: SetupOpts = {}) {
       visibleNodes: [],
       openFolder: vi.fn(),
       toggleFolder: vi.fn(),
-      refreshTree: vi.fn(),
+      refreshTree,
       editor,
     }),
   );
 
   const controllerOpts = vi.mocked(useVaultController).mock.calls[0][0] as unknown as CapturedControllerOpts;
-  return { result, editor, handleConfirmDelete, updateTabPaths, closeTab, controllerOpts };
+  return { result, editor, handleConfirmDelete, updateTabPaths, closeTab, controllerOpts, refreshTree };
 }
 
 const node = (path: string, name: string) =>
@@ -129,6 +135,60 @@ describe("useWorkspaceController", () => {
       controllerOpts.editor.loadNote({ path: "a/b.md", name: "b" });
       expect(editor.openInPreview).toHaveBeenCalledWith({ path: "a/b.md", title: "b" });
       expect(editor.setTabTitle).toHaveBeenCalledWith("tab-1", "b");
+    });
+
+    it("forwards renameOnOpen to openInPreview (note creation)", () => {
+      const { editor, controllerOpts } = setup();
+      editor.openInPreview.mockReturnValue("tab-1");
+      controllerOpts.editor.loadNote({
+        path: "a/b.md",
+        name: "b",
+        renameOnOpen: true,
+      });
+      expect(editor.openInPreview).toHaveBeenCalledWith({
+        path: "a/b.md",
+        title: "b",
+        renameOnOpen: true,
+      });
+    });
+  });
+
+  describe("renameNote", () => {
+    it("refreshes the tree and repoints the tab on success, returning the new path", async () => {
+      const { result, refreshTree, updateTabPaths } = setup();
+      vi.mocked(invoke).mockResolvedValue({
+        path: "/vault/renamed.md",
+        name: "renamed",
+        updated_files: ["/vault/other.md"],
+      });
+
+      const out = await result.current.renameNote(
+        { id: "t1", path: "/vault/old.md" },
+        "renamed",
+      );
+
+      expect(out).toEqual({ ok: true, path: "/vault/renamed.md" });
+      expect(refreshTree).toHaveBeenCalledTimes(1);
+      expect(updateTabPaths).toHaveBeenCalledWith([
+        { from: "/vault/old.md", to: "/vault/renamed.md" },
+      ]);
+    });
+
+    it("returns {ok:false} with the backend error and does not touch tabs or tree on failure", async () => {
+      const { result, refreshTree, updateTabPaths } = setup();
+      vi.mocked(invoke).mockRejectedValue(new Error("a note named 'old' already exists"));
+
+      const out = await result.current.renameNote(
+        { id: "t1", path: "/vault/old.md" },
+        "renamed",
+      );
+
+      expect(out).toEqual({
+        ok: false,
+        error: "a note named 'old' already exists",
+      });
+      expect(refreshTree).not.toHaveBeenCalled();
+      expect(updateTabPaths).not.toHaveBeenCalled();
     });
   });
 

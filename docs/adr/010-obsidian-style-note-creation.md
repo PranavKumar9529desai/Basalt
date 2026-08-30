@@ -1,7 +1,9 @@
 # ADR-010: Obsidian-Style Instant Note Creation
 
 **Date:** 2026-04-05  
-**Status:** Accepted
+**Status:** Accepted  
+**Superseded in part by:** [ADR-023](023-inline-title-rename.md) — the
+"Further Work" section on the inline title shipped there.
 
 ## Context
 
@@ -22,15 +24,13 @@ The ghost-node inline input is **preserved for folder creation only** (`startFol
 
 - Note creation is now a single action with no intermediate state
 - The `create_note` command (named creation) remains available for programmatic use
-- Renaming a note after creation is not yet fully addressed — see **Further Work** below
+- Renaming a note after creation is complete via the inline title — see [ADR-023](023-inline-title-rename.md)
 
-## Further Work
+## Inline Title (shipped — see ADR-023)
 
-**Inline title (editor title bar):** The natural complement to this feature is an editable title rendered above the CodeMirror editor — showing the filename, updating the file on rename, and updating when the file is renamed elsewhere (e.g. from the tree). This is how Obsidian handles the "title = filename" relationship:
+The "Further Work" item below (an editable title above the CodeMirror editor that renames the file, updates on external renames, and is the documented complement to this feature) shipped in ADR-023:
 
 - The inline title is **not** a `# H1` in the markdown content — it is a UI element injected above the editor
-- Editing the inline title renames the file on disk
-- Renaming the file (tree, command palette) updates the inline title
-- New files open with the cursor in the editor body; the inline title is immediately visible and editable
-
-This feature should be the **next item after note creation** and will complete the creation → naming flow. Until it ships, the context menu "Rename" (currently disabled) remains the only rename path.
+- Editing the inline title renames the file on disk (rewriting `[[wikilinks]]` in other notes)
+- Renaming the file elsewhere updates the inline title (it reads the live tab title through the tabs store)
+- New files open with the inline title in edit mode with the whole name selected — this **overrides** this ADR's earlier "cursor in the editor body" plan, per the ADR-023 decision (one-shot `renameOnOpen`)

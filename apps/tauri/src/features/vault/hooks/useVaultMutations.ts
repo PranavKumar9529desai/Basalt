@@ -6,7 +6,11 @@ import type { BootResult, CreateNoteResult } from "../types";
 
 const GHOST_ID = "__ghost__";
 
-type GhostNode = FileNode & { parentRelPath?: string };
+type GhostNode = FileNode & {
+  parentRelPath?: string;
+  path?: string;
+  relPath?: string;
+};
 
 export interface UseVaultMutationsReturn {
   // Ghost / inline creation
@@ -17,6 +21,14 @@ export interface UseVaultMutationsReturn {
     depth?: number;
   }) => void;
   clearGhost: () => void;
+  // Inline rename (tree context-menu)
+  /**
+   * Node currently in rename mode (`isEditing`) — shown instead of the
+   * regular row so the user can type a new name in place.
+   */
+  renamingNode: GhostNode | null;
+  startRename: (node: GhostNode) => void;
+  clearRename: () => void;
   // Note / folder creation (invoke backed)
   createNote: (
     name: string,
@@ -52,6 +64,7 @@ export interface UseVaultMutationsReturn {
 export function useVaultMutations(): UseVaultMutationsReturn {
   const router = useRouter();
   const [ghostNode, setGhostNode] = useState<GhostNode | null>(null);
+  const [renamingNode, setRenamingNode] = useState<GhostNode | null>(null);
 
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(
@@ -141,6 +154,15 @@ export function useVaultMutations(): UseVaultMutationsReturn {
 
   const clearGhost = useCallback(() => {
     setGhostNode(null);
+  }, []);
+
+  const startRename = useCallback((node: GhostNode) => {
+    setRenamingNode({ ...node, isEditing: true });
+    setError(null);
+  }, []);
+
+  const clearRename = useCallback(() => {
+    setRenamingNode(null);
   }, []);
 
   const createNote = useCallback(
@@ -280,6 +302,9 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     createNoteInline,
     createFolderInline,
     clearGhost,
+    renamingNode,
+    startRename,
+    clearRename,
     createNote,
     createUntitledNote,
     createFolder,

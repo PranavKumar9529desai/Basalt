@@ -7,6 +7,39 @@
 
 ---
 
+## Inline note title + rename (ADR-023) — IMPLEMENTED, ready to merge
+
+Complete across all layers (Rust → parser → tabs → leaf → shared orchestration):
+
+- **Rust backend** (`rename_note` in `apps/tauri/src-tauri/src/commands/files.rs`
+  + `crates/basalt-parser/src/link_rewrite.rs`): atomic rename — sanitize name,
+  enumerate link candidates from graph metadata, `fs::rename`, rewrite
+  `[[wikilinks]]` in other notes + self-links, update vault doc/index under the
+  write lock (`index_remove` + `index_upsert`). Returns `{ path, name,
+  updated_files }`; emits no events (frontend refreshes).
+- **Tabs** (`renameOnOpen`): transient flag on `OpenableTabInput`/`TabModel`
+  (mirrors `line`), set by `createNoteInstant`; **persistence layer now
+  serializes an explicit field list** — this fixes `line` (and would have
+  leaked `renameOnOpen`) out of the snapshot while keeping `leafType`.
+- **Leaf** (`packages/editor/src/scroll-header.ts` + `features/editor/
+  components/InlineTitle.tsx`): title mounted in its own React root inside a
+  slot prepended to `.cm-scroller` (`data-basalt-title` flips the scroller to
+  flex-column); CM stays the sole scroll owner. Click → edit with select-all;
+  Enter commits / Esc cancels / blur commits; backend errors render inline;
+  interrupted edits commit on unmount. `renameOnOpen` consumed once per tab id.
+- **Orchestration** (`shared/useWorkspace.ts` `renameNote`): invoke →
+  `refreshTree()` → `updateTabPaths([{from,to}])` (id-stable, caches survive).
+  Injected to leaves via `LeafServices.renameNote`.
+
+Verified: `cargo test -p basalt-parser -p tauri@0.1.0` (30+19 pass), full
+`apps/tauri` vitest suite (187), `bun run lint`, `bunx tsc --noEmit` clean.
+
+Deferred (explicit non-goals in ADR-023): tree/context-menu "Rename" entry,
+F2 binding, title ⋮ overflow menu. ADR-010's "cursor in editor body" plan is
+superseded by select-all-on-create.
+
+---
+
 ## Active workstream: Editor performance campaign (ADR-018 follow-up)
 
 Goal: make the editor measurably fast (beat Obsidian feel), then add graph view
@@ -98,6 +131,82 @@ culprit extension to chase.
   creation on multi-tab restore.**
   Follow-ups: rayon-parallel vault parsing (25k tier), 25k criterion
   fixtures (AGENTS.md rule), memory-footprint measurement.
+
+### Search modal benchmark (recorded 2026-08-30)
+
+Frontend counterpart of the `basalt-search` criterion benches (those prove the
+raw index is fast; this proves the React modal ships results to pixels).
+Harness in `apps/tauri/src/features/search/benchmark.ts` — deterministic
+synthetic results (4KB / 40KB / 100KB notes × 20 files × 16 matches, the
+`limit: 20` display cap) driven through the real `useSearchStore` +
+`SearchModal`. Two numbers per phase: `commit` (React render+commit via
+`flushSync`) and `paint` (until a frame paints after passive effects drain —
+catches the PreviewPane CM6 work `commit` can't see). p95 of `paint` is the
+gate vs the 16.67ms budget. Run via palette command **Run Search Modal
+Benchmark** (`dev:search-benchmark`); report → `/tmp/basalt-reports/search-benchmark.md`.
+
+**Bug found by the harness (fixed):** unsorted highlight spans crash
+`PreviewPane.buildDecorations` with CodeMirror's "Ranges must be added sorted
+by 'from' position" — preview marks were added in input order while
+`HighlightedText` sorts its copy. Fixed both sides: generator emits sorted
+spans; `buildDecorations` sorts defensively (regression tests in
+`PreviewPane.test.ts`).
+
+**Perf fixes (PreviewPane, 2026-08-30):**
+- Module-level LRU of parsed `EditorState`s keyed by **file content**
+  (`cachedPreviewState`, cap 24) — the MarkdownLeaf tab-cache pattern surviving
+  modal mounts. Cross-file nav now swaps via `view.setState(cached)` instead of
+  a full-doc re-parse; open-cold reuses the previous parse. Correct by
+  construction: reuse requires the identical content string, so a changed file
+  always re-parses.
+- Per-nav `scrollIntoView` skipped when the match line is already in
+  `view.visibleRanges` — real adjacent-line scanning no longer forces an
+  O(doc) line-measure each keystroke.
+- Same-file nav kept incremental (decoration dispatch only); the old
+  `doc.toString()` compare replaced by a text-ref compare.
+
+**Dev-build results (p95 paint ms; dev+devtools inflate 2–5×, re-measure in
+prod):**
+
+| phase | 4KB | 40KB | 100KB | verdict |
+|---|---|---|---|---|
+| open-cold | 292 (was 185) | 274 (was 552) | 328 (was **1011**) | ❌ warm-reopen improved; cold parse lives in `max` |
+| install | 34 (was 17) | 28 (was 17) | 18 (was 17) | ✅ one to two frames |
+| nav-same-file | 124 (was 82) | 103 (was 82) | 89 (was 69) | ⚠️ scroll-skip + prod pending |
+| nav-cross-file | 117 (was 98) | 176 (was 253) | 218 (was **395**) | ⚠️ parse tax gone (−45% @100KB) |
+| keystroke | 32 (was 40) | 30 (was 30) | 30 (was 24) | ⚠️ 1.5–2× |
+
+Reading: `install` (results landed) fits the budget at every size. Cross-file +
+open-cold parse tax eliminated; the residual ~90–220ms nav paint is now
+once-per-state line-measure + the ~35–40ms dev commit (React list re-render on
+selection). **Next: prod re-run for real numbers** — nav commit is plausibly
+~8–17ms after 2–5× inflation. If it fits, close out; if not, the lever is the
+per-row `Button`/`HighlightedText` re-render on selection change. 4KB open-cold
+regression is run-to-run noise (see `max`), not a fix regression.
+
+**Perf pass 2 (2026-08-30) — kill the per-keystroke commit**: the ~35–40ms
+dev `commit` on every selection/query change was the SearchModal re-rendering
+the *entire* virtualized list (`Button` + `HighlightedText` per row). Rows
+extracted to `features/search/components/SearchResultRows.tsx` and memoized
+(`FileRow`/`MatchRow`, `memo`) on **primitives** (`top`, `selected`) + stable
+item refs + a stable `openItem` callback (no inline closures) — so a selection
+change re-renders only the two rows whose `selected` flips, and a query change
+re-renders none. `top` is passed as a number (not a fresh style object) so
+unchanged rows skip even when the virtualizer re-runs. Expected: nav/keystroke
+`commit` → near-zero; remaining `paint` for far-jump nav is the virtualizer
+scroll re-render + once-per-state line-measure (avoided for real adjacent-line
+scanning by the `visibleRanges` scroll-skip from pass 1). Re-measure, then
+prod-re-run for the gate.
+
+**Perf pass 3 (2026-08-30) — take the recenter off the critical frame**: the
+PreviewPane `scrollIntoView` to a far match forced an O(doc) line-measure
+inside the same frame as the keydown. The decoration highlight stays
+synchronous (cheap one-line mark), but a non-visible recenter is now deferred
+to a `requestAnimationFrame` — rapid navigation coalesces into a single
+recenter (last target wins via refs), a destroyed/remounted view bails on
+`scrollDOM.isConnected`, and an in-flight cross-file swap re-targets the new
+doc offset. The keydown paints instantly; centering happens one frame later,
+off the measured critical path.
 
 ### Recorded migration debt (not urgent)
 

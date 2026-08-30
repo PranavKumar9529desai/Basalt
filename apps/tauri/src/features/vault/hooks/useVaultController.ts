@@ -208,6 +208,17 @@ function useVaultSelectionState(): VaultSelectionApi {
 interface NoteSelection {
   name: string;
   path: string;
+  /** Transient: enter the note's title-rename flow once on open (note creation). */
+  renameOnOpen?: boolean;
+}
+
+/** A tree item chosen for renaming — cross-feature rename is delegated to the
+ *  caller (shared/useWorkspace) via `onRenameNode`: it decides notes vs
+ *  folders/attachments, refreshes the tree, and repoints open tabs. */
+export interface RenameTarget {
+  path: string;
+  name: string;
+  isFolder: boolean;
 }
 
 interface VaultNoteController {
@@ -232,6 +243,12 @@ export interface UseVaultControllerOptions {
    * — this hook must stay tabs-free.
    */
   onPathsMoved?: (sourcePaths: string[], destinationRelPath: string) => void;
+  /**
+   * Rename a node in place. The caller owns the backend invoke, tree refresh,
+   * tab repointing, and (for folders) opening the renamed folder. This hook
+   * only resolves the target and routes the new name.
+   */
+  onRenameNode?: (target: RenameTarget, newName: string) => Promise<unknown>;
 }
 
 export interface UseVaultControllerReturn {
@@ -245,6 +262,12 @@ export interface UseVaultControllerReturn {
     newName: string,
   ) => Promise<void>;
   handleCancelEdit: () => void;
+  /** Commit a tree inline rename (Enter/blur on the renaming node). */
+  handleCommitRename: (
+    node: FileNode & { parentRelPath?: string },
+    newName: string,
+  ) => Promise<void>;
+  handleCancelRename: () => void;
   handleConfirmDelete: () => Promise<void>;
   handleDeleteFromCommands: () => void;
   onTreeFileClick: (node: FlatTreeNode, e: React.UIEvent) => void;
@@ -255,6 +278,7 @@ export interface UseVaultControllerReturn {
   onMenuNewFolder: () => void;
   onMenuCut: () => void;
   onMenuPaste: () => Promise<void>;
+  onMenuRename: () => void;
   onMenuDelete: () => void;
   selection: VaultSelectionApi;
   contextMenu: VaultContextMenuApi;
@@ -283,6 +307,7 @@ export function useVaultController(
     refreshTree,
     onFileOpen,
     onPathsMoved,
+    onRenameNode,
   } = options;
 
   const [focusedNode, setFocusedNode] = useState<FlatTreeNode | null>(null);
@@ -324,7 +349,11 @@ export function useVaultController(
       ctx.parentRelPath || undefined,
     );
     if (!result) return;
-    void editor.loadNote({ name: result.name, path: result.path });
+    void editor.loadNote({
+      name: result.name,
+      path: result.path,
+      renameOnOpen: true,
+    });
     await refreshTree();
   }, [deriveParentContext, editor, mutations, openFolder, refreshTree]);
 
@@ -414,6 +443,55 @@ export function useVaultController(
   const handleCancelEdit = useCallback(() => {
     mutations.clearGhost();
   }, [mutations]);
+
+  // Inline rename (context-menu Rename). The editing row lives at the node's
+  // own path — no creation, no re-parenting — so the commit is just a
+  // same-parent rename routed to the caller's orchestrator (which decides
+  // rename_note vs rename_path and repoints open tabs).
+  const handleCommitRename = useCallback(
+    async (node: FileNode & { parentRelPath?: string }, newName: string) => {
+      const trimmed = newName.trim();
+      const target = treeNodes.find((n) => n.path === node.id);
+      if (!target || !trimmed) {
+        mutations.clearRename();
+        return;
+      }
+      mutations.clearRename();
+      const isFolder = node.isFolder ?? target.kind === "folder";
+      if (trimmed === target.name) return;
+      // Notes are renamed by stem (the backend re-appends .md); folders and
+      // attachments keep the name as typed (backend preserves extensions).
+      const newNameResolved =
+        isFolder || !target.name.toUpperCase().endsWith(".MD")
+          ? trimmed
+          : trimmed.replace(/\.md$/i, "");
+      if (newNameResolved === target.name.replace(/\.md$/i, "")) return;
+      void onRenameNode?.(
+        { path: target.path, name: target.name, isFolder },
+        newNameResolved,
+      );
+    },
+    [mutations, onRenameNode, treeNodes],
+  );
+
+  const handleCancelRename = useCallback(() => {
+    mutations.clearRename();
+  }, [mutations]);
+
+  const onMenuRename = useCallback(() => {
+    const target = contextMenu.menuState.target;
+    if (!target || target.kind === "root" || !target.node) return;
+    contextMenu.closeMenu();
+    const node = target.node;
+    mutations.startRename({
+      id: node.path,
+      name: node.name,
+      isFolder: node.kind === "folder",
+      depth: node.depth,
+      relPath: node.relPath,
+      path: node.path,
+    });
+  }, [contextMenu, mutations]);
 
   const handleConfirmDelete = useCallback(async () => {
     const deletesSelectedEditor =
@@ -619,6 +697,8 @@ export function useVaultController(
     isMultiSelectContextMenu: contextMenu.menuState.isMultiSelect,
     handleCommitEdit,
     handleCancelEdit,
+    handleCommitRename,
+    handleCancelRename,
     handleConfirmDelete,
     handleDeleteFromCommands,
     onTreeFileClick,
@@ -629,6 +709,7 @@ export function useVaultController(
     onMenuNewFolder,
     onMenuCut,
     onMenuPaste,
+    onMenuRename,
     onMenuDelete,
     selection,
     contextMenu,

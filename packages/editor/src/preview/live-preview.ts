@@ -80,8 +80,11 @@ import { CODE_BLOCKS_THEME, handleCodeBlockNode } from "./code-blocks";
 import {
   FRONTMATTER_THEME,
   handleFrontmatterFallback,
-  handleFrontmatterNode,
 } from "./frontmatter";
+import {
+  blockWidgetsFor,
+  handleBlockWidgetsNode,
+} from "../block-widgets/registry";
 import { handleHeading7Lines, handleHeadingNode } from "./headings";
 import {
   handleInlineNode,
@@ -152,6 +155,10 @@ interface PreviewState {
   /** Code-block ranges discovered during the walk; shared with the viewport-
    * scoped tags plugin so it can skip code blocks without its own scan. */
   codeBlockRanges: { from: number; to: number }[];
+  /** Per-widget parsed models collected during the walk (ADR-022 rule 14).
+   * The single per-view source of truth for block widgets; read externally via
+   * getBlockWidgetModel. */
+  widgetModels: Record<string, unknown[]>;
   /** Last-known DOM focus, snapshotted at rebuild time so builders never
    * need a view reference. */
   focused: boolean;
@@ -191,12 +198,20 @@ function buildPreviewState(
     return {
       decorations: Decoration.none,
       codeBlockRanges: [],
+      widgetModels: {},
       focused: hasFocus,
       complete: false,
     };
   }
 
+  // Block-widget specs are read once per rebuild (ADR-019 rule 2 — dispatch
+  // happens inside this single walk). New widget types contribute here; they
+  // never add another tree pass.
+  const specs = blockWidgetsFor(state);
+  const hasFrontmatter = specs.some((s) => s.id === "frontmatter");
+  const models: Record<string, unknown[]> = {};
   let frontmatterFound = false;
+  let frontmatterWidgeted = false;
 
   tree.iterate({
     enter(node) {
@@ -227,9 +242,13 @@ function buildPreviewState(
         return false;
       }
 
-      if (handleFrontmatterNode(node, ctx, collector)) {
-        frontmatterFound = true;
-      }
+      // Block widgets + frontmatter presentation (ADR-022 rule 14): every
+      // registered block widget replaces/dims/none-s its matched blocks from
+      // this single walk. Widget models are collected per-view for external
+      // reads (properties panel).
+      const handled = handleBlockWidgetsNode(node, ctx, collector, models, specs);
+      if (handled.found) frontmatterFound = true;
+      if (handled.widgeted) frontmatterWidgeted = true;
 
       // Horizontal rule: replace with <hr> widget when cursor is off the line
       if (node.type.name === "HorizontalRule") {
@@ -248,7 +267,10 @@ function buildPreviewState(
     },
   });
 
-  if (!frontmatterFound) {
+  // Regex fallback for a frontmatter block the parser hasn't produced a node
+  // for yet — only when a frontmatter widget is in play and nothing node-based
+  // decorated/rendered it (covers dim mode and the pre-parse flash window).
+  if (hasFrontmatter && !frontmatterFound && !frontmatterWidgeted) {
     handleFrontmatterFallback(ctx, collector);
   }
 
@@ -262,6 +284,7 @@ function buildPreviewState(
   return {
     decorations: finish(),
     codeBlockRanges: ctx.codeBlockRanges,
+    widgetModels: models,
     focused: hasFocus,
     complete: true,
   };
@@ -332,6 +355,7 @@ export const livePreviewField = StateField.define<PreviewState>({
           from: tr.changes.mapPos(r.from),
           to: tr.changes.mapPos(r.to),
         })),
+        widgetModels: value.widgetModels,
         focused,
         complete: value.complete,
       };
@@ -470,3 +494,26 @@ export const livePreviewPlugin = [
   previewScheduler,
   tagMarksPlugin,
 ];
+
+// ---------------------------------------------------------------------------
+// Block-widget reads + rebuilds (ADR-022 rule 14)
+// ---------------------------------------------------------------------------
+
+/** Read the first parsed model for a block widget id off a view. Per-view —
+ * never a module global — so split panes each render their own state. */
+export function getBlockWidgetModel<M>(
+  view: EditorView,
+  id: string,
+): M | null {
+  const field = view.state.field(livePreviewField, false);
+  if (!field) return null;
+  return (field.widgetModels[id]?.[0] as M | undefined) ?? null;
+}
+
+/** Force a synchronous full rebuild of the preview field — the one sanctioned
+ * catch-up for the boot-time WASM parse race (a transport concern, not the
+ * keystroke path): the first parse of a doc may happen before WASM is loaded,
+ * so after `initFrontmatterWasm()` resolves, dispatch this once. */
+export function requestPreviewRebuild(view: EditorView): void {
+  view.dispatch({ effects: rebuildPreview.of(null) });
+}

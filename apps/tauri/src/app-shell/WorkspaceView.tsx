@@ -126,6 +126,7 @@ function WorkspaceShell({
       getTabInfo,
       onTabStructureChanged,
       openPinned,
+      renameNote: ws.renameNote,
     }),
     [
       ws.openNote,
@@ -137,6 +138,7 @@ function WorkspaceShell({
       getTabInfo,
       onTabStructureChanged,
       openPinned,
+      ws.renameNote,
     ],
   );
 

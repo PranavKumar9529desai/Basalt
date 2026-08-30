@@ -1,0 +1,67 @@
+//! Minimal WASM bridge for the YAML frontmatter engine (ADR-022 rule 2/4).
+//!
+//! Exposes a C-ABI surface consumed by `frontmatter-wasm.ts` via
+//! vite-plugin-wasm `?init` (same path as `crates/graph-wasm`). Build with
+//! `cargo build --target wasm32-unknown-unknown --release` from this crate's
+//! directory (see scripts/build-frontmatter-wasm.sh).
+//!
+//! This is the **synchronous keystroke-path** parser: the editor calls
+//! `fm_parse` synchronously inside the decoration state field, so the per-view
+//! model is always fresh on the very same transaction that changed the
+//! frontmatter. The async IPC parser (`parse_frontmatter` Tauri command) is
+//! reserved for the indexer / cold paths (ADR-022 rule 2).
+
+use std::cell::RefCell;
+
+/// Input buffer written from JS via `fm_alloc` (bytes of the document text
+/// as UTF-8). Held in a `thread_local!` (never a `static mut`) so the pointer
+/// returned to JS stays valid for the alloc→write→parse sequence.
+thread_local! {
+    static INPUT: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    /// Serialized JSON result of the last parse, read back via `fm_ptr` +
+    /// `fm_len`. One parse result at a time is enough — reads happen on the
+    /// same synchronous call stack.
+    static RESULT: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
+
+/// Allocate `capacity` bytes of wasm linear memory for the JS side to write
+/// the document text into. Returns the buffer offset.
+#[no_mangle]
+pub extern "C" fn fm_alloc(capacity: u32) -> u32 {
+    INPUT.with(|i| {
+        let buf = vec![0u8; capacity as usize];
+        let ptr = buf.as_ptr() as u32;
+        *i.borrow_mut() = Some(buf);
+        ptr
+    })
+}
+
+/// Parse the document text currently held in the input buffer. Returns the
+/// byte length of the serialized JSON model (0 = no model / serialization
+/// failure); the JSON itself is at `fm_ptr()`.
+#[no_mangle]
+pub extern "C" fn fm_parse(input_ptr: *const u8, input_len: usize) -> u32 {
+    let input = unsafe { std::slice::from_raw_parts(input_ptr, input_len) };
+    let text = String::from_utf8_lossy(input).into_owned();
+    let model = basalt_parser::frontmatter::parse_frontmatter(&text);
+    match serde_json::to_vec(&model) {
+        Ok(bytes) => {
+            let len = bytes.len() as u32;
+            RESULT.with(|r| *r.borrow_mut() = Some(bytes));
+            len
+        }
+        Err(_) => 0,
+    }
+}
+
+/// Offset of the serialized JSON result in wasm linear memory.
+#[no_mangle]
+pub extern "C" fn fm_ptr() -> u32 {
+    RESULT.with(|r| r.borrow().as_ref().map(|b| b.as_ptr() as u32).unwrap_or(0))
+}
+
+/// Byte length of the serialized JSON result.
+#[no_mangle]
+pub extern "C" fn fm_len() -> u32 {
+    RESULT.with(|r| r.borrow().as_ref().map(|b| b.len() as u32).unwrap_or(0))
+}

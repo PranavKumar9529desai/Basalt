@@ -6,6 +6,11 @@ export interface OpenableTabInput {
   title?: string;
   /** Optional 1-based line to reveal when the tab opens (search jump-to-line). */
   line?: number;
+  /**
+   * Transient: enter the leaf's "rename on open" flow once (select-all title
+   * editing) on first show. Mirrors `line` — never persisted.
+   */
+  renameOnOpen?: boolean;
 }
 
 export interface TabModel {
@@ -21,6 +26,8 @@ export interface TabModel {
   lastAccessedAt: number;
   /** Transient: line to reveal once on open. Not persisted. */
   line?: number;
+  /** Transient: rename title once on first show. Not persisted. */
+  renameOnOpen?: boolean;
 }
 
 export interface TabPane {

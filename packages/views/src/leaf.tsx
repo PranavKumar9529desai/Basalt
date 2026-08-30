@@ -12,11 +12,19 @@ export interface LeafTabInfo {
   title: string;
   /** Transient: line to reveal once on open (search jump-to-line). Not persisted. */
   line?: number;
+  /** Transient: enter the leaf's title-rename flow once on first show.
+   * Set by note creation; cleared by the leaf after entering. Not persisted. */
+  renameOnOpen?: boolean;
 }
 
 export interface LeafProps {
   tab: LeafTabInfo;
 }
+
+/** Result of a leaf-initiated note rename (inline title commit). */
+export type RenameResult =
+  | { ok: true; path: string }
+  | { ok: false; error: string };
 
 /**
  * Services a leaf may need from the workbench. Provided by the shell
@@ -49,6 +57,12 @@ export interface LeafServices {
   activeNote: { path: string; name: string } | null;
   /** Open a note as a pinned (non-preview) tab — graph node "open in new tab". */
   openPinned: (note: { path: string; title?: string }, options?: { activate?: boolean }) => string;
+  /** Rename the open note behind a tab (inline-title commit). Repoints the
+   * tab's path/title, refreshes the tree, and rewrites wikilinks backend-side. */
+  renameNote: (
+    tab: { id: string; path: string },
+    newName: string,
+  ) => Promise<RenameResult>;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

@@ -17,5 +17,6 @@
   { "key": "CmdOrCtrl+V", "command": "editor:paste", "when": "editorFocused" },
   { "key": "CmdOrCtrl+P", "action": "openCommandPalette" },
   { "key": "CmdOrCtrl+S", "action": "saveActiveFile" },
+  { "key": "F2", "action": "renameActiveNote" },
   { "key": "Escape", "action": "closeTopModal", "when": "modalOpen" }
 ]

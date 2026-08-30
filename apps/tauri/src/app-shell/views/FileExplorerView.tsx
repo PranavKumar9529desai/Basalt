@@ -28,6 +28,9 @@ export function FileExplorerView() {
       ghostNode={mutations.ghostNode}
       onCommitEdit={controller.handleCommitEdit}
       onCancelEdit={controller.handleCancelEdit}
+      renamingNode={mutations.renamingNode}
+      onCommitRename={controller.handleCommitRename}
+      onCancelRename={controller.handleCancelRename}
     />
   );
 }

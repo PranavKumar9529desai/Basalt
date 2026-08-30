@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted (2026-08-30)
+Accepted (2026-08-30); amended the same day with the Properties widget
+architecture, fresh Obsidian-Properties research, the WASM keystroke path, and
+the generic **block-widget kernel** (rule 14, below) that generalizes the
+frontmatter widget to any presentational/replacive block feature.
 
 ## Context
 
@@ -73,6 +76,59 @@ plus the
 11. **Bases** (1.9.10) are views *over* Markdown + YAML properties; data stays in
     the file, the base is config. Dashboard-first, complementary to Dataview.
 
+### Properties UX research — what Obsidian does well and badly (2026-08)
+
+Second pass, specifically on Obsidian's **Properties** feature — the panel that
+replaces raw YAML in the editor and the UI this ADR's widget design matches
+against. Sources: official Obsidian Help (Properties), the
+[practicalpkm Properties guide](https://practicalpkm.com/basics-of-properties-in-obsidian/),
+[obsidianmate's Properties guide](https://obsidianmate.com/blog/properties-the-complete-guide-part-1-the-basics),
+the
+[Extended Properties plugin](https://github.com/dy-sh/extended-properties) and
+[Better Properties](https://github.com/rwv/better-properties) plugins, plus
+official-forum threads (data-loss reports and the type-system FR cited above).
+
+**What Obsidian does well**
+
+- **Plain-text, portable storage.** The panel is a friendly editor *over* the
+  same YAML frontmatter any tool can read; the files-first model survives.
+- **Type-aware widgets.** The type drives the field: date → picker, checkbox →
+  toggle, list → pill editor, link → note-autocomplete picker.
+- **Vault-wide autocompletion** of property *names* and previously-used *values*
+  — a cheap, effective anti-fragmentation device.
+- **Behavioral default properties** (`tags`, `aliases`, `cssclasses`) get real
+  integrations: aliases feed the quick switcher, tags feed the tag pane, and
+  link-type properties become graph/backlink edges.
+- **Type mismatch is visible** (an orange "Type mismatch, expected X" warning
+  instead of silently mis-parsing) — though see the trap below.
+- **Escape hatches:** per-app Display modes (Visible / Hidden / Source), Source
+  mode per note, `Cmd+;` add-property, a Properties sidebar pane, and vault-wide
+  property rename (merges synonyms) from All properties.
+
+**What Obsidian does badly**
+
+- **No note types; a flat, global property namespace** (`types.json`): one name
+  → one type vault-wide, unscopable (research point 1). Community plugins
+  ("Better Properties" schemas) only paper over it.
+- **Type mismatch traps you in Source mode** — orange values cannot be edited in
+  the panel (research point 2). ADR-022 already rejects this: diagnostics are
+  non-blocking, editing never disabled.
+- **One invalid value can destroy the whole section.** A single unquoted colon
+  invalidates *all* properties, and adding a new property afterwards can
+  silently rewrite away the existing section (forum: "Invalid properties may
+  cause data loss"). Whole-block rewrites are a hard no for us.
+- **types.json is a partial, guessed sidecar** — only explicitly chosen types
+  are stored, everything else is inferred, and plugins fake behavior by patching
+  `metadataCache` (e.g. Typed Tags) → fragmented sources of truth.
+- **No controlled vocabularies / enums / value restrictions**, and no core path
+  to custom property types; the gap is entirely filled by plugins.
+- **No date maintenance**: `created`/`updated`/`viewed` are never written by
+  Obsidian; only templates' `{{date}}` placeholders or plugins fill the gap.
+- **Broken at our scale**: link autocomplete degrades past a few hundred notes
+  (~29K searchable items, 2024 bug graveyard), duplicate keys need manual
+  removal, nested properties unsupported, and a blank line above `---` silently
+  demotes the block.
+
 ### Why this is Basalt's opening
 
 Because Rust **already** parses frontmatter into a structured value, Basalt can
@@ -84,7 +140,8 @@ highest-leverage fix is closing the extraction gap above.
 This ADR sits on three accepted foundations: **ADR-007** (Rust owns heavy
 parse/index; TS owns gestures), **ADR-019** (one keystroke = one pass; no nested
 dispatch; benchmark-gated; "why not Rust per keystroke"), and **ADR-018** (shell
-renders from registries — the properties panel is a `registerView`). **ADR-020**
+renders from registries — dock-appropriate panels are `registerView`s; Properties
+is deliberately *not* one, see rule 7). **ADR-020**
 sets the ≥25k-note perf tier and the WASM-compute path we reuse.
 
 ## Decision
@@ -129,16 +186,93 @@ graph, search, and backlinks natively — never as a render-only layer.**
 6. **First-class downstream.** `apps/tauri/src/shared` feeds the live frontmatter
    model into the search index, the graph (links), and backlinks. Native, not
    plugin-render-only (closes point 8).
-7. **Registry-driven panel (ADR-018).** `registerView('properties')` contributes
-   a properties panel to the header band / a side dock. It reads the model and
-   edits via the surgical command; it shows typed widgets, vault-registry
-   autocomplete, and one-click validation fixes.
-8. **Benchmark-gated (ADR-019 / ADR-020).** Add a `frontmatter` entry to
-   `EditorExtensionGroups` (`packages/editor/src/editor.ts:25`) so the isolation
-   benchmark attributes per-keystroke cost. Extend `parse_metadata` to a **25k-note
-   frontmatter corpus** (ADR-020's scale rule). Acceptance: keystroke p95 stays
-   flat with vs without frontmatter; vault-wide extraction stays within its
-   Criterion budget.
+7. **Properties live inline at the top of the note, Obsidian-style.** The
+   Properties surface is the **inline block widget** replacing the YAML at the
+   top of the editor canvas (the note's header block) — exactly where Obsidian
+   shows it. There is **no side-dock properties panel** and no window
+   header-band strip: the window's 40px header band is chrome (tabs/ribbon/dock
+   headers), and Obsidian puts properties in the note, not the chrome. In
+   *reading / live-preview* the same block renders dim (rule 11); editing
+   happens where the note is.
+8. **Benchmark-gated (ADR-019 / ADR-020).** Add a `blockWidgets` entry to
+    `EditorExtensionGroups` (`packages/editor/src/editor.ts`) so the isolation
+    benchmark attributes per-keystroke cost. Extend `parse_metadata` to a **25k-note
+    frontmatter corpus** (ADR-020's scale rule). Acceptance: keystroke p95 stays
+    flat with vs without frontmatter; vault-wide extraction stays within its
+    Criterion budget.
+
+### Widget architecture (update 2026-08-30)
+
+The inline Properties widget is a block `Decoration.replace` over the frontmatter
+span (`blockSpan.start` → end of the closing `---`): the raw YAML is replaced on
+screen by an interactive panel, and the document text is only ever touched via
+span-scoped edits. The architecture that makes the widget scalable, multi-pane
+safe, and extensible to future property types:
+
+9. **Synchronous model via WASM; IPC stays off the keystroke path.** The editor
+    parses frontmatter **in the webview** through the standalone
+    `crates/frontmatter-wasm` (C-ABI `fm_parse`, the same `?init` load path as
+    `crates/graph-wasm`; `basalt-wasm` lives in the main workspace, which cannot
+    target wasm32), wrapped and injected as `EditorConfig.parseFrontmatter`
+    (rule 2). A frontmatter-region transaction reparses and re-renders the
+    widget in the same frame — no async gap, no "widget lags the keystroke."
+    The Tauri `parse_frontmatter` **command** remains for the vault
+    indexer/batch only. *Landing note (2026-08-30 amend): the previous
+    deviation (feature-layer IPC + module-global cache/debounce/reparse
+    effect) is deleted; the sync WASM path is the code.**
+10. **Per-view state, never module globals.** The live-preview field's
+    `widgetModels` (kernel) is the single per-editor holder of the model;
+    `surgicalEdit` is bound to its own `EditorView`; the widget binds its view
+    at `toDOM`. There is **no `activeView` singleton, no shared
+    cache, no global refresh timer** — split panes (ADR-018 Phase 3) each own their
+    model and widget, so panes can never render each other's state. The inline
+    Properties surface (rule 7) *is* the widget; it reads the model from its own
+    field and there is no separate panel store to keep in sync.
+11. **Explicit render-mode facet.** `blockWidgetModeFacet` (per widget id) ∈
+    `"widget"` (editing surfaces: the inline Properties widget — Obsidian's
+    model), `"dim"` (read-only
+    / live preview: tinted YAML via the `--sat-frontmatter-*` token group),
+    `"none"` (Source mode / power users). Which surface shows what is declared,
+    not a side-effect of which callbacks happen to be wired.
+12. **Widget = registry of per-type field components (ADR-018 pattern).** The
+    widget dispatches each entry on its `PropertyType` to a registered field
+    component (`registerPropertyField(type, component)`): text, list/chips,
+    number, checkbox, date / datetime (picker + one-click insert of
+    `frontmatterDefaults.today|now`), tags, link (nucleo note-picker), url,
+    enum/select. **Adding a property type = one Rust enum variant + one
+    registered field component** — no editor surgery and no metadataCache-style
+    patching (unlike Obsidian's plugin hacks). Value autocompletion (vault value
+    corpus, tag corpus, note-title corpus, schema enum) flows from a single
+    `suggestFor(type, key)` seam supplied through `frontmatterFetchFacet` — the
+    same extensibility mechanism Obsidian's global `types.json` lacks.
+13. **Data-loss-safe by construction.** Diagnostics are non-blocking; edits are
+    span-scoped; **no code path may rewrite the whole block or drop a section to
+    "fix" a value** (Obsidian's silent-rewrite class of bug). A malformed entry
+    offers a *fix action* (quote it, coerce to type, drop duplicate) instead of a
+    silent rewrite, and `created` / `updated` / `viewed` auto-date maintenance is
+    a first-class `frontmatterDefaults` behavior (gated behind config), where
+    Obsidian leaves it to templates or plugins.
+14. **One kernel, many block widgets (extensibility rule — added 2026-08-30).**
+    The Properties widget is the **first** of a family of *block widgets*:
+    syntax-node-matched blocks (frontmatter, and tomorrow callouts and embeds,
+    citations, datasheets…) replaced on screen by an interactive widget while the
+    document text stays untouched. They all render through one registry
+    (`packages/editor/src/block-widgets/registry.ts`): a spec has `id`,
+    `matches(node)`, synchronous `parse`, `render`, `span`, optional read-only
+    `decorateDim`, and `theme`. The registry is **fused into live-preview's
+    single tree walk** (ADR-019 rule 2) via `handleBlockWidgetsNode`, so N widget
+    types still cost exactly one pass and a spec's parse runs inside the StateField
+    where no view exists; widgets bind the view at `toDOM` for their edits.
+    Per-widget parsed models collect into the field's `widgetModels[id]` and are
+    read externally via `getBlockWidgetModel(view, id)` — genuinely per-view
+    (rule 10), never module-global. Adding a widget = one generic spec file +
+    one boot entry (`registerBlockWidget` / an editor group); **no live-preview
+    edits, no new StateFields, no shell surgery.** Rendering per surface remains
+    declared via the mode facet (rule 11), now generalized to
+    `blockWidgetModeFacet` ("widget" | "dim" | "none") keyed by widget id. The
+    frontmatter spec lives in `block-widgets/frontmatter.ts` and is registered by
+    the `blockWidgets` extension group; read-only previews register the same spec
+    under the `frontmatterDimMode` facet to keep the tinted-YAML presentation.
 
 ### Layer map
 
@@ -147,20 +281,30 @@ Rust (single source of truth)
   basalt-parser::parse_frontmatter  ──►  FrontmatterModel {typed values, UTF-16 spans, diags}
   basalt-parser::extract_metadata    (fixed: FM links/tags/aliases)  ──► vault index
   basalt-types::{FrontmatterValue, PropertyType, TypeRegistry}
-  basalt-wasm::parse_frontmatter     (exposes Rust to the webview, no IPC)
+  crates/frontmatter-wasm            (C-ABI fm_alloc/fm_parse/fm_ptr/fm_len; WASM `?init`)
+  (basalt-wasm::parse_frontmatter    (main-workspace crate — NOT wasm-targetable; the
+                                     standalone frontmatter-wasm supersedes it)
 
-Webview (per keystroke)
+Webview (per keystroke, synchronous via frontmatter-wasm)
   packages/editor (pure)
-    frontmatterModelPlugin  ── calls EditorConfig.parseFrontmatter (injected) when
-                             the YAMLFrontMatter node range is touched; holds model +
-                             diagnostics; surgical-edit query API
+    block-widgets/registry.ts        ── generic kernel: blockWidgetSpecsFacet + mode facet +
+                                       handleBlockWidgetsNode (fused into the one walk, ADR-019)
+    block-widgets/frontmatter.ts     ── the frontmatter spec + dep facets + dim-mode facet + watcher
+    preview/live-preview.ts          ── single walk owns livePreviewField.widgetModels;
+                                       getBlockWidgetModel(view, id); requestPreviewRebuild
+    FrontmatterWidget                ── block Decoration.replace; view bound at toDOM;
+                                       propertyFieldRegistry (type→field) [rule 12 — future]
+    surgicalEdit(view, …)            ── span-scoped edits, bound to its own view
+    frontmatterFetchFacet            ── suggestFor(type, key): value/tag/title/enum suggestions
   features/editor
-    supplies parseFrontmatter (wraps WASM) · useFrontmatter Zustand store ·
-    surgicalEdit(key, value) command
+    frontmatter-wasm.ts (sync loader + parser) · parseFrontmatter (injected) ·
+    surgicalEdit (feature-side spans) · initFrontmatterWasm (boot race)
   shared
     live model ──► search index · graph edges · backlinks
   app-shell
-    registerView('properties')  (ADR-018)
+    (no properties panel — Properties is the inline widget at the top of the note)
+  packages/theme
+    --sat-frontmatter-* tokens (tinted YAML in "dim" mode)
 ```
 
 ### Rejected alternatives
@@ -186,15 +330,26 @@ Webview (per keystroke)
 
 - `basalt-parser` gains `parse_frontmatter` and the `extract_metadata`
   FM-link/tag fix; `basalt-types` gains `FrontmatterValue` / `PropertyType` /
-  type registry; `basalt-wasm` exposes `parse_frontmatter`.
-- `packages/editor` gains `frontmatterModelPlugin`, the
-  `EditorConfig.parseFrontmatter` injection point, and a `frontmatter` isolation
-  group — all pure.
-- `features/editor` supplies the parser impl + `useFrontmatter` store +
-  `surgicalEdit` command; `shared` wires frontmatter into search/graph/backlinks;
-  `app-shell` registers the properties view.
+  type registry; `crates/frontmatter-wasm` exposes the C-ABI keystroke parser.
+- `packages/editor` gains the **block-widget kernel** (`block-widgets/registry.ts`),
+  the frontmatter spec + dep facets (`block-widgets/frontmatter.ts`), the fused
+  `handleBlockWidgetsNode` dispatch + per-view `widgetModels` in the live-preview
+  field, `getBlockWidgetModel`/`requestPreviewRebuild`, `FrontmatterWidget`
+  (view-bound edits), the per-type `propertyFieldRegistry` (rule 12),
+  `frontmatterModeFacet` (rule 11), `frontmatterFetchFacet`/`suggestFor`, and a
+  `blockWidgets` isolation group — all pure. The bespoke `frontmatter-model.ts`
+  StateField is deleted.
+- `features/editor` supplies the sync WASM loader + parser impl and deletes the
+  IPC-on-keystroke globals (`useFrontmatter` store, refresh timer, activeView
+  cache); `shared` wires frontmatter into search/graph/backlinks; the
+  Properties surface is the inline widget itself — there is **no side-dock
+  panel** (ADR-018 view registration is not used for Properties; it stays
+  reserved for dock-appropriate panels like Files and Backlinks).
 - Frontmatter `[[links]]` and `tags:` become real graph/backlink/search edges —
   Basalt's headline differentiator over Obsidian's plugin-only metadata.
+- **Adding a new block widget** (callout, embed, citation, datasheet…) is one
+  `BlockWidgetSpec` file + one registration — no editor-plumbing changes. The
+  live-preview walk stays single-pass regardless of how many widget types exist.
 - Risks to manage:
   - `serde_yaml_ng` key-order preservation (uses `IndexMap`) must be verified
     before relying on it for surgical edits; if it reorders, parse to an
@@ -202,6 +357,14 @@ Webview (per keystroke)
   - YAML quoting for the link round-trip must quote `"[[Note]]"` only when
     required and unquote on read, so the panel shows `[[Note]]` while the file
     stays valid.
+  - Adding a new `PropertyType` touches both Rust (`basalt-types` enum +
+    `basalt-parser` parse arm) and TS (one `registerPropertyField` call). The
+    two must stay in lockstep; a mismatch surfaces as an unregistered-field
+    diagnostic rather than a silent mis-render.
+  - The kernel makes large-doc (`>48KB`) frontmatter edits update the widget on
+    the idle-tick rebuild rather than the same keystroke (they travel the lazy
+    decoration path). Acceptable at this scale; revisit if a giantnote
+    frontmatter edit feels sticky.
 
 ## Verification
 
@@ -209,9 +372,26 @@ Webview (per keystroke)
   links and `tags:` into tags; duplicate keys and malformed YAML produce
   diagnostics (not panics); typed coercion (date string → date, `"5"` → number)
   behaves; spans map to correct UTF-16 ranges.
-- **Editor isolation bench:** the new `frontmatter` group shows p95 ≤ baseline +
+- **Editor isolation bench:** the `blockWidgets` group shows p95 ≤ baseline +
   small additive at 100KB; at the 25k corpus, vault-wide extraction stays within
   Criterion budget (ADR-020).
+- **Widget, multi-pane:** with two panes open on different notes, editing a
+  property in one never changes the other's model; a split-pane open during a
+  frontmatter edit shows no cross-pane render. `blockWidgetModeFacet` in
+  `"dim"` renders tinted YAML; `"none"` is invisible; `"widget"` renders the
+  panel.
+- **Kernel extensibility:** register a second trivial `BlockWidgetSpec` in a
+  test; assert it renders on its node, its model is readable via
+  `getBlockWidgetModel`, and the live-preview walk still completes in one pass
+  (widget + fields produce no added tree iteration). Breadcrumb of rule 14:
+  the frontmatter migration already exercises the identical path.
+- **Data-loss safety:** a malformed value (unquoted colon, duplicate key, type
+  mismatch, blank line above `---`) produces a non-blocking diagnostic with a
+  fix action; the document is never survived a whole-block rewrite. Property
+  edits change only the key's span; CRLF files round-trip unchanged elsewhere.
+- **Extensibility:** adding a fresh `PropertyType` requires only the Rust
+  variant + one registered field component; a unit test registers a custom
+  type and exercises its widget + round-trip without touching the editor.
 - **Manual:** edit a property in the visual panel → graph/backlinks/search update;
   type in the body → profiler shows no frontmatter reparse; introduce a blank
   line above `---` → non-blocking diagnostic, still editable.

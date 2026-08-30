@@ -32,7 +32,8 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                     |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                  |
 | Editor perf baseline (typing-latency harness)                       | ⏳ Next up                                      |
-| Graph view (ADR-021) | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
+| **Inline title + rename (ADR-023)**                           | ✅ Complete                                            |
+| Graph view (ADR-021)                                           | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
 
@@ -238,6 +239,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [020-desktop-tier-performance](docs/adr/020-desktop-tier-performance.md)                 | ADR-020: Desktop-Tier Performance Architecture                              |
 | [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)     | ADR-021: Graph View Architecture                                          |
 | [022-frontmatter-engine](docs/adr/022-frontmatter-engine.md)                    | ADR-022: Frontmatter Engine — Structured, Typed, First-Class Properties       |
+| [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                   | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title           |
 
 <!-- ADR_INDEX_END -->
 
