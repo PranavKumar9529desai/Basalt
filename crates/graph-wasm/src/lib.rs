@@ -24,24 +24,31 @@ struct GraphState {
 
 thread_local! {
     static STATE: RefCell<Option<GraphState>> = RefCell::new(None);
+    /// Flat `u32` buffer that holds edges written from JS via
+    /// `graph_alloc_edges`. Held in a `thread_local!` (not a `static mut`) so the
+    /// pointer returned to JS stays valid for the alloc→write→build sequence
+    /// without risking data-race UB or leaking on re-alloc.
+    static EDGE_BUF: RefCell<Option<Vec<u32>>> = RefCell::new(None);
 }
-
-/// Bump buffer for edges written from JS via `graph_alloc_edges`. Lives in wasm
-/// linear memory; pointer is stable for the lifetime of the allocation.
-static mut EDGE_BUF: Option<Vec<u32>> = None;
 
 /// Allocate a `u32` buffer for `capacity` edges (2 * capacity slots) and return
 /// its linear-memory offset. The worker copies the flat edge array here, then
 /// calls `graph_build` with this pointer.
 #[no_mangle]
 pub extern "C" fn graph_alloc_edges(capacity: u32) -> u32 {
-    let mut buf = Vec::with_capacity(capacity as usize * 2);
-    buf.resize(capacity as usize * 2, 0);
-    let ptr = buf.as_ptr() as u32;
-    unsafe {
-        EDGE_BUF = Some(buf);
-    }
-    ptr
+    EDGE_BUF.with(|b| {
+        let mut buf = Vec::with_capacity(capacity as usize * 2);
+        buf.resize(capacity as usize * 2, 0);
+        let ptr = buf.as_ptr() as u32;
+        *b.borrow_mut() = Some(buf);
+        ptr
+    })
+}
+
+/// Number of `u32` slots currently held in the edge buffer (for bounds checks
+/// on the JS-supplied pointer in `graph_build`).
+fn edge_buf_len() -> usize {
+    EDGE_BUF.with(|b| b.borrow().as_ref().map(|v| v.len()).unwrap_or(0))
 }
 
 /// Build a synthetic random graph of `n` nodes, each linked to `degree` random
@@ -84,11 +91,15 @@ pub extern "C" fn graph_seed(n: u32, degree: u32, seed: u32) {
 /// space produced by `get_graph`.
 #[no_mangle]
 pub extern "C" fn graph_build(node_count: u32, edges_ptr: *const u32, edge_count: u32) {
-    let slice = unsafe { std::slice::from_raw_parts(edges_ptr, edge_count as usize * 2) };
-    let mut edges: Vec<(u32, u32)> = Vec::with_capacity(edge_count as usize);
+    // Clamp reads to what was actually allocated in `graph_alloc_edges`: the
+    // worker passes its own count, but we never read past the buffer we own.
+    let slots = edge_count as usize * 2;
+    let len = slots.min(edge_buf_len());
+    let slice = unsafe { std::slice::from_raw_parts(edges_ptr, len) };
+    let mut edges: Vec<(u32, u32)> = Vec::with_capacity(len / 2);
     let mut degree = vec![0u32; node_count as usize];
     let mut i = 0;
-    while i < slice.len() {
+    while i + 1 < slice.len() {
         let u = slice[i];
         let v = slice[i + 1];
         edges.push((u, v));

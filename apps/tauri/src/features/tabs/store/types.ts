@@ -28,6 +28,8 @@ export interface TabsState {
    * — allowing the persistence layer to subscribe to persistVersion
    * instead of the full `tabs` record and avoid re-rendering on every
    * keystroke.
+   * Because activateTab doesn't bump this, activeTabId is never persisted;
+   * hydration restores to the last tab in open order (see persistence.ts).
    */
   persistVersion: number;
 

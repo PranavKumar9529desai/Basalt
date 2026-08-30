@@ -1,5 +1,6 @@
 import { TabsBar } from "@workspace/ui/components/tabs";
-import { type DragEvent, useCallback, useMemo } from "react";
+import { type DragEvent, useCallback } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
 
@@ -17,27 +18,27 @@ export function WorkspaceTabsBar({
   onCloseTab,
   onPinToggle,
 }: WorkspaceTabsBarProps) {
-  const pane = useTabsStore((state) => state.pane);
-  const tabsRecord = useTabsStore((state) => state.tabs);
+  // Project only the data each pill needs; useShallow compares the array
+  // shallowly, so a mutation to any single tab (dirty/title/pin) or the active
+  // selection re-renders only when the rendered pills actually change — not on
+  // every tabs/pane identity churn.
+  const tabsBarTabs = useTabsStore(
+    useShallow((s) =>
+      s.pane.tabIds
+        .map((tabId) => s.tabs[tabId])
+        .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
+        .map((tab) => ({
+          id: tab.id,
+          title: tab.title,
+          isActive: s.pane.activeTabId === tab.id,
+          isDirty: tab.isDirty,
+          isPinned: tab.isPinned,
+          isPreview: tab.isPreview,
+          canClose: true,
+        })),
+    ),
+  );
   const tabDnD = useTabDnD();
-
-  const tabIds = pane.tabIds;
-  const activeTabId = pane.activeTabId;
-
-  const tabsBarTabs = useMemo(() => {
-    return tabIds
-      .map((tabId) => tabsRecord[tabId])
-      .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
-      .map((tab) => ({
-        id: tab.id,
-        title: tab.title,
-        isActive: activeTabId === tab.id,
-        isDirty: tab.isDirty,
-        isPinned: tab.isPinned,
-        isPreview: tab.isPreview,
-        canClose: true,
-      }));
-  }, [tabIds, activeTabId, tabsRecord]);
 
   const onSelect = useCallback(
     (tabId: string) => onSelectTab(tabId),

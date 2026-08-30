@@ -45,13 +45,16 @@ describe("tabs persistence", () => {
     expect(snap.tabs).toHaveLength(2);
     expect(snap.panes).toHaveLength(1);
     expect(snap.panes?.[0].tabIds).toEqual([a, b]);
-    expect(snap.panes?.[0].activeTabId).toBe(a);
+    // activeTabId is never serialized — it would be stale (tab switches don't
+    // bump persistVersion), so hydration restores to the last tab instead.
+    expect(snap.panes?.[0].activeTabId).toBeNull();
   });
 
   it("round-trips: snapshot -> reset -> hydrate restores state", () => {
     const a = store.getState().openPinned({ path: "a.md" }, { activate: false });
     const b = store.getState().openPinned({ path: "b.md" }, { activate: false });
-    store.getState().activateTab(b);
+    // open-order is [a, b]; make a active, then hydrate.
+    store.getState().activateTab(a);
     store.getState().markTabDirty(a, true);
 
     const snap = store.getState().toWorkspaceSnapshot();
@@ -62,6 +65,7 @@ describe("tabs persistence", () => {
     store.getState().hydrateFromWorkspaceSnapshot(snap);
     const s = store.getState();
     expect(s.pane.tabIds).toEqual([a, b]);
+    // Restores to the LAST tab in open order (b), not the stale active a.
     expect(s.pane.activeTabId).toBe(b);
     expect(s.tabs[a]?.isDirty).toBe(true);
     expect(s.tabs[a]?.path).toBe("a.md");
@@ -164,7 +168,7 @@ describe("tabs persistence", () => {
     expect(store.getState().tabs["tab:x.md"]?.leafType).toBe("markdown");
   });
 
-  it("drops pane.tabIds that reference missing tabs and nulls a dangling active", () => {
+  it("drops pane.tabIds that reference missing tabs and restores to a surviving tab", () => {
     const snapshot = {
       version: 1,
       panes: [
@@ -191,6 +195,7 @@ describe("tabs persistence", () => {
     store.getState().hydrateFromWorkspaceSnapshot(snapshot);
     const s = store.getState();
     expect(s.pane.tabIds).toEqual(["tab:real.md"]);
-    expect(s.pane.activeTabId).toBeNull();
+    // activeTabId is not persisted; restore to the last surviving tab.
+    expect(s.pane.activeTabId).toBe("tab:real.md");
   });
 });

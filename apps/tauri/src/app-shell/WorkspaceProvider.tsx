@@ -11,7 +11,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useMemo,
 } from "react";
 
 function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
@@ -21,17 +20,19 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
 
   const activeNote = useActiveNoteStore((s) => s.activeNote);
   const activeNoteBacklinks = useActiveNoteStore((s) => s.activeNoteBacklinks);
-  const pane = useTabsStore((s) => s.pane);
-  const tabsRecord = useTabsStore((s) => s.tabs);
+  const activeNotePath = activeNote?.path ?? null;
   const openInPreview = useTabsStore((s) => s.openInPreview);
   const openPinned = useTabsStore((s) => s.openPinned);
   const setTabTitle = useTabsStore((s) => s.setTabTitle);
   const closeTab = useTabsStore((s) => s.closeTab);
 
-  const activeNoteTab = useMemo(
-    () =>
-      activeNote?.path ? getTabByPath(pane, tabsRecord, activeNote.path) : null,
-    [activeNote?.path, pane, tabsRecord],
+  // Select ONLY the tab for the active note's path (a single TabModel ref),
+  // never the whole tabs/pane records. zustand re-renders when the returned
+  // value changes (Object.is), so picking one tab reference means unrelated
+  // tab/pane mutations — markTabDirty / setTabTitle on other tabs, activateTab
+  // between notes — don't re-render the whole app shell.
+  const activeNoteTab = useTabsStore(
+    (s) => (activeNotePath ? getTabByPath(s.pane, s.tabs, activeNotePath) : null),
   );
 
   const workspace = useWorkspaceController({
