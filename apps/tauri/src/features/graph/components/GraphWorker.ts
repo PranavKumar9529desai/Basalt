@@ -26,6 +26,7 @@ let ex: GraphExports | null = null;
 let ready: Promise<void> | null = null;
 let activeNodeCount = 0;
 let running = false;
+let failed = false;
 
 function ensureInit(): Promise<void> {
   if (!ready) {
@@ -80,7 +81,20 @@ self.onmessage = async (
     | { action: "pin"; index: number; x: number; y: number }
   >,
 ) => {
-  await ensureInit();
+  if (failed) return;
+  try {
+    await ensureInit();
+  } catch (err) {
+    // Latch the failure: report once, then ignore all further messages. Without
+    // this, a rejected init promise would hang every await below and freeze the
+    // graph with no explanation.
+    failed = true;
+    self.postMessage({
+      action: "error",
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return;
+  }
   const data = e.data;
   if (data.action === "build") {
     activeNodeCount = data.nodeCount;

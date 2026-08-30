@@ -16,11 +16,10 @@ import { commandService } from "@workspace/commands";
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
 import {
-  useTabs,
   useTabsStore,
   WorkspaceTabs,
   WorkspaceTabsBar,
@@ -70,12 +69,19 @@ function WorkspaceShell({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
 
-  const tabs = useTabs();
+  // Subscribe ONLY to the stable tab actions the shell needs — never the whole
+  // tabs/pane records. Otherwise every markTabDirty/setTabTitle (i.e. typing
+  // bursts and autosaves) would re-render the entire shell for data it throws away.
+  const activateTab = useTabsStore((s) => s.activateTab);
+  const closeTab = useTabsStore((s) => s.closeTab);
+  const togglePinTab = useTabsStore((s) => s.togglePinTab);
+  const markTabDirty = useTabsStore((s) => s.markTabDirty);
+  const openPinned = useTabsStore((s) => s.openPinned);
   const tabHandlers = useWorkspaceTabHandlers({
     tabActions: {
-      activateTab: tabs.activateTab,
-      closeTab: tabs.closeTab,
-      togglePinTab: tabs.togglePinTab,
+      activateTab,
+      closeTab,
+      togglePinTab,
     },
   });
 
@@ -112,25 +118,25 @@ function WorkspaceShell({
   const leafServices = useMemo(
     () => ({
       openNote: ws.openNote,
-      markTabDirty: tabs.markTabDirty,
+      markTabDirty,
       findNote: ws.findNote,
       activeNote: ws.activeNote,
       getOpenTabIds,
       getOpenTabPaths,
       getTabInfo,
       onTabStructureChanged,
-      openPinned: tabs.openPinned,
+      openPinned,
     }),
     [
       ws.openNote,
-      tabs.markTabDirty,
+      markTabDirty,
       ws.findNote,
       ws.activeNote,
       getOpenTabIds,
       getOpenTabPaths,
       getTabInfo,
       onTabStructureChanged,
-      tabs.openPinned,
+      openPinned,
     ],
   );
 
@@ -148,7 +154,15 @@ function WorkspaceShell({
 
       return (
         <LeafServicesProvider services={leafServices}>
-          <LeafComponent tab={tab} />
+          <Suspense
+            fallback={
+              <div className="flex h-full w-full items-center justify-center text-[var(--sat-text-muted)] text-xs">
+                Loading…
+              </div>
+            }
+          >
+            <LeafComponent tab={tab} />
+          </Suspense>
         </LeafServicesProvider>
       );
     },

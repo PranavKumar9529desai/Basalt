@@ -35,6 +35,10 @@ type GraphFrame = {
   alpha: number;
 };
 
+type GraphWorkerMessage =
+  | GraphFrame
+  | { action: "error"; message: string };
+
 const NODE_R = 2.6; // node radius in screen px
 const MIN_SCALE = 0.02;
 const MAX_SCALE = 12;
@@ -92,8 +96,11 @@ interface ThemeColors {
   note: [number, number, number];
   attachment: [number, number, number];
   tag: [number, number, number][];
+  tagFill: [number, number, number];
   edge: [number, number, number];
   label: string;
+  hoverFill: [number, number, number];
+  hoverRing: [number, number, number];
 }
 const FALLBACK_COLORS: ThemeColors = {
   note: [0.54, 0.58, 0.6],
@@ -106,8 +113,11 @@ const FALLBACK_COLORS: ThemeColors = {
     [0.34, 0.65, 1],
     [0.9, 0.93, 0.95],
   ],
+  tagFill: [0.25, 0.73, 0.31],
   edge: [0.54, 0.58, 0.6],
   label: "#c9d1d9",
+  hoverFill: [0.3, 0.76, 1],
+  hoverRing: [0.9, 0.93, 0.95],
 };
 const readThemeColors = (): ThemeColors => {
   const tmp = document.createElement("canvas").getContext("2d")!;
@@ -129,8 +139,8 @@ const readThemeColors = (): ThemeColors => {
     return tmp.fillStyle;
   };
   return {
-    note: resolve("--sat-text-muted", "#8b949e"),
-    attachment: resolve("--sat-text-muted", "#8b949e"),
+    note: resolve("--sat-graph-node", "#8b949e"),
+    attachment: resolve("--sat-graph-attachment", "#8b949e"),
     tag: [
       resolve("--sat-accent-primary", "#4cc2ff"),
       resolve("--sat-state-success", "#3fb950"),
@@ -139,8 +149,11 @@ const readThemeColors = (): ThemeColors => {
       resolve("--sat-state-info", "#58a6ff"),
       resolve("--sat-text-primary", "#e6edf3"),
     ],
-    edge: resolve("--sat-text-muted", "#8b949e"),
-    label: resolveCss("--sat-text-primary", "#e6edf3"),
+    tagFill: resolve("--sat-graph-tag", "#3fb950"),
+    edge: resolve("--sat-graph-edge", "#8b949e"),
+    label: resolveCss("--sat-graph-label", "#e6edf3"),
+    hoverFill: resolve("--sat-graph-hover-fill", "#4cc2ff"),
+    hoverRing: resolve("--sat-graph-hover-ring", "#e6edf3"),
   };
 };
 
@@ -165,6 +178,13 @@ const noteExcerpt = (md: string): string => {
 export function GraphView(_props: LeafProps) {
   const services = useLeafServices();
   const activeNotePath = services.activeNote?.path ?? null;
+
+  // The leaf-services bag identity changes whenever activeNote/activeTab
+  // change, but these callbacks themselves are stable. Mount the worker +
+  // renderer ONCE: remounting would reset camera + layout and rerun the whole
+  // force sim every time the user switches notes.
+  const openNoteRef = useRef(services.openNote);
+  openNoteRef.current = services.openNote;
 
   const glRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLCanvasElement>(null);
@@ -198,6 +218,7 @@ export function GraphView(_props: LeafProps) {
   const downRef = useRef<{ x: number; y: number } | null>(null);
   const hoverRef = useRef(-1);
   const rebuildRef = useRef<() => void>(() => {});
+  const recolorRef = useRef<() => void>(() => {});
   const centerOnRef = useRef<(full: number) => void>(() => {});
   // Per-subset hover flag buffer for the renderer (written on hover, uploaded when dirty).
   const flagsRef = useRef<Float32Array>(new Float32Array(0));
@@ -231,6 +252,7 @@ export function GraphView(_props: LeafProps) {
   const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [colorMode, setColorMode] = useState<GraphColorMode>("single");
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<{
     x: number;
     y: number;
@@ -248,15 +270,19 @@ export function GraphView(_props: LeafProps) {
   // Keep the mirrors in sync with the rendered state.
   queryRef.current = query;
   colorModeRef.current = colorMode;
+  activeNotePathRef.current = activeNotePath;
+  localRootRef.current = localRoot;
   useEffect(() => {
     colorModeRef.current = colorMode;
-    rebuildRef.current?.();
+    recolorRef.current?.();
   }, [colorMode]);
   useEffect(() => {
     const ro = new MutationObserver(() => {
       themeColorsRef.current = readThemeColors();
-      rendererRef.current?.setEdgeColor(themeColorsRef.current.edge);
-      rebuildRef.current?.();
+      const tc = themeColorsRef.current;
+      rendererRef.current?.setEdgeColor(tc.edge);
+      rendererRef.current?.setHoverColors(tc.hoverFill, tc.hoverRing);
+      recolorRef.current?.();
     });
     ro.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
     return () => ro.disconnect();
@@ -265,6 +291,9 @@ export function GraphView(_props: LeafProps) {
     const tc = themeColorsRef.current;
     const mode = colorModeRef.current;
     if (isTagRef.current[full]) {
+      // Default ("single") view keeps tags one theme-hued fill; the rainbow
+      // palette is opt-in via the cluster/tag/folder color modes below.
+      if (mode === "single") return tc.tagFill;
       const p = pathsRef.current[full] ?? "";
       let h = 0;
       for (const c of p) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -298,6 +327,28 @@ export function GraphView(_props: LeafProps) {
   };
   const basename = (p: string) => p.split("/").pop() ?? p;
 
+  // Recolor only — repaints the current active subset's node colors without a
+  // full rebuild (which would re-seed the force sim and reset the camera).
+  // colorMode/theme affect only the color array, not positions/physics.
+  recolorRef.current = () => {
+    const renderer = rendererRef.current;
+    const map = activeMapRef.current;
+    if (!renderer || !map.length) return;
+    const cols = new Float32Array(map.length * 3);
+    for (let i = 0; i < map.length; i++) {
+      const c = colorFor(map[i]);
+      cols[i * 3] = c[0];
+      cols[i * 3 + 1] = c[1];
+      cols[i * 3 + 2] = c[2];
+    }
+    renderer.setColors(cols);
+    if (flagsRef.current.length === map.length) {
+      flagsRef.current.fill(0);
+      flagsDirtyRef.current = true;
+    }
+    dirtyRef.current = true;
+  };
+
   useEffect(() => {
     const glCanvas = glRef.current;
     const labelCanvas = labelRef.current;
@@ -313,8 +364,10 @@ export function GraphView(_props: LeafProps) {
 
     const renderer = new GraphRenderer(glCanvas);
     rendererRef.current = renderer;
-        themeColorsRef.current = readThemeColors();
-        renderer.setEdgeColor(themeColorsRef.current.edge);
+    themeColorsRef.current = readThemeColors();
+    const tc = themeColorsRef.current;
+    renderer.setEdgeColor(tc.edge);
+    renderer.setHoverColors(tc.hoverFill, tc.hoverRing);
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -334,8 +387,14 @@ export function GraphView(_props: LeafProps) {
       type: "module",
     });
     workerRef.current = worker;
-    worker.onmessage = (e: MessageEvent<GraphFrame>) => {
-      frameRef.current = e.data;
+    worker.onmessage = (e: MessageEvent<GraphWorkerMessage>) => {
+      const data = e.data;
+      if ("action" in data) {
+        // The only union member with `action` is the error message.
+        setError((data as { message: string }).message);
+        return;
+      }
+      frameRef.current = data;
       dirtyRef.current = true;
     };
 
@@ -375,7 +434,8 @@ export function GraphView(_props: LeafProps) {
         console.log(
           `[graph] real vault graph: ${g.node_count} nodes, ${g.edges.length / 2} edges`,
         );
-      } catch {
+      } catch (err) {
+        console.error("[graph] get_graph failed:", err);
         syntheticRef.current = true;
         const n = 2000;
         pathsRef.current = Array.from({ length: n }, (_, i) => `Note ${i}`);
@@ -684,7 +744,9 @@ export function GraphView(_props: LeafProps) {
           }
         }
         const isTag = isTagRef.current[full];
-        const title = isTag ? `#${pathsRef.current[full] ?? ""}` : (pathsRef.current[full] ?? "");
+        const title = isTag
+          ? `#${pathsRef.current[full] ?? ""}`
+          : basename(pathsRef.current[full] ?? "");
         setHover({ x: px, y: py, title, full, isTag });
         if (isTag) {
           hoverFullRef.current = -1;
@@ -743,7 +805,7 @@ export function GraphView(_props: LeafProps) {
           if (isTagRef.current[full]) {
             setQuery(`tag:${title}`);
           } else if (title) {
-            services.openNote(title);
+            openNoteRef.current(title);
           }
         }
         dragRef.current = null;
@@ -841,7 +903,14 @@ export function GraphView(_props: LeafProps) {
         labelCtx.clearRect(0, 0, w, h);
         const hov = hoverRef.current;
         const neighbors = hov >= 0 ? activeAdjRef.current[hov] : null;
-        const showLabels = v.scale > LABEL_SCALE && count < LABEL_CAP;
+        // Set for O(1) membership below — `neighbors.includes(i)` inside the
+        // per-node label loop would be O(n·deg) on every mouse move.
+        const neighborSet = neighbors ? new Set(neighbors) : null;
+        const hoverMode = hov >= 0;
+        // On hover, the focused node's neighborhood is always labeled (Obsidian
+        // behavior); outside hover, labels appear once the user zooms in.
+        // LABEL_CAP stays as a hard safety bound either way.
+        const showLabels = count < LABEL_CAP && (hoverMode || v.scale > LABEL_SCALE);
         if (showLabels) {
           labelCtx.font = "10px system-ui, sans-serif";
           labelCtx.fillStyle = themeColorsRef.current.label;
@@ -849,8 +918,9 @@ export function GraphView(_props: LeafProps) {
             if (i * 2 + 1 >= p.length) break;
             const full = map[i];
             const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
-            const dim = hov >= 0 && i !== hov && !(neighbors && neighbors.includes(i));
-            labelCtx.globalAlpha = hov < 0 ? 1 : dim ? 0.25 : 1;
+            const related = hoverMode && (i === hov || (neighborSet && neighborSet.has(i)));
+            if (hoverMode && !related) continue;
+            labelCtx.globalAlpha = 1;
             const lbl = isTagRef.current[full] ? `#${pathsRef.current[full] ?? ""}` : basename(pathsRef.current[full] ?? "");
             labelCtx.fillText(lbl, px + NODE_R + 2, py + 3);
           }
@@ -874,13 +944,18 @@ export function GraphView(_props: LeafProps) {
       glCanvas.removeEventListener("mouseleave", onLeave);
       glCanvas.removeEventListener("contextmenu", onContext);
     };
-  }, [services]);
+  }, []);
 
   // Rebuild the visible subset whenever a control changes (debounced).
+  // activeNotePath feeds the local-graph root, so it must rebuild in local
+  // mode; in global mode it only affects the highlighted/hovered node, never
+  // the visible subset — so we gate it to null there to avoid re-seeding the
+  // force sim and resetting the camera whenever the user clicks between notes.
+  const rebuildOnActiveNote = local ? activeNotePath : null;
   useEffect(() => {
     const t = setTimeout(() => rebuildRef.current(), 120);
     return () => clearTimeout(t);
-  }, [query, showOrphans, showAttach, local, localDepth, localRoot, activeNotePath, loaded]);
+  }, [query, showOrphans, showAttach, local, localDepth, localRoot, rebuildOnActiveNote, loaded]);
 
   const centerActive = () => {
     const p = activeNotePathRef.current;
@@ -924,7 +999,7 @@ export function GraphView(_props: LeafProps) {
   return (
     <div
       ref={wrapRef}
-      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", backgroundColor: "var(--sat-editor-background, #0f172a)" }}
+      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", backgroundColor: "var(--sat-graph-background, var(--sat-editor-background, #0f172a))" }}
     >
       <GraphControls
         colorMode={colorMode}
@@ -941,6 +1016,30 @@ export function GraphView(_props: LeafProps) {
         showAttach={showAttach}
         onToggleAttach={() => setShowAttach((a) => !a)}
       />
+      {error && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            textAlign: "center",
+            color: "var(--sat-text-primary)",
+            fontSize: 13,
+            lineHeight: 1.5,
+            zIndex: 6,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+              Graph failed to load
+            </div>
+            <div style={{ opacity: 0.75 }}>{error}</div>
+          </div>
+        </div>
+      )}
       <canvas
         ref={glRef}
         style={{
@@ -948,7 +1047,7 @@ export function GraphView(_props: LeafProps) {
           inset: 0,
           width: "100%",
           height: "100%",
-          background: "#0d1117",
+          background: "var(--sat-graph-background)",
           display: "block",
           cursor: "grab",
         }}
