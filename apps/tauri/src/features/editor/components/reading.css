@@ -1,15 +1,15 @@
 .markdown-reading-view {
   background: var(--sat-editor-background, var(--sat-surface-1));
   color: var(--sat-text-primary);
+  /* Mirrors the editor's .cm-scroller padding (padding sits on the scroll
+     container, not the 70ch sizer) so reading never gets narrower than edit. */
+  padding: 24px max(32px, 5%);
 }
 
 .markdown-reading-sizer {
   font-family: var(--sat-font-sans);
   font-size: 16px;
   line-height: 1.65;
-  /* Mirrors the editor's .cm-scroller padding so toggling Edit <-> Reading
-     never shifts the note vertically. */
-  padding: 24px max(32px, 5%);
 }
 
 .markdown-reading-sizer .markdown-reading-title {
