@@ -45,9 +45,7 @@ describe("tabs persistence", () => {
     expect(snap.tabs).toHaveLength(2);
     expect(snap.panes).toHaveLength(1);
     expect(snap.panes?.[0].tabIds).toEqual([a, b]);
-    // activeTabId is never serialized — it would be stale (tab switches don't
-    // bump persistVersion), so hydration restores to the last tab instead.
-    expect(snap.panes?.[0].activeTabId).toBeNull();
+    expect(snap.panes?.[0].activeTabId).toBe(a);
   });
 
   it("never serializes transient fields (line, renameOnOpen)", () => {
@@ -77,8 +75,7 @@ describe("tabs persistence", () => {
     store.getState().hydrateFromWorkspaceSnapshot(snap);
     const s = store.getState();
     expect(s.pane.tabIds).toEqual([a, b]);
-    // Restores to the LAST tab in open order (b), not the stale active a.
-    expect(s.pane.activeTabId).toBe(b);
+    expect(s.pane.activeTabId).toBe(a);
     expect(s.tabs[a]?.isDirty).toBe(true);
     expect(s.tabs[a]?.path).toBe("a.md");
   });
@@ -207,7 +204,6 @@ describe("tabs persistence", () => {
     store.getState().hydrateFromWorkspaceSnapshot(snapshot);
     const s = store.getState();
     expect(s.pane.tabIds).toEqual(["tab:real.md"]);
-    // activeTabId is not persisted; restore to the last surviving tab.
     expect(s.pane.activeTabId).toBe("tab:real.md");
   });
 });

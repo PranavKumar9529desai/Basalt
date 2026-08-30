@@ -44,8 +44,8 @@ export async function initFrontmatterWasm(): Promise<void> {
 export function parseFrontmatterSync(text: string): FrontmatterModel | null {
   if (!ex) return null;
   const encoded = new TextEncoder().encode(text);
-  const mem = ex.memory.buffer;
   const ptr = ex.fm_alloc(encoded.length);
+  const mem = ex.memory.buffer;
   new Uint8Array(mem, ptr, encoded.length).set(encoded);
   try {
     const len = ex.fm_parse(ptr, encoded.length);

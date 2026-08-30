@@ -240,6 +240,8 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)     | ADR-021: Graph View Architecture                                          |
 | [022-frontmatter-engine](docs/adr/022-frontmatter-engine.md)                    | ADR-022: Frontmatter Engine — Structured, Typed, First-Class Properties       |
 | [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                   | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title           |
+| [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)       | ADR-024: Editor Surface Typography and Spatial Rhythm                         |
+| [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md) | ADR-025: Tab Lifecycle and Workspace Persistence                              |
 
 <!-- ADR_INDEX_END -->
 

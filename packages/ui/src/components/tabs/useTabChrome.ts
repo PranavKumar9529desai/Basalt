@@ -17,7 +17,11 @@ export interface TabsChromeLayout {
   separatorXs: number[];
 }
 
-export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
+export function useTabChrome(
+  tabs: TabItemData[],
+  visibleTabCount?: number,
+  visibleTabStart = 0,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [chrome, setChrome] = useState<TabsChromeLayout>({
@@ -53,7 +57,9 @@ export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
     const activeIndex = activeTabId
       ? tabs.findIndex((t) => t.id === activeTabId)
       : -1;
-    const isActiveVisible = activeIndex >= 0 && activeIndex < visibleCount;
+    const isActiveVisible =
+      activeIndex >= visibleTabStart &&
+      activeIndex < visibleTabStart + visibleCount;
 
     const activeLeft =
       activeEl && isActiveVisible
@@ -65,8 +71,12 @@ export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
     // Separators only between visible tabs, skipping any pair adjacent to the
     // active tab (Chrome draws no divider there).
     const separatorXs: number[] = [];
-    const maxSep = Math.min(tabs.length - 1, visibleCount - 1);
-    for (let i = 0; i < maxSep; i += 1) {
+    const firstSeparator = visibleTabStart;
+    const lastSeparator = Math.min(
+      tabs.length - 1,
+      visibleTabStart + visibleCount - 1,
+    );
+    for (let i = firstSeparator; i < lastSeparator; i += 1) {
       const current = tabs[i];
       const next = tabs[i + 1];
       if (current.isActive || next.isActive) continue;
@@ -92,7 +102,7 @@ export function useTabChrome(tabs: TabItemData[], visibleTabCount?: number) {
       }
       return { activeLeft, activeWidth, separatorXs };
     });
-  }, [activeTabId, tabs, visibleTabCount]);
+  }, [activeTabId, tabs, visibleTabCount, visibleTabStart]);
 
   // Layout effect on mount/change
   useLayoutEffect(() => {

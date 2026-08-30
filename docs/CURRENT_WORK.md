@@ -17,6 +17,13 @@ Complete across all layers (Rust → parser → tabs → leaf → shared orchest
   `[[wikilinks]]` in other notes + self-links, update vault doc/index under the
   write lock (`index_remove` + `index_upsert`). Returns `{ path, name,
   updated_files }`; emits no events (frontend refreshes).
+- **Rust backend — `rename_path`** (folders + attachments): same choke-point
+  contract. Notes are rejected ("use rename_note"); files keep their extension
+  (`resolve_rename_target_name`), folders rewrite vault-relative path-form
+  wikilinks (`PathRename` / `rewrite_wikilinks_path` in `link_rewrite.rs`),
+  move every nested `.md` doc through the cache + index, and return `{ path,
+  name, moved, updated_files }` so the frontend can repoint open tabs inside
+  the folder. Tested via the `temp_vault_with_folder` harness.
 - **Tabs** (`renameOnOpen`): transient flag on `OpenableTabInput`/`TabModel`
   (mirrors `line`), set by `createNoteInstant`; **persistence layer now
   serializes an explicit field list** — this fixes `line` (and would have
@@ -31,12 +38,61 @@ Complete across all layers (Rust → parser → tabs → leaf → shared orchest
   `refreshTree()` → `updateTabPaths([{from,to}])` (id-stable, caches survive).
   Injected to leaves via `LeafServices.renameNote`.
 
-Verified: `cargo test -p basalt-parser -p tauri@0.1.0` (30+19 pass), full
-`apps/tauri` vitest suite (187), `bun run lint`, `bunx tsc --noEmit` clean.
+The three deferred companions from the ADR are now shipped too:
 
-Deferred (explicit non-goals in ADR-023): tree/context-menu "Rename" entry,
-F2 binding, title ⋮ overflow menu. ADR-010's "cursor in editor body" plan is
-superseded by select-all-on-create.
+- **F2 rename** (`keybindings.json` `{ "key": "F2", "action": "renameActiveNote" }`):
+  registered in `useMarkdownEditor` → `useRenameSignalStore.request(tabId)` →
+  `MarkdownEditorView` bumps a `renameEpoch` → `InlineTitle` enters edit mode.
+  `mountedEpochRef` baselines the mount-time epoch so tab switches never
+  re-enter edit mode, only fresh signals do. Rename signal lives in
+  `features/editor/ui/renameSignal.ts` (the shared seam for the ⋮ menu too).
+- **Tree context-menu Rename**: `FileTreeContextMenu` item enabled (`onRename`
+  prop) → `useVaultController.onMenuRename` sets `mutations.renamingNode`
+  (isEditing row rendered in place, stem shown for notes) →
+  `handleCommitRename` routes to `shared/useWorkspace.ts` `renameNode`
+  (notes → `rename_note`; folders/attachments → `rename_path`) which refreshes
+  the tree, repoints open tabs (`moved` covers nested docs), and opens the
+  renamed folder.
+- **ViewHeader ⋮ menu** (`app-shell/ViewHeader.tsx`): generic per-leaf chrome
+  band wrapping leaf content in `WorkspaceView.renderPane`. Actions: Rename
+  note (markdown leaves only, via the rename signal), Pin/Unpin, Copy path,
+  Copy link, Close. Uses the existing Base UI `ContextMenu*` primitives in
+  controlled mode with an element anchor — no new dependency, works for
+  markdown and graph leaves alike.
+
+Verified: `cargo test -p basalt-parser -p tauri@0.1.0` (**41 + 23 pass**, +11
+parser `PathRename` tests, +4 `rename_path` tests), full `apps/tauri` vitest
+suite (**189**), `bun run lint`, `bunx tsc --noEmit` clean.
+
+Frontmatter `title` is intentionally not renamed by this feature (ADR-023
+non-goal).
+
+### Post-merge regression fixes (2026-08-30)
+
+Three issues surfaced after the rename/header work shipped:
+
+1. **"Save error: No such file or directory (os error 2)" on new-note (Ctrl+N)
+   + inline-title not focused.** Root cause confirmed: `WorkspaceTabs` memoized
+   `activeTab` on `[activeTabId]` only. A rename keeps the tab id stable and
+   repoints its path in place (via `updateTabPaths`, which bumps
+   `persistVersion`), so the memo kept serving the **stale tab (old path)** to
+   the leaf — the leaf's autosave then wrote to the now-deleted old path
+   (ENOENT). Fix: `WorkspaceTabs` now subscribes to `persistVersion` and keys
+   the memo on it, so a path repoint re-resolves the live tab object. This is
+   the same stale-snapshot root class as the pre-existing "move strands a tab"
+   debt below.
+2. **Inline-title focus on mount.** `InlineTitle`'s edit-mode effect only
+   called `input.select()`; a freshly-inserted input isn't focused yet, and
+   `select()` on an unfocused element is a no-op. Fix: `focus()` then `select()`.
+3. **Header UI reconciled with Obsidian reference.** The note name was shown a
+   third time in the `ViewHeader` chrome band (it already lives on the tab AND
+   as the editable inline title). Removed the `displayTitle` span from
+   `ViewHeader`; the band now shows only the ⋮ actions menu (Rename / Pin /
+   Copy path / Copy link / Close), matching Obsidian's tab + inline-title
+   anatomy.
+
+Re-verified after fixes: 41 + 23 Rust, 189 vitest, `bun run lint`, `bunx tsc
+--noEmit` all green.
 
 ---
 
@@ -219,13 +275,14 @@ off the measured critical path.
 - Remaining known trade-offs: lingering self-write markers if a watcher event
   never arrives for a registered path (rare, benign); live-preview reveal on
   > 48KB docs is deferred to idle ticks (~350ms cap).
-- **BUG (pre-existing, scoped): moving an open note strands its tab on the
-  dead old path** — tab ids derive from paths and nothing rekeys open tabs
-  after `move_paths`, so the next autosave fails (`save_file` on nonexistent
-  path) and edits are lost. Fix sketch: decouple tab identity from path —
-  stable ids + path updates in place, with MarkdownLeaf reading path from
-  the live tab instead of cached meta. Touches tabs store + leaf meta
-  lifecycle; needs its own session.
+- ~~**BUG (pre-existing, scoped): moving an open note strands its tab on the
+  dead old path**~~ ✅ FIXED 2026-08-30 — the root cause was the
+  `WorkspaceTabs` `activeTab` memo being keyed only on `activeTabId`: after
+  `updateTabPaths` repointed a tab's path in place (bumping `persistVersion`),
+  the memo kept returning the stale tab (old path), so
+  `MarkdownLeaf` saved to the dead location. `WorkspaceTabs` now subscribes to
+  `persistVersion` and re-keys the memo on it, so saves always resolve the live
+  path. (See the ADR-023 regression fixes above.)
 
 ### Key invariants (do not break)
 

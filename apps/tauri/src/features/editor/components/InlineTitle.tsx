@@ -1,6 +1,7 @@
 import {
   type KeyboardEvent,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -106,9 +107,15 @@ export function InlineTitle({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renameEpoch, liveStem]);
 
-  // Select-all whenever the input mounts/enters edit mode.
-  useEffect(() => {
-    if (mode === "edit" && inputRef.current) inputRef.current.select();
+  // Select-all whenever the input mounts/enters edit mode. `focus()` first:
+  // a freshly-inserted input (note creation / rename) is not focused yet, and
+  // `select()` alone on an unfocused element is a no-op, so the name would
+  // never be highlighted away from the default caret position.
+  useLayoutEffect(() => {
+    if (mode === "edit" && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
   }, [mode]);
 
   const exitEdit = () => {
@@ -173,7 +180,7 @@ export function InlineTitle({
     return (
       <button
         type="button"
-        className="block w-full cursor-text select-text border-none bg-transparent p-0 text-left text-[2em] font-bold leading-[1.15] tracking-[-0.03em] text-[var(--sat-editor-heading1,var(--sat-text-primary))]"
+        className="block w-full cursor-text select-text border-none bg-transparent p-0 text-left"
         onClick={() => startEdit(liveStem)}
         onMouseDown={(e) => e.stopPropagation()}
         title="Click to rename"
@@ -198,7 +205,7 @@ export function InlineTitle({
         disabled={pending}
         spellCheck={false}
         aria-label="Note title"
-        className="block w-full border-b border-[var(--sat-accent-primary)] bg-transparent pb-1 text-[2em] font-bold leading-[1.15] tracking-[-0.03em] text-[var(--sat-editor-heading1,var(--sat-text-primary))] outline-none"
+        className="block w-full bg-transparent py-0 outline-none"
       />
       {error && (
         <div className="pt-1 text-xs text-[var(--sat-state-danger,var(--sat-accent-primary))]">

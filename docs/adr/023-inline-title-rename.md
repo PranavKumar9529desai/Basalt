@@ -143,14 +143,19 @@ rename's own disk writes never surface as conflicts.
   disagree, and the single invoke keeps IPC cheap (ADR-020 batched-IPC
   direction).
 - The `line` transient leak is fixed as a side effect of strict serialization.
-- Known non-goals (future work): tree/context-menu rename entry, F2 binding,
-  and the title's ⋮ overflow menu are still deferred. Frontmatter `title` is
-  intentionally not renamed by this feature.
+- The title's three companion affordances are shipped: the F2 keybinding
+  (and any chrome-level "rename note" request via the rename signal) enters
+  the inline title edit, the tree context-menu "Rename" renames files,
+  folders, and attachments in place (`rename_note` for notes;
+  `rename_path` for folders/attachments — folder renames rewrite
+  vault-relative path-form wikilinks and move every nested document), and
+  the per-leaf ⋮ menu carries Rename/Pin/Copy path/Copy link/Close.
+  Frontmatter `title` is intentionally not renamed by this feature.
 
 ## Further Work
 
-- Tree context-menu "Rename" (currently disabled) and command-palette rename
-  should invoke the same `renameNote` orchestration.
+- Command-palette rename could dispatch the same rename signal the F2
+  binding uses.
 - File watcher parity: rename a note outside the title should update the
   open tab's inline title live (already true — the title reads through
   `getTabInfo`).

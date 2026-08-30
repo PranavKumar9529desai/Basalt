@@ -10,7 +10,6 @@ export function StatusBar() {
       <span className="flex-1 truncate">
         {note ? note.name : "No note open"}
       </span>
-      <span className="hidden md:inline">Source mode</span>
       <span className="tabular-nums">{words} words</span>
       <span className="tabular-nums">{chars} chars</span>
     </div>

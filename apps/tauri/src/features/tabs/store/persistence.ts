@@ -22,11 +22,7 @@ export const createPersistenceSlice: StateCreator<
         {
           id: state.pane.id,
           tabIds: [...state.pane.tabIds],
-          // activeTabId is intentionally NOT persisted: tab switches never bump
-          // persistVersion (kept in the active tab only), so the persisted value
-          // would be stale — we'd reopen the wrong tab on launch. Hydration
-          // restores to the last tab in tabIds instead.
-          activeTabId: null,
+          activeTabId: state.pane.activeTabId,
           previewTabId: state.pane.previewTabId,
         },
       ],
@@ -72,11 +68,14 @@ export const createPersistenceSlice: StateCreator<
     const pane: TabPane = {
       id: (firstPane?.id as TabPaneId) ?? (ROOT_PANE_ID as TabPaneId),
       tabIds,
-      // activeTabId is not persisted (see toWorkspaceSnapshot). Restore to the
-      // last tab in open order — the most recently opened — which is the closest
-      // deterministic guess at "the tab I was last looking at".
+      // Keep the saved active tab when it still exists; old snapshots have a
+      // null active id and fall back to the last surviving tab.
       activeTabId:
-        tabIds.length > 0 ? (tabIds[tabIds.length - 1] as TabId) : null,
+        firstPane?.activeTabId && tabs[firstPane.activeTabId]
+          ? (firstPane.activeTabId as TabId)
+          : tabIds.length > 0
+            ? (tabIds[tabIds.length - 1] as TabId)
+            : null,
       previewTabId:
         firstPane?.previewTabId && tabs[firstPane.previewTabId]
           ? (firstPane.previewTabId as TabId)

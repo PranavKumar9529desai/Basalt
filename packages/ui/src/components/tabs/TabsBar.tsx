@@ -114,12 +114,14 @@ export function TabsBar({
 
   const tabWidthsRef = useRef<Map<string, number>>(new Map());
   const [visibleTabCount, setVisibleTabCount] = useState(tabs.length);
+  const [visibleTabStart, setVisibleTabStart] = useState(0);
 
   // Use the extracted useTabChrome hook with visibleTabCount so chrome is
   // only computed for tabs that aren't hidden
   const { containerRef, tabRefs, chrome, setTabRef } = useTabChrome(
     tabs,
     visibleTabCount,
+    visibleTabStart,
   );
 
   /* eslint-disable react-hooks/exhaustive-deps -- tabRefs/tabWidths are live
@@ -132,29 +134,40 @@ export function TabsBar({
     const dropdownWidth = dropdownWrapper?.offsetWidth || 0;
     const availableWidth = container.clientWidth - dropdownWidth - 8; // 8px buffer
 
-    let usedWidth = 0;
-    let count = 0;
-
-    for (const tab of tabs) {
+    const widths = tabs.map((tab) => {
       const el = tabRefs.current.get(tab.id);
-      if (!el) break;
-
       // Measure width — if 0 (display:none), use cached value from when it was visible
-      const measuredWidth = el.offsetWidth;
+      const measuredWidth = el?.offsetWidth ?? 0;
       if (measuredWidth > 0) {
         tabWidthsRef.current.set(tab.id, measuredWidth);
       }
-      const effectiveWidth = tabWidthsRef.current.get(tab.id) || 170;
+      return tabWidthsRef.current.get(tab.id) || 170;
+    });
 
-      usedWidth += effectiveWidth;
-      if (usedWidth <= availableWidth) {
-        count++;
-      } else {
-        break;
-      }
+    if (tabs.length === 0) {
+      setVisibleTabStart(0);
+      setVisibleTabCount(0);
+      return;
     }
 
-    setVisibleTabCount(Math.max(1, Math.min(count, tabs.length)));
+    // Keep the active tab in the strip. Fill to the right first, then use
+    // remaining space on the left so overflow never hides the current tab.
+    const activeIndex = tabs.findIndex((tab) => tab.isActive);
+    const anchor = activeIndex >= 0 ? activeIndex : 0;
+    let start = anchor;
+    let end = anchor + 1;
+    let usedWidth = widths[anchor] ?? 170;
+    while (end < tabs.length && usedWidth + widths[end] <= availableWidth) {
+      usedWidth += widths[end] ?? 170;
+      end += 1;
+    }
+    while (start > 0 && usedWidth + widths[start - 1] <= availableWidth) {
+      start -= 1;
+      usedWidth += widths[start] ?? 170;
+    }
+
+    setVisibleTabStart(start);
+    setVisibleTabCount(Math.max(1, end - start));
   }, [tabs, containerRef]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -256,6 +269,33 @@ export function TabsBar({
         "pt-[0.5px] relative flex h-10 items-end gap-0 bg-[var(--sat-surface-2)] px-2 overflow-hidden",
         className,
       )}
+      onKeyDown={(event) => {
+        if (!onSelectTab) return;
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+          return;
+        }
+        const target =
+          event.target instanceof HTMLElement
+            ? event.target.closest<HTMLElement>("[data-tab-id]")
+          : null;
+        const currentId = target?.dataset.tabId;
+        if (!currentId) return;
+        const currentIndex = tabs.findIndex((tab) => tab.id === currentId);
+        if (currentIndex < 0) return;
+        const nextIndex =
+          event.key === "ArrowLeft"
+            ? (currentIndex - 1 + tabs.length) % tabs.length
+            : event.key === "ArrowRight"
+              ? (currentIndex + 1) % tabs.length
+              : event.key === "Home"
+                ? 0
+                : tabs.length - 1;
+        const nextTab = tabs[nextIndex];
+        if (!nextTab || nextTab.disabled) return;
+        event.preventDefault();
+        onSelectTab(nextTab.id);
+        requestAnimationFrame(() => tabRefs.current.get(nextTab.id)?.focus());
+      }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -298,17 +338,19 @@ export function TabsBar({
               showDropIndicator={
                 dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined
               }
-              hidden={index >= visibleTabCount}
+              hidden={
+                index < visibleTabStart || index >= visibleTabStart + visibleTabCount
+              }
             />
           ))}
           {/* Explicit end drop zone */}
-          {tabs.length > 0 && (
+          {tabs.length > 0 && visibleTabCount > 0 && (
             <div
               aria-hidden="true"
               className="h-full w-20 shrink-0"
               onDragOver={(e) => {
                 e.preventDefault();
-                const last = tabs[tabs.length - 1];
+                const last = tabs[visibleTabStart + visibleTabCount - 1];
                 if (!last) return;
                 if (
                   dropIndicatorRef.current?.tabId === last.id &&
@@ -320,7 +362,7 @@ export function TabsBar({
               onDrop={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const last = tabs[tabs.length - 1];
+                const last = tabs[visibleTabStart + visibleTabCount - 1];
                 if (!last) return;
                 setDropIndicatorBoth(null);
                 onTabDrop?.(

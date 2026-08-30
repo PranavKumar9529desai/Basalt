@@ -19,12 +19,18 @@ function titleFromPath(path: string) {
 }
 
 function removeTabFromPane(pane: TabsState["pane"], tabId: TabId): void {
+  const removedIndex = pane.tabIds.indexOf(tabId);
+  if (removedIndex === -1) return;
   pane.tabIds = pane.tabIds.filter((id) => id !== tabId);
   if (pane.previewTabId === tabId) pane.previewTabId = null;
   if (pane.activeTabId === tabId) {
+    // Prefer the tab to the right, then the tab to the left, instead of
+    // jumping to the end of the strip when an active tab closes.
     pane.activeTabId =
       pane.tabIds.length > 0
-        ? (pane.tabIds[pane.tabIds.length - 1] as TabId | null)
+        ? ((pane.tabIds[removedIndex] ?? pane.tabIds[removedIndex - 1]) as
+            | TabId
+            | null)
         : null;
   }
 }
@@ -248,6 +254,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...state.tabs,
           [tabId]: { ...tab, lastAccessedAt: nowMs() },
         },
+        persistVersion: state.persistVersion + 1,
       };
     });
   },

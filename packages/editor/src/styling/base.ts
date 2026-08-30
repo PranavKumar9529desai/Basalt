@@ -8,7 +8,7 @@ const baseTheme = EditorView.theme({
   // We only set styles that are NOT conflicting with that.
   "&": {
     backgroundColor: "transparent",
-    fontSize: "16px",
+    fontSize: "var(--sat-editor-font-size, 16px)",
     fontFamily: "var(--sat-font-sans)",
     fontOpticalSizing: "auto",
     fontFeatureSettings: '"cv01", "ss01"',
@@ -23,25 +23,42 @@ const baseTheme = EditorView.theme({
   },
   // Scroller-injected inline title (ADR-023): the scroller is a flex row by
   // default; column direction stacks the title slot above the content so it
-  // scrolls with the document. `.cm-content` snaps to full scroller width the
-  // way flexGrow in the row axis did. Selection/cursor layers are absolutely
-  // positioned and direction-agnostic, so virtualization is unaffected.
+  // scrolls with the document. The scroller remains full width so its
+  // scrollbar stays at the pane edge. Its document children use the same
+  // configurable readable width, mirroring Obsidian's `.cm-sizer` model.
   "&[data-basalt-title] .cm-scroller": {
     flexDirection: "column",
   },
   "&[data-basalt-title] .cm-scroller > .cm-content": {
     width: "100%",
+    maxWidth: "var(--sat-editor-readable-width, 70ch)",
+    marginInline: "auto",
+    flex: "0 0 auto",
   },
   ".cm-scroller-title": {
     flex: "0 0 auto",
     width: "100%",
+    maxWidth: "var(--sat-editor-readable-width, 70ch)",
+    marginInline: "auto",
     boxSizing: "border-box",
   },
   ".cm-content": {
     fontFamily: "inherit",
+    width: "100%",
+    maxWidth: "var(--sat-editor-readable-width, 70ch)",
+    marginInline: "auto",
+    flex: "0 0 auto",
   },
   ".cm-line": {
-    lineHeight: "1.6",
+    lineHeight: "var(--sat-editor-line-height, 1.6)",
+    maxWidth: "var(--sat-editor-readable-width, 70ch)",
+  },
+  ".cm-scroller-title button, .cm-scroller-title input": {
+    fontSize: "var(--sat-editor-title-size, 2em)",
+    fontWeight: "var(--sat-editor-title-weight, 700)",
+    lineHeight: "var(--sat-editor-title-line-height, 1.15)",
+    letterSpacing: "var(--sat-editor-title-letter-spacing, -0.03em)",
+    color: "var(--sat-editor-heading1, var(--sat-text-primary))",
   },
   "&.cm-focused": {
     outline: "none",

@@ -41,6 +41,8 @@ export interface SerializedTab {
   id: TabId;
   path: string;
   title: string;
+  /** Registered leaf type needed to restore non-markdown tabs. */
+  leafType: string;
   isPinned: boolean;
   isPreview: boolean;
   isDirty: boolean;

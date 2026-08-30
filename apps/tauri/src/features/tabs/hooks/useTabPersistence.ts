@@ -26,9 +26,9 @@ function isTabSnapshot(value: unknown): value is TabsWorkspaceSnapshot {
  * Subscribes to `persistVersion` instead of the full `tabs`/`pane` objects.
  *
  * This avoids re-rendering the parent component on every `markTabDirty` call
- * (which fires on every keystroke). Only structural mutations (open, close,
- * move) bump `persistVersion`, so the persistence effect only runs when the
- * workspace layout actually changes.
+ * (which fires on every keystroke). Structural mutations and active-tab
+ * changes bump `persistVersion`; dirty state remains out of the workspace
+ * persistence path because the editor document cache is separate.
  */
 export function useTabPersistence({
   workspace,

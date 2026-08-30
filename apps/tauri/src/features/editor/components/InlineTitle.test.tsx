@@ -51,6 +51,7 @@ describe("InlineTitle", () => {
     render(<InlineTitle tab={tab} services={services} autoEdit />);
     const input = screen.getByRole("textbox") as HTMLInputElement;
     expect(input.value).toBe("Note");
+    expect(document.activeElement).toBe(input);
     expect(input.selectionStart).toBe(0);
     expect(input.selectionEnd).toBe(4);
   });
@@ -172,5 +173,42 @@ describe("InlineTitle", () => {
       { id: tab.id, path: tab.path },
       "MidEdit",
     );
+  });
+
+  it("enters edit mode when a fresh rename signal arrives (F2 / ⋮ menu)", () => {
+    const services = makeServices({
+      getTabInfo: () => ({ path: tab.path, title: "Note" }),
+    });
+    const { rerender } = render(
+      <InlineTitle tab={tab} services={services} renameEpoch={0} />,
+    );
+    expect(screen.getByRole("button")).toBeDefined();
+
+    // Same epoch re-render (tab switch back, pre-existing signal): display.
+    rerender(<InlineTitle tab={tab} services={services} renameEpoch={0} />);
+    expect(screen.getByRole("button")).toBeDefined();
+
+    // A newer epoch is the signal: enter edit with the name selected.
+    rerender(<InlineTitle tab={tab} services={services} renameEpoch={1} />);
+    const input = screen.getByRole("textbox") as HTMLInputElement;
+    expect(input.value).toBe("Note");
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(4);
+  });
+
+  it("does not re-enter edit mode on remount with a pre-existing epoch", () => {
+    const services = makeServices({
+      getTabInfo: () => ({ path: tab.path, title: "Note" }),
+    });
+    // Mounted AFTER a signal already fired for this tab: the epoch seen at
+    // mount is the baseline, so no spurious edit (tab switch, not a signal).
+    const { rerender } = render(
+      <InlineTitle tab={tab} services={services} renameEpoch={3} />,
+    );
+    expect(screen.getByRole("button")).toBeDefined();
+
+    // Only a strictly newer epoch triggers the edit.
+    rerender(<InlineTitle tab={tab} services={services} renameEpoch={4} />);
+    expect(screen.getByRole("textbox")).toBeDefined();
   });
 });

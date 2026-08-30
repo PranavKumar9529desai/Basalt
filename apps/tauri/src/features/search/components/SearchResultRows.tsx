@@ -1,43 +1,8 @@
 import { IconFileText } from "@tabler/icons-react";
-import { memo, type CSSProperties, type ReactNode } from "react";
+import { memo, type CSSProperties } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
 
-import type { FileMatch, Highlight, LineMatch } from "../types";
-
-/** Renders `text` with `highlights` (character offsets) wrapped in <mark>. */
-function HighlightedText({
-  text,
-  highlights,
-  className,
-}: {
-  text: string;
-  highlights: Highlight[];
-  className?: string;
-}) {
-  if (highlights.length === 0) return <span className={className}>{text}</span>;
-
-  const parts: ReactNode[] = [];
-  let cursor = 0;
-  const sorted = [...highlights].sort((a, b) => a.start - b.start);
-  for (const h of sorted) {
-    if (h.start > cursor) {
-      parts.push(<span key={`t-${cursor}`}>{text.slice(cursor, h.start)}</span>);
-    }
-    parts.push(
-      <mark
-        key={`h-${h.start}`}
-        className="bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)] rounded-[2px] px-[1px] py-px"
-      >
-        {text.slice(h.start, h.end)}
-      </mark>,
-    );
-    cursor = h.end;
-  }
-  if (cursor < text.length) {
-    parts.push(<span key="t-end">{text.slice(cursor)}</span>);
-  }
-  return <span className={className}>{parts}</span>;
-}
+import type { FileMatch, LineMatch } from "../types";
 
 /** Absolute position for a virtualized row inside the grid's fixed container. */
 function rowStyle(top: number): CSSProperties {
@@ -67,7 +32,7 @@ export const FileRow = memo(function FileRow({
       className="flex items-center gap-2 px-4 py-2 bg-[var(--sat-surface-2)] border-b border-[var(--sat-layout-border)]"
     >
       <IconFileText className="size-3.5 shrink-0 text-[var(--sat-text-muted)]" />
-      <span className="flex-1 text-[12px] font-semibold truncate">
+      <span className="flex-1 truncate text-[11px] font-semibold text-[var(--sat-text-primary)]">
         {file.title}
       </span>
       <span className="text-[10px] tabular-nums text-[var(--sat-text-muted)]">
@@ -101,19 +66,17 @@ export const MatchRow = memo(function MatchRow({
       variant="ghost"
       tabIndex={-1}
       className={[
-        "w-full flex-col items-start gap-0.5 px-4 py-2.5 h-auto rounded-none text-left",
+        "w-full flex-col items-start gap-0.5 px-4 py-2 h-auto rounded-none text-left",
         selected ? "bg-[var(--sat-surface-3)]" : "hover:bg-[var(--sat-surface-1)]",
       ].join(" ")}
       onClick={() => onOpen(file.path, match.lineNumber)}
     >
-      <span className="text-[10px] text-[var(--sat-text-muted)] tabular-nums">
-        {file.title} · Ln {match.lineNumber}
+      <span className="text-[9px] text-[var(--sat-text-muted)] tabular-nums">
+        Ln {match.lineNumber}
       </span>
-      <HighlightedText
-        text={match.text}
-        highlights={match.highlights}
-        className="text-[12px] leading-snug truncate w-full text-[var(--sat-text-primary)]"
-      />
+      <span className="w-full truncate text-[11px] leading-snug text-[var(--sat-text-primary)]">
+        {match.text}
+      </span>
     </Button>
   );
 });

@@ -10,12 +10,12 @@ import { markdownPreviewExtensions } from "@workspace/editor";
 // Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
 // theme tokens so the preview tracks the editor's prose + code surface.
 const highlightStyle = HighlightStyle.define([
-  { tag: t.heading1, color: "var(--sat-editor-heading1)", fontWeight: "700", fontSize: "1.7em" },
-  { tag: t.heading2, color: "var(--sat-editor-heading2)", fontWeight: "700", fontSize: "1.45em" },
-  { tag: t.heading3, color: "var(--sat-editor-heading3)", fontWeight: "600", fontSize: "1.25em" },
-  { tag: t.heading4, color: "var(--sat-editor-heading4)", fontWeight: "600", fontSize: "1.12em" },
-  { tag: t.heading5, color: "var(--sat-editor-heading5)", fontWeight: "600", fontSize: "1.04em" },
-  { tag: t.heading6, color: "var(--sat-editor-heading6)", fontWeight: "600", fontSize: "1em" },
+  { tag: t.heading1, color: "var(--sat-editor-heading1)", fontWeight: "700", fontSize: "1.55em" },
+  { tag: t.heading2, color: "var(--sat-editor-heading2)", fontWeight: "700", fontSize: "1.32em" },
+  { tag: t.heading3, color: "var(--sat-editor-heading3)", fontWeight: "600", fontSize: "1.16em" },
+  { tag: t.heading4, color: "var(--sat-editor-heading4)", fontWeight: "600", fontSize: "1.06em" },
+  { tag: t.heading5, color: "var(--sat-editor-heading5)", fontWeight: "600", fontSize: "0.98em" },
+  { tag: t.heading6, color: "var(--sat-editor-heading6)", fontWeight: "600", fontSize: "0.93em" },
   { tag: t.keyword, color: "var(--sat-syntax-keyword)" },
   { tag: t.string, color: "var(--sat-syntax-string)" },
   { tag: t.comment, color: "var(--sat-syntax-comment)", fontStyle: "italic" },
@@ -95,10 +95,13 @@ function makeState(text: string, path: string): EditorState {
       EditorView.theme(
         {
           "&": { height: "100%", backgroundColor: "transparent" },
+          ".cm-content": {
+            padding: "12px 14px 16px",
+          },
           ".cm-scroller": {
             fontFamily: "var(--sat-font-mono, monospace)",
-            fontSize: "12px",
-            lineHeight: "1.5",
+            fontSize: "11px",
+            lineHeight: "1.42",
           },
           ".cm-gutters": {
             backgroundColor: "transparent",

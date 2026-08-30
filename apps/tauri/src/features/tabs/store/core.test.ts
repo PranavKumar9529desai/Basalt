@@ -187,6 +187,24 @@ describe("tabs core slice", () => {
       expect(store.getState().tabs[b]).toBeUndefined();
       expect(store.getState().pane.activeTabId).toBe(a);
     });
+
+    it("selects the next tab to the right when closing the active middle tab", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openPinned({ path: "b.md" });
+      const c = store.getState().openPinned({ path: "c.md" });
+      store.getState().activateTab(b);
+      store.getState().closeTab(b);
+      expect(store.getState().pane.tabIds).toEqual([a, c]);
+      expect(store.getState().pane.activeTabId).toBe(c);
+    });
+
+    it("selects the previous tab when closing the active last tab", () => {
+      const a = store.getState().openPinned({ path: "a.md" });
+      const b = store.getState().openPinned({ path: "b.md" });
+      store.getState().activateTab(b);
+      store.getState().closeTab(b);
+      expect(store.getState().pane.activeTabId).toBe(a);
+    });
   });
 
   describe("closeOtherTabs", () => {

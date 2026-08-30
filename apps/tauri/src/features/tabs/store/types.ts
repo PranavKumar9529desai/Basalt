@@ -22,14 +22,9 @@ export interface TabsState {
   tabs: Record<TabId, TabModel>;
   pane: TabPane;
   /**
-   * Monotonically increasing version counter bumped ONLY on structural
-   * mutations (open, close, pin, rename).
-   * Ephemeral changes (markTabDirty, activateTab) leave this untouched
-   * — allowing the persistence layer to subscribe to persistVersion
-   * instead of the full `tabs` record and avoid re-rendering on every
-   * keystroke.
-   * Because activateTab doesn't bump this, activeTabId is never persisted;
-   * hydration restores to the last tab in open order (see persistence.ts).
+   * Monotonically increasing version counter bumped on workspace mutations
+   * that must be persisted. Dirty state remains ephemeral because the editor
+   * document cache is not part of the workspace snapshot.
    */
   persistVersion: number;
 

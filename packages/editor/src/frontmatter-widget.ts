@@ -6,17 +6,46 @@ import type {
   FrontmatterModel,
   FrontmatterValue,
 } from "./types";
+import { createFrontmatterIcon } from "./frontmatter-icons";
+
+type FrontmatterVariant = Exclude<FrontmatterValue, "None">;
+
+function isFrontmatterObject(v: FrontmatterValue): v is FrontmatterVariant {
+  return typeof v !== "string";
+}
+
+function getVariantKey(v: FrontmatterVariant, name: string): string | undefined {
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(v)) {
+    if (key.toLowerCase() === lower) return key;
+  }
+  return undefined;
+}
+
+function variantValue<T>(v: FrontmatterValue, name: string): T | undefined {
+  if (!isFrontmatterObject(v)) return undefined;
+  const key = getVariantKey(v, name);
+  if (!key) return undefined;
+  return v[key as keyof FrontmatterVariant] as T;
+}
 
 /** Human-readable form of a value for input fields. */
 export function displayValue(v: FrontmatterValue): string {
   if (typeof v === "string") return ""; // "None"
-  if ("Text" in v) return v.Text;
-  if ("Link" in v) return `[[${v.Link}]]`;
-  if ("Number" in v) return String(v.Number);
-  if ("Checkbox" in v) return v.Checkbox ? "true" : "false";
-  if ("Date" in v) return v.Date;
-  if ("DateTime" in v) return v.DateTime;
-  if ("List" in v) return v.List.map(displayValue).join(", ");
+  const text = variantValue<string>(v, "Text");
+  if (text !== undefined) return text;
+  const link = variantValue<string>(v, "Link");
+  if (link !== undefined) return `[[${link}]]`;
+  const number = variantValue<number>(v, "Number");
+  if (number !== undefined) return String(number);
+  const checkbox = variantValue<boolean>(v, "Checkbox");
+  if (checkbox !== undefined) return checkbox ? "true" : "false";
+  const date = variantValue<string>(v, "Date");
+  if (date !== undefined) return date;
+  const dateTime = variantValue<string>(v, "DateTime");
+  if (dateTime !== undefined) return dateTime;
+  const list = variantValue<FrontmatterValue[]>(v, "List");
+  if (list !== undefined) return list.map(displayValue).join(", ");
   return "";
 }
 
@@ -38,22 +67,26 @@ function inferValue(text: string): FrontmatterValue {
 function coerce(text: string, original?: FrontmatterValue): FrontmatterValue {
   const t = text.trim();
   if (original && typeof original !== "string") {
-    if ("Number" in original) {
+    if (variantValue<number>(original, "Number") !== undefined) {
       const n = Number(t);
       return Number.isNaN(n) ? { Text: t } : { Number: n };
     }
-    if ("Checkbox" in original) return { Checkbox: t === "true" || t === "yes" || t === "1" };
-    if ("Date" in original) return { Date: t };
-    if ("DateTime" in original) return { DateTime: t };
-    if ("Link" in original) return { Link: t.replace(/^\[\[|\]\]$/g, "") };
-    if ("Text" in original) return { Text: t };
+    if (variantValue<boolean>(original, "Checkbox") !== undefined) {
+      return { Checkbox: t === "true" || t === "yes" || t === "1" };
+    }
+    if (variantValue<string>(original, "Date") !== undefined) return { Date: t };
+    if (variantValue<string>(original, "DateTime") !== undefined) return { DateTime: t };
+    if (variantValue<string>(original, "Link") !== undefined) {
+      return { Link: t.replace(/^\[\[|\]\]$/g, "") };
+    }
+    if (variantValue<string>(original, "Text") !== undefined) return { Text: t };
   }
   return inferValue(t);
 }
 
 /**
- * Inline Live-Preview "Properties" box. Replaces the YAML frontmatter block in
- * the editor canvas (a CodeMirror replacement decoration) without altering the
+ * Inline live frontmatter editor. Replaces the YAML frontmatter block in the
+ * editor canvas (a CodeMirror replacement decoration) without altering the
  * document — surgical span edits stay valid (ADR-022 rule 4). Edits dispatch
  * through the injected `edit` callback; the model re-parses and the widget
  * re-renders.
@@ -131,6 +164,8 @@ export class FrontmatterWidget extends WidgetType {
       row.title = err;
     }
 
+    const icon = createFrontmatterIcon(entry);
+
     const keyInput = document.createElement("input");
     keyInput.className = "cm-fm-key";
     keyInput.value = entry.key;
@@ -145,38 +180,37 @@ export class FrontmatterWidget extends WidgetType {
 
     const valueEl = this.renderValue(entry);
 
-    const remove = document.createElement("button");
-    remove.className = "cm-fm-remove";
-    remove.type = "button";
-    remove.textContent = "✕";
-    remove.title = "Remove property";
-    remove.addEventListener("click", () => this.editWith(entry.key, undefined));
-
-    row.append(keyInput, valueEl, remove);
+    row.append(icon, keyInput, valueEl);
     return row;
   }
 
   private renderValue(entry: FrontmatterEntry): HTMLElement {
     const v = entry.value;
     if (typeof v !== "string") {
-      if ("Checkbox" in v) {
+      const checkbox = variantValue<boolean>(v, "Checkbox");
+      if (checkbox !== undefined) {
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.className = "cm-fm-value cm-fm-checkbox";
-        cb.checked = v.Checkbox;
+        cb.checked = checkbox;
         cb.addEventListener("change", () =>
           this.editWith(entry.key, { Checkbox: cb.checked }),
         );
         return cb;
       }
-      if ("List" in v) {
-        return this.renderList(entry.key, v.List);
+      const list = variantValue<FrontmatterValue[]>(v, "List");
+      if (list !== undefined) {
+        return this.renderList(entry.key, list);
       }
     }
     const input = document.createElement("input");
     input.type = "text";
     input.className = "cm-fm-value";
     input.value = displayValue(v);
+    if (typeof v === "string") {
+      input.classList.add("cm-fm-empty");
+      input.placeholder = "Empty";
+    }
     const commit = () => this.editWith(entry.key, coerce(input.value, entry.value));
     input.addEventListener("blur", commit);
     input.addEventListener("keydown", (e) => {
@@ -251,13 +285,23 @@ export class FrontmatterWidget extends WidgetType {
     const row = document.createElement("div");
     row.className = "cm-fm-row cm-fm-add";
 
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "cm-fm-add-action";
+    action.textContent = "+ Add property";
+
     const keyInput = document.createElement("input");
     keyInput.className = "cm-fm-key";
-    keyInput.placeholder = "new property";
+    keyInput.placeholder = "property";
 
     const valInput = document.createElement("input");
     valInput.className = "cm-fm-value";
     valInput.placeholder = "value";
+
+    const editor = document.createElement("div");
+    editor.className = "cm-fm-add-editor";
+    editor.append(keyInput, valInput);
+    editor.hidden = true;
 
     const add = () => {
       const k = keyInput.value.trim();
@@ -275,7 +319,13 @@ export class FrontmatterWidget extends WidgetType {
       if ((e as KeyboardEvent).key === "Enter") add();
     });
 
-    row.append(keyInput, valInput);
+    action.addEventListener("click", () => {
+      action.hidden = true;
+      editor.hidden = false;
+      keyInput.focus();
+    });
+
+    row.append(action, editor);
     return row;
   }
 }

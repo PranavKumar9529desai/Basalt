@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
 import { PaletteShellFooter } from "@workspace/ui/components/palette-shell";
-import { IconFileSearch, IconFileText, IconSearch } from "@tabler/icons-react";
+import { IconFileSearch, IconSearch } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -165,33 +165,27 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     >
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-[min(92vw,960px)] w-full h-[85vh] p-0 gap-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--sat-surface-2)] ring-1 ring-[var(--sat-layout-border)]"
+        className="sm:max-w-[min(92vw,960px)] w-full h-[84vh] p-0 gap-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--sat-surface-2)] ring-1 ring-[var(--sat-layout-border)]"
       >
-        {/* HEADER: input (left) + preview title (right) — one continuous divider */}
         <div className="grid grid-cols-[minmax(0,42%)_minmax(0,1fr)] border-b border-[var(--sat-layout-border)]">
-          {/* input cell */}
-          <div className="px-3 py-2 border-r border-[var(--sat-layout-border)]">
-            <div className="flex items-center gap-2 rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] px-2.5 py-1.5">
-              <IconSearch className="size-4 shrink-0 text-[var(--sat-text-muted)]" />
-              <input
-                ref={inputRef}
-                value={searchQuery}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Search in vault…"
-                spellCheck={false}
-                className="flex-1 min-w-0 bg-transparent text-[13px] text-[var(--sat-text-primary)] outline-none placeholder:text-[var(--sat-text-muted)]"
-              />
-              {showCount && (
-                <span className="shrink-0 text-[11px] tabular-nums text-[var(--sat-text-muted)]">
-                  {totalMatches} in {searchTotalHits} files
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-2 px-4 py-3 border-r border-[var(--sat-layout-border)]">
+            <IconSearch className="size-4 shrink-0 text-[var(--sat-text-muted)]" />
+            <input
+              ref={inputRef}
+              value={searchQuery}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Search in vault…"
+              spellCheck={false}
+              className="flex-1 min-w-0 bg-transparent text-[12px] text-[var(--sat-text-primary)] outline-none placeholder:text-[var(--sat-text-muted)]"
+            />
+            {showCount && (
+              <span className="shrink-0 text-[10px] tabular-nums text-[var(--sat-text-muted)]">
+                {totalMatches} in {searchTotalHits} files
+              </span>
+            )}
           </div>
-          {/* preview title cell */}
-          <div className="flex items-center gap-2 px-4 py-2.5">
-            <IconFileText className="size-4 shrink-0 text-[var(--sat-text-muted)]" />
+          <div className="flex items-center justify-center px-4 py-3 text-center">
             <span className="truncate text-[12px] font-medium text-[var(--sat-text-primary)]">
               {selected ? selected.title : "Preview"}
             </span>

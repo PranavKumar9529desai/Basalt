@@ -4,15 +4,17 @@ import type { DecorationCollector, DecorationContext } from "./types";
 
 export const FRONTMATTER_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-frontmatter": {
-    backgroundColor: "var(--sat-frontmatter-bg, rgba(100,116,139,0.08))",
+    backgroundColor: "transparent",
     color: "var(--sat-frontmatter-text, #94a3b8)",
+    borderLeft: "2px solid color-mix(in srgb, var(--sat-text-muted) 22%, transparent)",
+    paddingLeft: "10px",
   },
   ".cm-line.cm-live-frontmatter-fence": {
     color: "var(--sat-frontmatter-fence-color, #475569)",
     fontWeight: "600",
   },
   ".cm-live-frontmatter-key": {
-    color: "var(--sat-frontmatter-key-color, #818cf8)",
+    color: "var(--sat-frontmatter-key-color, var(--sat-accent-primary))",
   },
 });
 

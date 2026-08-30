@@ -13,41 +13,6 @@ export const VaultSplash: FC<VaultSplashProps> = ({
 }) => {
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-8">
-      {/* Logo / wordmark */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-2xl bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] flex items-center justify-center">
-          {/* Simple geometric mark — replace with real SVG logo later */}
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            fill="none"
-            aria-hidden="true"
-          >
-            <polygon
-              points="16,3 29,24 3,24"
-              stroke="var(--sat-text-muted)"
-              strokeWidth="2"
-              fill="none"
-            />
-            <polygon
-              points="16,10 24,24 8,24"
-              stroke="var(--sat-text-muted)"
-              strokeWidth="1.5"
-              fill="var(--sat-surface-3)"
-            />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--sat-text-primary)]">
-          Basalt
-        </h1>
-        <p className="text-sm text-[var(--sat-text-muted)] text-center max-w-xs leading-relaxed">
-          A fast, local-first markdown notebook.
-          <br />
-          Open a folder to get started.
-        </p>
-      </div>
-
       {/* Action */}
       <button
         type="button"

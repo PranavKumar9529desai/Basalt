@@ -30,6 +30,7 @@ import "../shared/tabCommands";
 import { Ribbon } from "./Ribbon";
 import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { SideDock } from "./SideDock";
+import { ViewHeader } from "./ViewHeader";
 import "./viewRegistrations";
 import { WorkspaceProvider, useWorkspaceContext } from "./WorkspaceProvider";
 import { WorkspaceOverlays } from "./WorkspaceOverlays";
@@ -155,20 +156,31 @@ function WorkspaceShell({
       const LeafComponent = leaf.component;
 
       return (
-        <LeafServicesProvider services={leafServices}>
-          <Suspense
-            fallback={
-              <div className="flex h-full w-full items-center justify-center text-[var(--sat-text-muted)] text-xs">
-                Loading…
-              </div>
-            }
-          >
-            <LeafComponent tab={tab} />
-          </Suspense>
-        </LeafServicesProvider>
+        // Generic per-leaf chrome band (⋮ menu) above the leaf content; only
+        // re-renders when the active tab changes, never during typing.
+        <div className="flex h-full min-h-0 flex-col">
+          <ViewHeader
+            tab={tab}
+            vaultPath={ws.vaultPath}
+            canRename={leaf.type === "markdown"}
+          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <LeafServicesProvider services={leafServices}>
+              <Suspense
+                fallback={
+                  <div className="flex h-full w-full items-center justify-center text-[var(--sat-text-muted)] text-xs">
+                    Loading…
+                  </div>
+                }
+              >
+                <LeafComponent tab={tab} />
+              </Suspense>
+            </LeafServicesProvider>
+          </div>
+        </div>
       );
     },
-    [leafServices],
+    [leafServices, ws.vaultPath],
   );
 
   // Vault commands — need controller / mutation data from the context.
@@ -242,9 +254,7 @@ function WorkspaceShell({
           <WorkspaceTabs renderPane={renderPane} />
         </div>
 
-        {/* The ONE bottom hairline under the header band. z-10: above the
-            sections' opaque backgrounds, below the active tab + chrome nubs
-            (z-20) which carve the cut-through. */}
+        {/* The single continuous hairline under the workspace header band. */}
         <HeaderBandRule className="col-start-2 col-end-[-1] row-start-1 self-end" />
 
         <SideDock
