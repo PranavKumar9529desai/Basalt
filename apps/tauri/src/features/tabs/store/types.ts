@@ -34,6 +34,7 @@ export interface TabsState {
   activateTab: (tabId: TabId) => void;
   markTabDirty: (tabId: TabId, isDirty: boolean) => void;
   setTabTitle: (tabId: TabId, title: string) => void;
+  setTabViewMode: (tabId: TabId, mode: import("../types").NoteViewMode) => void;
   pinTab: (tabId: TabId) => void;
   unpinTab: (tabId: TabId) => void;
   togglePinTab: (tabId: TabId) => void;

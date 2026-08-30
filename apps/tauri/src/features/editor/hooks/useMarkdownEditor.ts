@@ -42,6 +42,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
   const [conflict, setConflict] = useState(false);
   const [view, setView] = useState<EditorView | null>(null);
+  const [documentRevision, setDocumentRevision] = useState(0);
 
   const tabRef = useLatestRef(tab);
   const servicesRef = useLatestRef(services);
@@ -62,6 +63,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
       currentTab: tab,
       setContextMenuState: setMenuState,
       onStatus: io.setStatus,
+      onDocumentReady: () => setDocumentRevision((revision) => revision + 1),
     };
     controllerRef.current = new MarkdownEditorController(options);
   }
@@ -307,5 +309,6 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
     handleReady,
     handleKeepMine,
     handleDiscard,
+    documentRevision,
   };
 }

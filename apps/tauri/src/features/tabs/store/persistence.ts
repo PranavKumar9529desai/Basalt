@@ -31,6 +31,7 @@ export const createPersistenceSlice: StateCreator<
         path: tab.path,
         title: tab.title,
         leafType: tab.leafType,
+        viewMode: tab.viewMode,
         isPinned: tab.isPinned,
         isPreview: tab.isPreview,
         isDirty: tab.isDirty,
@@ -54,6 +55,7 @@ export const createPersistenceSlice: StateCreator<
             (tab as { leafType?: string }).leafType ??
             (tab as { viewType?: string }).viewType ??
             "markdown",
+          viewMode: tab.viewMode === "reading" ? "reading" : "edit",
         },
       ]),
     ) as Record<TabId, import("../types").TabModel>;

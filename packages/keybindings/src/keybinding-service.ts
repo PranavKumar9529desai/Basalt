@@ -16,14 +16,6 @@ import { parseHotkey } from "./hotkey-parser";
 import KEYBINDINGS from "./keybindings.json";
 import type { Keybinding, WhenContext } from "./types";
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target instanceof HTMLInputElement) return !target.readOnly && !target.disabled;
-  if (target instanceof HTMLTextAreaElement) return !target.readOnly && !target.disabled;
-  if (target instanceof HTMLSelectElement) return !target.disabled;
-  return target.isContentEditable;
-}
-
 export class KeybindingService {
   private bindings: Keybinding[];
   private context: WhenContext = {};
@@ -111,7 +103,6 @@ export class KeybindingService {
   }
 
   handleKeydown(event: KeyboardEvent): boolean {
-    if (isEditableTarget(event.target)) return false;
     const binding = this.resolve(event);
     if (!binding) return false;
     event.preventDefault();

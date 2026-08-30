@@ -10,6 +10,8 @@ export interface LeafTabInfo {
   id: string;
   path: string;
   title: string;
+  /** Presentation mode for Markdown leaves. */
+  viewMode?: "edit" | "reading";
   /** Transient: line to reveal once on open (search jump-to-line). Not persisted. */
   line?: number;
   /** Transient: enter the leaf's title-rename flow once on first show.

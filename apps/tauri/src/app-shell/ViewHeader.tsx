@@ -9,6 +9,7 @@ import {
   IconPin,
   IconX,
 } from "@tabler/icons-react";
+import { commandService } from "@workspace/commands";
 import { Button } from "@workspace/ui/components/ui/button";
 import {
   ContextMenu,
@@ -50,8 +51,10 @@ export function ViewHeader({
   // Pin state read reactively so the label flips without a shell-wide
   // re-render (pin toggles are rare; this selector is the only subscription).
   const isPinned = useTabsStore((s) => s.tabs[tab.id]?.isPinned ?? false);
+  const viewMode = useTabsStore((s) => s.tabs[tab.id]?.viewMode ?? "edit");
 
   const displayTitle = (() => {
+    if (tab.path === "view://graph") return "Graph view";
     const relative =
       vaultPath && tab.path.startsWith(`${vaultPath}/`)
         ? tab.path.slice(vaultPath.length + 1)
@@ -82,7 +85,7 @@ export function ViewHeader({
   };
 
   const handleModeClick = () => {
-    // TODO: wire note reading/source mode switching.
+    commandService.execute("editor:toggle-view-mode");
   };
 
   return (
@@ -123,12 +126,12 @@ export function ViewHeader({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label="Source mode"
-          title="TODO: wire source/reading mode toggle"
+          aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
+          title={viewMode === "reading" ? "Edit note" : "Reading view"}
           onClick={handleModeClick}
           className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
-          <IconBook size={14} />
+          {viewMode === "reading" ? <IconPencil size={14} /> : <IconBook size={14} />}
         </Button>
 
         <ContextMenu open={open} onOpenChange={setOpen}>

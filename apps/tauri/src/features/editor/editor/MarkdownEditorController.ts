@@ -44,6 +44,8 @@ export interface MarkdownEditorControllerOptions {
   currentTab: LeafTabInfo | null;
   setContextMenuState: (state: ContextMenuState | null) => void;
   onStatus: (status: string | null) => void;
+  /** Notifies the leaf when a tab document has been loaded or reloaded. */
+  onDocumentReady?: () => void;
 }
 
 /**
@@ -73,6 +75,7 @@ export class MarkdownEditorController {
   readonly io: NoteIO;
   readonly keybindingService: ReturnType<typeof useKeybindingService>;
   readonly onTabChanged?: () => void;
+  readonly onDocumentReady?: () => void;
 
   private view: EditorView | null = null;
   private currentTab: LeafTabInfo | null;
@@ -90,6 +93,7 @@ export class MarkdownEditorController {
     this.services = options.services;
     this.keybindingService = options.keybindingService;
     this.currentTab = options.currentTab;
+    this.onDocumentReady = options.onDocumentReady;
 
     const updateListener = EditorView.updateListener.of((u) => {
       if (!u.docChanged) return;
@@ -182,6 +186,7 @@ export class MarkdownEditorController {
     const cached = this.statesRef.get(t.id);
     if (cached) {
       view.setState(cached);
+      this.onDocumentReady?.();
       view.scrollDOM.scrollTop = this.scrollRef.get(t.id) ?? 0;
       this.io.setSaveStatus(this.isDirty(t.id) ? "unsaved" : "saved");
       if (t.line) this.revealLine(t.line);
@@ -206,6 +211,7 @@ export class MarkdownEditorController {
       });
       this.statesRef.set(t.id, state);
       view.setState(state);
+      this.onDocumentReady?.();
       view.scrollDOM.scrollTop = 0;
       if (t.line) this.revealLine(t.line);
     } catch (err) {
@@ -316,6 +322,7 @@ export class MarkdownEditorController {
       });
       this.statesRef.set(t.id, state);
       view.setState(state);
+      this.onDocumentReady?.();
       this.dirtyRef.delete(t.id);
       this.services.markTabDirty(t.id, false);
       this.io.setSaveStatus("saved");

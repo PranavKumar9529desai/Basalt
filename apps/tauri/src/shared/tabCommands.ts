@@ -70,3 +70,16 @@ commandService.registerCommand(
 commandService.registerCommand("graph:open", () => {
   useTabsStore.getState().openView("graph", { title: "Graph" });
 });
+
+commandService.registerCommand(
+  "editor:toggle-view-mode",
+  () => {
+    const tab = resolveActiveTab();
+    if (!tab || tab.leafType !== "markdown") return;
+    useTabsStore.getState().setTabViewMode(
+      tab.id,
+      tab.viewMode === "reading" ? "edit" : "reading",
+    );
+  },
+  () => resolveActiveTab()?.leafType === "markdown",
+);

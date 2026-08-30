@@ -4,6 +4,8 @@ import { type LeafProps } from "@workspace/views";
 import { createRoot } from "react-dom/client";
 import { useEffect, useRef } from "react";
 import { InlineTitle } from "./InlineTitle";
+import { ReadingView } from "./ReadingView";
+import "./reading.css";
 import { ConflictBanner } from "./ConflictBanner";
 import { EditorContextMenu } from "./EditorContextMenu";
 import { EditorHost } from "./EditorHost";
@@ -41,7 +43,9 @@ export function MarkdownEditorView({ tab }: LeafProps) {
     handleReady,
     handleKeepMine,
     handleDiscard,
+    documentRevision,
   } = useMarkdownEditor(tab);
+  const readingScrollRatioRef = useRef(0);
 
   // Scroller-injected title root: created once when the EditorView exists,
   // re-rendered on tab changes. The module-level set tracks which tab ids
@@ -89,6 +93,20 @@ export function MarkdownEditorView({ tab }: LeafProps) {
     );
   }, [tab, services, renameEpoch]);
 
+  useEffect(() => {
+    if (!view) return;
+    if (tab.viewMode === "reading") {
+      const range = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
+      readingScrollRatioRef.current = range > 0 ? view.scrollDOM.scrollTop / range : 0;
+    } else {
+      const range = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
+      // Scroll restoration intentionally mutates the CodeMirror DOM after the
+      // mode transition; the editor controller remains the state owner.
+      // eslint-disable-next-line react/immutability
+      if (range > 0) view.scrollDOM.scrollTop = readingScrollRatioRef.current * range;
+    }
+  }, [tab.viewMode, view]);
+
   return (
     <>
       {conflict && (
@@ -98,8 +116,25 @@ export function MarkdownEditorView({ tab }: LeafProps) {
         <EditorHost
           initialState={controller.initialState}
           onReady={handleReady}
-          className="min-h-0 flex-1"
+          className={
+            tab.viewMode === "reading"
+              ? "absolute inset-0 invisible pointer-events-none overflow-hidden"
+              : "min-h-0 flex-1"
+          }
         />
+        {tab.viewMode === "reading" && (
+          <ReadingView
+            key={`${tab.id}:${documentRevision}`}
+            markdown={controller.getCachedDocText(tab.id)}
+            sourcePath={tab.path}
+            title={tab.title}
+            initialScrollRatio={readingScrollRatioRef.current}
+            onScrollRatioChange={(ratio) => {
+              readingScrollRatioRef.current = ratio;
+            }}
+            services={services}
+          />
+        )}
       </EditorScrollContainer>
       {io.status && <EditorStatusLine status={io.status} />}
       <EditorContextMenu

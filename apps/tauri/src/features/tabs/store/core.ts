@@ -62,6 +62,7 @@ export interface CoreSlice {
   closeTabsToRight: TabsState["closeTabsToRight"];
   markTabDirty: TabsState["markTabDirty"];
   setTabTitle: TabsState["setTabTitle"];
+  setTabViewMode: TabsState["setTabViewMode"];
   pinTab: TabsState["pinTab"];
   unpinTab: TabsState["unpinTab"];
   togglePinTab: TabsState["togglePinTab"];
@@ -131,6 +132,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       path: note.path,
       title: note.title ?? titleFromPath(note.path),
       leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+      viewMode: "edit",
       isPinned: false,
       isPreview: true,
       isDirty: false,
@@ -191,6 +193,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       path: note.path,
       title: note.title ?? titleFromPath(note.path),
       leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+      viewMode: "edit",
       isPinned: true,
       isPreview: false,
       isDirty: false,
@@ -231,6 +234,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       path,
       title: options?.title ?? leafType,
       leafType,
+      viewMode: "edit",
       isPinned: true,
       isPreview: false,
       isDirty: false,
@@ -353,6 +357,19 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...state.tabs,
           [tabId]: { ...tab, title },
         },
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  setTabViewMode: (tabId, mode) => {
+    set((state) => {
+      const tab = state.tabs[tabId];
+      if (!tab || tab.leafType !== "markdown" || tab.viewMode === mode) {
+        return state;
+      }
+      return {
+        tabs: { ...state.tabs, [tabId]: { ...tab, viewMode: mode } },
         persistVersion: state.persistVersion + 1,
       };
     });

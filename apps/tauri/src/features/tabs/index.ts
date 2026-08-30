@@ -12,5 +12,6 @@ export type {
   TabPane,
   TabId,
   TabModel,
+  NoteViewMode,
   TabsWorkspaceSnapshot,
 } from "./types";

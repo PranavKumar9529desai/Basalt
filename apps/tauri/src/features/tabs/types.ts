@@ -1,5 +1,6 @@
 export type TabId = string;
 export type TabPaneId = string;
+export type NoteViewMode = "edit" | "reading";
 
 export interface OpenableTabInput {
   path: string;
@@ -19,6 +20,8 @@ export interface TabModel {
   title: string;
   /** Registered leaf type that renders this tab's content (ADR-018). */
   leafType: string;
+  /** Presentation mode for Markdown leaves; ignored by non-Markdown leaves. */
+  viewMode?: NoteViewMode;
   isPinned: boolean;
   isPreview: boolean;
   isDirty: boolean;
@@ -43,6 +46,8 @@ export interface SerializedTab {
   title: string;
   /** Registered leaf type needed to restore non-markdown tabs. */
   leafType: string;
+  /** Persisted presentation mode for Markdown leaves. */
+  viewMode?: NoteViewMode;
   isPinned: boolean;
   isPreview: boolean;
   isDirty: boolean;
