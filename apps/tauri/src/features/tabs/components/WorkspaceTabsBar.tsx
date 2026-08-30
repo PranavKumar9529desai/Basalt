@@ -1,5 +1,5 @@
 import { TabsBar } from "@workspace/ui/components/tabs";
-import { type DragEvent, useCallback } from "react";
+import { type DragEvent, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
@@ -18,25 +18,40 @@ export function WorkspaceTabsBar({
   onCloseTab,
   onPinToggle,
 }: WorkspaceTabsBarProps) {
-  // Project only the data each pill needs; useShallow compares the array
-  // shallowly, so a mutation to any single tab (dirty/title/pin) or the active
-  // selection re-renders only when the rendered pills actually change — not on
-  // every tabs/pane identity churn.
-  const tabsBarTabs = useTabsStore(
-    useShallow((s) =>
-      s.pane.tabIds
-        .map((tabId) => s.tabs[tabId])
-        .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab))
-        .map((tab) => ({
-          id: tab.id,
-          title: tab.title,
-          isActive: s.pane.activeTabId === tab.id,
-          isDirty: tab.isDirty,
-          isPinned: tab.isPinned,
-          isPreview: tab.isPreview,
-          canClose: true,
-        })),
-    ),
+  // Project only the data each pill needs. The selector picks STABLE
+  // references — the stored `pane.tabIds` array, the `tabs` map, and the
+  // active id — so useShallow's shallow compare short-circuits and the
+  // snapshot only changes when a render-affecting change actually lands.
+  // Building the tab array (or pill shape) here would allocate a fresh array
+  // per selector call, defeating useSyncExternalStore's snapshot caching and
+  // causing an infinite render loop ("Maximum depth reached"). The tab
+  // reference list is derived below in a useMemo instead.
+  const { tabIds, tabsRef, activeTabId } = useTabsStore(
+    useShallow((s) => ({
+      tabIds: s.pane.tabIds,
+      tabsRef: s.tabs,
+      activeTabId: s.pane.activeTabId,
+    })),
+  );
+  const tabRefs = useMemo(
+    () =>
+      tabIds
+        .map((tabId) => tabsRef[tabId])
+        .filter((tab): tab is NonNullable<typeof tab> => Boolean(tab)),
+    [tabIds, tabsRef],
+  );
+  const tabsBarTabs = useMemo(
+    () =>
+      tabRefs.map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        isActive: activeTabId === tab.id,
+        isDirty: tab.isDirty,
+        isPinned: tab.isPinned,
+        isPreview: tab.isPreview,
+        canClose: true,
+      })),
+    [tabRefs, activeTabId],
   );
   const tabDnD = useTabDnD();
 
