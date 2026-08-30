@@ -1,34 +1,34 @@
 import { useEffect, useRef } from "react";
-import { EditorState, Extension, Range, Text } from "@codemirror/state";
-import { EditorView, lineNumbers, Decoration, ViewPlugin, type DecorationSet, type ViewUpdate } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
-import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { EditorState, Extension, Range, StateEffect, StateField, Text } from "@codemirror/state";
+import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { tags as t } from "@lezer/highlight";
 import type { Highlight } from "../types";
+import { markdownPreviewExtensions } from "@workspace/editor";
 
-// Minimal token styling mapped to the app's --sat-* theme tokens so the
-// preview matches the editor without depending on the (in-progress) editor package.
+// Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
+// theme tokens so the preview tracks the editor's prose + code surface.
 const highlightStyle = HighlightStyle.define([
-  { tag: t.heading1, color: "var(--sat-accent-primary)", fontWeight: "700", fontSize: "1.7em" },
-  { tag: t.heading2, color: "var(--sat-accent-primary)", fontWeight: "700", fontSize: "1.45em" },
-  { tag: t.heading3, color: "var(--sat-accent-primary)", fontWeight: "600", fontSize: "1.25em" },
-  { tag: t.heading4, color: "var(--sat-accent-primary)", fontWeight: "600", fontSize: "1.12em" },
-  { tag: t.heading5, color: "var(--sat-accent-primary)", fontWeight: "600", fontSize: "1.04em" },
-  { tag: t.heading6, color: "var(--sat-text-primary)", fontWeight: "600", fontSize: "1em" },
-  { tag: t.keyword, color: "var(--sat-accent-primary)" },
-  { tag: t.string, color: "var(--sat-text-primary)" },
-  { tag: t.comment, color: "var(--sat-text-muted)", fontStyle: "italic" },
-  { tag: t.number, color: "var(--sat-text-primary)" },
-  { tag: t.link, color: "var(--sat-accent-primary)", textDecoration: "underline" },
+  { tag: t.heading1, color: "var(--sat-editor-heading1)", fontWeight: "700", fontSize: "1.7em" },
+  { tag: t.heading2, color: "var(--sat-editor-heading2)", fontWeight: "700", fontSize: "1.45em" },
+  { tag: t.heading3, color: "var(--sat-editor-heading3)", fontWeight: "600", fontSize: "1.25em" },
+  { tag: t.heading4, color: "var(--sat-editor-heading4)", fontWeight: "600", fontSize: "1.12em" },
+  { tag: t.heading5, color: "var(--sat-editor-heading5)", fontWeight: "600", fontSize: "1.04em" },
+  { tag: t.heading6, color: "var(--sat-editor-heading6)", fontWeight: "600", fontSize: "1em" },
+  { tag: t.keyword, color: "var(--sat-syntax-keyword)" },
+  { tag: t.string, color: "var(--sat-syntax-string)" },
+  { tag: t.comment, color: "var(--sat-syntax-comment)", fontStyle: "italic" },
+  { tag: t.number, color: "var(--sat-syntax-number)" },
+  { tag: t.link, color: "var(--sat-syntax-link)", textDecoration: "underline" },
   { tag: t.strong, fontWeight: "700" },
   { tag: t.emphasis, fontStyle: "italic" },
-  { tag: t.monospace, fontFamily: "var(--font-mono, monospace)" },
+  { tag: t.monospace, fontFamily: "var(--sat-font-mono, monospace)" },
 ]);
 
 function languageForPath(path: string): Extension {
   if (path.endsWith(".md")) {
-    return markdown({ base: markdownLanguage, codeLanguages: languages });
+    return markdownPreviewExtensions();
   }
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const desc = languages.find(
@@ -37,7 +37,7 @@ function languageForPath(path: string): Extension {
   return (desc ? desc.support : []) as Extension;
 }
 
-function buildDecorations(
+export function buildDecorations(
   doc: Text,
   matchLine: number,
   highlights: Highlight[],
@@ -52,7 +52,7 @@ function buildDecorations(
       },
     }).range(line.from),
   );
-  for (const h of highlights) {
+  for (const h of [...highlights].sort((a, b) => a.start - b.start)) {
     const from = line.from + h.start;
     const to = line.from + h.end;
     if (from >= line.from && to <= line.to && from < to) {
@@ -69,68 +69,26 @@ function buildDecorations(
   return Decoration.set(ranges);
 }
 
-// Hide raw markdown markers (###, **, `, [], (), etc.) so the preview reads like a
-// rendered note. Read-only: markers are always hidden (no cursor-aware reveal).
-const HIDDEN_MARKS = new Set([
-  "HeaderMark",
-  "LinkMark",
-  "EmphasisMark",
-  "CodeMark",
-  "CodeInfo",
-  "URL",
-  "HardBreak",
-]);
 
-const hiddenMark = Decoration.mark({ class: "cm-markdoc-hidden" });
+const setMatchDeco = StateEffect.define<DecorationSet>();
 
-function buildRichDecorations(view: EditorView): DecorationSet {
-  const widgets: Range<Decoration>[] = [];
-  for (const { from, to } of view.visibleRanges) {
-    syntaxTree(view.state).iterate({
-      from,
-      to,
-      enter: (node) => {
-        if (!HIDDEN_MARKS.has(node.name)) return;
-        // For headings, also swallow the space after '#' so text isn't indented.
-        const end =
-          node.name === "HeaderMark"
-            ? Math.min(node.to + 1, view.state.doc.length)
-            : node.to;
-        widgets.push(hiddenMark.range(node.from, end));
-      },
-    });
-  }
-  return Decoration.set(widgets);
-}
-
-const richMarkdownPreview = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    constructor(view: EditorView) {
-      this.decorations = buildRichDecorations(view);
+const matchDecoField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(value, tr) {
+    if (tr.docChanged) return value.map(tr.changes.desc);
+    for (const e of tr.effects) {
+      if (e.is(setMatchDeco)) return e.value;
     }
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = buildRichDecorations(update.view);
-      }
-    }
+    return value;
   },
-  { decorations: (v) => v.decorations },
-);
+  provide: (f) => EditorView.decorations.from(f),
+});
 
-function makeState(
-  text: string,
-  path: string,
-  matchLine: number,
-  highlights: Highlight[],
-): EditorState {
-  const tmp = EditorState.create({ doc: text });
-  const deco = buildDecorations(tmp.doc, matchLine, highlights);
+function makeState(text: string, path: string): EditorState {
   return EditorState.create({
     doc: text,
     extensions: [
-      lineNumbers(),
-      richMarkdownPreview,
+      languageForPath(path),
       syntaxHighlighting(highlightStyle),
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
@@ -138,7 +96,7 @@ function makeState(
         {
           "&": { height: "100%", backgroundColor: "transparent" },
           ".cm-scroller": {
-            fontFamily: "var(--font-mono, monospace)",
+            fontFamily: "var(--sat-font-mono, monospace)",
             fontSize: "12px",
             lineHeight: "1.5",
           },
@@ -147,13 +105,37 @@ function makeState(
             border: "none",
             color: "var(--sat-text-muted)",
           },
-          ".cm-markdoc-hidden": { display: "none" },
         },
         { dark: true },
       ),
-      EditorView.decorations.of(deco),
+      matchDecoField,
     ],
   });
+}
+
+/**
+ * Module-level LRU of parsed preview states, keyed by file content — the
+ * MarkdownEditorView per-tab cache pattern, but surviving modal mounts. Parsing a
+ * large file is the dominant preview cost (open-cold, cross-file nav); the
+ * parse is correct to reuse because a hit requires the identical content
+ * string, so a changed file is always re-parsed.
+ */
+const parseCacheLimit = 24;
+const parseCache = new Map<string, EditorState>();
+
+export function cachedPreviewState(text: string, path: string): EditorState {
+  const hit = parseCache.get(text);
+  if (hit) {
+    parseCache.delete(text);
+    parseCache.set(text, hit);
+    return hit;
+  }
+  const state = makeState(text, path);
+  if (parseCache.size >= parseCacheLimit) {
+    parseCache.delete(parseCache.keys().next().value as string);
+  }
+  parseCache.set(text, state);
+  return state;
 }
 
 interface PreviewPaneProps {
@@ -166,29 +148,67 @@ interface PreviewPaneProps {
 export function PreviewPane({ text, path, matchLine, highlights }: PreviewPaneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  /** Content currently installed in `view` — ref compare beats a per-nav
+   * `doc.toString()` on large files. */
+  const currentTextRef = useRef(text);
+  /** Latest match offset to recenter on; coalesces rapid navigation. */
+  const scrollTargetRef = useRef<number>(0);
+  /** One pending recenter rAF at a time. */
+  const scrollScheduledRef = useRef(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
     const view = new EditorView({
       parent: hostRef.current,
-      state: makeState(text, path, matchLine, highlights),
+      state: cachedPreviewState(text, path),
     });
     viewRef.current = view;
     return () => view.destroy();
-    // Create once; updates handled by the effect below.
+    // Create the EditorView once; subsequent updates are done via transactions
+    // in the effect below so livePreviewPlugin updates incrementally instead of
+    // re-instantiating extensions (which re-parsed the whole file and froze the
+    // app on every keystroke / result navigation).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    view.setState(makeState(text, path, matchLine, highlights));
+    // Swap the document only when the content changed. Parsed states come from
+    // the module-level LRU cache, so revisiting a file never re-parses;
+    // navigating results within the same file skips this entirely.
+    if (currentTextRef.current !== text) {
+      view.setState(cachedPreviewState(text, path));
+      currentTextRef.current = text;
+    }
     const lineNo = Math.max(1, Math.min(matchLine, view.state.doc.lines));
-    view.dispatch({
-      effects: EditorView.scrollIntoView(view.state.doc.line(lineNo).from, {
-        y: "center",
-      }),
-    });
+    const pos = view.state.doc.line(lineNo).from;
+    view.dispatch({ effects: [setMatchDeco.of(buildDecorations(view.state.doc, matchLine, highlights))] });
+
+    // Skip the recenter when the match is already visible — scrollIntoView on
+    // a large doc forces O(doc) line-measure. When it must jump, defer it to
+    // the next frame so the keydown paints instantly; rapid navigation
+    // coalesces into a single recenter (the last target wins).
+    const visible = view.visibleRanges.some((r) => pos >= r.from && pos <= r.to);
+    if (!visible) {
+      scrollTargetRef.current = pos;
+      if (scrollScheduledRef.current) return;
+      scrollScheduledRef.current = true;
+      requestAnimationFrame(() => {
+        scrollScheduledRef.current = false;
+        const v = viewRef.current;
+        if (v !== view || !v.scrollDOM.isConnected) return;
+        const target = scrollTargetRef.current;
+        if (target <= 0 || !v.state.doc.length) return;
+        v.dispatch({
+          effects: [
+            EditorView.scrollIntoView(Math.min(target, v.state.doc.length), {
+              y: "center",
+            }),
+          ],
+        });
+      });
+    }
   }, [text, path, matchLine, highlights]);
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden" />;

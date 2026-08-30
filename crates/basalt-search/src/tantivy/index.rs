@@ -1,11 +1,12 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use tantivy::collector::TopDocs;
+use tantivy::collector::{Count, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query};
 use tantivy::schema::Value;
 use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument, Term};
+use super::snippets::extract_file_matches;
 
 use basalt_types::FileMatch;
 
@@ -133,7 +134,12 @@ impl TantivyIndex {
     /// Each word in the query is treated as a prefix via `FuzzyTermQuery::new_prefix`
     /// — "packag" finds "package", "ne" finds "new"/"next"/"note" etc. All words
     /// must appear (AND), each word is OR'd across title (3× boost), body, and tags.
-    pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<FileMatch>> {
+    ///
+    /// Returns the top `limit` documents with line-level matches built from the
+    /// stored `body` field (a cheap in-process mmap read — no filesystem access)
+    /// plus the total number of matching documents via tantivy's `Count` collector.
+    /// Per-query cost is therefore O(limit), independent of how many files match.
+    pub fn search(&self, query_str: &str, limit: usize) -> Result<(Vec<FileMatch>, u64)> {
         let searcher = self.reader.searcher();
 
         let words: Vec<String> = query_str
@@ -142,7 +148,7 @@ impl TantivyIndex {
             .collect();
 
         if words.is_empty() {
-            return Ok(vec![]);
+            return Ok((vec![], 0));
         }
 
         // For each word: build a prefix query per field, OR across fields, AND words together.
@@ -173,9 +179,17 @@ impl TantivyIndex {
             .collect();
 
         let query = BooleanQuery::new(word_queries);
-        let top_docs = searcher.search(&query, &TopDocs::with_limit(limit))?;
+        // Single pass: collect the top `limit` docs for display AND the exact
+        // match count. Counting happens during the same traversal, so `Count`
+        // adds ~nothing over a plain TopDocs search.
+        let (top_docs, total_docs) = searcher.search(&query, &(TopDocs::with_limit(limit), Count))?;
+        let total_docs = total_docs as u64;
 
-        let mut results = Vec::new();
+        let terms: Vec<&str> = words.iter().map(|w| w.as_str()).collect();
+        const MAX_MATCHES_PER_FILE: usize = 30;
+        const CONTEXT_LINES: usize = 4;
+
+        let mut results = Vec::with_capacity(top_docs.len());
         for (score, doc_address) in top_docs {
             let doc: TantivyDocument = searcher.doc(doc_address)?;
             let path = doc
@@ -188,17 +202,30 @@ impl TantivyIndex {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
+            // Body is STORED in the index, so this is a cheap mmap read, not a
+            // `std::fs::read_to_string` over the vault.
+            let body = doc
+                .get_first(self.body_field)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let matches = if body.is_empty() {
+                vec![]
+            } else {
+                extract_file_matches(&body, &terms, MAX_MATCHES_PER_FILE, CONTEXT_LINES)
+            };
 
             results.push(FileMatch {
                 path,
                 title,
                 score,
-                text: String::new(),
-                matches: vec![],
+                text: body,
+                matches,
             });
         }
 
-        Ok(results)
+        Ok((results, total_docs))
     }
 }
 
@@ -214,7 +241,7 @@ mod tests {
         idx.update_document("/vault/hello.md", "hello", "Hello World", "")
             .unwrap();
         idx.commit().unwrap();
-        let results = idx.search("hello", 10).unwrap();
+        let (results, _) = idx.search("hello", 10).unwrap();
         assert!(!results.is_empty(), "expected at least one result");
         assert_eq!(results[0].path, "/vault/hello.md");
     }
@@ -231,12 +258,12 @@ mod tests {
         )
         .unwrap();
         idx.commit().unwrap();
-        let results = idx.search("packag", 10).unwrap();
+        let (results, _) = idx.search("packag", 10).unwrap();
         assert!(
             !results.is_empty(),
             "partial word 'packag' should match 'package'"
         );
-        let results = idx.search("pack", 10).unwrap();
+        let (results, _) = idx.search("pack", 10).unwrap();
         assert!(
             !results.is_empty(),
             "partial word 'pack' should match 'package'"
@@ -252,7 +279,7 @@ mod tests {
         idx.commit().unwrap();
         idx.remove_document("/vault/a.md").unwrap();
         idx.commit().unwrap();
-        let results = idx.search("alpha", 10).unwrap();
+        let (results, _) = idx.search("alpha", 10).unwrap();
         assert!(
             results.is_empty(),
             "removed doc should not appear in results"

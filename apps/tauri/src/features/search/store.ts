@@ -2,6 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 
 import type { FileMatch, FileResult, SearchContentResult } from "./types";
+
+// Guards against out-of-order responses (a slower earlier query returning after a
+// newer one) overwriting fresher results — the classic search-as-you-type flicker.
+let latestSearchSeq = 0;
+let latestSwitcherSeq = 0;
 /** Total number of matching lines across all files (the flattened result set). */
 const countMatches = (results: FileMatch[]): number =>
   results.reduce((n, f) => n + f.matches.length, 0);
@@ -56,16 +61,24 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     set({ searchQuery: query, searchSelectedIndex: 0 }),
 
   runSearch: async (query) => {
-    if (!query.trim()) {
-      set({ searchResults: [], isSearchLoading: false });
+    const seq = ++latestSearchSeq;
+    const q = query.trim();
+    if (q.length < 2) {
+      set({
+        searchResults: [],
+        searchTotalHits: 0,
+        searchSelectedIndex: 0,
+        isSearchLoading: false,
+      });
       return;
     }
     set({ isSearchLoading: true });
     try {
       const res = await invoke<SearchContentResult>("search_content", {
-        query,
+        query: q,
         limit: 20,
       });
+      if (seq !== latestSearchSeq) return; // stale response, discard
       set({
         searchResults: res.files,
         searchTotalHits: res.totalHits,
@@ -73,6 +86,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         isSearchLoading: false,
       });
     } catch (err) {
+      if (seq !== latestSearchSeq) return;
       console.error("[search] search_content error:", err);
       set({ isSearchLoading: false });
     }
@@ -83,12 +97,14 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     const total = countMatches(searchResults);
     if (total === 0) return;
     set({
-      searchSelectedIndex: Math.min(searchSelectedIndex + 1, total - 1),
+      searchSelectedIndex: (searchSelectedIndex + 1) % total,
     });
   },
   searchSelectPrev: () => {
-    const { searchSelectedIndex } = get();
-    set({ searchSelectedIndex: Math.max(searchSelectedIndex - 1, 0) });
+    const { searchSelectedIndex, searchResults } = get();
+    const total = countMatches(searchResults);
+    if (total === 0) return;
+    set({ searchSelectedIndex: (searchSelectedIndex - 1 + total) % total });
   },
 
   isSwitcherOpen: false,
@@ -113,13 +129,21 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   setSwitcherQuery: (query) => set({ switcherQuery: query }),
 
   runSwitcher: async (query) => {
+    const seq = ++latestSwitcherSeq;
+    const q = query.trim();
+    if (q.length < 2) {
+      set({ switcherResults: [], switcherSelectedIndex: 0 });
+      return;
+    }
     try {
       const results = await invoke<FileResult[]>("search_files", {
-        query,
+        query: q,
         limit: 20,
       });
+      if (seq !== latestSwitcherSeq) return; // stale response, discard
       set({ switcherResults: results, switcherSelectedIndex: 0 });
     } catch (err) {
+      if (seq !== latestSwitcherSeq) return;
       console.error("[search] search_files error:", err);
     }
   },

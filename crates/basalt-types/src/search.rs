@@ -54,14 +54,12 @@ pub struct FileMatch {
 }
 /// Top-level result of `search_content`.
 ///
-/// `total_hits` is the total number of matching lines across the top
-/// `COUNT_WINDOW` BM25 documents (exact unless more than that many files match,
-/// which is rare). `files` is the subset returned for display (top `MAX_FILES`),
-/// each carrying its full `text` and matching lines.
+/// `total_hits` is the total number of matching documents, returned instantly by
+/// tantivy's `Count` collector (independent of vault size). `files` is the subset
+/// returned for display (top `limit`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SearchContentResult {
-    /// Total matching lines across the counted window of files.
+    /// Total number of matching documents (instant, from the `Count` collector).
     pub total_hits: u32,
     /// Files returned for display, in relevance order.
     pub files: Vec<FileMatch>,

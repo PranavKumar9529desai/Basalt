@@ -6,7 +6,7 @@ use anyhow::Result;
 use basalt_vault::Vault;
 
 use crate::nucleo_scorer::NucleoScorer;
-use crate::tantivy::{extract_file_matches, TantivyIndex};
+use crate::tantivy::TantivyIndex;
 use basalt_types::{FileMatch, FileResult, SearchContentResult};
 
 /// How long the index may hold uncommitted in-memory updates before the
@@ -112,19 +112,13 @@ impl SearchState {
         })
     }
 
-    /// BM25 full-text search. Reads matched note bodies from disk to build
-    /// line-level matches for the preview pane. Returns the display files plus
-    /// `total_hits` — the total number of matching lines across the top
-    /// `COUNT_WINDOW` BM25 documents (exact unless more than that many files
-    /// match, which is rare). Flushes pending updates first.
+    /// BM25 full-text search. Builds line-level matches for the preview pane from
+    /// the stored `body` field (no filesystem reads). Returns the display files
+    /// plus `total_hits` — the total number of matching documents, from tantivy's
+    /// `Count` collector (instant, independent of vault size).
     pub fn search_content(&mut self, query: &str, limit: usize) -> SearchContentResult {
         let _ = self.flush_pending();
-        const COUNT_WINDOW: usize = 100;
-        const MAX_MATCHES_PER_FILE: usize = 30;
-        const CONTEXT_LINES: usize = 4;
-        let terms: Vec<&str> = query.split_whitespace().collect();
-
-        let docs = match self.tantivy.search(query, COUNT_WINDOW) {
+        let (files, total_docs) = match self.tantivy.search(query, limit) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("[search] tantivy error: {e}");
@@ -135,22 +129,10 @@ impl SearchState {
             }
         };
 
-        let mut total_hits: u32 = 0;
-        let mut files: Vec<FileMatch> = Vec::with_capacity(limit.min(docs.len()));
-        for (i, mut file) in docs.into_iter().enumerate() {
-            if let Ok(body) = std::fs::read_to_string(&file.path) {
-                let matches =
-                    extract_file_matches(&body, &terms, MAX_MATCHES_PER_FILE, CONTEXT_LINES);
-                total_hits += matches.len() as u32;
-                if i < limit {
-                    file.text = body;
-                    file.matches = matches;
-                    files.push(file);
-                }
-            }
+        SearchContentResult {
+            total_hits: total_docs as u32,
+            files,
         }
-
-        SearchContentResult { total_hits, files }
     }
 
     /// Fuzzy file-name search via nucleo. Requires `&mut self` because

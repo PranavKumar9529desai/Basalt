@@ -1,4 +1,3 @@
-import { Button } from "@workspace/ui/components/ui/button";
 import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
 import { PaletteShellFooter } from "@workspace/ui/components/palette-shell";
 import { IconFileSearch, IconFileText, IconSearch } from "@tabler/icons-react";
@@ -7,45 +6,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { useSearchStore } from "../store";
 import { PreviewPane } from "./PreviewPane";
-import type { FileMatch, Highlight, LineMatch } from "../types";
-
-/** Renders `text` with `highlights` (character offsets) wrapped in <mark>. */
-function HighlightedText({
-  text,
-  highlights,
-  className,
-}: {
-  text: string;
-  highlights: Highlight[];
-  className?: string;
-}) {
-  if (highlights.length === 0) return <span className={className}>{text}</span>;
-
-  const parts: React.ReactNode[] = [];
-  let cursor = 0;
-  const sorted = [...highlights].sort((a, b) => a.start - b.start);
-  for (const h of sorted) {
-    if (h.start > cursor) {
-      parts.push(
-        <span key={`t-${cursor}`}>{text.slice(cursor, h.start)}</span>,
-      );
-    }
-    parts.push(
-      <mark
-        key={`h-${h.start}`}
-        className="bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)] rounded-[2px] px-[1px]"
-      >
-        {text.slice(h.start, h.end)}
-      </mark>,
-    );
-    cursor = h.end;
-  }
-  if (cursor < text.length) {
-    parts.push(<span key="t-end">{text.slice(cursor)}</span>);
-  }
-  return <span className={className}>{parts}</span>;
-}
-
+import { FileRow, MatchRow } from "./SearchResultRows";
+import type { FileMatch, LineMatch } from "../types";
 
 /** Centered placeholder for an empty pane. */
 function EmptyPane({
@@ -127,7 +89,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
   const virtualizer = useVirtualizer({
     count: flatItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (flatItems[i].type === "file" ? 34 : 40),
+    estimateSize: (i) => (flatItems[i].type === "file" ? 38 : 48),
     overscan: 12,
   });
 
@@ -155,7 +117,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
       const q = e.target.value;
       setSearchQuery(q);
       clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => runSearch(q), 150);
+      debounceRef.current = setTimeout(() => runSearch(q), 200);
     },
     [setSearchQuery, runSearch],
   );
@@ -165,6 +127,16 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     onOpen(selected.path, selected.lineNumber);
     closeSearch();
   }, [selected, onOpen, closeSearch]);
+
+  // Stable row handler — passed through to memoized rows so a selection
+  // change doesn't re-create handler identity and defeat the memo.
+  const openItem = useCallback(
+    (path: string, line: number) => {
+      onOpen(path, line);
+      closeSearch();
+    },
+    [onOpen, closeSearch],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -193,7 +165,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     >
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-[min(92vw,960px)] w-full h-[68vh] p-0 gap-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--sat-surface-2)] ring-1 ring-[var(--sat-layout-border)]"
+        className="sm:max-w-[min(92vw,960px)] w-full h-[85vh] p-0 gap-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--sat-surface-2)] ring-1 ring-[var(--sat-layout-border)]"
       >
         {/* HEADER: input (left) + preview title (right) — one continuous divider */}
         <div className="grid grid-cols-[minmax(0,42%)_minmax(0,1fr)] border-b border-[var(--sat-layout-border)]">
@@ -212,7 +184,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
               />
               {showCount && (
                 <span className="shrink-0 text-[11px] tabular-nums text-[var(--sat-text-muted)]">
-                  {totalMatches}/{searchTotalHits}
+                  {totalMatches} in {searchTotalHits} files
                 </span>
               )}
             </div>
@@ -235,8 +207,8 @@ export function SearchModal({ onOpen }: SearchModalProps) {
             {flatItems.length === 0 ? (
               <EmptyPane
                 icon={<IconFileSearch className="size-8" />}
-        showCloseButton={false}
-        className="sm:max-w-[min(92vw,960px)] w-full h-[85vh] p-0 gap-0 overflow-hidden grid grid-rows-[auto_minmax(0,1fr)_auto] bg-[var(--sat-surface-2)] ring-1 ring-[var(--sat-layout-border)]"
+                text={
+                  searchQuery && !isSearchLoading
                     ? "No results found"
                     : "Search your vault"
                 }
@@ -251,58 +223,25 @@ export function SearchModal({ onOpen }: SearchModalProps) {
               >
                 {virtualizer.getVirtualItems().map((vi) => {
                   const item = flatItems[vi.index];
-                  const rowStyle: React.CSSProperties = {
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${vi.start}px)`,
-                  };
                   if (item.type === "file") {
                     return (
-                      <div
+                      <FileRow
                         key={`file-${item.file.path}`}
-                        style={rowStyle}
-                        className="flex items-center gap-2 px-4 py-1.5 bg-[var(--sat-surface-2)] border-b border-[var(--sat-layout-border)]"
-                      >
-                        <IconFileText className="size-3.5 shrink-0 text-[var(--sat-text-muted)]" />
-                        <span className="flex-1 text-[12px] font-semibold truncate">
-                          {item.file.title}
-                        </span>
-                        <span className="text-[10px] tabular-nums text-[var(--sat-text-muted)]">
-                          {item.file.matches.length}
-                        </span>
-                      </div>
+                        file={item.file}
+                        top={vi.start}
+                      />
                     );
                   }
                   const { file, match, gi } = item;
-                  const isSelected = gi === searchSelectedIndex;
                   return (
-                    <Button
+                    <MatchRow
                       key={`${file.path}:${match.lineNumber}`}
-                      style={rowStyle}
-                      variant="ghost"
-                      tabIndex={-1}
-                      className={[
-                        "w-full flex-col items-start gap-0.5 px-4 py-1.5 h-auto rounded-none text-left",
-                        isSelected
-                          ? "bg-[var(--sat-surface-3)]"
-                          : "hover:bg-[var(--sat-surface-1)]",
-                      ].join(" ")}
-                      onClick={() => {
-                        onOpen(file.path, match.lineNumber);
-                        closeSearch();
-                      }}
-                    >
-                      <span className="text-[10px] text-[var(--sat-text-muted)] tabular-nums">
-                        {file.title} · Ln {match.lineNumber}
-                      </span>
-                      <HighlightedText
-                        text={match.text}
-                        highlights={match.highlights}
-                        className="text-[12px] leading-snug truncate w-full text-[var(--sat-text-primary)]"
-                      />
-                    </Button>
+                      file={file}
+                      match={match}
+                      selected={gi === searchSelectedIndex}
+                      top={vi.start}
+                      onOpen={openItem}
+                    />
                   );
                 })}
               </div>

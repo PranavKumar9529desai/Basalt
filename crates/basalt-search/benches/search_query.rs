@@ -45,7 +45,7 @@ fn populate_index(dir: &std::path::Path, count: usize) -> TantivyIndex {
 fn bench_search_query(c: &mut Criterion) {
     let mut group = c.benchmark_group("search_query");
 
-    for size in [1000usize, 5000] {
+    for size in [1000usize, 5000, 25000] {
         let dir = tempfile::tempdir().expect("temp dir");
         let index = populate_index(dir.path(), size);
 
