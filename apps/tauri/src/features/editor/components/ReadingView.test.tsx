@@ -13,7 +13,7 @@ describe("ReadingView", () => {
       <ReadingView
         title="A note"
         sourcePath="A note.md"
-        markdown={"---\nstatus: draft\n---\n# Heading\n\n**bold** and [[Target]]"}
+        markdown={"---\nstatus: draft\ntags: [react, typescript]\n---\n# Heading\n\n**bold** and [[Target]]"}
         services={services}
       />,
     );
@@ -21,6 +21,9 @@ describe("ReadingView", () => {
     expect(screen.getByRole("heading", { name: "A note" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Heading" })).toBeTruthy();
     expect(screen.getByText("draft")).toBeTruthy();
+    expect(screen.getByText("react")).toBeTruthy();
+    expect(screen.getByText("typescript")).toBeTruthy();
+    expect(screen.getByLabelText("Properties").querySelector("svg")).toBeTruthy();
     expect(screen.getByText("bold").closest("strong")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Target" })).toBeTruthy();
     expect(screen.queryByText("# Heading")).toBeNull();

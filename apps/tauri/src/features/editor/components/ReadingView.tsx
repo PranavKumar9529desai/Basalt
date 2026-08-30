@@ -1,5 +1,17 @@
 import { parser } from "@lezer/markdown";
 import type { SyntaxNode, Tree } from "@lezer/common";
+import {
+  IconCalendar,
+  IconCheck,
+  IconClock,
+  IconFileText,
+  IconHash,
+  IconLink,
+  IconList,
+  IconNote,
+  IconTag,
+  type IconProps,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, type ElementType } from "react";
 import type { LeafServices } from "@workspace/views";
 
@@ -12,7 +24,22 @@ interface ReadingViewProps {
   services: Pick<LeafServices, "openNote" | "findNote">;
 }
 
-function maskFrontmatter(source: string): { masked: string; entries: Array<[string, string]> } {
+interface ReadingProperty {
+  key: string;
+  value: string;
+  tags: string[];
+}
+
+function parseListValue(value: string): string[] {
+  const body = value.trim().replace(/^\[/, "").replace(/\]$/, "");
+  if (!body) return [];
+  return body
+    .split(",")
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, ""))
+    .filter(Boolean);
+}
+
+function maskFrontmatter(source: string): { masked: string; entries: ReadingProperty[] } {
   if (!source.startsWith("---\n")) return { masked: source, entries: [] };
   const end = source.indexOf("\n---", 4);
   if (end < 0) return { masked: source, entries: [] };
@@ -21,11 +48,29 @@ function maskFrontmatter(source: string): { masked: string; entries: Array<[stri
     .split("\n")
     .map((line) => line.match(/^([A-Za-z_][\w-]*):\s*(.*)$/))
     .filter((match): match is RegExpMatchArray => Boolean(match))
-    .map((match) => [match[1], match[2]] as [string, string]);
+    .map((match) => ({
+      key: match[1],
+      value: match[2],
+      tags: match[1].toLowerCase() === "tags" ? parseListValue(match[2]) : [],
+    }));
   return {
     masked: source.slice(0, end + 4).replace(/[^\n]/g, " ") + source.slice(end + 4),
     entries,
   };
+}
+
+function propertyIcon(key: string, value: string) {
+  const normalized = key.toLowerCase();
+  let Icon: (props: IconProps) => React.ReactNode = IconNote;
+  if (normalized === "title" || normalized === "type") Icon = IconFileText;
+  else if (normalized === "created_at" || normalized === "created at") Icon = IconCalendar;
+  else if (normalized.includes("updated") || normalized.includes("modified")) Icon = IconClock;
+  else if (normalized === "tags") Icon = IconTag;
+  else if (normalized === "aliases") Icon = IconLink;
+  else if (normalized === "status") Icon = IconCheck;
+  else if (value.trim().startsWith("[")) Icon = IconList;
+  else if (/^-?\d+(\.\d+)?$/.test(value.trim())) Icon = IconHash;
+  return <Icon aria-hidden="true" size={16} stroke={1.7} />;
 }
 
 function maskReadingOnlySyntax(source: string): string {
@@ -286,9 +331,17 @@ export function ReadingView({ markdown, sourcePath, title, services, initialScro
         {parsed.entries.length > 0 && (
           <section className="markdown-reading-properties" aria-label="Properties">
             <h2>Properties</h2>
-            {parsed.entries.map(([key, value]) => (
+            {parsed.entries.map(({ key, value, tags }) => (
               <div className="markdown-reading-property" key={key}>
-                <span>{key}</span><strong>{value || "Empty"}</strong>
+                <span className="markdown-reading-property-icon">{propertyIcon(key, value)}</span>
+                <span className="markdown-reading-property-key">{key}</span>
+                {tags.length > 0 ? (
+                  <span className="markdown-reading-property-tags">
+                    {tags.map((tag) => <span className="markdown-reading-tag" key={tag}>{tag}</span>)}
+                  </span>
+                ) : (
+                  <strong>{value || "Empty"}</strong>
+                )}
               </div>
             ))}
           </section>

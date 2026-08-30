@@ -21,25 +21,51 @@
   margin: 0 0 2.2em;
 }
 
-.markdown-reading-properties h2 {
+.markdown-reading-sizer .markdown-reading-properties h2 {
+  color: var(--sat-editor-section-label-color, var(--sat-text-primary));
   font-size: 1em;
-  font-weight: 500;
+  font-weight: var(--sat-editor-section-label-weight, 500);
   margin: 0 0 0.4em;
 }
 
 .markdown-reading-property {
   display: grid;
-  grid-template-columns: minmax(8em, 30%) minmax(0, 1fr);
+  grid-template-columns: 16px minmax(8em, 30%) minmax(0, 1fr);
   gap: 0.75em;
   padding: 0.18em 0;
+  align-items: center;
 }
 
-.markdown-reading-property span {
+.markdown-reading-property-icon {
+  display: inline-flex;
+  color: var(--sat-editor-property-icon-color, var(--sat-text-muted));
+}
+
+.markdown-reading-property-key {
   color: var(--sat-text-muted);
 }
 
 .markdown-reading-property strong {
   font-weight: 400;
+}
+
+.markdown-reading-property-tags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.markdown-reading-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--sat-layout-border);
+  border-radius: 999px;
+  background: var(--sat-surface-3);
+  color: var(--sat-text-primary);
+  padding: 0.08em 0.55em;
+  font-size: 0.9em;
+  line-height: 1.35;
 }
 
 .markdown-reading-callout {
