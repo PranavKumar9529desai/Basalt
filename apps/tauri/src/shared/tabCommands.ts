@@ -75,11 +75,21 @@ commandService.registerCommand(
   "editor:toggle-view-mode",
   () => {
     const tab = resolveActiveTab();
-    if (!tab || tab.leafType !== "markdown") return;
-    useTabsStore.getState().setTabViewMode(
-      tab.id,
-      tab.viewMode === "reading" ? "edit" : "reading",
-    );
+    console.log("[ReadingMode] toggle command invoked", {
+      activeNote: useActiveNoteStore.getState().activeNote,
+      tab,
+    });
+    if (!tab || tab.leafType !== "markdown") {
+      console.warn("[ReadingMode] toggle skipped: no active markdown tab");
+      return;
+    }
+    const nextMode = tab.viewMode === "reading" ? "edit" : "reading";
+    useTabsStore.getState().setTabViewMode(tab.id, nextMode);
+    console.log("[ReadingMode] mode changed", {
+      tabId: tab.id,
+      from: tab.viewMode ?? "edit",
+      to: nextMode,
+    });
   },
   () => resolveActiveTab()?.leafType === "markdown",
 );

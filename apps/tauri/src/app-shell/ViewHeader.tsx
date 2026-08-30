@@ -1,5 +1,5 @@
 import {
-  IconBook,
+  IconCode,
   IconCopy,
   IconChevronLeft,
   IconChevronRight,
@@ -85,6 +85,10 @@ export function ViewHeader({
   };
 
   const handleModeClick = () => {
+    console.log("[ReadingMode] header toggle clicked", {
+      tabId: tab.id,
+      currentMode: viewMode,
+    });
     commandService.execute("editor:toggle-view-mode");
   };
 
@@ -125,13 +129,14 @@ export function ViewHeader({
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
+          size="sm"
           aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
-          title={viewMode === "reading" ? "Edit note" : "Reading view"}
+          title={viewMode === "reading" ? "Edit note (Ctrl/Cmd+E)" : "Reading view (Ctrl/Cmd+E)"}
           onClick={handleModeClick}
-          className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+          className="gap-1.5 px-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
-          {viewMode === "reading" ? <IconPencil size={14} /> : <IconBook size={14} />}
+          {viewMode === "reading" ? <IconPencil size={14} /> : <IconCode size={14} />}
+          <span>{viewMode === "reading" ? "Reading" : "Editing"}</span>
         </Button>
 
         <ContextMenu open={open} onOpenChange={setOpen}>

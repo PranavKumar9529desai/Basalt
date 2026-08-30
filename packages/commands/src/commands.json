@@ -88,5 +88,11 @@
     "name": "Open Graph View",
     "category": "View",
     "icon": "IconSitemap"
+  },
+  {
+    "id": "editor:toggle-view-mode",
+    "name": "Toggle Reading View",
+    "category": "Editor",
+    "icon": "IconBook"
   }
 ]
