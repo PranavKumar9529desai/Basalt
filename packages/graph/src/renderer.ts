@@ -41,17 +41,32 @@ void main() {
 }`;
 
 const FRAG_POINTS = `#version 300 es
-precision mediump float;
+precision highp float;
 in vec3 vColor;
 in float vFlag;
 uniform float uHasHover;
+uniform vec3 uAccent;
+uniform vec3 uRing;
 out vec4 frag;
 void main() {
   // Circular node mask (points are squares by default).
   vec2 d = gl_PointCoord - vec2(0.5);
   if (dot(d, d) > 0.25) discard;
-  float a = (uHasHover > 0.5 && vFlag < 0.5) ? 0.22 : 1.0;
-  frag = vec4(vColor * a, a);
+  float r = length(d) * 2.0;
+  float a = 1.0;
+  vec3 col = vColor;
+  if (uHasHover > 0.5) {
+    if (vFlag < 0.5) {
+      // Unrelated nodes recede hard (Obsidian fades the rest of the vault).
+      a = 0.08;
+    } else if (vFlag > 1.5) {
+      // Hovered node: accent fill + a bright ring hugging the node edge.
+      // Point-coord space = ring scales with the node's drawn size.
+      bool ring = r > 0.84;
+      col = ring ? uRing : uAccent;
+    }
+  }
+  frag = vec4(col * a, a);
 }`;
 
 const VERT_EDGE = `#version 300 es
@@ -63,6 +78,7 @@ uniform vec2 uResolution;
 uniform float uScale;
 uniform vec2 uOffset;
 uniform float uDpr;
+uniform float uHasHover;
 out float vWeight;
 out float vEdgeFlag;
 void main() {
@@ -72,6 +88,7 @@ void main() {
   float len = length(dir);
   vec2 n = len > 0.0 ? vec2(-dir.y, dir.x) / len : vec2(0.0, 1.0);
   float w = clamp(1.0 + 0.35 * aWeight, 1.0, 2.2) * uDpr;
+  if (uHasHover > 0.5 && aEdgeFlag > 0.5) w *= 1.7;
   vec2 base = mix(sA, sB, (aCorner.x + 1.0) * 0.5);
   vec2 screen = base + n * (aCorner.y * w * 0.5);
   vec2 clip = (screen / uResolution) * 2.0 - 1.0;
@@ -82,20 +99,27 @@ void main() {
 }`;
 
 const FRAG_EDGE = `#version 300 es
-precision mediump float;
+precision highp float;
 in float vWeight;
 in float vEdgeFlag;
 uniform float uHasHover;
 uniform vec3 uEdgeColor;
+uniform vec3 uEdgeAccent;
 out vec4 frag;
 void main() {
   // When a node is hovered, only its connections stay bright; every other
-  // edge fades so the focused node's neighborhood stands out.
+  // edge recedes so the focused node's neighborhood stands out.
   float a = clamp(0.14 + 0.07 * vWeight, 0.14, 0.38);
+  vec3 col = uEdgeColor;
   if (uHasHover > 0.5) {
-    a = vEdgeFlag > 0.5 ? clamp(0.22 + 0.12 * vWeight, 0.22, 0.5) : a * 0.3;
+    if (vEdgeFlag > 0.5) {
+      a = clamp(0.3 + 0.15 * vWeight, 0.3, 0.6);
+      col = mix(uEdgeColor, uEdgeAccent, 0.55);
+    } else {
+      a = 0.08;
+    }
   }
-  frag = vec4(uEdgeColor, a);
+  frag = vec4(col * a, a);
 }`;
 
 const VERT_ARROW = `#version 300 es
@@ -181,6 +205,8 @@ export class GraphRenderer {
   private edgeCornerBuf: WebGLBuffer;
   private edgeFlagBuf!: WebGLBuffer;
   private edgeColor: [number, number, number] = [0.5, 0.6, 0.78];
+  private hoverAccent: [number, number, number] = [0.3, 0.76, 1];
+  private hoverRing: [number, number, number] = [0.9, 0.93, 0.95];
   private uEdgeColor: WebGLUniformLocation | null = null;
   private edgePairs: Uint32Array = new Uint32Array(0);
   private edgeEndpoints: Float32Array = new Float32Array(0);
@@ -188,6 +214,20 @@ export class GraphRenderer {
   private vaoScene: WebGLVertexArrayObject;
   private vaoEdges: WebGLVertexArrayObject;
   private vaoArrows: WebGLVertexArrayObject;
+
+  // Track WebGL context loss via canvas events instead of polling
+  // gl.isContextLost() in the per-frame path (which would add a sync query every
+  // redraw). While lost, every GL call is a safe no-op but would be wasted work,
+  // so render()/resize()/uploads bail out early. The owning app is responsible
+  // for rebuilding the renderer on context restore.
+  private lost = false;
+  private readonly onContextLost = (e: Event) => {
+    e.preventDefault(); // allow the context to be restored
+    this.lost = true;
+  };
+  private readonly onContextRestored = () => {
+    this.lost = false;
+  };
 
   private cssW = 800;
   private cssH = 600;
@@ -205,11 +245,14 @@ export class GraphRenderer {
   private uSceneOffset: WebGLUniformLocation | null;
   private uSceneDpr: WebGLUniformLocation | null;
   private uSceneHasHover: WebGLUniformLocation | null;
+  private uSceneAccent: WebGLUniformLocation | null;
+  private uSceneRing: WebGLUniformLocation | null;
   private uEdgeRes: WebGLUniformLocation | null;
   private uEdgeScale: WebGLUniformLocation | null;
   private uEdgeOffset: WebGLUniformLocation | null;
   private uEdgeDpr: WebGLUniformLocation | null;
   private uEdgeHasHover: WebGLUniformLocation | null;
+  private uEdgeAccent: WebGLUniformLocation | null;
   private uArrowRes: WebGLUniformLocation | null;
   private uArrowScale: WebGLUniformLocation | null;
   private uArrowOffset: WebGLUniformLocation | null;
@@ -234,6 +277,10 @@ export class GraphRenderer {
       vendor: String(gl.getParameter(gl.VENDOR)),
       contextLost: gl.isContextLost(),
     });
+    // Context-loss tracking so the hot path can bail without per-frame GL queries.
+    this.lost = gl.isContextLost();
+    canvas.addEventListener("webglcontextlost", this.onContextLost, false);
+    canvas.addEventListener("webglcontextrestored", this.onContextRestored, false);
     // Premultiplied-alpha compositing: transparent clear + dimmed hover edges blend correctly.
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -273,12 +320,15 @@ export class GraphRenderer {
     this.uSceneOffset = gl.getUniformLocation(this.progScene, "uOffset");
     this.uSceneDpr = gl.getUniformLocation(this.progScene, "uDpr");
     this.uSceneHasHover = gl.getUniformLocation(this.progScene, "uHasHover");
+    this.uSceneAccent = gl.getUniformLocation(this.progScene, "uAccent");
+    this.uSceneRing = gl.getUniformLocation(this.progScene, "uRing");
     this.uEdgeRes = gl.getUniformLocation(this.progEdge, "uResolution");
     this.uEdgeScale = gl.getUniformLocation(this.progEdge, "uScale");
     this.uEdgeOffset = gl.getUniformLocation(this.progEdge, "uOffset");
     this.uEdgeDpr = gl.getUniformLocation(this.progEdge, "uDpr");
     this.uEdgeColor = gl.getUniformLocation(this.progEdge, "uEdgeColor");
     this.uEdgeHasHover = gl.getUniformLocation(this.progEdge, "uHasHover");
+    this.uEdgeAccent = gl.getUniformLocation(this.progEdge, "uEdgeAccent");
     this.uArrowRes = gl.getUniformLocation(this.progArrows, "uResolution");
     this.uArrowScale = gl.getUniformLocation(this.progArrows, "uScale");
     this.uArrowOffset = gl.getUniformLocation(this.progArrows, "uOffset");
@@ -334,6 +384,7 @@ export class GraphRenderer {
   }
 
   resize(cssW: number, cssH: number, dpr: number): void {
+    if (this.lost) return;
     this.cssW = cssW;
     this.cssH = cssH;
     this.dpr = dpr;
@@ -343,6 +394,7 @@ export class GraphRenderer {
   }
 
   setPositions(positions: Float32Array): void {
+    if (this.lost) return;
     const gl = this.gl;
     this.nodeCount = positions.length >> 1;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
@@ -429,7 +481,13 @@ export class GraphRenderer {
     this.edgeColor = c;
   }
 
+  setHoverColors(accent: [number, number, number], ring: [number, number, number]): void {
+    this.hoverAccent = accent;
+    this.hoverRing = ring;
+  }
+
   render(): void {
+    if (this.lost) return;
     const gl = this.gl;
     gl.clearColor(0, 0, 0, 0); // transparent — geometry only; app theme shows through
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -447,6 +505,7 @@ export class GraphRenderer {
       gl.uniform1f(this.uEdgeDpr, this.dpr);
       gl.uniform1f(this.uEdgeHasHover, this.hasHover ? 1 : 0);
       gl.uniform3fv(this.uEdgeColor, this.edgeColor);
+      gl.uniform3fv(this.uEdgeAccent, this.hoverAccent);
       gl.bindVertexArray(this.vaoEdges);
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.edgeCount);
     }
@@ -458,6 +517,8 @@ export class GraphRenderer {
     gl.uniform2f(this.uSceneOffset, v.ox, v.oy);
     gl.uniform1f(this.uSceneDpr, this.dpr);
     gl.uniform1f(this.uSceneHasHover, this.hasHover ? 1 : 0);
+    gl.uniform3fv(this.uSceneAccent, this.hoverAccent);
+    gl.uniform3fv(this.uSceneRing, this.hoverRing);
     gl.bindVertexArray(this.vaoScene);
     gl.drawArrays(gl.POINTS, 0, this.nodeCount);
 
@@ -481,6 +542,8 @@ export class GraphRenderer {
 
   dispose(): void {
     const gl = this.gl;
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
     gl.deleteBuffer(this.posBuf);
     gl.deleteBuffer(this.colorBuf);
     gl.deleteBuffer(this.flagBuf);
