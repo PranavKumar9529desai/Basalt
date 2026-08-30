@@ -13,6 +13,9 @@
     "primary": "{palette.accent}",
     "strong": "{palette.accentStrong}"
   },
+  "editor": {
+    "caret": "{accent.primary}"
+  },
   "border": {
     "default": "{palette.border}"
   },

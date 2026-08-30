@@ -6,13 +6,17 @@ export type FetchLinksFn = (
 ) => Promise<Array<{ name: string; path: string }>>;
 export type FetchTagsFn = (query: string) => Promise<string[]>;
 
-// ---------------------------------------------------------------------------
-// Frontmatter model — mirrors `basalt_types::frontmatter` (camelCase on the
-// wire). The parser is injected (EditorConfig.parseFrontmatter) so this
-// package stays pure (ADR-022 rule 2). Spans are UTF-16 CodeMirror offsets.
-// ---------------------------------------------------------------------------
+/**
+ * The frontmatter model mirrors `basalt_types::frontmatter` (camelCase on
+ * the wire). The parser is injected via `EditorConfig.parseFrontmatter`
+ * back into this package so `packages/editor` stays pure; span fields are
+ * UTF-16 CodeMirror offsets.
+ */
 
-/** Externally-tagged serde enum: `{ Text: "..." }`, `{ List: [...] }`, `"None"`, … */
+/**
+ * Externally-tagged serde value enum: `{ Text: "..." }`, `{ List: [...] }`,
+ * `"None"`, …
+ */
 export type FrontmatterValue =
   | { Text: string }
   | { List: FrontmatterValue[] }

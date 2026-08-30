@@ -1,24 +1,6 @@
 import { EditorState, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
-// ---------------------------------------------------------------------------
-// Editor typing benchmark — the frontend counterpart of ADR-017.
-//
-// Measures the REAL per-keystroke cost of the live EditorView (all
-// extensions included: live preview, wikilinks, suggestions, …) across
-// document sizes. This is the number the editor performance campaign
-// optimizes; run it before and after every change.
-//
-// Safety: while a benchmark runs, `editorBenchmarkState.active` is set —
-// the app's update listener must check it and skip dirty/autosave/stats
-// handling, so benchmark documents are never saved into user files.
-// The original document is restored synchronously at the end.
-//
-// Note: dispatches are synchronous — large sizes block the UI for the
-// duration. Default sizes stay ≤ 100KB for that reason.
-// ---------------------------------------------------------------------------
-
-/** Set while a benchmark is running. Update listeners must skip work. */
 export const editorBenchmarkState = { active: false };
 
 function mulberry32(seed: number): () => number {
@@ -141,9 +123,15 @@ function percentile(sorted: number[], p: number): number {
 }
 
 /**
- * Run the typing benchmark against the live view. Synchronous; restores
- * the original document when done. Sets `editorBenchmarkState.active`
- * for the duration.
+ * Run the typing benchmark against the live view — measures the real
+ * per-keystroke cost of the full extension stack (live preview, wikilinks,
+ * suggestions) across document sizes.
+ *
+ * Synchronous: dispatches block the UI for the duration, so default sizes
+ * stay ≤ 100KB. While it runs, `editorBenchmarkState.active` is set so the
+ * app's update listener skips dirty/autosave/stats handling — benchmark
+ * docs are never saved into user files — and the original document is
+ * restored synchronously at the end.
  */
 export function runTypingBenchmark(
   view: EditorView,

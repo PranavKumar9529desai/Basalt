@@ -47,10 +47,6 @@ import {
 } from "@codemirror/view";
 import { editorBenchmarkState } from "../benchmark";
 
-// ---------------------------------------------------------------------------
-// Horizontal Rule widget
-// ---------------------------------------------------------------------------
-
 class HorizontalRuleWidget extends WidgetType {
   eq() {
     return true;
@@ -97,10 +93,6 @@ import { handleTableNode, TABLES_THEME } from "./tables";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { isInCodeBlock, sortCodeBlockRanges } from "./types";
 
-// ---------------------------------------------------------------------------
-// Composed Theme
-// ---------------------------------------------------------------------------
-
 export const LIVE_PREVIEW_THEME = [
   CODE_BLOCKS_THEME,
   BLOCKQUOTES_THEME,
@@ -112,10 +104,6 @@ export const LIVE_PREVIEW_THEME = [
   FRONTMATTER_THEME,
   HR_THEME,
 ];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function makeCollector() {
   const widgets: { from: number; to: number; deco: Decoration }[] = [];
@@ -146,10 +134,6 @@ function makeCollector() {
   return { collector, finish };
 }
 
-// ---------------------------------------------------------------------------
-// Single-pass engine — one walk builds every decoration
-// ---------------------------------------------------------------------------
-
 interface PreviewState {
   decorations: DecorationSet;
   /** Code-block ranges discovered during the walk; shared with the viewport-
@@ -179,7 +163,11 @@ function buildPreviewState(
   const headPos = state.selection.main.head;
   const doc = state.doc;
   const ctx: DecorationContext = {
-    activeLine: hasFocus
+    // A stale focus flag must not hide syntax at the current caret position.
+    // During typing, the empty selection is the authoritative active-line
+    // signal; hiding a heading marker before the next input breaks DOM-to-doc
+    // mapping and can insert the next character before `#`.
+    activeLine: hasFocus || state.selection.main.empty
       ? (() => {
           const l = doc.lineAt(headPos);
           return { from: l.from, to: l.to, number: l.number };
@@ -290,27 +278,24 @@ function buildPreviewState(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Focus tracking — builders have no view, sync DOM focus into field effects
-// ---------------------------------------------------------------------------
-
+// Builders run with no view reference, so DOM focus is synced into the field
+// via this effect instead of being read directly.
 const setHasFocus = StateEffect.define<boolean>();
 
 /** Force a synchronous full rebuild from the current state. */
 const rebuildPreview = StateEffect.define<null>();
 
-// ---------------------------------------------------------------------------
-// The live-preview StateField — sole owner of document-wide decorations
-//
-// Incremental strategy (ADR-019 / Xi-style minimal invalidation):
-//   - docs ≤ LAZY_THRESHOLD bytes: full rebuild per doc/selection change
-//     (measured ~1–2ms there — cheaper than bookkeeping).
-//   - larger docs: typing only MAPS the existing decorations through the
-//     change (position remap, no tree walk); the full walk is deferred to an
-//     idle tick by previewScheduler. Explicit selection moves (click/arrows)
-//     still rebuild synchronously — instant reveal matters more there, and
-//     they are off the keystroke path.
-// ---------------------------------------------------------------------------
+/**
+ * The live-preview field — sole owner of document-wide decorations.
+ *
+ * Incremental strategy: docs ≤ `LAZY_DOC_THRESHOLD` bytes fully rebuild per
+ * doc/selection change (measured ~1–2ms there — cheaper than bookkeeping).
+ * Larger docs: typing only maps the existing decorations through the change
+ * (position remap, no tree walk); the full walk defers to an idle tick via
+ * `previewScheduler`. Explicit selection moves (click/arrows) still rebuild
+ * synchronously — instant reveal matters more there, and they are off the
+ * keystroke path.
+ */
 
 const LAZY_DOC_THRESHOLD = 48 * 1024;
 
@@ -383,18 +368,17 @@ const focusTracking = EditorView.domEventHandlers({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Idle scheduler — defers full structure rebuilds on large documents
-//
-// Typing on big notes maps decorations lazily (see livePreviewField); this
-// plugin dispatches `rebuildPreview` when the main thread goes idle so the
-// structure catches up between keystrokes. Also covers mount-time parse
-// growth on huge files. Never schedules while a benchmark is running —
-// measurements must see the pure keystroke path.
-// ---------------------------------------------------------------------------
-
+/** Base idle timeout before a deferred rebuild is forced regardless. */
 const IDLE_REBUILD_TIMEOUT_MS = 350;
 
+/**
+ * Idle scheduler — defers full structure rebuilds on large documents.
+ * Typing on big notes maps decorations lazily (see `livePreviewField`); this
+ * plugin dispatches `rebuildPreview` when the main thread goes idle so the
+ * structure catches up between keystrokes. Also covers mount-time parse
+ * growth on huge files. Never schedules while a benchmark is running —
+ * measurements must see the pure keystroke path.
+ */
 class PreviewScheduler {
   private scheduled = false;
 
@@ -443,10 +427,9 @@ class PreviewScheduler {
 
 const previewScheduler = ViewPlugin.fromClass(PreviewScheduler);
 
-// ---------------------------------------------------------------------------
-// Tags plugin — the one viewport-scoped pass (text regex, not tree walk)
-// ---------------------------------------------------------------------------
-
+/** The one viewport-scoped pass — a text regex over visible lines, not a
+ * tree walk. Tags don't have their own tree nodes, so scanning the visible
+ * region is cheaper than a full-document pass. */
 class TagMarksPlugin {
   decorations: DecorationSet;
 
@@ -484,20 +467,12 @@ const tagMarksPlugin = ViewPlugin.fromClass(TagMarksPlugin, {
   decorations: (v) => v.decorations,
 });
 
-// ---------------------------------------------------------------------------
-// Public export
-// ---------------------------------------------------------------------------
-
 export const livePreviewPlugin = [
   livePreviewField,
   focusTracking,
   previewScheduler,
   tagMarksPlugin,
 ];
-
-// ---------------------------------------------------------------------------
-// Block-widget reads + rebuilds (ADR-022 rule 14)
-// ---------------------------------------------------------------------------
 
 /** Read the first parsed model for a block widget id off a view. Per-view —
  * never a module global — so split panes each render their own state. */

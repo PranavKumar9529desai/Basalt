@@ -48,6 +48,7 @@ const baseTheme = EditorView.theme({
     maxWidth: "var(--sat-editor-readable-width, 70ch)",
     marginInline: "auto",
     flex: "0 0 auto",
+    caretColor: "var(--sat-editor-caret, var(--sat-text-primary))",
   },
   ".cm-line": {
     lineHeight: "var(--sat-editor-line-height, 1.6)",
@@ -64,7 +65,7 @@ const baseTheme = EditorView.theme({
     outline: "none",
   },
   ".cm-cursor, .cm-dropCursor": {
-    borderLeft: "2px solid var(--sat-editor-accent, #a78bfa)",
+    borderLeft: "2px solid var(--sat-editor-caret, var(--sat-text-primary))",
   },
 });
 

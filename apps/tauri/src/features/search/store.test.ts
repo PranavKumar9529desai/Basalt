@@ -14,7 +14,6 @@ const content = (path: string, title: string): FileMatch => ({
   path,
   title,
   score: 1,
-  text: "",
   matches: [
     {
       lineNumber: 1,

@@ -17,9 +17,9 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
             let frontmatter_str = &input[4..actual_end];
             if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
                 meta.frontmatter = Some(yaml);
-                // ADR-022 rule 1: make frontmatter properties first-class.
-                // Extract wikilinks / tags / aliases declared inside the block
-                // so they reach the graph, backlinks and search index.
+                // Make frontmatter properties first-class: extract wikilinks /
+                // tags / aliases declared inside the block so they reach the
+                // graph, backlinks and search index (ADR-022 rule 1).
                 if let Some(fm) = &meta.frontmatter {
                     let mut fm_links: Vec<String> = Vec::new();
                     let mut fm_tags: Vec<String> = Vec::new();

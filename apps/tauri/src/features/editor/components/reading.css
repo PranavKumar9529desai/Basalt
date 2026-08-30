@@ -7,51 +7,70 @@
   font-family: var(--sat-font-sans);
   font-size: 16px;
   line-height: 1.65;
+  /* Mirrors the editor's .cm-scroller padding so toggling Edit <-> Reading
+     never shifts the note vertically. */
+  padding: 24px max(32px, 5%);
 }
 
-.markdown-reading-title {
+.markdown-reading-sizer .markdown-reading-title {
   color: var(--sat-editor-heading1, var(--sat-text-primary));
   font-size: 2em;
   font-weight: 700;
   line-height: 1.15;
-  margin: 0 0 1.2em;
+  /* Same gap the editor leaves between the inline title and the frontmatter
+     panel (--sat-editor-property-title-gap). */
+  margin: 0 0 var(--sat-editor-property-title-gap, 28px);
 }
 
 .markdown-reading-properties {
-  margin: 0 0 2.2em;
+  margin: 0 0 var(--sat-editor-property-body-gap, 8px);
 }
 
 .markdown-reading-sizer .markdown-reading-properties h2 {
   color: var(--sat-editor-section-label-color, var(--sat-text-primary));
-  font-size: 1em;
+  font-size: var(--sat-editor-section-label-size, inherit);
   font-weight: var(--sat-editor-section-label-weight, 500);
-  margin: 0 0 0.4em;
+  margin: 0 0 var(--sat-editor-property-label-gap, 2px);
 }
 
+/* The property panel mirrors the editor's interactive frontmatter widget
+   (FRONTMATTER_WIDGET_THEME) so Edit and Reading are pixel-identical. */
 .markdown-reading-property {
-  display: grid;
-  grid-template-columns: 16px minmax(8em, 30%) minmax(0, 1fr);
-  gap: 0.75em;
-  padding: 0.18em 0;
+  display: flex;
   align-items: center;
+  gap: var(--sat-editor-property-gap, 8px);
+  margin: 0 -8px;
+  padding: 2px 8px;
+  min-height: var(--sat-editor-property-row-height, 1.75em);
 }
 
 .markdown-reading-property-icon {
+  flex: 0 0 var(--sat-editor-property-icon-size, 16px);
+  width: var(--sat-editor-property-icon-size, 16px);
+  height: var(--sat-editor-property-icon-size, 16px);
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--sat-editor-property-icon-color, var(--sat-text-muted));
+  opacity: 0.9;
 }
 
 .markdown-reading-property-key {
+  flex: 0 1 var(--sat-editor-property-key-width, 150px);
+  min-width: 0;
   color: var(--sat-text-muted);
 }
 
 .markdown-reading-property strong {
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 400;
 }
 
 .markdown-reading-property-tags {
   display: flex;
   min-width: 0;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   gap: 0.35rem;
 }
@@ -171,3 +190,27 @@
   accent-color: var(--sat-editor-task-accent, var(--sat-accent-primary));
   margin-right: 0.5em;
 }
+
+/* Syntax-highlighted tokens inside code blocks — same classes the editor
+   emits, bound to the same --sat-syntax-* theme tokens. */
+.markdown-reading-sizer .sat-syntax-keyword { color: var(--sat-syntax-keyword, #c678dd); }
+.markdown-reading-sizer .sat-syntax-string { color: var(--sat-syntax-string, #98c379); }
+.markdown-reading-sizer .sat-syntax-number { color: var(--sat-syntax-number, #d19a66); }
+.markdown-reading-sizer .sat-syntax-comment { color: var(--sat-syntax-comment, #5c6370); font-style: italic; }
+.markdown-reading-sizer .sat-syntax-function { color: var(--sat-syntax-function, #61afef); }
+.markdown-reading-sizer .sat-syntax-type { color: var(--sat-syntax-type, #e5c07b); }
+.markdown-reading-sizer .sat-syntax-variable { color: var(--sat-syntax-variable, #e06c75); }
+.markdown-reading-sizer .sat-syntax-atom { color: var(--sat-syntax-atom, #d19a66); }
+.markdown-reading-sizer .sat-syntax-operator { color: var(--sat-syntax-operator, #abb2bf); }
+.markdown-reading-sizer .sat-syntax-property { color: var(--sat-syntax-property, #e06c75); }
+.markdown-reading-sizer .sat-syntax-tag { color: var(--sat-syntax-tag, #e06c75); }
+.markdown-reading-sizer .sat-syntax-attribute { color: var(--sat-syntax-attribute, #d19a66); }
+.markdown-reading-sizer .sat-syntax-punctuation { color: var(--sat-syntax-punctuation, #abb2bf); }
+.markdown-reading-sizer .sat-syntax-regexp { color: var(--sat-syntax-regexp, #98c379); }
+.markdown-reading-sizer .sat-syntax-doc { color: var(--sat-syntax-doc, #5c6370); font-style: italic; }
+.markdown-reading-sizer .sat-syntax-macro { color: var(--sat-syntax-macro, #c678dd); }
+.markdown-reading-sizer .sat-syntax-meta { color: var(--sat-syntax-meta, #5c6370); }
+.markdown-reading-sizer .sat-syntax-link { color: var(--sat-syntax-link, #61afef); text-decoration: underline; }
+.markdown-reading-sizer .sat-syntax-changed { color: var(--sat-syntax-changed, #e5c07b); }
+.markdown-reading-sizer .sat-syntax-deleted { color: var(--sat-syntax-deleted, #e06c75); }
+.markdown-reading-sizer .sat-syntax-inserted { color: var(--sat-syntax-inserted, #98c379); }

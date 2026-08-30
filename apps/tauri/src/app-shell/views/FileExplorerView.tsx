@@ -7,7 +7,7 @@ import { FileTree } from "../../features/vault";
 import { useWorkspaceContext } from "../WorkspaceProvider";
 
 /**
- * File explorer view — the left dock's registered view (ADR-018).
+ * File explorer view — the left dock's registered view.
  * Self-contained: reads the workspace context instead of receiving
  * prop drills from the shell.
  */

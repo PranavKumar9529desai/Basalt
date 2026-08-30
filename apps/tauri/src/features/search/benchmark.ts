@@ -22,10 +22,7 @@ import { flushSync } from "react-dom";
 import { useSearchStore } from "./store";
 import type { FileMatch, Highlight, LineMatch } from "./types";
 
-// ---------------------------------------------------------------------------
 // Deterministic synthetic data (mulberry32 — same PRNG as the editor harness)
-// ---------------------------------------------------------------------------
-
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -168,16 +165,11 @@ function buildResults(spec: TierSpec): FileMatch[] {
       path: `bench/${String(f).padStart(3, "0")}.md`,
       title: `Benchmark Note ${spec.name} ${f}`,
       score: 1 - f / spec.files,
-      text,
       matches,
     });
   }
   return files;
 }
-
-// ---------------------------------------------------------------------------
-// Measurement
-// ---------------------------------------------------------------------------
 
 /** One frame of the browser's paint cadence. */
 function frame(): Promise<void> {
@@ -223,10 +215,6 @@ function percentile(sorted: number[], p: number): number {
   );
   return sorted[idx];
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export interface SearchBenchmarkSample {
   tier: string;

@@ -1,4 +1,5 @@
-//! Minimal WASM bridge for the graph force layout (ADR-021 Phase 2 proof).
+//! Minimal WASM bridge for the graph force layout — runs the simulation off
+//! the UI thread in a worker, posting flat position buffers back to WebGL.
 //!
 //! Exposes a C-ABI surface consumed by `GraphWorker.ts` via
 //! vite-plugin-wasm `?init` (same path as `crates/graph-wasm-probe`). Build with

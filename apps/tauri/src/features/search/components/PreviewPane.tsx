@@ -117,7 +117,7 @@ function makeState(text: string, path: string): EditorState {
 }
 
 /**
- * Module-level LRU of parsed preview states, keyed by file content — the
+ * Module-level LRU of parsed preview states, keyed by path and file content — the
  * MarkdownEditorView per-tab cache pattern, but surviving modal mounts. Parsing a
  * large file is the dominant preview cost (open-cold, cross-file nav); the
  * parse is correct to reuse because a hit requires the identical content
@@ -127,17 +127,18 @@ const parseCacheLimit = 24;
 const parseCache = new Map<string, EditorState>();
 
 export function cachedPreviewState(text: string, path: string): EditorState {
-  const hit = parseCache.get(text);
+  const cacheKey = `${path}\0${text}`;
+  const hit = parseCache.get(cacheKey);
   if (hit) {
-    parseCache.delete(text);
-    parseCache.set(text, hit);
+    parseCache.delete(cacheKey);
+    parseCache.set(cacheKey, hit);
     return hit;
   }
   const state = makeState(text, path);
   if (parseCache.size >= parseCacheLimit) {
     parseCache.delete(parseCache.keys().next().value as string);
   }
-  parseCache.set(text, state);
+  parseCache.set(cacheKey, state);
   return state;
 }
 

@@ -14,6 +14,8 @@ export interface LeafTabInfo {
   viewMode?: "edit" | "reading";
   /** Transient: line to reveal once on open (search jump-to-line). Not persisted. */
   line?: number;
+  /** Transient: focus the note body once after opening. Not persisted. */
+  focusOnOpen?: boolean;
   /** Transient: enter the leaf's title-rename flow once on first show.
    * Set by note creation; cleared by the leaf after entering. Not persisted. */
   renameOnOpen?: boolean;

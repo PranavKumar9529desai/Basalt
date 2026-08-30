@@ -46,9 +46,6 @@ pub struct FileMatch {
     pub title: String,
     /// BM25 relevance score (higher = better).
     pub score: f32,
-    /// Full file content. Populated by `search_content` so the preview pane can
-    /// render syntax-highlighted source without a second IPC call.
-    pub text: String,
     /// Matching lines, in document order.
     pub matches: Vec<LineMatch>,
 }

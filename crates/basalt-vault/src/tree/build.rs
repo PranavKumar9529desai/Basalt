@@ -69,9 +69,8 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
 
     let mut root = DirEntry::new_folder(root_name, root_abs.as_ref(), "");
 
-    // ── Insert every active indexed .md path into the internal tree ───────
-    // Source of truth for "real files" is metadata_cache, not the arena.
-    // Arena may contain unresolved link targets or historical interned paths.
+    // Source of truth for "real files" is metadata_cache, not the arena, which
+    // may hold unresolved link targets or historical interned paths.
     let mut paths: Vec<String> = vault
         .graph
         .metadata_cache
@@ -82,7 +81,6 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
     paths.sort_unstable();
 
     for abs_path in &paths {
-        // Derive the vault-relative path.
         let rel = abs_path
             .strip_prefix(&root_prefix)
             .unwrap_or(abs_path)
@@ -96,12 +94,11 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         insert_path(&mut root, &parts, abs_path, &root_prefix);
     }
 
-    // ── Also include on-disk directories (so empty folders are visible) ───
+    // Include on-disk directories too, so empty folders are visible.
     if vault_root.is_dir() {
         insert_disk_dirs(&mut root, vault_root, &root_prefix);
     }
 
-    // ── Flatten into a pre-order DFS array ────────────────────────────────
     let mut out = Vec::new();
     flatten_children(&root, 0, &mut out);
     out
@@ -116,7 +113,6 @@ fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix:
     let name = parts[0];
     let is_last = parts.len() == 1;
 
-    // Build the rel_path for this child.
     let child_rel = if node.rel_path.is_empty() {
         name.to_string()
     } else {
@@ -124,12 +120,10 @@ fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix:
     };
 
     if is_last {
-        // File leaf — use the canonical abs_path from the arena.
         node.children
             .entry(name.to_string())
             .or_insert_with(|| DirEntry::new_file(name, abs_path, &child_rel));
     } else {
-        // Intermediate directory — construct its abs_path from the root prefix.
         let child_abs = format!("{}{}", root_prefix, child_rel);
         let entry = node
             .children
@@ -155,7 +149,6 @@ fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
 
-        // Skip hidden directories
         if name_str.starts_with('.') {
             continue;
         }
@@ -173,7 +166,6 @@ fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
             .entry(name_str.to_string())
             .or_insert_with(|| DirEntry::new_folder(&*name_str, &child_abs, &child_rel));
 
-        // Recurse into subdirectories
         insert_disk_dirs(child, &entry.path(), root_prefix);
     }
 }
@@ -182,11 +174,9 @@ fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
 /// Folders are emitted before files at every level; within each group the
 /// ordering is already alphabetical thanks to `BTreeMap`.
 fn flatten_children(node: &DirEntry, depth: u32, out: &mut Vec<FlatTreeNode>) {
-    // Split children into folders and files while preserving BTreeMap order.
     let (folders, files): (Vec<&DirEntry>, Vec<&DirEntry>) =
         node.children.values().partition(|c| !c.is_file);
 
-    // ── Folders first ──────────────────────────────────────────────────────
     for folder in folders {
         out.push(FlatTreeNode {
             name: folder.name.clone(),
@@ -196,11 +186,9 @@ fn flatten_children(node: &DirEntry, depth: u32, out: &mut Vec<FlatTreeNode>) {
             depth,
             child_count: folder.children.len() as u32,
         });
-        // Recurse into the folder's own children at depth + 1.
         flatten_children(folder, depth + 1, out);
     }
 
-    // ── Files after ────────────────────────────────────────────────────────
     for file in files {
         out.push(FlatTreeNode {
             name: file.name.clone(),
@@ -212,10 +200,6 @@ fn flatten_children(node: &DirEntry, depth: u32, out: &mut Vec<FlatTreeNode>) {
         });
     }
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

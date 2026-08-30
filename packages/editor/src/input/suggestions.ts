@@ -100,6 +100,11 @@ export function createSuggestionsPlugin(
         // Tag Completion #...
         const tagMatch = context.matchBefore(/#([^\s]*)/);
         if (tagMatch && onFetchTags) {
+          const line = context.state.doc.lineAt(context.pos);
+          const beforeCursor = line.text.slice(0, context.pos - line.from);
+          // A line-start hash is Markdown heading syntax, not a tag. Avoid
+          // starting the async tag provider while the user is typing a title.
+          if (/^\s{0,3}#\s*$/.test(beforeCursor)) return null;
           const query = tagMatch.text.slice(1); // skip `#`
           const results = await onFetchTags(query);
 

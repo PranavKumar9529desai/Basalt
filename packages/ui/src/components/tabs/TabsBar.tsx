@@ -32,12 +32,9 @@ export interface TabsBarProps {
   className?: string;
 }
 
-// --------------------------------------------------------------------------
-// TabItemCell — wraps TabItem with a stable elementRef callback so that
+// TabItemCell wraps TabItem with a stable elementRef callback so that
 // React.memo on TabItem is not defeated by a new inline function every
-// render.  All other event handlers pass through as stable references.
-// --------------------------------------------------------------------------
-
+// render. All other event handlers pass through as stable references.
 interface TabItemCellProps {
   tab: TabItemData;
   setTabRef: (id: string, el: HTMLDivElement | null) => void;
@@ -316,7 +313,7 @@ export function TabsBar({
     >
       {leftSlot ? <div className="shrink-0">{leftSlot}</div> : null}
 
-      {/* ── Tab strip: overflow hidden, all tabs inside ── */}
+      {/* Tab strip — overflow hidden keeps every tab inside one row */}
       <div
         ref={containerRef}
         className="relative flex-1 min-w-0 h-full overflow-hidden"
@@ -375,7 +372,7 @@ export function TabsBar({
           )}
         </div>
 
-        {/* ── Chrome: separators + active-tab corner nubs ── */}
+        {/* Chrome — separators + active-tab corner nubs */}
         <div className="pointer-events-none absolute inset-0 z-20">
           {chrome.separatorXs.map((x, idx) => (
             <span
@@ -434,7 +431,6 @@ export function TabsBar({
         </div>
       </div>
 
-      {/* ── Dropdown trigger — sticky at right edge ── */}
       <div
         ref={dropdownWrapperRef}
         // No opaque background: it would chop the HeaderBandRule hairline
@@ -476,7 +472,6 @@ export function TabsBar({
         </>
       ) : null}
 
-      {/* ── Dropdown (fixed position below trigger) ── */}
       {dropdownOpen && dropdownPosition ? (
         <>
           {/* Backdrop — click to close */}

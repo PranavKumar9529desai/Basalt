@@ -7,9 +7,6 @@ use tauri::State;
 
 use crate::app_state::AppState;
 
-// ---------------------------------------------------------------------------
-// Write choke point helpers (ADR-018)
-//
 // Every app-initiated filesystem mutation goes through the same contract as
 // save_file:
 //   1. Register self-write markers BEFORE touching disk — the watcher
@@ -20,7 +17,6 @@ use crate::app_state::AppState;
 //   4. Emit NOTHING: the frontend initiated the operation and refreshes its
 //      own tree. `vault://file-changed` means "changed by something OTHER
 //      than the app".
-// ---------------------------------------------------------------------------
 
 fn register_self_writes(state: &AppState, paths: &[PathBuf]) {
     if let Ok(mut guard) = state.self_writes.lock() {
@@ -1339,7 +1335,7 @@ mod tests {
         assert_eq!(name_for(99), "Untitled 99");
     }
 
-    // -- rename_note --------------------------------------------------------
+    // rename_note tests
 
     /// Scaffold a temp vault on disk with three notes, mirrored into a fresh
     /// `AppState` (search index left `None` — index calls become no-ops).
@@ -1489,7 +1485,7 @@ mod tests {
         (root, state)
     }
 
-    // -- rename_path (folders + attachments) --------------------------------
+    // rename_path (folders + attachments) tests
 
     /// Temp vault with a small folder of notes plus a path-form link into it
     /// from the root, mirrored into a fresh `AppState`.

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ReadingView } from "./ReadingView";
 
@@ -42,5 +42,87 @@ describe("ReadingView", () => {
     expect(screen.getByRole("checkbox")).toBeChecked();
     expect(screen.queryByRole("link", { name: "unsafe" })).toBeNull();
     expect(screen.getByText("[unsafe](javascript:alert(1))")).toBeTruthy();
+  });
+
+  it("renders fenced and indented code blocks as <pre><code>", () => {
+    render(
+      <ReadingView
+        title="Code"
+        sourcePath="Code.md"
+        markdown={
+          "```ts\nconst x: number = 1;\n```\n\nindented:\n\n    const a = 1;\n    const b = 2;\n"
+        }
+        services={services}
+      />,
+    );
+
+    const preBlocks = document.querySelectorAll(
+      ".markdown-reading-sizer pre",
+    );
+    expect(preBlocks.length).toBe(2);
+    const [fenced, indented] = Array.from(preBlocks);
+    expect(fenced.querySelector("code")?.textContent).toContain(
+      "const x: number = 1;",
+    );
+    expect(fenced.querySelector("code")?.getAttribute("data-language")).toBe(
+      "ts",
+    );
+    expect(indented.querySelector("code")?.textContent).toContain(
+      "const a = 1;",
+    );
+    expect(indented.querySelector("code")?.textContent).toContain(
+      "const b = 2;",
+    );
+  });
+
+  it("does not truncate fenced code nested inside a list item", () => {
+    render(
+      <ReadingView
+        title="Nested"
+        sourcePath="Nested.md"
+        markdown={
+          "- item with code:\n\n  ```ts\n  const x: number = 1;\n  console.log(x);\n  ```\n"
+        }
+        services={services}
+      />,
+    );
+
+    const code = document.querySelector(".markdown-reading-sizer pre code");
+    expect(code?.textContent).toContain("const x: number = 1;");
+    expect(code?.textContent).toContain("console.log(x);");
+  });
+
+  it("keeps the title above the properties section", () => {
+    render(
+      <ReadingView
+        title="Ordered.md"
+        sourcePath="Ordered.md"
+        markdown={"---\nstatus: draft\n---\nbody\n"}
+        services={services}
+      />,
+    );
+
+    const title = screen.getByRole("heading", { name: "Ordered" });
+    const properties = screen.getByLabelText("Properties");
+    expect(title.compareDocumentPosition(properties)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("syntax-highlights recognised code blocks", async () => {
+    render(
+      <ReadingView
+        title="Highlight"
+        sourcePath="Highlight.md"
+        markdown={"```ts\nconst answer: number = 42;\n```\n"}
+        services={services}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(".markdown-reading-sizer .sat-syntax-keyword"),
+      ).toBeTruthy();
+    });
   });
 });

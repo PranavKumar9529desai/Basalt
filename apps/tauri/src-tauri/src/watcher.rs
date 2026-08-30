@@ -86,7 +86,6 @@ pub fn start_watcher(
                 }
             }
 
-            // Emit event to frontend.
             let kind = if changed_path.exists() { "modified" } else { "deleted" };
             let _ = app_handle.emit(
                 "vault://file-changed",

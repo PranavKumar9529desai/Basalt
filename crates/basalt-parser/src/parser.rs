@@ -199,7 +199,6 @@ fn process_children(
     final_children
 }
 
-// Existing function retained for testing/compatibility
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ProcessedMarkdown {
     pub html: String,

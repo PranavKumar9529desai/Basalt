@@ -516,7 +516,11 @@ export function useVaultController(
         ctx.parentRelPath || undefined,
       );
       if (!result) return;
-      void editor.loadNote({ name: result.name, path: result.path });
+      void editor.loadNote({
+        name: result.name,
+        path: result.path,
+        renameOnOpen: true,
+      });
       await refreshTree();
     }, 0);
   }, [

@@ -16,10 +16,6 @@ export const HEADING_CLASS: Record<string, string> = {
 
 export const HEADING_7_RE = /^(\s{0,3}#{7}\s+)/;
 
-// ---------------------------------------------------------------------------
-// Node Handler (called during shared tree walk)
-// ---------------------------------------------------------------------------
-
 /**
  * Handles ATXHeading / SetextHeading nodes — adds line-level heading classes.
  * Returns true if the node was handled (caller can skip descending).
@@ -37,10 +33,6 @@ export function handleHeadingNode(
   }
   return false;
 }
-
-// ---------------------------------------------------------------------------
-// Post-walk: Heading-7 regex scan
-// ---------------------------------------------------------------------------
 
 /**
  * Scans visible lines for 7-hash headings (not supported by Lezer grammar).

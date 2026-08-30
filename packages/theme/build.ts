@@ -14,10 +14,6 @@ const OUTPUT_UI_GLOBALS = path.resolve(
 const OUTPUT_TYPES = path.join(TOKENS_DIR, "src/types.ts");
 const MANIFEST_TS = path.resolve(TOKENS_DIR, "themes/manifest.ts");
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function kebabify(str: string): string {
   return str
     .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
@@ -67,10 +63,6 @@ function toCssVars(map: Dict): string[] {
     ([key, val]) => `  --sat-${kebabify(key)}: ${asString(val)};`,
   );
 }
-
-// ---------------------------------------------------------------------------
-// Build pipeline
-// ---------------------------------------------------------------------------
 
 function buildBaseMap(): Dict {
   const base = readJson(path.join(TOKENS_DIR, "tokens", "base.json"));
@@ -218,10 +210,6 @@ ${arr}
 export const defaultThemeId: ThemeId = "${defaultId}";
 `;
 }
-
-// ---------------------------------------------------------------------------
-// Run
-// ---------------------------------------------------------------------------
 
 function main() {
   ensureDir(STYLES_DIR);

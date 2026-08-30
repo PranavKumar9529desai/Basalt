@@ -40,9 +40,15 @@ export function SearchModal({ onOpen }: SearchModalProps) {
     searchResults,
     searchTotalHits,
     isSearchLoading,
+    searchError,
     searchSelectedIndex,
     searchSelectNext,
     searchSelectPrev,
+    loadPreview,
+    previewPath,
+    previewText,
+    isPreviewLoading,
+    previewError,
   } = useSearchStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +104,11 @@ export function SearchModal({ onOpen }: SearchModalProps) {
       virtualizer.scrollToIndex(selectedFlatIndex, { align: "auto" });
     }
   }, [searchSelectedIndex, selectedFlatIndex, virtualizer]);
+
+  useEffect(() => {
+    if (selected?.path) void loadPreview(selected.path);
+  }, [selected?.path, loadPreview]);
+
   const showCount = searchQuery.trim().length > 0;
 
   useEffect(() => {
@@ -175,13 +186,18 @@ export function SearchModal({ onOpen }: SearchModalProps) {
               value={searchQuery}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
+              role="combobox"
+              aria-expanded={flatItems.length > 0}
+              aria-controls="search-result-list"
+              aria-activedescendant={selected ? `search-result-${searchSelectedIndex}` : undefined}
+              aria-autocomplete="list"
               placeholder="Search in vault…"
               spellCheck={false}
               className="flex-1 min-w-0 bg-transparent text-[12px] text-[var(--sat-text-primary)] outline-none placeholder:text-[var(--sat-text-muted)]"
             />
             {showCount && (
               <span className="shrink-0 text-[10px] tabular-nums text-[var(--sat-text-muted)]">
-                {totalMatches} in {searchTotalHits} files
+                {totalMatches} shown · {searchTotalHits} files matched
               </span>
             )}
           </div>
@@ -196,15 +212,24 @@ export function SearchModal({ onOpen }: SearchModalProps) {
         <div className="grid grid-cols-[minmax(0,42%)_minmax(0,1fr)] min-h-0">
           <div
             ref={scrollRef}
+            id="search-result-list"
+            // Virtualized result rows require an ARIA listbox container rather than native select.
+            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+            role="listbox"
+            aria-label="Search results"
             className="overflow-y-auto min-h-0 border-r border-[var(--sat-layout-border)]"
           >
-            {flatItems.length === 0 ? (
+            {searchError ? (
+              <EmptyPane icon={<IconFileSearch className="size-8" />} text={searchError} />
+            ) : flatItems.length === 0 ? (
               <EmptyPane
                 icon={<IconFileSearch className="size-8" />}
                 text={
-                  searchQuery && !isSearchLoading
-                    ? "No results found"
-                    : "Search your vault"
+                  isSearchLoading
+                    ? "Searching…"
+                    : searchQuery
+                      ? "No results found"
+                      : "Search your vault"
                 }
               />
             ) : (
@@ -234,6 +259,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
                       match={match}
                       selected={gi === searchSelectedIndex}
                       top={vi.start}
+                      optionId={`search-result-${gi}`}
                       onOpen={openItem}
                     />
                   );
@@ -242,14 +268,18 @@ export function SearchModal({ onOpen }: SearchModalProps) {
             )}
           </div>
 
-          <div className="overflow-y-auto min-h-0">
-            {selectedFile ? (
+          <div className="overflow-y-auto min-h-0" aria-live="polite">
+            {selectedFile && previewPath === selectedFile.path && previewText !== null ? (
               <PreviewPane
-                text={selectedFile.text}
+                text={previewText}
                 path={selectedFile.path}
                 matchLine={selected.lineNumber}
                 highlights={selected.highlights}
               />
+            ) : isPreviewLoading ? (
+              <EmptyPane icon={<IconFileSearch className="size-8" />} text="Loading preview…" />
+            ) : previewError ? (
+              <EmptyPane icon={<IconFileSearch className="size-8" />} text={previewError} />
             ) : (
               <EmptyPane
                 icon={<IconFileSearch className="size-8" />}

@@ -10,7 +10,6 @@ packages/commands/
 ├── types.ts        ← CommandMetadata + Command interfaces
 ├── service.ts      ← CommandService class (singleton)
 ├── react.tsx       ← CommandProvider + useCommandService hook
-├── store.ts        ← backward-compat Zustand bridge (deprecated)
 ├── icons.ts        ← icon name → React component resolver
 └── index.ts        ← barrel exports
 ```

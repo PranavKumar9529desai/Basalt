@@ -227,7 +227,16 @@ export class GraphRenderer {
   };
   private readonly onContextRestored = () => {
     this.lost = false;
+    // WebGL objects are invalid after restoration. The owning view must call
+    // rebuildResources() before the next render.
+    this.resourcesNeedRebuild = true;
   };
+
+  private resourcesNeedRebuild = false;
+
+  needsResourceRebuild(): boolean {
+    return this.resourcesNeedRebuild;
+  }
 
   private cssW = 800;
   private cssH = 600;
@@ -269,7 +278,7 @@ export class GraphRenderer {
     // fail to compile with a null info log. Surface the truth before linking.
     const isWebGL2 =
       typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
-    console.error("[graph] WebGL2 context probe", {
+    console.debug("[graph] WebGL2 context probe", {
       isWebGL2,
       version: String(gl.getParameter(gl.VERSION)),
       shadingLanguage: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)),

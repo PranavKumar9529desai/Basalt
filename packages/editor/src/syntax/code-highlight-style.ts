@@ -3,11 +3,6 @@ import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 
-// ---------------------------------------------------------------------------
-// CSS theme — syntax token colours via --sat-syntax-* CSS custom properties.
-// Define these variables in your theme root and they'll cascade here.
-// ---------------------------------------------------------------------------
-
 export const CODE_HIGHLIGHT_THEME = EditorView.theme({
   /** Keywords: if, else, for, while, return, import, class, etc. */
   "& .cm-line.cm-live-code .sat-syntax-keyword": {
@@ -96,10 +91,6 @@ export const CODE_HIGHLIGHT_THEME = EditorView.theme({
   },
 });
 
-// ---------------------------------------------------------------------------
-// HighlightStyle — maps Lezer syntax tags → CSS class names
-// ---------------------------------------------------------------------------
-
 /**
  * A class-based syntax highlighter for code blocks within the editor.
  * Instead of inlining colour values, we emit CSS class names that are
@@ -169,10 +160,6 @@ const codeSyntaxHighlighter = HighlightStyle.define([
   { tag: t.color, class: "sat-syntax-atom" },
 ]);
 
-// ---------------------------------------------------------------------------
-// Public extension
-// ---------------------------------------------------------------------------
-
 /**
  * CodeMirror extension that provides dark-theme-optimised syntax
  * highlighting for code blocks.  Uses CSS class names (styled via
@@ -185,3 +172,6 @@ const codeSyntaxHighlighter = HighlightStyle.define([
 export function codeSyntaxHighlightingExtension(): Extension {
   return [CODE_HIGHLIGHT_THEME, syntaxHighlighting(codeSyntaxHighlighter)];
 }
+
+/** The token highlighter used by the editor, reused by the reading view. */
+export { codeSyntaxHighlighter };

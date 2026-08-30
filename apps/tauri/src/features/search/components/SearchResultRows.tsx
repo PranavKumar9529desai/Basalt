@@ -29,6 +29,7 @@ export const FileRow = memo(function FileRow({
   return (
     <div
       style={rowStyle(top)}
+      role="presentation"
       className="flex items-center gap-2 px-4 py-2 bg-[var(--sat-surface-2)] border-b border-[var(--sat-layout-border)]"
     >
       <IconFileText className="size-3.5 shrink-0 text-[var(--sat-text-muted)]" />
@@ -53,15 +54,22 @@ export const MatchRow = memo(function MatchRow({
   selected,
   top,
   onOpen,
+  optionId,
 }: {
   file: FileMatch;
   match: LineMatch;
   selected: boolean;
   top: number;
   onOpen: (path: string, line: number) => void;
+  optionId: string;
 }) {
   return (
     <Button
+      id={optionId}
+      // Virtualized rows cannot use native <option> elements.
+      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="option"
+      aria-selected={selected}
       style={rowStyle(top)}
       variant="ghost"
       tabIndex={-1}

@@ -1,6 +1,7 @@
 use basalt_types::MarkdownNode;
-// this is for the Single file obsidian edge case extraction
-// like the embed link and tags
+
+/// Parse inline text for Obsidian's single-file edge case: `[[links]]`,
+/// `![[embeds]]`, and `#tags` that can appear within a line.
 pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
     let mut nodes = Vec::new();
 

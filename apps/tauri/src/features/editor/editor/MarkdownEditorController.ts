@@ -151,6 +151,16 @@ export class MarkdownEditorController {
     return this.view;
   }
 
+  /** Return focus to the note body after the title submits. */
+  focusBody = (anchor = 0) => {
+    const view = this.view;
+    if (!view) return;
+    requestAnimationFrame(() => {
+      view.dispatch({ selection: { anchor } });
+      view.focus();
+    });
+  };
+
   /** Current active tab (normally passed by the component on changes). */
   setCurrentTab(tab: LeafTabInfo | null) {
     this.currentTab = tab;
@@ -190,6 +200,7 @@ export class MarkdownEditorController {
       view.scrollDOM.scrollTop = this.scrollRef.get(t.id) ?? 0;
       this.io.setSaveStatus(this.isDirty(t.id) ? "unsaved" : "saved");
       if (t.line) this.revealLine(t.line);
+      if (t.focusOnOpen) this.focusBody(view.state.selection.main.head);
       return;
     }
 

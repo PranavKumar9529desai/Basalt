@@ -23,13 +23,11 @@ export interface FileMatch {
   path: string;
   title: string;
   score: number;
-  /** Full file content (powers the syntax-highlighted preview pane). */
-  text: string;
   matches: LineMatch[];
 }
 /** Top-level result of `search_content`. */
 export interface SearchContentResult {
-  /** Total matching lines across the counted window of files. */
+  /** Total number of matching files in the index. */
   totalHits: number;
   /** Files returned for display, in relevance order. */
   files: FileMatch[];

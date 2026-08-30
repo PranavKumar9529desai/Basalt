@@ -2,10 +2,6 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 
-// ---------------------------------------------------------------------------
-// Widgets
-// ---------------------------------------------------------------------------
-
 export class CodeHeaderWidget extends WidgetType {
   constructor(
     private readonly lang: string,
@@ -137,10 +133,6 @@ export const CODE_BLOCKS_THEME = EditorView.baseTheme({
     borderBottomRightRadius: "6px",
   },
 });
-
-// ---------------------------------------------------------------------------
-// Node Handler (called during shared tree walk)
-// ---------------------------------------------------------------------------
 
 /**
  * Handles FencedCode and CodeBlock nodes:

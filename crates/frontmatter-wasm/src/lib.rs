@@ -1,4 +1,6 @@
-//! Minimal WASM bridge for the YAML frontmatter engine (ADR-022 rule 2/4).
+//! Minimal WASM bridge for the YAML frontmatter engine — the synchronous
+//! keystroke-path parser, so per-keystroke frontmatter parsing never blocks
+//! on a round trip to the main process.
 //!
 //! Exposes a C-ABI surface consumed by `frontmatter-wasm.ts` via
 //! vite-plugin-wasm `?init` (same path as `crates/graph-wasm`). Build with

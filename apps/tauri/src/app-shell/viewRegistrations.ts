@@ -16,7 +16,7 @@ const GraphView = lazy(() =>
 );
 
 /**
- * Boot-time view registrations (ADR-018).
+ * Boot-time view registrations.
  *
  * Explicit list — imported once by WorkspaceView for its side effects.
  * The set of live views is deterministic and greppable from this file.

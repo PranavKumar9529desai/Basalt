@@ -12,7 +12,8 @@ import {
   IconTag,
   type IconProps,
 } from "@tabler/icons-react";
-import { useEffect, useMemo, useRef, type ElementType } from "react";
+import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
+import { tokenizeCode, type CodeToken } from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
 
 interface ReadingViewProps {
@@ -214,6 +215,53 @@ function renderInlineNode(
   }
 }
 
+const codeTokenCache = new Map<string, CodeToken[]>();
+
+function HighlightedCode({ code, info }: { code: string; info?: string }) {
+  const [tokens, setTokens] = useState<CodeToken[] | null>(() => {
+    return codeTokenCache.get(`${info ?? ""}\u0000${code}`) ?? null;
+  });
+
+  useEffect(() => {
+    const key = `${info ?? ""}\u0000${code}`;
+    const cached = codeTokenCache.get(key);
+    if (cached) {
+      setTokens(cached);
+      return;
+    }
+    let cancelled = false;
+    void tokenizeCode(code, info).then((result) => {
+      if (cancelled) return;
+      codeTokenCache.set(key, result);
+      setTokens(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, info]);
+
+  let children: React.ReactNode = code;
+  if (tokens) {
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    for (const token of tokens) {
+      if (token.from > cursor) parts.push(code.slice(cursor, token.from));
+      if (token.to > token.from) {
+        parts.push(
+          <span key={`${token.from}-${token.to}`} className={token.classes}>
+            {code.slice(token.from, token.to)}
+          </span>,
+        );
+      }
+      cursor = token.to;
+    }
+    if (cursor < code.length) parts.push(code.slice(cursor));
+    children = parts;
+  }
+
+  return <code data-language={info}>{children}</code>;
+}
+
 function renderBlock(
   node: SyntaxNode,
   source: string,
@@ -266,14 +314,23 @@ function renderBlock(
     }
     return <blockquote key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`))}</blockquote>;
   }
-  if (node.name === "FencedCode") {
-    const info = childNodes(node).find((child) => child.name === "CodeInfo");
-    const code = childNodes(node).find((child) => child.name === "CodeText");
+  // Fenced (```/~~~) and indented (4-space) code blocks. A block may split
+  // into several `CodeText` children (nested in lists/quotes), so code runs
+  // from the first to the last of them — never just the first.
+  if (node.name === "FencedCode" || node.name === "CodeBlock") {
+    const codeTexts = childNodes(node).filter((child) => child.name === "CodeText");
+    const info =
+      node.name === "FencedCode"
+        ? childNodes(node).find((child) => child.name === "CodeInfo")
+        : undefined;
+    const from = codeTexts.length > 0 ? codeTexts[0].from : node.from;
+    const to = codeTexts.length > 0 ? codeTexts[codeTexts.length - 1].to : node.to;
     return (
       <pre key={key}>
-        <code data-language={info ? source.slice(info.from, info.to) : undefined}>
-          {code ? source.slice(code.from, code.to) : ""}
-        </code>
+        <HighlightedCode
+          code={source.slice(from, to)}
+          info={info ? source.slice(info.from, info.to) : undefined}
+        />
       </pre>
     );
   }
@@ -325,7 +382,7 @@ export function ReadingView({ markdown, sourcePath, title, services, initialScro
     <div ref={scrollRef} className="markdown-reading-view flex min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
       <article
         data-source-path={sourcePath}
-        className="markdown-reading-sizer mx-auto w-full max-w-[var(--sat-editor-readable-width,70ch)] px-6 py-10 text-[var(--sat-text-primary)]"
+        className="markdown-reading-sizer mx-auto w-full max-w-[var(--sat-editor-readable-width,70ch)] text-[var(--sat-text-primary)]"
       >
         <h1 className="markdown-reading-title">{title.replace(/\.md$/i, "")}</h1>
         {parsed.entries.length > 0 && (

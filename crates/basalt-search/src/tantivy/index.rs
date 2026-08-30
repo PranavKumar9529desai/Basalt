@@ -202,8 +202,9 @@ impl TantivyIndex {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            // Body is STORED in the index, so this is a cheap mmap read, not a
-            // `std::fs::read_to_string` over the vault.
+            // Body is stored in the index for snippet extraction, but is not
+            // sent with every result. The selected preview fetches its body
+            // on demand through the existing open_file command.
             let body = doc
                 .get_first(self.body_field)
                 .and_then(|v| v.as_str())
@@ -220,7 +221,6 @@ impl TantivyIndex {
                 path,
                 title,
                 score,
-                text: body,
                 matches,
             });
         }

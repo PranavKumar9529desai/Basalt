@@ -38,14 +38,15 @@ src/components/
 │   ├── separator.tsx
 │   ├── textarea.tsx
 │   └── tooltip.tsx
-├── activity-bar/        # Feature-group — one component per file
-├── command-palette/
+├── command-palette/     # Feature-group panels — each a folder with an index barrel
 ├── confirm-dialog/
 ├── file-tree/
+├── header-band/          # HeaderBandRule — the unified header band cut-through
 ├── input-dialog/
 ├── palette-shell/
-├── sidebar/
-└── tabs/
+├── ribbon/               # Ribbon + RibbonItem (far-left quick-access bar)
+├── sidebar/              # ResizeHandle, SidebarHeader, SidebarPanel
+└── tabs/                 # TabsBar, TabItem, TabListFrame, types, useTabChrome
 ```
 
 ### Convention: Folder vs Flat
@@ -56,6 +57,10 @@ src/components/
 | **File** (`component.tsx`)       | NOT used anymore — all components now use folders          |
 
 Every feature folder MUST have an `index.ts` barrel that re-exports the public API.
+
+> **Lexicon:** the far-left quick-access bar is the **Ribbon** (Obsidian
+> lexicon) — it was renamed from `ActivityBar`. See
+> `apps/tauri/src/app-shell/Ribbon.tsx` for the shell-side wiring.
 
 ## Usage
 

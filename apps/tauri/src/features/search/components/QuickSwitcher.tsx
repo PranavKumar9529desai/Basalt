@@ -14,10 +14,12 @@ function ResultRow({
   result,
   isSelected,
   onClick,
+  optionId,
 }: {
   result: FileResult;
   isSelected: boolean;
   onClick: () => void;
+  optionId: string;
 }) {
   const parts = result.path.split("/");
   const name = parts.pop() ?? result.path;
@@ -25,11 +27,16 @@ function ResultRow({
 
   return (
     <Button
+      id={optionId}
+      // Virtualized rows cannot use native <option> elements.
+      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="option"
+      aria-selected={isSelected}
       variant="ghost"
       tabIndex={-1}
       className={[
         "w-full justify-start gap-3 px-4 py-2 h-auto rounded-md",
-        isSelected ? "bg-accent" : "",
+        isSelected ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]" : "",
       ].join(" ")}
       onClick={onClick}
     >
@@ -59,10 +66,13 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     switcherSelectedIndex,
     switcherSelectNext,
     switcherSelectPrev,
+    isSwitcherLoading,
+    switcherError,
   } = useSearchStore();
 
   const parentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const rowVirtualizer = useVirtualizer({
     count: switcherResults.length,
@@ -76,9 +86,12 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
   // Focus input when modal opens.
   useEffect(() => {
     if (isSwitcherOpen) {
-      setTimeout(() => inputRef.current?.focus(), 0);
+      const timer = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(timer);
     }
   }, [isSwitcherOpen]);
+
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   // Keep the selected row visible without stealing focus from the input.
   useEffect(() => {
@@ -89,7 +102,8 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const q = e.target.value;
       setSwitcherQuery(q);
-      void runSwitcher(q);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => void runSwitcher(q), 180);
     },
     [setSwitcherQuery, runSwitcher],
   );
@@ -139,13 +153,34 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Open file…"
+        isLoading={isSwitcherLoading}
+        inputProps={{
+          // The palette input owns focus while the virtualized list owns the selection.
+          role: "combobox",
+          "aria-expanded": switcherResults.length > 0,
+          "aria-controls": "quick-switcher-results",
+          "aria-activedescendant": switcherResults[switcherSelectedIndex]
+            ? `quick-switcher-${switcherSelectedIndex}`
+            : undefined,
+          "aria-autocomplete": "list",
+        }}
       />
 
-      <div ref={parentRef} className="max-h-[320px] overflow-y-auto px-2">
-        {switcherResults.length === 0 && switcherQuery ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            No files found
-          </p>
+      <div
+        ref={parentRef}
+        id="quick-switcher-results"
+        // Virtualized result rows require an ARIA listbox container rather than native select.
+        // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+        role="listbox"
+        aria-label="Files"
+        className="max-h-[320px] overflow-y-auto px-2"
+      >
+        {switcherError ? (
+          <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">{switcherError}</p>
+        ) : switcherResults.length === 0 && switcherQuery && !isSwitcherLoading ? (
+          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">No files found</p>
+        ) : isSwitcherLoading && switcherResults.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">Searching…</p>
         ) : (
           <div
             style={{
@@ -169,6 +204,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
                   <ResultRow
                     result={r}
                     isSelected={vItem.index === switcherSelectedIndex}
+                    optionId={`quick-switcher-${vItem.index}`}
                     onClick={() => {
                       onOpen(r.path);
                       closeSwitcher();

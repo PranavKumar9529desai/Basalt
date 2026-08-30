@@ -104,7 +104,6 @@ export const TabItem = memo(function TabItem({
               />
             )}
 
-            {/* ── Content ── */}
             <div
               data-disabled={tab.disabled ? "true" : undefined}
               className={cn(

@@ -54,8 +54,15 @@ describe("PreviewPane.cachedPreviewState", () => {
   it("reuses the same parsed state for identical content", () => {
     const text = "# hello\n\nsome body\n";
     const a = cachedPreviewState(text, "a.md");
-    const b = cachedPreviewState(text, "b.md");
+    const b = cachedPreviewState(text, "a.md");
     expect(a).toBe(b); // same EditorState object => no re-parse
+  });
+
+  it("does not reuse syntax state across different file paths", () => {
+    const text = "same content";
+    const markdown = cachedPreviewState(text, "note.md");
+    const otherNote = cachedPreviewState(text, "other.md");
+    expect(markdown).not.toBe(otherNote);
   });
 
   it("parses a new state when content changes", () => {

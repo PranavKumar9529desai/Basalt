@@ -98,6 +98,11 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], line: note.line } },
         }));
       }
+      if (note.focusOnOpen) {
+        set((s) => ({
+          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], focusOnOpen: true } },
+        }));
+      }
       if (note.renameOnOpen) {
         set((s) => ({
           tabs: {
@@ -139,6 +144,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       createdAt: timestamp,
       lastAccessedAt: timestamp,
       line: note.line,
+      focusOnOpen: note.focusOnOpen,
       renameOnOpen: note.renameOnOpen,
     };
 
@@ -170,6 +176,11 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       }
     }
     if (existingTab) {
+      if (note.focusOnOpen) {
+        set((s) => ({
+          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], focusOnOpen: true } },
+        }));
+      }
       if (note.renameOnOpen) {
         set((s) => ({
           tabs: {
@@ -200,6 +211,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       createdAt: timestamp,
       lastAccessedAt: timestamp,
       line: note.line,
+      focusOnOpen: note.focusOnOpen,
       renameOnOpen: note.renameOnOpen,
     };
 

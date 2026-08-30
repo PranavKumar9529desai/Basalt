@@ -142,6 +142,39 @@ export class FrontmatterWidget extends WidgetType {
     }
     root.appendChild(rows);
     root.appendChild(this.renderAddRow());
+
+    // Keep property navigation inside the widget. Native Tab/Shift+Tab still
+    // follows DOM order, while arrows provide the same row-to-row movement as
+    // Obsidian without taking control away from text inputs.
+    root.addEventListener("keydown", (event) => {
+      const e = event as KeyboardEvent;
+      const target = e.target as HTMLElement | null;
+      if (!target?.matches(".cm-fm-key, .cm-fm-value")) return;
+      if (e.key === "Escape") {
+        target.blur();
+        e.preventDefault();
+        return;
+      }
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      const fields = Array.from(
+        root.querySelectorAll<HTMLElement>(".cm-fm-key, .cm-fm-value"),
+      );
+      const index = fields.indexOf(target);
+      const next = fields[index + (e.key === "ArrowDown" ? 1 : -1)];
+      if (next) {
+        next.focus();
+        next.scrollIntoView({ block: "nearest" });
+        e.preventDefault();
+      } else if (e.key === "ArrowUp" && index === 0) {
+        const title = root
+          .closest(".cm-scroller")
+          ?.querySelector<HTMLElement>("[data-basalt-inline-title]");
+        if (title) {
+          title.focus();
+          e.preventDefault();
+        }
+      }
+    });
     return root;
   }
 
@@ -204,9 +237,11 @@ export class FrontmatterWidget extends WidgetType {
       }
     }
     const input = document.createElement("input");
-    input.type = "text";
+    const date = typeof v !== "string" && variantValue<string>(v, "Date") !== undefined;
+    const dateTime = typeof v !== "string" && variantValue<string>(v, "DateTime") !== undefined;
+    input.type = date ? "date" : dateTime ? "datetime-local" : "text";
     input.className = "cm-fm-value";
-    input.value = displayValue(v);
+    input.value = dateTime ? displayValue(v).slice(0, 16) : displayValue(v);
     if (typeof v === "string") {
       input.classList.add("cm-fm-empty");
       input.placeholder = "Empty";
@@ -246,26 +281,38 @@ export class FrontmatterWidget extends WidgetType {
 
     // Vault autocomplete for Obsidian's tag/alias fields.
     if (key === "tags" || key === "aliases") {
-      const dl = document.createElement("datalist");
-      const dlId = `cm-fm-dl-${key}`;
-      dl.id = dlId;
-      add.setAttribute("list", dlId);
+      add.setAttribute("role", "combobox");
+      add.setAttribute("aria-autocomplete", "list");
+      const suggestions = document.createElement("div");
+      suggestions.className = "cm-fm-suggestions";
+      suggestions.hidden = true;
       const populate = async () => {
-        const tags = key === "tags" ? await this.fetch.onFetchTags?.(add.value) : undefined;
+        const prefix = add.value.trim().replace(/^#/, "");
+        const tags = key === "tags" ? await this.fetch.onFetchTags?.(prefix) : undefined;
         const links = key === "aliases" ? await this.fetch.onFetchLinks?.(add.value) : undefined;
         const opts: string[] = key === "tags" ? (tags ?? []) : (links ?? []).map((l) => l.name);
         const present = new Set(items.map(displayValue));
-        dl.replaceChildren(
+        suggestions.replaceChildren(
           ...opts.filter((o) => !present.has(o)).map((o) => {
-            const op = document.createElement("option");
-            op.value = o;
-            return op;
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "cm-fm-suggestion";
+            option.textContent = o;
+            option.addEventListener("mousedown", (event) => event.preventDefault());
+            option.addEventListener("click", () => {
+              add.value = o;
+              add.focus();
+              suggestions.hidden = true;
+            });
+            return option;
           }),
         );
+        suggestions.hidden = suggestions.childElementCount === 0;
       };
       add.addEventListener("focus", populate);
       add.addEventListener("input", populate);
-      wrap.appendChild(dl);
+      add.addEventListener("blur", () => window.setTimeout(() => { suggestions.hidden = true; }, 120));
+      wrap.appendChild(suggestions);
     }
 
     add.addEventListener("keydown", (e) => {

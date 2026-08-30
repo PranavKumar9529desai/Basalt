@@ -7,6 +7,8 @@ export interface OpenableTabInput {
   title?: string;
   /** Optional 1-based line to reveal when the tab opens (search jump-to-line). */
   line?: number;
+  /** Transient: focus the note body once when the tab opens. */
+  focusOnOpen?: boolean;
   /**
    * Transient: enter the leaf's "rename on open" flow once (select-all title
    * editing) on first show. Mirrors `line` — never persisted.
@@ -18,7 +20,7 @@ export interface TabModel {
   id: TabId;
   path: string;
   title: string;
-  /** Registered leaf type that renders this tab's content (ADR-018). */
+  /** Registered leaf type that renders this tab's content. */
   leafType: string;
   /** Presentation mode for Markdown leaves; ignored by non-Markdown leaves. */
   viewMode?: NoteViewMode;
@@ -29,6 +31,8 @@ export interface TabModel {
   lastAccessedAt: number;
   /** Transient: line to reveal once on open. Not persisted. */
   line?: number;
+  /** Transient: focus the note body once when the tab opens. Not persisted. */
+  focusOnOpen?: boolean;
   /** Transient: rename title once on first show. Not persisted. */
   renameOnOpen?: boolean;
 }

@@ -80,6 +80,26 @@ describe("InlineTitle", () => {
     expect(await screen.findByRole("button")).toHaveTextContent("Renamed");
   });
 
+  it("notifies the leaf after an explicit Enter commit", async () => {
+    const onSubmit = vi.fn();
+    const services = makeServices();
+    render(
+      <InlineTitle
+        tab={tab}
+        services={services}
+        onSubmit={onSubmit}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "Renamed" },
+    });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+
+    expect(await screen.findByRole("button")).toBeDefined();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
   it("shows the backend error inline, stays in edit mode, and accepts a fix", async () => {
     const renameNote = vi
       .fn()

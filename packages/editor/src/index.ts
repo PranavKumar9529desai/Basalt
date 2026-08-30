@@ -52,3 +52,5 @@ export {
 } from "./block-widgets/frontmatter";
 
 export { attachScrollHeader } from "./scroll-header";
+export type { CodeToken } from "./syntax/code-highlighting";
+export { tokenizeCode } from "./syntax/code-highlighting";

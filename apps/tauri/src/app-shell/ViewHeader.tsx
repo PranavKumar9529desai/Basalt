@@ -1,5 +1,4 @@
 import {
-  IconCode,
   IconCopy,
   IconChevronLeft,
   IconChevronRight,
@@ -11,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { commandService } from "@workspace/commands";
 import { Button } from "@workspace/ui/components/ui/button";
+import { BookOpenIcon, PenLineIcon } from "@workspace/ui/components/icons";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -129,14 +129,13 @@ export function ViewHeader({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="icon-xs"
           aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
           title={viewMode === "reading" ? "Edit note (Ctrl/Cmd+E)" : "Reading view (Ctrl/Cmd+E)"}
           onClick={handleModeClick}
-          className="gap-1.5 px-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+          className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
-          {viewMode === "reading" ? <IconPencil size={14} /> : <IconCode size={14} />}
-          <span>{viewMode === "reading" ? "Reading" : "Editing"}</span>
+          {viewMode === "reading" ? <PenLineIcon size={14} /> : <BookOpenIcon size={14} />}
         </Button>
 
         <ContextMenu open={open} onOpenChange={setOpen}>

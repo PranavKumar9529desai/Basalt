@@ -44,6 +44,7 @@ export interface PaletteShellInputProps {
   placeholder?: string;
   isLoading?: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
 }
 
 export function PaletteShellInput({
@@ -53,6 +54,7 @@ export function PaletteShellInput({
   placeholder = "Search…",
   isLoading = false,
   inputRef,
+  inputProps,
 }: PaletteShellInputProps) {
   return (
     <div className="flex items-center gap-2 px-4 py-3">
@@ -62,6 +64,7 @@ export function PaletteShellInput({
         onChange={onChange}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
+        {...inputProps}
         className="border-0 shadow-none focus-visible:ring-0 h-auto py-0 bg-transparent"
       />
       {isLoading && (

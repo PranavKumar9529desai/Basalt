@@ -1,5 +1,5 @@
-// Real vault note-link graph rendered as a full workbench leaf (ADR-018).
-// Feeds `get_graph` to the wasm force graph (GraphWorker), then draws on a WebGL2
+// The real vault note-link graph, rendered as a full workbench leaf. Feeds
+// `get_graph` to the wasm force graph (GraphWorker), then draws on a WebGL2
 // canvas (packages/graph) with Obsidian-style interactions + controls:
 // hover-highlight, click-to-open, right-click context menu, wheel zoom,
 // drag-pan, node drag, filter bar (tag:/path:/ operators), color groups (by
@@ -9,8 +9,10 @@
 // GL canvas stays pure geometry (ADR-021: WebGL2, never Canvas2D).
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useLeafServices, type LeafProps } from "@workspace/views";
 import { GraphRenderer } from "@workspace/graph";
+import { Button } from "@workspace/ui/components/ui/button";
 import { SpatialGrid } from "../spatialGrid";
 import { computeNodeSize } from "../nodeScale";
 import { GraphControls, type GraphColorMode } from "./GraphControls";
@@ -175,7 +177,19 @@ const noteExcerpt = (md: string): string => {
     ? cleaned.slice(0, EXCERPT_MAX).replace(/\s+\S*$/, "") + "…"
     : cleaned;
 };
-export function GraphView(_props: LeafProps) {
+interface PersistedGraphState {
+  query: string;
+  local: boolean;
+  localDepth: number;
+  localRoot: string | null;
+  showOrphans: boolean;
+  showAttach: boolean;
+  colorMode: GraphColorMode;
+  controlsOpen: boolean;
+  camera?: { scale: number; ox: number; oy: number };
+}
+
+export function GraphView({ tab }: LeafProps) {
   const services = useLeafServices();
   const activeNotePath = services.activeNote?.path ?? null;
 
@@ -209,6 +223,7 @@ export function GraphView(_props: LeafProps) {
   // Active (visible) subset, recomputed by `rebuild`.
   const activeMapRef = useRef<number[]>([]); // subset idx -> full idx
   const activeEdgesRef = useRef<Uint32Array>(new Uint32Array(0));
+  const activeEdgeWeightsRef = useRef<Float32Array>(new Float32Array(0));
   const activeAdjRef = useRef<number[][]>([]);
 
   const frameRef = useRef<GraphFrame | null>(null);
@@ -220,6 +235,7 @@ export function GraphView(_props: LeafProps) {
   const rebuildRef = useRef<() => void>(() => {});
   const recolorRef = useRef<() => void>(() => {});
   const centerOnRef = useRef<(full: number) => void>(() => {});
+  const fitRef = useRef<() => void>(() => {});
   // Per-subset hover flag buffer for the renderer (written on hover, uploaded when dirty).
   const flagsRef = useRef<Float32Array>(new Float32Array(0));
   const flagsDirtyRef = useRef(false);
@@ -251,6 +267,7 @@ export function GraphView(_props: LeafProps) {
   const [localDepth, setLocalDepth] = useState(2);
   const [localRoot, setLocalRoot] = useState<string | null>(null);
   const [colorMode, setColorMode] = useState<GraphColorMode>("single");
+  const [controlsOpen, setControlsOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<{
@@ -261,13 +278,14 @@ export function GraphView(_props: LeafProps) {
     isTag: boolean;
   } | null>(null);
   const [preview, setPreview] = useState<{ excerpt: string } | null>(null);
+  const [stateReady, setStateReady] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const excerptCacheRef = useRef<Map<string, string>>(new Map());
   const hoverFetchRef = useRef(0);
   const hoverFullRef = useRef(-1);
   const [menu, setMenu] = useState<{ x: number; y: number; full: number; isTag: boolean } | null>(
     null,
   );
-  // Keep the mirrors in sync with the rendered state.
   queryRef.current = query;
   colorModeRef.current = colorMode;
   activeNotePathRef.current = activeNotePath;
@@ -287,6 +305,54 @@ export function GraphView(_props: LeafProps) {
     ro.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void invoke<Record<string, unknown>>("get_workspace")
+      .then((workspace) => {
+        if (cancelled) return;
+        const saved = workspace[`graphState:${tab.path}`] as PersistedGraphState | undefined;
+        if (saved) {
+          setQuery(saved.query ?? "");
+          setLocal(Boolean(saved.local));
+          setLocalDepth(Math.max(1, Math.min(5, saved.localDepth ?? 2)));
+          setLocalRoot(saved.localRoot ?? null);
+          setShowOrphans(saved.showOrphans ?? true);
+          setShowAttach(saved.showAttach ?? true);
+          setColorMode(saved.colorMode ?? "single");
+          setControlsOpen(saved.controlsOpen ?? true);
+          if (saved.camera) viewRef.current = { ...saved.camera, fitted: true };
+        }
+        setStateReady(true);
+      })
+      .catch(() => setStateReady(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [tab.path]);
+
+  useEffect(() => {
+    if (!stateReady) return;
+    const state: PersistedGraphState = {
+      query,
+      local,
+      localDepth,
+      localRoot,
+      showOrphans,
+      showAttach,
+      colorMode,
+      controlsOpen,
+      camera: {
+        scale: viewRef.current.scale,
+        ox: viewRef.current.ox,
+        oy: viewRef.current.oy,
+      },
+    };
+    const timer = window.setTimeout(() => {
+      void invoke("set_workspace_key", { key: `graphState:${tab.path}`, value: state });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [stateReady, tab.path, query, local, localDepth, localRoot, showOrphans, showAttach, colorMode, controlsOpen]);
   const colorFor = (full: number): [number, number, number] => {
     const tc = themeColorsRef.current;
     const mode = colorModeRef.current;
@@ -398,10 +464,12 @@ export function GraphView(_props: LeafProps) {
       dirtyRef.current = true;
     };
 
-    (async () => {
+    const loadSnapshot = async () => {
       try {
         const g = await invoke<GraphSnapshot>("get_graph");
-        if (g.node_count === 0) throw new Error("empty vault");
+        if (g.node_count === 0) {
+          throw new Error("No notes are available to graph");
+        }
         pathsRef.current = g.nodes.map((n) => n.path);
         tagsRef.current = g.nodes.map((n) => n.tags);
         attachRef.current = g.nodes.map((n) => n.is_attachment);
@@ -434,23 +502,37 @@ export function GraphView(_props: LeafProps) {
         console.log(
           `[graph] real vault graph: ${g.node_count} nodes, ${g.edges.length / 2} edges`,
         );
+        setError(null);
       } catch (err) {
         console.error("[graph] get_graph failed:", err);
-        syntheticRef.current = true;
-        const n = 2000;
-        pathsRef.current = Array.from({ length: n }, (_, i) => `Note ${i}`);
-        tagsRef.current = Array.from({ length: n }, () => []);
-        attachRef.current = Array.from({ length: n }, () => false);
+        syntheticRef.current = false;
+        pathsRef.current = [];
+        tagsRef.current = [];
+        attachRef.current = [];
         edgesRef.current = new Uint32Array(0);
         edgeWeightsRef.current = new Float32Array(0);
-        adjRef.current = Array.from({ length: n }, () => []);
-        scaleInputsRef.current = new Float32Array(n);
-        isTagRef.current = Array.from({ length: n }, () => false);
-        worker.postMessage({ action: "start", n, degree: 3 });
-        console.log("[graph] no vault graph — synthetic fallback");
+        adjRef.current = [];
+        scaleInputsRef.current = new Float32Array(0);
+        isTagRef.current = [];
+        activeMapRef.current = [];
+        activeEdgesRef.current = new Uint32Array(0);
+        activeEdgeWeightsRef.current = new Float32Array(0);
+        activeAdjRef.current = [];
+        frameRef.current = null;
+        setError(err instanceof Error ? err.message : String(err));
       }
       setLoaded(true);
-    })();
+    };
+
+    void loadSnapshot();
+    let refreshTimer = 0;
+    const unlisten = listen("vault://file-changed", () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        setLoaded(false);
+        void loadSnapshot().then(() => rebuildRef.current());
+      }, 150);
+    });
 
     // Build the visible (filtered / local / display-gated) subset and (re)seed
     // the worker graph with it.
@@ -512,8 +594,9 @@ export function GraphView(_props: LeafProps) {
             const dist = new Map<number, number>();
             const q = [root];
             dist.set(root, 0);
-            while (q.length) {
-              const u = q.shift()!;
+            let head = 0;
+            while (head < q.length) {
+              const u = q[head++]!;
               const d = dist.get(u)!;
               if (d >= depth) continue;
               for (const v of adj[u]) {
@@ -537,7 +620,7 @@ export function GraphView(_props: LeafProps) {
         map.push(full);
       });
 
-      // Per-node diameter from sizing importance (degree now; tag count in Phase 2).
+      // Per-node diameter from sizing importance (link degree; tag nodes use note count).
       const subSizes = new Float32Array(map.length);
       const imp = scaleInputsRef.current;
       for (let sub = 0; sub < map.length; sub++) {
@@ -556,7 +639,7 @@ export function GraphView(_props: LeafProps) {
           subEdgeWeights.push(fullW[e >> 1] ?? 1);
         }
       }
-      const subAdj: number[][] = map.map(() => []);
+        const subAdj: number[][] = map.map(() => []);
       for (let e = 0; e < subEdges.length; e += 2) {
         subAdj[subEdges[e]].push(subEdges[e + 1]);
         subAdj[subEdges[e + 1]].push(subEdges[e]);
@@ -564,10 +647,14 @@ export function GraphView(_props: LeafProps) {
 
       activeMapRef.current = map;
       activeEdgesRef.current = Uint32Array.from(subEdges);
+      activeEdgeWeightsRef.current = Float32Array.from(subEdgeWeights);
       edgeFlagsRef.current = new Float32Array(subEdges.length / 2);
       edgeFlagsDirtyRef.current = true;
       activeAdjRef.current = subAdj;
-      viewRef.current.fitted = false;
+      // Keep the current camera when narrowing the graph. The initial graph
+      // still auto-fits because `fitted` starts false; users can explicitly
+      // reframe any subset with the Fit graph action.
+      viewRef.current.fitted = viewRef.current.fitted && map.length > 0;
 
       // Rebuild renderer color + reset hover flags for the new subset.
       const cols = new Float32Array(map.length * 3);
@@ -599,7 +686,6 @@ export function GraphView(_props: LeafProps) {
     };
     rebuildRef.current = rebuild;
 
-    // ---- transform + hit-test helpers ----
     const toScreen = (wx: number, wy: number): [number, number] => {
       const v = viewRef.current;
       return [wx * v.scale + v.ox, wy * v.scale + v.oy];
@@ -638,12 +724,14 @@ export function GraphView(_props: LeafProps) {
       v.fitted = true;
       dirtyRef.current = true;
     };
+    fitRef.current = fit;
     // Fly the camera to a node (snap): center it and zoom to a readable scale.
     const centerOn = (full: number) => {
       const f = frameRef.current;
-      if (!f || full * 2 + 1 >= f.positions.length) return;
-      const x = f.positions[full * 2];
-      const y = f.positions[full * 2 + 1];
+      const sub = activeMapRef.current.indexOf(full);
+      if (!f || sub < 0 || sub * 2 + 1 >= f.positions.length) return;
+      const x = f.positions[sub * 2];
+      const y = f.positions[sub * 2 + 1];
       const w = glCanvas.clientWidth || 800;
       const h = glCanvas.clientHeight || 600;
       const v = viewRef.current;
@@ -660,7 +748,6 @@ export function GraphView(_props: LeafProps) {
       return gridRef.current.query(sx, sy, 8, sizesRef.current, viewRef.current.scale);
     };
 
-    // ---- pointer handlers ----
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = glCanvas.getBoundingClientRect();
@@ -851,7 +938,6 @@ export function GraphView(_props: LeafProps) {
     glCanvas.addEventListener("mouseleave", onLeave);
     glCanvas.addEventListener("contextmenu", onContext);
 
-    // ---- draw loop ----
     let raf = 0;
     const draw = () => {
       const f = frameRef.current;
@@ -864,8 +950,23 @@ export function GraphView(_props: LeafProps) {
         const p = f.positions;
         if (!viewRef.current.fitted) fit();
         const v = viewRef.current;
-        const renderer = rendererRef.current;
+        let renderer = rendererRef.current;
         if (renderer) {
+          if (renderer.needsResourceRebuild()) {
+            renderer.dispose();
+            renderer = new GraphRenderer(glCanvas);
+            rendererRef.current = renderer;
+            const tc = themeColorsRef.current;
+            renderer.setEdgeColor(tc.edge);
+            renderer.setHoverColors(tc.hoverFill, tc.hoverRing);
+            renderer.resize(glCanvas.clientWidth || 800, glCanvas.clientHeight || 600, window.devicePixelRatio || 1);
+            renderer.setSizes(sizesRef.current);
+            renderer.setColors(new Float32Array(activeMapRef.current.flatMap((full) => colorFor(full))));
+            renderer.setEdges(activeEdgesRef.current, activeEdgesRef.current.length / 2);
+            renderer.setEdgeWeights(activeEdgeWeightsRef.current);
+            renderer.setFlags(flagsRef.current);
+            renderer.setEdgeFlags(edgeFlagsRef.current);
+          }
           renderer.setPositions(p);
           renderer.setView({ scale: v.scale, ox: v.ox, oy: v.oy });
           if (flagsDirtyRef.current) {
@@ -936,7 +1037,9 @@ export function GraphView(_props: LeafProps) {
       ro.disconnect();
       cancelAnimationFrame(raf);
       worker.terminate();
-      renderer.dispose();
+      rendererRef.current?.dispose();
+      void unlisten.then((dispose) => dispose());
+      window.clearTimeout(refreshTimer);
       glCanvas.removeEventListener("wheel", onWheel);
       glCanvas.removeEventListener("mousedown", onDown);
       window.removeEventListener("mousemove", onMove);
@@ -944,7 +1047,7 @@ export function GraphView(_props: LeafProps) {
       glCanvas.removeEventListener("mouseleave", onLeave);
       glCanvas.removeEventListener("contextmenu", onContext);
     };
-  }, []);
+  }, [reloadNonce]);
 
   // Rebuild the visible subset whenever a control changes (debounced).
   // activeNotePath feeds the local-graph root, so it must rebuild in local
@@ -998,10 +1101,16 @@ export function GraphView(_props: LeafProps) {
 
   return (
     <div
-      ref={wrapRef}
-      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", backgroundColor: "var(--sat-graph-background, var(--sat-editor-background, #0f172a))" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        backgroundColor: "var(--sat-graph-background)",
+      }}
     >
-      <GraphControls
+      {controlsOpen && <GraphControls
         colorMode={colorMode}
         onColorModeChange={setColorMode}
         query={query}
@@ -1011,11 +1120,36 @@ export function GraphView(_props: LeafProps) {
         localDepth={localDepth}
         onLocalDepthChange={setLocalDepth}
         onCenter={centerActive}
+        onFit={() => {
+          viewRef.current.fitted = false;
+          dirtyRef.current = true;
+        }}
         showOrphans={showOrphans}
         onToggleOrphans={() => setShowOrphans((o) => !o)}
         showAttach={showAttach}
         onToggleAttach={() => setShowAttach((a) => !a)}
-      />
+        onClose={() => setControlsOpen(false)}
+      />}
+      <div
+        ref={wrapRef}
+        style={{
+          position: "relative",
+          flex: "1 1 auto",
+          minHeight: 0,
+          overflow: "hidden",
+          backgroundColor: "var(--sat-graph-background)",
+        }}
+      >
+      {!controlsOpen && (
+        <Button
+          variant="outline"
+          size="sm"
+          style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
+          onClick={() => setControlsOpen(true)}
+        >
+          Graph settings
+        </Button>
+      )}
       {error && (
         <div
           style={{
@@ -1037,6 +1171,18 @@ export function GraphView(_props: LeafProps) {
               Graph failed to load
             </div>
             <div style={{ opacity: 0.75 }}>{error}</div>
+            <Button
+              variant="outline"
+              size="sm"
+              style={{ marginTop: 12 }}
+              onClick={() => {
+                setError(null);
+                setLoaded(false);
+                setReloadNonce((value) => value + 1);
+              }}
+            >
+              Retry
+            </Button>
           </div>
         </div>
       )}
@@ -1113,6 +1259,7 @@ export function GraphView(_props: LeafProps) {
           setMenu(null);
         }}
       />
+      </div>
     </div>
   );
 }

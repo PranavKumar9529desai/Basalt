@@ -14,10 +14,10 @@ import {
   type BlockWidgetSpec,
 } from "./registry";
 
-// ---------------------------------------------------------------------------
-// Dependency facets — supplied by the feature layer via EditorConfig
-// (ADR-022 rule 2: packages/editor imports no WASM/IPC/Tauri).
-// ---------------------------------------------------------------------------
+/**
+ * Dependency facets injected by the feature layer via `EditorConfig`, so
+ * `packages/editor` never imports WASM/IPC/Tauri.
+ */
 
 /** Injected synchronous frontmatter parser (WASM-backed). */
 export const frontmatterParserFacet = Facet.define<
@@ -48,10 +48,7 @@ export const frontmatterDimMode: Extension = blockWidgetModeFacet.of([
   { id: "frontmatter", mode: "dim" },
 ]);
 
-// ---------------------------------------------------------------------------
-// The widget theme (the interactive Properties panel). `--sat-*` only (ADR-002).
-// ---------------------------------------------------------------------------
-
+/** The interactive Properties panel; uses `--sat-*` tokens only. */
 export const FRONTMATTER_WIDGET_THEME = EditorView.baseTheme({
   ".cm-frontmatter-properties": {
     backgroundColor: "transparent",
@@ -153,6 +150,38 @@ export const FRONTMATTER_WIDGET_THEME = EditorView.baseTheme({
     alignItems: "center",
     gap: "var(--sat-spacing-xs, 4px)",
     flex: "1 1 auto",
+    position: "relative",
+  },
+  ".cm-fm-suggestions": {
+    position: "absolute",
+    zIndex: "5",
+    left: "0",
+    top: "calc(100% + 2px)",
+    display: "flex",
+    flexDirection: "column",
+    minWidth: "160px",
+    maxHeight: "180px",
+    overflowY: "auto",
+    padding: "4px",
+    background: "var(--sat-editor-popover-bg, var(--sat-surface-2))",
+    border: "1px solid var(--sat-editor-popover-border, var(--sat-layout-border))",
+    borderRadius: "var(--sat-layout-radius-sm, 4px)",
+    boxShadow: "var(--sat-layout-shadow-md)",
+  },
+  ".cm-fm-suggestions[hidden]": { display: "none" },
+  ".cm-fm-suggestion": {
+    textAlign: "left",
+    background: "transparent",
+    border: "none",
+    color: "var(--sat-editor-popover-text, var(--sat-text-primary))",
+    font: "inherit",
+    padding: "4px 6px",
+    borderRadius: "var(--sat-layout-radius-sm, 4px)",
+    cursor: "pointer",
+  },
+  ".cm-fm-suggestion:hover, .cm-fm-suggestion:focus-visible": {
+    background: "var(--sat-editor-popover-active-bg, var(--sat-surface-3))",
+    outline: "none",
   },
   ".cm-fm-chip": {
     display: "inline-flex",
@@ -204,11 +233,6 @@ export const FRONTMATTER_WIDGET_THEME = EditorView.baseTheme({
     boxShadow: "0 1px 0 0 var(--sat-state-warning, #f59e0b)",
   },
 });
-
-// ---------------------------------------------------------------------------
-// The frontmatter block-widget spec. The single registration that gives the
-// editor inline Properties; new widget types follow this same shape.
-// ---------------------------------------------------------------------------
 
 const spanFor = (
   model: FrontmatterModel,

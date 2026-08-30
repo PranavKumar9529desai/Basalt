@@ -23,6 +23,7 @@ export function InlineTitle({
   services,
   autoEdit,
   renameEpoch,
+  onSubmit,
 }: {
   tab: LeafTabInfo;
   services: LeafServices;
@@ -34,6 +35,8 @@ export function InlineTitle({
    * mount-time baseline means switching tabs never re-enters edit mode.
    */
   renameEpoch?: number;
+  /** Called after an explicit title submit succeeds. */
+  onSubmit?: () => void;
 }) {
   const [mode, setMode] = useState<"display" | "edit">("display");
   const [value, setValue] = useState("");
@@ -123,7 +126,7 @@ export function InlineTitle({
     setError(null);
   };
 
-  const commit = async () => {
+  const commit = async (submit = false) => {
     // Synchronous guard: Enter-then-blur in the same tick would otherwise
     // double-commit while the async rename is in flight.
     if (pendingRef.current) return;
@@ -135,6 +138,7 @@ export function InlineTitle({
     }
     if (next === sourceStemRef.current) {
       exitEdit();
+      if (submit) onSubmit?.();
       return;
     }
     pendingRef.current = true;
@@ -148,6 +152,7 @@ export function InlineTitle({
     if (result.ok) {
       sourceStemRef.current = next;
       exitEdit();
+      if (submit) onSubmit?.();
     } else {
       setError(result.error);
       inputRef.current?.select();
@@ -157,10 +162,29 @@ export function InlineTitle({
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      void commit();
+      void commit(true);
     } else if (e.key === "Escape") {
       cancelledRef.current = true;
       exitEdit();
+    } else if (e.key === "ArrowDown") {
+      const property = inputRef.current
+        ?.closest(".cm-scroller")
+        ?.querySelector<HTMLElement>(".cm-fm-key");
+      if (property) {
+        e.preventDefault();
+        property.focus();
+      }
+    }
+  };
+
+  const focusFirstProperty = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== "ArrowDown") return;
+    const property = e.currentTarget
+      .closest(".cm-scroller")
+      ?.querySelector<HTMLElement>(".cm-fm-key");
+    if (property) {
+      e.preventDefault();
+      property.focus();
     }
   };
 
@@ -182,7 +206,9 @@ export function InlineTitle({
         type="button"
         className="block w-full cursor-text select-text border-none bg-transparent p-0 text-left"
         onClick={() => startEdit(liveStem)}
+        onKeyDown={focusFirstProperty}
         onMouseDown={(e) => e.stopPropagation()}
+        data-basalt-inline-title="true"
         title="Click to rename"
       >
         {liveStem}
@@ -202,6 +228,7 @@ export function InlineTitle({
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         onMouseDown={(e) => e.stopPropagation()}
+        data-basalt-inline-title="true"
         disabled={pending}
         spellCheck={false}
         aria-label="Note title"

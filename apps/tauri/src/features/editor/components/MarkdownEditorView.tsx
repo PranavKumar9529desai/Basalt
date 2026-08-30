@@ -89,9 +89,10 @@ export function MarkdownEditorView({ tab }: LeafProps) {
         services={services}
         autoEdit={autoEdit}
         renameEpoch={renameEpoch}
+        onSubmit={controller.focusBody}
       />,
     );
-  }, [tab, services, renameEpoch]);
+  }, [tab, services, renameEpoch, controller]);
 
   useEffect(() => {
     if (!view) return;

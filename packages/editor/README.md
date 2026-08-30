@@ -74,7 +74,15 @@ src/
 │   └── index.ts
 ├── styling/             # CodeMirror editor visual theme (NOT SAT tokens)
 │   ├── base.ts          # EditorView.theme() + HighlightStyle
+│   ├── highlight-override.ts
 │   └── index.ts
+├── block-widgets/       # Decoration/block widget collection
+│   ├── frontmatter.ts   # YAML frontmatter widget
+│   └── registry.ts
+├── syntax/code-highlight-style.ts  # Per-language code highlight overrides
+├── frontmatter-widget.ts / frontmatter-icons.ts
+├── scroll-header.ts     # Adapter that slots a React title into .cm-scroller (ADR-023)
+├── benchmark.ts         # runTypingBenchmark() — editor perf harness
 ├── editor.ts            # createEditorExtensions() — the main factory
 ├── types.ts             # EditorConfig, FetchLinksFn, FetchTagsFn
 └── index.ts             # Public API barrel

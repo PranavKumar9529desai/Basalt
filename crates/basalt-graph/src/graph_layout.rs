@@ -1,4 +1,4 @@
-//! Force-directed layout simulation for the graph view (ADR-021, Phase 1).
+//! Force-directed layout simulation for the graph view.
 //!
 //! The simulation owns the model-independent physics: a Barnes-Hut quadtree
 //! gives O(n log n) repulsion, edges are springs, a weak gravity term keeps the
@@ -274,8 +274,6 @@ impl ForceGraph {
         self.alpha = (self.alpha * ALPHA_DECAY).max(ALPHA_MIN);
     }
 
-    // --- Barnes-Hut tree -------------------------------------------------
-
     fn build_tree(&mut self) {
         self.quads.clear();
         if self.n == 0 {
@@ -452,8 +450,6 @@ impl ForceGraph {
         self.quads = reordered;
     }
 
-    // --- Forces ----------------------------------------------------------
-
     fn compute_forces(&mut self) {
         let theta2 = self.params.theta * self.params.theta;
         let repulsion = self.params.repulsion;
@@ -560,8 +556,6 @@ impl ForceGraph {
         }
         (fx, fy)
     }
-
-    // --- Integration -----------------------------------------------------
 
     fn integrate(&mut self) {
         let dt = self.params.dt;

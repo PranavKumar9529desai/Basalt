@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-// Phase-2 proof worker: loads the Rust->wasm force graph, ticks it off the main
+// Loads the Rust->wasm force graph in a web worker, ticks it off the main
 // thread, and posts position buffers back for the canvas to draw.
 //
 // Obsidian-style cooling: the graph decays `alpha` each step; once it settles
@@ -98,7 +98,7 @@ self.onmessage = async (
   const data = e.data;
   if (data.action === "build") {
     activeNodeCount = data.nodeCount;
-    const edgeCount = data.edges.length / 2;
+    const edgeCount = Math.floor(data.edges.length / 2);
     const ptr = ex!.graph_alloc_edges(edgeCount);
     new Uint32Array(ex!.memory.buffer, ptr, data.edges.length).set(data.edges);
     ex!.graph_build(data.nodeCount, ptr, edgeCount);

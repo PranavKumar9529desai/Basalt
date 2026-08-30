@@ -10,8 +10,7 @@ crate-type = ["cdylib", "rlib"]
 basalt-graph = { path = "../basalt-graph" }
 
 # Standalone workspace so `cargo build --target wasm32-unknown-unknown` here does
-# not pull the whole repo workspace (which cannot build for wasm). Mirrors
-# crates/graph-wasm-probe.
+# not pull the whole repo workspace (which cannot build for wasm).
 [profile.release]
 opt-level = "z"
 lto = true

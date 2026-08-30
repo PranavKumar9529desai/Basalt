@@ -7,7 +7,7 @@ use basalt_vault::Vault;
 
 use crate::nucleo_scorer::NucleoScorer;
 use crate::tantivy::TantivyIndex;
-use basalt_types::{FileMatch, FileResult, SearchContentResult};
+use basalt_types::{FileResult, SearchContentResult};
 
 /// How long the index may hold uncommitted in-memory updates before the
 /// next flush writes them to disk. Commits create a new tantivy segment

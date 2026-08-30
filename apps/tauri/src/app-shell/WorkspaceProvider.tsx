@@ -64,7 +64,12 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     (path: string, line?: number) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
       const name = node?.name ?? path.split("/").pop() ?? path;
-      const tabId = openInPreview({ path, title: name, line });
+      const tabId = openInPreview({
+        path,
+        title: name,
+        line,
+        focusOnOpen: true,
+      });
       setTabTitle(tabId, name);
     },
     [treeNodes, openInPreview, setTabTitle],

@@ -9,6 +9,7 @@
     "./components/ribbon": "./src/components/ribbon/index.ts",
     "./components/tabs": "./src/components/tabs/index.ts",
     "./components/header-band": "./src/components/header-band/index.ts",
+    "./components/icons": "./src/components/icons/index.ts",
     "./components/input-dialog": "./src/components/input-dialog/index.ts",
     "./components/confirm-dialog": "./src/components/confirm-dialog/index.ts",
     "./components/palette-shell": "./src/components/palette-shell/index.ts",
