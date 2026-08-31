@@ -6,6 +6,13 @@ use tauri::Manager;
 use crate::app_state::AppState;
 use crate::config::{load_config, save_config};
 
+/// Simple djb2 hash — no external dep needed.
+fn djb2_hash(s: &str) -> u32 {
+    s.bytes().fold(5381u32, |acc, b| {
+        acc.wrapping_mul(33).wrapping_add(b as u32)
+    })
+}
+
 /// Derives a stable filename for the vault cache from the vault's root path.
 /// Uses the folder name + a simple 8-char hex hash of the full path so two
 /// vaults with the same folder name don't collide.
@@ -15,12 +22,7 @@ fn cache_filename(vault_path: &str) -> String {
         .and_then(|n| n.to_str())
         .unwrap_or("vault");
 
-    // Simple djb2 hash — no external dep needed.
-    let hash: u32 = vault_path.bytes().fold(5381u32, |acc, b| {
-        acc.wrapping_mul(33).wrapping_add(b as u32)
-    });
-
-    format!("{}_{:08x}.json", folder_name, hash)
+    format!("{}_{:08x}.json", folder_name, djb2_hash(vault_path))
 }
 
 pub(crate) fn cache_path(app: &tauri::AppHandle, vault_path: &str) -> PathBuf {
@@ -108,11 +110,8 @@ pub fn update_last_vault(app: &tauri::AppHandle, vault_path: &str) {
 /// Returns the directory where the tantivy search index for `vault_path` is stored.
 /// Uses the same djb2 hash as `cache_filename` so the index lives alongside the vault cache.
 pub(crate) fn search_index_dir(app: &tauri::AppHandle, vault_path: &str) -> std::path::PathBuf {
-    let hash: u32 = vault_path.bytes().fold(5381u32, |acc, b| {
-        acc.wrapping_mul(33).wrapping_add(b as u32)
-    });
     app.path()
         .app_cache_dir()
         .expect("app cache dir unavailable")
-        .join(format!("search_{:08x}", hash))
+        .join(format!("search_{:08x}", djb2_hash(vault_path)))
 }

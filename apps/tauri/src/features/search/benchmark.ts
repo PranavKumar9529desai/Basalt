@@ -127,7 +127,7 @@ interface TierSpec {
   bytes: number;
 }
 
-export const DEFAULT_TIERS: TierSpec[] = [
+const DEFAULT_TIERS: TierSpec[] = [
   { name: "4KB", files: 20, matchesPerFile: 16, bytes: 4 * 1024 },
   { name: "40KB", files: 20, matchesPerFile: 16, bytes: 40 * 1024 },
   { name: "100KB", files: 20, matchesPerFile: 16, bytes: 100 * 1024 },

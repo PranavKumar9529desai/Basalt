@@ -6,7 +6,7 @@
  * commands in useEffect patterns. Shell mounts <CommandProvider> at the
  * root so all descendants can access the service.
  */
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, type ReactNode } from "react";
 import { CommandService, commandService } from "./service";
 
 const CommandServiceContext = createContext<CommandService>(commandService);
@@ -17,8 +17,4 @@ export function CommandProvider({ children }: { children: ReactNode }) {
       {children}
     </CommandServiceContext.Provider>
   );
-}
-
-export function useCommandService(): CommandService {
-  return useContext(CommandServiceContext);
 }

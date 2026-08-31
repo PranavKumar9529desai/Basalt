@@ -88,13 +88,6 @@ export class KeybindingService {
 
       if (binding.action && !this.actions.has(binding.action)) continue;
 
-      if (binding.command === "editor:toggle-view-mode") {
-        console.log("[ReadingMode] Ctrl/Cmd+E resolved", {
-          target: event.target,
-          context: this.context,
-        });
-      }
-
       return binding;
     }
     return null;
@@ -113,9 +106,6 @@ export class KeybindingService {
     const binding = this.resolve(event);
     if (!binding) return false;
     event.preventDefault();
-    if (binding.command === "editor:toggle-view-mode") {
-      console.log("[ReadingMode] keybinding dispatching toggle command");
-    }
     this.execute(binding);
     return true;
   }

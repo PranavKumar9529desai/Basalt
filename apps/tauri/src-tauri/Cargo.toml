@@ -29,7 +29,6 @@ basalt-vault = { path = "../../../crates/basalt-vault" }
 basalt-search = { path = "../../../crates/basalt-search" }
 
 basalt-parser = { path = "../../../crates/basalt-parser" }
-chrono = "0.4"
 
 [profile.release]
 opt-level = "z" # Optimize for binary size (most aggressive)

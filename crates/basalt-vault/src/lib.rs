@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 pub mod cache;
 pub mod indexer;
 pub mod path_utils;
@@ -12,9 +10,3 @@ pub use cache::{VaultCache, CACHE_VERSION};
 pub use indexer::incremental_reindex;
 pub use tree::{build_flat_tree, FlatTreeNode, NodeKind};
 pub use vault::Vault;
-
-pub trait FileSystem {
-    fn read(&self, path: &str) -> Result<Vec<u8>>;
-    fn write(&self, path: &str, data: &[u8]) -> Result<()>;
-    fn list(&self, path: &str) -> Result<Vec<String>>;
-}

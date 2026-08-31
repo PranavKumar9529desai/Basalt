@@ -4,8 +4,7 @@
  * Architecture: All commands (palette actions, keybinding targets) register
  * here. The service owns metadata (from commands.json) and runtime callbacks
  * (registered by features/shell). It is a plain TS class — no React, no
- * hooks, no JSX. React integration is via CommandProvider (DI wrapper) and
- * useCommandService (hook accessor).
+ * hooks, no JSX. React integration is via CommandProvider (DI wrapper).
  *
  * Features register commands in useEffect cleanup patterns. Shell registers
  * commands that depend on runtime hook data. The service never imports from

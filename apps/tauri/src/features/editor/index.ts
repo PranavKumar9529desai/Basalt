@@ -1,5 +1,3 @@
-import "./commands";
-
 export { CommandPalette } from "./components/CommandPalette";
 export { EditorView } from "./components/EditorView";
 export { useActiveNoteStore } from "./store";

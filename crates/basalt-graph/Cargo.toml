@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 basalt-types = { path = "../basalt-types" }
 serde = { version = "1", features = ["derive"] }
-thiserror = "2.0.18"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

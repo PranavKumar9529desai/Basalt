@@ -813,6 +813,22 @@ pub struct RenameNoteResult {
     pub updated_files: Vec<String>,
 }
 
+/// Validate a user-supplied name (stem or path segment): trimmed, non-empty,
+/// not `.`/`..`, and free of path separators.
+fn validate_name(raw: &str) -> Result<String, String> {
+    let name = raw.trim().to_string();
+    if name.is_empty() {
+        return Err("name cannot be empty".to_string());
+    }
+    if name == "." || name == ".." {
+        return Err("invalid name".to_string());
+    }
+    if name.contains('/') || name.contains('\\') || name.contains('\0') {
+        return Err("name must not contain '/' or '\\' characters".to_string());
+    }
+    Ok(name)
+}
+
 /// Normalize and validate a user-supplied note name (a stem — no path).
 /// Strips a trailing `.md`/`.markdown`, trims, and rejects directory
 /// separators and empty/`.`/`..` names.
@@ -825,17 +841,7 @@ fn sanitize_name(raw: &str) -> Result<String, String> {
             break;
         }
     }
-    let name = name.trim_end().to_string();
-    if name.is_empty() {
-        return Err("name cannot be empty".to_string());
-    }
-    if name == "." || name == ".." {
-        return Err("invalid name".to_string());
-    }
-    if name.contains('/') || name.contains('\\') || name.contains('\0') {
-        return Err("name must not contain '/' or '\\' characters".to_string());
-    }
-    Ok(name)
+    validate_name(&name.trim_end())
 }
 
 /// Rename a note in place (same folder) and keep the vault consistent with
@@ -1005,17 +1011,7 @@ pub struct RenamePathResult {
 /// trimmed, non-empty, not `.`/`..`, and free of path separators. Extension
 /// handling is left to the caller (files preserve their own extension).
 fn sanitize_path_name(raw: &str) -> Result<String, String> {
-    let name = raw.trim().to_string();
-    if name.is_empty() {
-        return Err("name cannot be empty".to_string());
-    }
-    if name == "." || name == ".." {
-        return Err("invalid name".to_string());
-    }
-    if name.contains('/') || name.contains('\\') || name.contains('\0') {
-        return Err("name must not contain '/' or '\\' characters".to_string());
-    }
-    Ok(name)
+    validate_name(raw)
 }
 
 /// Resolve the final on-disk name for a rename. Folders keep the raw name;

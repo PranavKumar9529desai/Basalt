@@ -14,7 +14,7 @@ export interface ScaleConfig {
   gain: number; // sqrt gain: hubs grow, but with diminishing returns vs the tail
 }
 
-export const DEFAULT_SCALE: ScaleConfig = {
+const DEFAULT_SCALE: ScaleConfig = {
   min: 2.6,
   max: 22,
   base: 5.2,

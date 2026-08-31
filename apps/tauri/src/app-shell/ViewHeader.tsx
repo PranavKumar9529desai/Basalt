@@ -76,19 +76,7 @@ export function ViewHeader({
     close();
   };
 
-  const handleBackClick = () => {
-    // TODO: wire workspace navigation history back.
-  };
-
-  const handleForwardClick = () => {
-    // TODO: wire workspace navigation history forward.
-  };
-
   const handleModeClick = () => {
-    console.log("[ReadingMode] header toggle clicked", {
-      tabId: tab.id,
-      currentMode: viewMode,
-    });
     commandService.execute("editor:toggle-view-mode");
   };
 
@@ -101,7 +89,6 @@ export function ViewHeader({
           size="icon-xs"
           aria-label="Back"
           title="TODO: wire workspace back navigation"
-          onClick={handleBackClick}
           className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
           <IconChevronLeft size={14} />
@@ -112,7 +99,6 @@ export function ViewHeader({
           size="icon-xs"
           aria-label="Forward"
           title="TODO: wire workspace forward navigation"
-          onClick={handleForwardClick}
           className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
           <IconChevronRight size={14} />

@@ -12,8 +12,10 @@ impl TextDocument {
     }
 
     /// Converts a CodeMirror UTF-16 offset into a Rust UTF-8 byte offset.
-    /// Returns `None` if the offset is out of bounds.
-    pub fn utf16_to_byte_offset(&self, utf16_offset: usize) -> Option<usize> {
+    /// Returns `None` if the offset is out of bounds. Kept test-only: no
+    /// production path converts in this direction today.
+    #[cfg(test)]
+    fn utf16_to_byte_offset(&self, utf16_offset: usize) -> Option<usize> {
         let max_utf16 = self.rope.len_utf16_cu();
         if utf16_offset > max_utf16 {
             return None;
@@ -33,11 +35,6 @@ impl TextDocument {
 
         let char_idx = self.rope.byte_to_char(byte_offset);
         Some(self.rope.char_to_utf16_cu(char_idx))
-    }
-
-    /// Access the underlying rope.
-    pub fn as_rope(&self) -> &Rope {
-        &self.rope
     }
 }
 

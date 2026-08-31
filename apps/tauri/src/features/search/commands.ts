@@ -35,5 +35,3 @@ commandService.registerCommand("dev:search-benchmark", () => {
     }
   })();
 });
-
-export const unregister = commandService.unregister.bind(commandService);

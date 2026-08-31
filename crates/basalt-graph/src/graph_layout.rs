@@ -251,11 +251,6 @@ impl ForceGraph {
         &self.pos
     }
 
-    #[inline]
-    pub fn positions_mut(&mut self) -> &mut [f32] {
-        &mut self.pos
-    }
-
     /// Pin a node (e.g. while dragging) and cancel its velocity so it stays put.
     pub fn set_position(&mut self, i: usize, x: f32, y: f32) {
         if i < self.n {

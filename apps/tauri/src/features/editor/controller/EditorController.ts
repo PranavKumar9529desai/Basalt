@@ -17,7 +17,7 @@ import { AUTOSAVE_DEBOUNCE_MS } from "../logic/saveManager";
 import { computeStats } from "../logic/stats";
 
 /** Debounce for word/char stats — computed from the CM doc, never per keystroke. */
-export const STATS_DEBOUNCE_MS = 500;
+const STATS_DEBOUNCE_MS = 500;
 
 /**
  * The note I/O surface the controller talks to — a structural subset of

@@ -17,8 +17,6 @@ interface SettingsModalStore {
   open: (section?: string) => void;
   close: () => void;
   setActiveSection: (id: string) => void;
-  registerSection: (def: SectionDef) => void;
-  unregisterSection: (id: string) => void;
 }
 
 const CORE_SECTIONS: SectionDef[] = [
@@ -64,15 +62,5 @@ export const useSettingsModalStore = create<SettingsModalStore>()(
       set({ isOpen: true, activeSection: section ?? get().activeSection }),
     close: () => set({ isOpen: false }),
     setActiveSection: (id) => set({ activeSection: id }),
-    registerSection: (def) =>
-      set((state) => ({
-        sections: state.sections.some((s) => s.id === def.id)
-          ? state.sections
-          : [...state.sections, def],
-      })),
-    unregisterSection: (id) =>
-      set((state) => ({
-        sections: state.sections.filter((s) => s.id !== id),
-      })),
   }),
 );

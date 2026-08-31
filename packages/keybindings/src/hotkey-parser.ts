@@ -49,13 +49,3 @@ export function parseHotkey(hotkey: string): ParsedHotkey {
 
   return { key, cmdOrCtrl, shift, alt };
 }
-
-export function matchesHotkey(e: KeyboardEvent, parsed: ParsedHotkey): boolean {
-  const keyMatch = e.key.toLowerCase() === parsed.key;
-  const modMatch = parsed.cmdOrCtrl
-    ? e.ctrlKey || e.metaKey
-    : !e.ctrlKey && !e.metaKey;
-  const shiftMatch = parsed.shift ? e.shiftKey : !e.shiftKey;
-  const altMatch = parsed.alt ? e.altKey : !e.altKey;
-  return keyMatch && modMatch && shiftMatch && altMatch;
-}
