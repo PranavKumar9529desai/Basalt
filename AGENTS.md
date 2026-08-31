@@ -2,12 +2,37 @@
 
 > Mandatory for ALL AI agents (Claude, Codex, Gemini, etc.).  
 > Violating any rule marked 🚫 is a hard error — stop and fix it.
->
-> **READ FIRST:**
->
-> - [`CONVENTIONS.md`](./CONVENTIONS.md) — Authoritative coding standards (supersedes ADRs where they conflict)
-> - [`docs/adr/018-registry-driven-workbench.md`](docs/adr/018-registry-driven-workbench.md) — Current architectural direction
-> - [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md) — Active workstream handoff (what we're doing right now)
+
+---
+
+## Context model — how to read these docs
+
+This repo is large; the docs are layered so an agent loads only what it needs.
+Treat the files below as **lazily loaded on trigger**, not as an always-on
+dump. Keeping the always-loaded window lean is the single biggest lever for
+correctness — a bloated context window degrades an agent's recall (the
+"context rot" / lost-in-the-middle effects) and stale docs actively poison
+decisions.
+
+| File | Load when… | Always loaded? |
+| ---- | ---------- | -------------- |
+| **`AGENTS.md`** (this file) | Every session | ✅ yes — keep lean |
+| [`CONVENTIONS.md`](./CONVENTIONS.md) | Writing/refactoring code (naming, state, comments) | ⚠️ on demand |
+| [`root README.md`](./README.md) | Human orientation / quick start | ⚠️ on demand |
+| [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md) | Working inside `apps/tauri/` (app-layer rules) | ⚠️ auto via nesting |
+| [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md) | Starting a session — the active workstream handoff | ✅ every session |
+| [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine) | ⚠️ on demand |
+
+Rules for keeping this lean:
+
+- **This file is an index, not a reference.** Detail belongs in the lazy
+  documents above, never duplicated here. If an explanation exists elsewhere,
+  link to it (§8 ADR-as-provenance).
+- **Never paste a whole ADR or a whole `README.md` into this file.**
+- **Keep the status table fresh.** If it disagrees with `CURRENT_WORK.md`,
+  CURRENT_WORK wins — and this table must be updated.
+- **One concept, one word.** Vocabulary lives in CONVENTIONS §1.6; do not coin
+  synonyms.
 
 ---
 
@@ -17,7 +42,7 @@
 
 The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150ms search on 5k notes. Every change is measured against that feel. When in doubt, prefer the approach that keeps the app fast.
 
-## Current State (as of 2026-06-25)
+## Current State (as of 2026-08-31)
 
 | Area                                                                | Status                                          |
 | ------------------------------------------------------------------- | ----------------------------------------------- |
@@ -31,11 +56,17 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                     |
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                     |
 | Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                  |
-| Editor perf baseline (typing-latency harness)                       | ⏳ Next up                                      |
-| **Inline title + rename (ADR-023)**                           | ✅ Complete                                            |
-| Graph view (ADR-021)                                           | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
+| Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB |
+| **Inline title + rename (ADR-023)**                                 | ✅ Complete                                     |
+| Markdown reading mode (ADR-024)                                     | ✅ Complete                                     |
+| Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
+| **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                     |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
+
+> **Freshness:** the authoritative "what's done / what's next" is
+> [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md). If this table disagrees with
+> that file, CURRENT_WORK wins — update this table (see Context model above).
 
 **Direction:** the shell renders from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls in `app-shell/registrations.ts`, never shell surgery. Views read app state via `useAppContext()`.
 
@@ -110,8 +141,7 @@ apps/tauri/src/
 │   ├── Overlays.tsx
 │   ├── Boot.tsx             ← One-time boot + persistence
 │   ├── registrations.ts   ← registerView()/leaf registry entries
-│   └── hooks/
-│       └── (tab handlers inlined in Shell.tsx)
+│   └── views/               ← Registered dock views (FileExplorer, Backlinks)
 ├── shared/                 ← Cross-feature orchestration
 │   ├── useWorkspace.ts     (useWorkspace)
 │   └── tabCommands.ts

@@ -78,7 +78,7 @@ Rules for every new component, hook, store, and file:
 1. **Name states what it owns**, not where it sits or how it's consumed.
    `useActiveNoteStore` ✅ — `useFocusedPaneStore` ❌ (there was no pane in it).
 2. **Registry-first**: new dock panels = `viewRegistry` entries, new tab
-   content = `leafRegistry` entries (both in `app-shell/viewRegistrations.ts`).
+   content = `leafRegistry` entries (both in `app-shell/registrations.ts`).
    Never a component switch in the shell.
 3. **No unwired exports**: exported means imported. Anything else is dead
    code — delete it (§6).
@@ -387,56 +387,49 @@ or forgotten.
 
 ```
 apps/tauri/src/
-├── app-shell/
-│   ├── WorkspaceView.tsx        # Workspace grid + header band
-│   ├── WorkspaceInit.tsx        # One-time boot + persistence
-│   ├── WorkspaceOverlays.tsx
-│   ├── WorkspaceProvider.tsx    # App context for views (ADR-018)
-│   ├── Ribbon.tsx               # Far-left quick-access bar
-│   ├── SideDock.tsx             # Generic registry-driven dock
+├── app-shell/                     # Layout composition (thin glue, no orchestration)
+│   ├── Shell.tsx                  # Workspace grid + header band; tab handlers inlined
+│   ├── Boot.tsx                   # One-time boot + persistence
+│   ├── AppProvider.tsx            # useWorkspace + app context for views (ADR-018)
+│   ├── Overlays.tsx               # Lazy modals / context menus
+│   ├── Ribbon.tsx                 # Far-left quick-access bar
+│   ├── SideDock.tsx               # Generic registry-driven dock (knows no views)
+│   ├── ViewHeader.tsx             # Per-leaf chrome band
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── viewRegistrations.ts     # viewRegistry + leafRegistry entries
-│   ├── views/                   # Registered dock views (FileExplorer, Backlinks)
-│   └── hooks/
-│       └── useWorkspaceTabHandlers.ts
-├── shared/
-│   ├── useWorkspace.ts          # useWorkspaceController — cross-feature orchestration
-│   └── tabCommands.ts           # Tab commands needing active-note state
-├── features/
+│   ├── registrations.ts           # ★ viewRegistry + leafRegistry entries
+│   └── views/                     # Registered dock views (FileExplorer, Backlinks)
+├── shared/                        # Cross-feature orchestration (imports 2+ features)
+│   ├── useWorkspace.ts            # useWorkspace — the single cross-feature orchestrator
+│   └── tabCommands.ts             # Tab commands needing active-note state
+├── features/                      # Business logic, one dir per domain, zero cross-imports
 │   ├── editor/
-│   │   ├── components/          # MarkdownLeaf, EditorHost, CommandPalette, EditorContextMenu
-│   │   ├── hooks/               # useNoteIO, useEditorCommands, useLatestRef
-│   │   ├── commands.ts
-│   │   ├── store.ts             # useActiveNoteStore
-│   │   ├── types.ts
-│   │   └── index.ts
+│   │   ├── components/            # Host, EditorView, Reading, ContextMenu, InlineTitle, StatusLine
+│   │   ├── controller/            # EditorController (+ test)
+│   │   ├── hooks/                 # useEditor, useNoteIO, useEditorCommands, useLatestRef
+│   │   ├── logic/                 # saveManager, reconcile, pruneCache, stats, frontmatter
+│   │   ├── store/                 # activeNote.ts + renameSignal.ts (index barrel)
+│   │   ├── commands.ts, types.ts, index.ts
 │   ├── tabs/
-│   │   ├── components/          # WorkspaceTabs, WorkspaceTabsBar
-│   │   ├── hooks/               # useTabs, useTabDnD, useTabPersistence
-│   │   ├── store/               # core.ts + persistence.ts
-│   │   ├── constants.ts
-│   │   ├── selectors.ts
-│   │   ├── types.ts
-│   │   └── index.ts
+│   │   ├── components/            # Tabs, TabsBar
+│   │   ├── hooks/                 # useTabDnD, useTabPersistence
+│   │   ├── store/                 # core.ts + persistence.ts (+ store/index.ts barrel)
+│   │   ├── constants.ts, selectors.ts, types.ts, index.ts
 │   ├── vault/
-│   │   ├── hooks/               # useVaultTree, useVaultMutations, useVaultController
-│   │   ├── components/          # FileTree, BacklinksSidebar, VaultSplash
-│   │   ├── commands.ts
-│   │   ├── types.ts
-│   │   └── index.ts
+│   │   ├── hooks/                 # useVaultTree, useVaultMutations, useVaultController
+│   │   ├── components/            # FileTree, BacklinksSidebar, VaultSplash
+│   │   ├── types.ts, index.ts
 │   ├── search/
-│   │   ├── components/          # SearchModal, QuickSwitcher
-│   │   ├── commands.ts
-│   │   ├── store.ts
-│   │   ├── types.ts
-│   │   └── index.ts
-│   └── settings/
-│       ├── components/          # SettingsModal, SettingsNav, SettingsPanel, sections/
-│       ├── commands.ts
-│       ├── settings-data.ts     # useSettingsStore (values) + useSetting/setSetting
-│       ├── store.ts             # useSettingsModalStore (modal chrome)
-│       └── index.ts
+│   │   ├── components/            # SearchModal, QuickSwitcher, PreviewPane, SearchResultRows
+│   │   ├── store.ts, types.ts, commands.ts, index.ts, benchmark.ts
+│   ├── settings/
+│   │   ├── components/            # SettingsModal, SettingsNav, SettingsPanel, sections/
+│   │   ├── settings-data.ts       # useSettingsStore (values) + useSetting/setSetting
+│   │   ├── store.ts               # useSettingsModalStore (modal chrome)
+│   │   ├── commands.ts, index.ts
+│   └── graph/                     # Graph leaf (useLeafServices only — no direct feature imports)
+│       ├── components/            # Graph, GraphControls, GraphContextMenu, GraphWorker, graph_sim.wasm
+│       ├── spatialGrid.ts (+ test), nodeScale.ts, index.ts
 ├── routes/
 │   ├── __root.tsx
 │   └── index.tsx
