@@ -107,6 +107,11 @@ export const LIVE_PREVIEW_THEME = [
 
 function makeCollector() {
   const widgets: { from: number; to: number; deco: Decoration }[] = [];
+  // Multi-line block-widget replaces (HTML, frontmatter) are re-exposed as
+  // atomic ranges so arrow motion skips a collapsed span in one step. Single-
+  // line widgets (HR, callout/code headers) stay non-atomic so the caret can
+  // still land on them to reveal + edit.
+  const replaces: { from: number; to: number; deco: Decoration }[] = [];
 
   const collector: DecorationCollector = {
     addLineClass(pos, className) {
@@ -119,8 +124,10 @@ function makeCollector() {
     addMark(from, to, className) {
       widgets.push({ from, to, deco: Decoration.mark({ class: className }) });
     },
-    addReplace(from, to, widget, block = false) {
-      widgets.push({ from, to, deco: Decoration.replace({ widget, block }) });
+    addReplace(from, to, widget, block = false, atomic = false) {
+      const deco = Decoration.replace({ widget, block });
+      widgets.push({ from, to, deco });
+      if (atomic) replaces.push({ from, to, deco });
     },
   };
 
@@ -131,11 +138,23 @@ function makeCollector() {
     );
   }
 
-  return { collector, finish };
+  function finishAtomic(): DecorationSet {
+    return Decoration.set(
+      replaces.map((w) => w.deco.range(w.from, w.to)),
+      true,
+    );
+  }
+
+  return { collector, finish, finishAtomic };
 }
 
 interface PreviewState {
   decorations: DecorationSet;
+  /** Replace decorations (HTML, frontmatter widgets) re-exposed as atomic
+   * ranges so arrow motion skips a replaced span in one step. Empty while the
+   * caret is on a block (no replace emitted), so it never blocks entering to
+   * edit raw source. */
+  atomicRanges: DecorationSet;
   /** Code-block ranges discovered during the walk; shared with the viewport-
    * scoped tags plugin so it can skip code blocks without its own scan. */
   codeBlockRanges: { from: number; to: number }[];
@@ -159,7 +178,7 @@ function buildPreviewState(
   state: EditorState,
   hasFocus: boolean,
 ): PreviewState {
-  const { collector, finish } = makeCollector();
+  const { collector, finish, finishAtomic } = makeCollector();
   const headPos = state.selection.main.head;
   const doc = state.doc;
   const ctx: DecorationContext = {
@@ -185,6 +204,7 @@ function buildPreviewState(
   if (!tree) {
     return {
       decorations: Decoration.none,
+      atomicRanges: Decoration.none,
       codeBlockRanges: [],
       widgetModels: {},
       focused: hasFocus,
@@ -271,6 +291,7 @@ function buildPreviewState(
 
   return {
     decorations: finish(),
+    atomicRanges: finishAtomic(),
     codeBlockRanges: ctx.codeBlockRanges,
     widgetModels: models,
     focused: hasFocus,
@@ -336,6 +357,7 @@ export const livePreviewField = StateField.define<PreviewState>({
       // through the change; structure refresh happens on the next idle tick.
       return {
         decorations: value.decorations.map(tr.changes.desc),
+        atomicRanges: value.atomicRanges.map(tr.changes.desc),
         codeBlockRanges: value.codeBlockRanges.map((r) => ({
           from: tr.changes.mapPos(r.from),
           to: tr.changes.mapPos(r.to),
@@ -350,7 +372,14 @@ export const livePreviewField = StateField.define<PreviewState>({
     return value;
   },
 
-  provide: (f) => EditorView.decorations.from(f, (s) => s.decorations),
+  provide: (f) => [
+    EditorView.decorations.from(f, (s) => s.decorations),
+    // Replaced multi-line block-widget spans are atoms for cursor motion:
+    // ArrowUp/Down skip the HTML/frontmatter widget in one step rather than
+    // sneaking through hidden positions. Empty while a block is raw (cursor on
+    // it), so the caret can still enter to edit.
+    EditorView.atomicRanges.of((view) => view.state.field(f).atomicRanges),
+  ],
 });
 
 const focusTracking = EditorView.domEventHandlers({

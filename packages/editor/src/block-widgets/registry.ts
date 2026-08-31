@@ -120,7 +120,12 @@ export function handleBlockWidgetsNode(
       spec.span?.(model, ctx.state) ??
       ({ from: node.from, to: ctx.state.doc.lineAt(node.to).to } as { from: number; to: number });
     if (!span) continue;
-    collector.addReplace(span.from, span.to, widget, true);
+    // block:false — a block:true replace yanks the range out of line flow so
+    // ArrowUp/Down can't place the caret across it (live-preview.ts invariant).
+    // Widget CSS supplies the block visual. atomic=true re-exposes the collapsed
+    // multi-line span as an atomic range (live-preview.ts), so arrow travel
+    // skips it in one step while still letting the caret enter when it's raw.
+    collector.addReplace(span.from, span.to, widget, false, true);
     (models[spec.id] ??= []).push(model);
     widgeted = true;
     found = true;

@@ -46,6 +46,13 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-em": {
     fontStyle: "italic",
   },
+  // Inline HTML tags stay visible, editable raw source; container-tag
+  // render-reveal is deferred to avoid mXSS risk. A subtle mark sets them apart
+  // without touching the document text.
+  ".cm-live-html-tag": {
+    color: "var(--sat-editor-accent, #a78bfa)",
+    opacity: "0.85",
+  },
 });
 
 /**
@@ -75,6 +82,14 @@ export function handleInlineNode(
 
   if (name === "Strikethrough") {
     collector.addMark(node.from, node.to, "cm-live-strikethrough");
+    return true;
+  }
+
+  // Inline HTML tags stay as visible, editable raw source (container-tag
+  // render-reveal is deferred). A subtle mark makes them distinct without
+  // touching the document text.
+  if (name === "HTMLTag") {
+    collector.addMark(node.from, node.to, "cm-live-html-tag");
     return true;
   }
 

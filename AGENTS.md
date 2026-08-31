@@ -22,6 +22,7 @@ decisions.
 | [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md) | Working inside `apps/tauri/` (app-layer rules) | ⚠️ auto via nesting |
 | [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md) | Starting a session — the active workstream handoff | ✅ every session |
 | [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine) | ⚠️ on demand |
+| [`docs/webview-costs.md`](./docs/webview-costs.md) | Remaining WebView / Obsidian-class costs (keystroke DOM, reading mode, JSON IPC) | ⚠️ on demand |
 
 Rules for keeping this lean:
 
@@ -272,6 +273,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                   | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title           |
 | [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)       | ADR-024: Editor Surface Typography and Spatial Rhythm                         |
 | [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md) | ADR-025: Tab Lifecycle and Workspace Persistence                              |
+| [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md) | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline          |
 
 <!-- ADR_INDEX_END -->
 

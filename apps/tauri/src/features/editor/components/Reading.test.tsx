@@ -125,4 +125,48 @@ describe("Reading", () => {
       ).toBeTruthy();
     });
   });
+
+  it("renders raw HTML blocks as sanitized rich content", () => {
+    render(
+      <Reading
+        title="Html"
+        sourcePath="Html.md"
+        markdown={
+          "<details><summary>Click</summary><p>Hidden text</p></details>"
+        }
+        services={services}
+      />,
+    );
+
+    expect(document.querySelector(".markdown-reading-html")).toBeTruthy();
+    expect(document.querySelector("details")).toBeTruthy();
+    expect(document.querySelector("summary")?.textContent).toBe("Click");
+  });
+
+  it("strips script and event handlers from rendered HTML", () => {
+    const markdown =
+      "<div onclick=\"alert(1)\"><script>alert(2)</script><img src=x onerror=alert(3)>safe</div>";
+    render(
+      <Reading title="Xss" sourcePath="Xss.md" markdown={markdown} services={services} />,
+    );
+
+    expect(document.querySelector("script")).toBeNull();
+    expect(document.querySelector("img")?.getAttribute("onerror")).toBeNull();
+    const htmlBlock = document.querySelector(".markdown-reading-html");
+    expect(htmlBlock?.textContent).toContain("safe");
+  });
+
+  it("keeps inline HTML tags visible as raw text", () => {
+    render(
+      <Reading
+        title="Inline"
+        sourcePath="Inline.md"
+        markdown={"Hello <span style=\"color:red\">world</span>!"}
+        services={services}
+      />,
+    );
+
+    expect(document.body.textContent).toContain("<span");
+    expect(document.body.textContent).toContain("world");
+  });
 });

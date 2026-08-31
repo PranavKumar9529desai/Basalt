@@ -13,7 +13,7 @@ import {
   type IconProps,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
-import { tokenizeCode, type CodeToken } from "@workspace/editor";
+import { tokenizeCode, sanitizeHtml, type CodeToken } from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
 
 interface ReadingProps {
@@ -178,6 +178,12 @@ function renderInlineNode(
       return <del key={key}>{renderInline(node, source, onWikiLink, key)}</del>;
     case "InlineCode":
       return <code key={key}>{source.slice(node.from, node.to).replace(/^`+|`+$/g, "")}</code>;
+    // Inline HTML tags render as safe, visible raw text in reading mode
+    // (container-tag render-reveal is deferred to avoid nesting issues and
+    // mXSS risk). This keeps the source visible and fully editable.
+    case "HTMLTag":
+    case "Comment":
+      return <span key={key} className="markdown-reading-html">{source.slice(node.from, node.to)}</span>;
     case "Link": {
       const raw = source.slice(node.from, node.to);
       if (/^\[[ xX]\]$/.test(raw)) {
@@ -335,6 +341,19 @@ function renderBlock(
     );
   }
   if (node.name === "HorizontalRule") return <hr key={key} />;
+  // Render raw HTML blocks sanitized at the single render boundary: the source
+  // slice is untrusted, so dangerouslySetInnerHTML is only ever fed the
+  // DOMPurify return value and never re-processed.
+  if (node.name === "HTMLBlock") {
+    const raw = source.slice(node.from, node.to);
+    return (
+      <div
+        key={key}
+        className="markdown-reading-html"
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw) }}
+      />
+    );
+  }
   return <div key={key}>{inline()}</div>;
 }
 

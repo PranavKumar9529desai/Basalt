@@ -26,6 +26,7 @@ export interface DecorationCollector {
     to: number,
     widget: WidgetType,
     block?: boolean,
+    atomic?: boolean,
   ): void;
 }
 

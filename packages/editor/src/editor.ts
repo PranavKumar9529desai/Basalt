@@ -19,6 +19,11 @@ import {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
 } from "./block-widgets/frontmatter";
+import { htmlBlockSpec, HTML_BLOCK_THEME } from "./block-widgets/html-block";
+import {
+  blockWidgetSpecsFacet,
+  type BlockWidgetSpec,
+} from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
 const basaltMarkdownExtensions = [
   wikiLinkExtension,
@@ -98,6 +103,9 @@ export function createEditorExtensionGroups(
         onFetchTags: onFetchTags,
         onFetchLinks: onFetchLinks,
       }),
+      // Sanitized HTML block widget + its theme.
+      blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
+      HTML_BLOCK_THEME,
     ],
   };
 }
@@ -137,6 +145,9 @@ export function previewExtensions(): Extension[] {
     // Dim-mode frontmatter only: no parser, no interactive panel.
     ...frontmatterBlockWidgetGroup({}),
     frontmatterDimMode,
+    // Sanitized HTML blocks render in read-only previews too.
+    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
+    HTML_BLOCK_THEME,
     EditorView.lineWrapping,
   ];
 }

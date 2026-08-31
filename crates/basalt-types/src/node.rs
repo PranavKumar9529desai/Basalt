@@ -22,6 +22,11 @@ pub enum MarkdownNode {
     CodeBlock(String, String), // language, code
     Blockquote(Vec<MarkdownNode>),
     Rule,
+    // Raw HTML preserved as opaque text (ADR-026). The string is never rendered
+    // from the AST — it only feeds metadata extraction (links/tags). HTML is
+    // sanitized at the render boundary in the frontend, never here.
+    HtmlBlock(String),
+    HtmlInline(String),
     // Add more as needed
 }
 

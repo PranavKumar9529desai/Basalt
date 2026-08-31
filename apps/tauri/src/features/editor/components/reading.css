@@ -214,3 +214,33 @@
 .markdown-reading-sizer .sat-syntax-changed { color: var(--sat-syntax-changed, #e5c07b); }
 .markdown-reading-sizer .sat-syntax-deleted { color: var(--sat-syntax-deleted, #e06c75); }
 .markdown-reading-sizer .sat-syntax-inserted { color: var(--sat-syntax-inserted, #98c379); }
+
+/* Rendered raw HTML blocks (block context) and visible inline HTML tags.
+   Blocks get a subtle container so embedded <details>/<table>/<video>
+   reads as distinct from prose. */
+.markdown-reading-sizer .markdown-reading-html {
+  border: 1px solid var(--sat-layout-divider, var(--sat-layout-border));
+  border-radius: var(--sat-layout-radius-md, 8px);
+  padding: 0.75em 1em;
+  margin: 1em 0;
+  background: var(--sat-surface-2, var(--sat-surface-1));
+  overflow-x: auto;
+}
+
+/* Inline HTML tags (kept as visible raw source in reading mode). */
+.markdown-reading-html,
+.markdown-reading-sizer span.markdown-reading-html {
+  color: var(--sat-editor-accent, var(--sat-accent-primary));
+  opacity: 0.9;
+  font-family: var(--sat-font-mono, monospace);
+  font-size: 0.9em;
+}
+
+/* The block container and its inline children should not inherit the mono
+   styling meant for inline raw tags. */
+.markdown-reading-sizer div.markdown-reading-html {
+  font-family: var(--sat-font-sans);
+  font-size: inherit;
+  color: inherit;
+  opacity: 1;
+}

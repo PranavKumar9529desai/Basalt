@@ -22,9 +22,11 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.2",
-    "@uiw/react-codemirror": "^4.23.8"
+    "@uiw/react-codemirror": "^4.23.8",
+    "dompurify": "^3.4.14"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
     "@types/react": "catalog:default",
     "@types/react-dom": "catalog:default",
     "react": "catalog:default",
