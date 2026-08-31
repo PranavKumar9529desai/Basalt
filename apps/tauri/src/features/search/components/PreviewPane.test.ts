@@ -1,7 +1,7 @@
 import { Text } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 
-import { buildDecorations, cachedPreviewState } from "./PreviewPane";
+import { buildDecorations, cachedPreviewState, windowPreview } from "./PreviewPane";
 
 function rangeSet(
   doc: Text,
@@ -47,6 +47,43 @@ describe("PreviewPane.buildDecorations", () => {
       [0, 0],
       [0, 3],
     ]);
+  });
+});
+
+describe("PreviewPane.windowPreview", () => {
+  it("keeps a small document intact", () => {
+    const text = "line1\nline2\nline3\n";
+    const hl = [{ start: 0, end: 4 }];
+    expect(windowPreview(text, 2, hl)).toEqual({ text, matchLine: 2, highlights: hl });
+  });
+
+  it("windows a match deep in a large file around it", () => {
+    const lines = Array.from({ length: 1000 }, (_, i) => `line-${i + 1}`);
+    const text = lines.join("\n");
+    const hl = [{ start: 0, end: 5 }];
+    // match on line 500 (1-based). before=300 lines, after window up to 700.
+    const win = windowPreview(text, 500, hl);
+    const n = win.text.split("\n").length;
+    expect(n).toBeLessThanOrEqual(401); // 200 before + 1 + 200 after
+    expect(win.text.startsWith("line-300")).toBe(true);
+    expect(win.text.endsWith("line-700")).toBe(true);
+    expect(win.matchLine).toBe(201); // 500 - 300 + 1
+    expect(win.highlights).toBe(hl);
+  });
+
+  it("clamps a match near the top of the file", () => {
+    const lines = Array.from({ length: 500 }, (_, i) => `line-${i + 1}`);
+    const text = lines.join("\n");
+    const win = windowPreview(text, 5, []);
+    expect(win.text.startsWith("line-1")).toBe(true);
+    expect(win.matchLine).toBe(5); // unchanged: no leading lines cut
+  });
+
+  it("always hands the parser a bounded slice", () => {
+    const lines = Array.from({ length: 20000 }, (_, i) => `l${i + 1}`);
+    const text = lines.join("\n");
+    const win = windowPreview(text, 10000, []);
+    expect(win.text.split("\n").length).toBeLessThanOrEqual(401);
   });
 });
 

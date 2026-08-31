@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { EditorState, Extension, Range, StateEffect, StateField, Text } from "@codemirror/state";
 import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
@@ -84,6 +84,53 @@ const matchDecoField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
+/**
+ * Bounded window of a preview document.
+ *
+ * The search preview feeds an *entire* file into CodeMirror, which parses and
+ * decorates the whole doc synchronously on the WebCore main thread. On large
+ * files (huge notes) that O(doc) parse runs on every result navigation and —
+ * combined with the live-preview scheduler + scroll-triggered renders — spins
+ * the main thread past WebKitGTK's 10s watchdog, which aborts the web process
+ * (`crashAfter10Seconds`). Capping the preview to a window of lines *around
+ * the match* bounds the parse to a handful of KB regardless of file size.
+ */
+export interface PreviewWindow {
+  text: string;
+  matchLine: number;
+  highlights: Highlight[];
+}
+
+const PREVIEW_WINDOW_LINES_BEFORE = 200;
+const PREVIEW_WINDOW_LINES_AFTER = 200;
+
+export function windowPreview(
+  text: string,
+  matchLine: number,
+  highlights: Highlight[],
+): PreviewWindow {
+  const beforeLine = Math.max(1, matchLine - PREVIEW_WINDOW_LINES_BEFORE);
+  const afterLine = matchLine + PREVIEW_WINDOW_LINES_AFTER;
+  let line = 1;
+  let lineStart = 0;
+  let start = 0;
+  let end = text.length;
+  for (let i = 0; i <= text.length; i++) {
+    if (i < text.length && text.charCodeAt(i) !== 10) continue;
+    if (line === beforeLine) start = lineStart;
+    if (line === afterLine) {
+      end = i;
+      break;
+    }
+    lineStart = i + 1;
+    line += 1;
+  }
+  // The match line's *content* is unchanged by the slice, so line-relative
+  // highlight offsets stay valid; only the line number shifts.
+  const newMatchLine = matchLine - beforeLine + 1;
+  return { text: text.slice(start, end), matchLine: newMatchLine, highlights };
+}
+
 function makeState(text: string, path: string): EditorState {
   return EditorState.create({
     doc: text,
@@ -152,9 +199,19 @@ interface PreviewPaneProps {
 export function PreviewPane({ text, path, matchLine, highlights }: PreviewPaneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  // Bound the document handed to CodeMirror to a window around the match line.
+  // Keeps the synchronous parse + decoration walk O(window) so a huge file
+  // can never spin the WebCore main thread past WebKitGTK's 10s watchdog.
+  const windowed = useMemo(
+    () => windowPreview(text, matchLine, highlights),
+    [text, matchLine, highlights],
+  );
+  const winText = windowed.text;
+  const winMatchLine = windowed.matchLine;
+  const winHighlights = windowed.highlights;
   /** Content currently installed in `view` — ref compare beats a per-nav
    * `doc.toString()` on large files. */
-  const currentTextRef = useRef(text);
+  const currentTextRef = useRef(winText);
   /** Latest match offset to recenter on; coalesces rapid navigation. */
   const scrollTargetRef = useRef<number>(0);
   /** One pending recenter rAF at a time. */
@@ -164,7 +221,7 @@ export function PreviewPane({ text, path, matchLine, highlights }: PreviewPanePr
     if (!hostRef.current) return;
     const view = new EditorView({
       parent: hostRef.current,
-      state: cachedPreviewState(text, path),
+      state: cachedPreviewState(winText, path),
     });
     viewRef.current = view;
     return () => view.destroy();
@@ -181,13 +238,13 @@ export function PreviewPane({ text, path, matchLine, highlights }: PreviewPanePr
     // Swap the document only when the content changed. Parsed states come from
     // the module-level LRU cache, so revisiting a file never re-parses;
     // navigating results within the same file skips this entirely.
-    if (currentTextRef.current !== text) {
-      view.setState(cachedPreviewState(text, path));
-      currentTextRef.current = text;
+    if (currentTextRef.current !== winText) {
+      view.setState(cachedPreviewState(winText, path));
+      currentTextRef.current = winText;
     }
-    const lineNo = Math.max(1, Math.min(matchLine, view.state.doc.lines));
+    const lineNo = Math.max(1, Math.min(winMatchLine, view.state.doc.lines));
     const pos = view.state.doc.line(lineNo).from;
-    view.dispatch({ effects: [setMatchDeco.of(buildDecorations(view.state.doc, matchLine, highlights))] });
+    view.dispatch({ effects: [setMatchDeco.of(buildDecorations(view.state.doc, winMatchLine, winHighlights))] });
 
     // Skip the recenter when the match is already visible — scrollIntoView on
     // a large doc forces O(doc) line-measure. When it must jump, defer it to
@@ -213,7 +270,7 @@ export function PreviewPane({ text, path, matchLine, highlights }: PreviewPanePr
         });
       });
     }
-  }, [text, path, matchLine, highlights]);
+  }, [winText, path, winMatchLine, winHighlights]);
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden" />;
 }
