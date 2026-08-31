@@ -148,8 +148,8 @@ function WorkspaceShell({
       const tab = ctx.activeTab;
       if (!tab) return null;
 
-      // ADR-018 Phase 2: leaf content resolves from the registry by the
-      // tab's leafType — never a component switch statement here.
+      // Leaf content resolves from the registry by the tab's leafType —
+      // never a component switch statement here.
       const leaf =
         leafRegistry.get(tab.leafType) ?? leafRegistry.get("markdown");
       if (!leaf) return null;

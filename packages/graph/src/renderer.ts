@@ -1,4 +1,4 @@
-// WebGL2 renderer for the note-link graph (ADR-021, Phase 3).
+// WebGL2 renderer for the note-link graph.
 //
 // Framework-agnostic: given a canvas + typed-array scene buffers it draws
 // nodes (gl.POINTS), edges (instanced gl.TRIANGLES quads) and directional arrowheads (gl.TRIANGLES)

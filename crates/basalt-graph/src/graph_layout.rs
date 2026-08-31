@@ -4,7 +4,7 @@
 //! gives O(n log n) repulsion, edges are springs, a weak gravity term keeps the
 //! cloud centered, and a fixed-timestep damped symplectic integrator settles it
 //! without depending on frame rate. State lives in flat `f32` arrays so the
-//! Phase-2 WASM bridge can hand the renderer a `Float32Array` with zero copy.
+//! WASM bridge hands the renderer a `Float32Array` with zero copy.
 //!
 //! Node indices in this module are dense `0..n`; `LayoutGraph::from_note_graph`
 //! remaps `basalt-graph`'s sparse arena `NodeId`s to that dense space.
@@ -22,7 +22,7 @@ use crate::graph::NoteGraph;
 use std::collections::HashMap;
 
 /// Tunable physics constants. Defaults chosen for a stable, quickly-settling
-/// layout at 25k nodes; revisit during Phase-2 visual tuning.
+/// layout at 25k nodes; tune these for visual quality on smaller graphs.
 #[derive(Debug, Clone)]
 pub struct GraphParams {
     /// Repulsion strength (Coulomb-style, scaled by node mass).

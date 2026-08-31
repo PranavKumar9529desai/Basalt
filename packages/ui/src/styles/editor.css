@@ -151,7 +151,6 @@
   text-decoration: none;
 }
 
-/* ── Syntax highlighting inside code blocks ──────────────────────────── */
 /*
  * These classes are emitted by the codeSyntaxHighlighting extension.
  * The colours use --sat-syntax-* variables so they adapt to any theme.
