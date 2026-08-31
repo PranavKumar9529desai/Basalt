@@ -3,13 +3,13 @@ import { useCallback, useState } from "react";
 import { useActiveNoteStore } from "../store";
 import type { LinkSuggestion, SaveStatus } from "../types";
 
-import { parseFrontmatter } from "../frontmatter";
+import { parseFrontmatter } from "../logic/frontmatter";
 
 /**
  * useNoteIO — thin invoke wrappers for note file I/O (Phase 2 editor split).
  *
  * Owns NO document state: the document lives in CodeMirror (per-tab
- * EditorStates owned by MarkdownEditorView). This hook only wraps IPC and the
+ * EditorStates owned by EditorView). This hook only wraps IPC and the
  * small pieces of React state the UI actually renders (status line,
  * active tab's save status) and mirrors backlinks into the active-note
  * store for the right dock.

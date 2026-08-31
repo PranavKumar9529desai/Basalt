@@ -104,7 +104,7 @@ via CSS variables — it's not a design token system itself.
 
 ## External conventions (for feature-layer consumers)
 
-The React `<EditorHost>` wrapper with `onViewReady` lives in
+The React `<Host>` wrapper with `onViewReady` lives in
 `apps/tauri/src/features/editor/components/editor-component.tsx`.
 
 The `useEditorCommands` hook (registers bold/italic/etc. in the global command

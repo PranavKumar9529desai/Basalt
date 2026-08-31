@@ -1,16 +1,16 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ReadingView } from "./ReadingView";
+import { Reading } from "./Reading";
 
 const services = {
   findNote: vi.fn(() => undefined),
   openNote: vi.fn(),
 };
 
-describe("ReadingView", () => {
+describe("Reading", () => {
   it("renders the note as readable content instead of raw Markdown", () => {
     render(
-      <ReadingView
+      <Reading
         title="A note"
         sourcePath="A note.md"
         markdown={"---\nstatus: draft\ntags: [react, typescript]\n---\n# Heading\n\n**bold** and [[Target]]"}
@@ -31,7 +31,7 @@ describe("ReadingView", () => {
 
   it("renders task items and rejects unsafe link protocols", () => {
     render(
-      <ReadingView
+      <Reading
         title="Links"
         sourcePath="Links.md"
         markdown={"- [x] finished\n\n[unsafe](javascript:alert(1))"}
@@ -46,7 +46,7 @@ describe("ReadingView", () => {
 
   it("renders fenced and indented code blocks as <pre><code>", () => {
     render(
-      <ReadingView
+      <Reading
         title="Code"
         sourcePath="Code.md"
         markdown={
@@ -77,7 +77,7 @@ describe("ReadingView", () => {
 
   it("does not truncate fenced code nested inside a list item", () => {
     render(
-      <ReadingView
+      <Reading
         title="Nested"
         sourcePath="Nested.md"
         markdown={
@@ -94,7 +94,7 @@ describe("ReadingView", () => {
 
   it("keeps the title above the properties section", () => {
     render(
-      <ReadingView
+      <Reading
         title="Ordered.md"
         sourcePath="Ordered.md"
         markdown={"---\nstatus: draft\n---\nbody\n"}
@@ -111,7 +111,7 @@ describe("ReadingView", () => {
 
   it("syntax-highlights recognised code blocks", async () => {
     render(
-      <ReadingView
+      <Reading
         title="Highlight"
         sourcePath="Highlight.md"
         markdown={"```ts\nconst answer: number = 42;\n```\n"}

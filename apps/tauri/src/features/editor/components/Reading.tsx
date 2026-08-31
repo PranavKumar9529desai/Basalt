@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import { tokenizeCode, type CodeToken } from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
 
-interface ReadingViewProps {
+interface ReadingProps {
   markdown: string;
   sourcePath: string;
   title: string;
@@ -348,7 +348,7 @@ function renderDocument(
   );
 }
 
-export function ReadingView({ markdown, sourcePath, title, services, initialScrollRatio = 0, onScrollRatioChange }: ReadingViewProps) {
+export function Reading({ markdown, sourcePath, title, services, initialScrollRatio = 0, onScrollRatioChange }: ReadingProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(() => maskFrontmatter(markdown), [markdown]);
   const parseSource = useMemo(() => maskReadingOnlySyntax(parsed.masked), [parsed.masked]);

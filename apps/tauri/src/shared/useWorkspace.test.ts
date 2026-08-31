@@ -8,7 +8,7 @@ import type { UseVaultMutationsReturn } from "../features/vault/hooks/useVaultMu
 import type { UseVaultControllerReturn } from "../features/vault/hooks/useVaultController";
 import type { TabsState } from "../features/tabs/store/types";
 
-import { useWorkspaceController } from "./useWorkspace";
+import { useWorkspace } from "./useWorkspace";
 
 vi.mock("../features/vault", () => ({
   useVaultMutations: vi.fn(),
@@ -105,7 +105,7 @@ function setup(opts: SetupOpts = {}) {
   const refreshTree = vi.fn().mockResolvedValue(undefined);
 
   const { result } = renderHook(() =>
-    useWorkspaceController({
+    useWorkspace({
       vaultPath: opts.vaultPath === undefined ? "/vault" : opts.vaultPath,
       treeNodes: [],
       visibleNodes: [],
@@ -123,7 +123,7 @@ function setup(opts: SetupOpts = {}) {
 const node = (path: string, name: string) =>
   ({ path, name } as unknown as FlatTreeNode);
 
-describe("useWorkspaceController", () => {
+describe("useWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

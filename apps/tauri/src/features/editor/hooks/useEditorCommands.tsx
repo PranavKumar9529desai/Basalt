@@ -20,7 +20,7 @@ import { useEffect } from "react";
 /**
  * Hook that registers editor-formatting commands into the global command
  * palette. Must be called from a component with access to a CodeMirror
- * EditorView instance (e.g., via EditorHost's onViewReady callback).
+ * EditorView instance (e.g., via Host's onViewReady callback).
  */
 export function useEditorCommands(view: EditorView | null) {
   useEffect(() => {

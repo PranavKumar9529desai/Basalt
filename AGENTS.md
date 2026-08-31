@@ -37,7 +37,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
 
-**Direction:** the shell renders from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls in `app-shell/viewRegistrations.ts`, never shell surgery. Views read app state via `useWorkspaceContext()`.
+**Direction:** the shell renders from registries, not hardcoded imports (ADR-018). New panels = `registerView()` calls in `app-shell/registrations.ts`, never shell surgery. Views read app state via `useAppContext()`.
 
 ---
 
@@ -106,14 +106,14 @@ apps/tauri/src/
 │   ├── SideDock.tsx          (generic registry-driven side dock)
 │   ├── StatusBar.tsx
 │   ├── ThemeProvider.tsx
-│   ├── WorkspaceView.tsx     ← Workspace grid + header band
-│   ├── WorkspaceOverlays.tsx
-│   ├── WorkspaceInit.tsx     ← One-time boot + persistence
-│   ├── viewRegistrations.ts  ← registerView()/leaf registry entries
+│   ├── Shell.tsx            ← Workspace grid + header band
+│   ├── Overlays.tsx
+│   ├── Boot.tsx             ← One-time boot + persistence
+│   ├── registrations.ts   ← registerView()/leaf registry entries
 │   └── hooks/
-│       └── useWorkspaceTabHandlers.ts
+│       └── (tab handlers inlined in Shell.tsx)
 ├── shared/                 ← Cross-feature orchestration
-│   ├── useWorkspace.ts     (useWorkspaceController)
+│   ├── useWorkspace.ts     (useWorkspace)
 │   └── tabCommands.ts
 ├── features/               ← Business logic (zero cross-feature imports)
 │  ├── editor/  search/  settings/  tabs/  vault/  graph/

@@ -186,7 +186,7 @@ draw lives in `apps/tauri/src/graph/`:
 - **`GraphWorker.ts`** — a **Web Worker** running the WASM force simulation;
   posts `Float32Array` positions to the main thread. The expensive node physics
   is already off the UI thread.
-- **`GraphView.tsx`** — owns the sim worker, the Canvas2D label overlay, and
+- **`Graph.tsx`** — owns the sim worker, the Canvas2D label overlay, and
   the per-frame orchestration: it calls `setPositions` / `setView` / `setFlags`
   / `setArrows` then `render()`.
 - **`spatialGrid.ts`** — `SpatialGrid`, a screen-space uniform grid used for

@@ -1,23 +1,23 @@
-import { TabsBar } from "@workspace/ui/components/tabs";
+import { TabsBar as UITabsBar } from "@workspace/ui/components/tabs";
 import { type DragEvent, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
 
-export interface WorkspaceTabsBarProps {
+export interface TabsBarProps {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onPinToggle: (tabId: string) => void;
 }
 
-// WorkspaceTabsBar — store→view wiring for the editor tab bar. Rendered by
+// TabsBar — store→view wiring for the editor tab bar. Rendered by
 // the shell as the header cell of the editor column in the workspace grid.
 // The bottom hairline is owned by the shell's <HeaderBandRule>, not drawn here.
-export function WorkspaceTabsBar({
+export function TabsBar({
   onSelectTab,
   onCloseTab,
   onPinToggle,
-}: WorkspaceTabsBarProps) {
+}: TabsBarProps) {
   // Project only the data each pill needs. The selector picks STABLE
   // references — the stored `pane.tabIds` array, the `tabs` map, and the
   // active id — so useShallow's shallow compare short-circuits and the
@@ -89,7 +89,7 @@ export function WorkspaceTabsBar({
   );
 
   return (
-    <TabsBar
+    <UITabsBar
       className="min-w-0 shrink-0"
       tabs={tabsBarTabs}
       onSelectTab={onSelect}

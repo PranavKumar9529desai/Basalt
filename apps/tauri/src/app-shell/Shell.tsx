@@ -1,13 +1,13 @@
 /**
- * WorkspaceView — Pure workspace layout.
+ * Shell — Pure workspace layout.
  *
  * Architecture: This component is responsible ONLY for composing the
  * visual layout of the workspace. Cross-feature state lives in
- * WorkspaceProvider (the "app context" views consume); views are
- * registered in viewRegistrations.ts and rendered by generic SideDocks
+ * AppProvider (the "app context" views consume); views are
+ * registered in registrations.ts and rendered by generic SideDocks
  * (ADR-018) — this file imports no feature panel directly.
  *
- * All initialization is owned by WorkspaceInit (parent). This component
+ * All initialization is owned by Boot (parent). This component
  * receives boot as a prop solely to seed the provider and to gate the
  * first-run splash.
  */
@@ -19,27 +19,22 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
-import {
-  useTabsStore,
-  WorkspaceTabs,
-  WorkspaceTabsBar,
-} from "../features/tabs";
+import { useTabsStore, Tabs, TabsBar } from "../features/tabs";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
 import "../shared/tabCommands";
 import { Ribbon } from "./Ribbon";
-import { useWorkspaceTabHandlers } from "./hooks/useWorkspaceTabHandlers";
 import { SideDock } from "./SideDock";
 import { ViewHeader } from "./ViewHeader";
-import "./viewRegistrations";
-import { WorkspaceProvider, useWorkspaceContext } from "./WorkspaceProvider";
-import { WorkspaceOverlays } from "./WorkspaceOverlays";
+import "./registrations";
+import { AppProvider, useAppContext } from "./AppProvider";
+import { Overlays } from "./Overlays";
 
-interface WorkspaceViewProps {
+interface ShellProps {
   boot: BootResult;
 }
 
-export function WorkspaceView({ boot }: WorkspaceViewProps) {
+export function Shell({ boot }: ShellProps) {
   const { isIndexing, status, pickAndSetVault } = useVaultMutations();
 
   if (!boot.vault_path) {
@@ -53,11 +48,11 @@ export function WorkspaceView({ boot }: WorkspaceViewProps) {
   }
 
   return (
-    <WorkspaceProvider vaultPath={boot.vault_path} initialTree={boot.tree}>
+    <AppProvider vaultPath={boot.vault_path} initialTree={boot.tree}>
       <WorkspaceShell
         defaultSidebarWidth={boot.workspace?.sidebarWidth as number | undefined}
       />
-    </WorkspaceProvider>
+    </AppProvider>
   );
 }
 
@@ -66,7 +61,7 @@ function WorkspaceShell({
 }: {
   defaultSidebarWidth?: number;
 }) {
-  const ws = useWorkspaceContext();
+  const ws = useAppContext();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
 
@@ -78,13 +73,9 @@ function WorkspaceShell({
   const togglePinTab = useTabsStore((s) => s.togglePinTab);
   const markTabDirty = useTabsStore((s) => s.markTabDirty);
   const openPinned = useTabsStore((s) => s.openPinned);
-  const tabHandlers = useWorkspaceTabHandlers({
-    tabActions: {
-      activateTab,
-      closeTab,
-      togglePinTab,
-    },
-  });
+  const handleTabSelect = useCallback((tabId: string) => activateTab(tabId), [activateTab]);
+  const handleTabClose = useCallback((tabId: string) => closeTab(tabId, { force: true }), [closeTab]);
+  const handleTabPinToggle = togglePinTab;
 
   // Stable services bag for leaf components — identity must not change per
   // render, or every keystroke would re-render the active leaf.
@@ -245,13 +236,13 @@ function WorkspaceShell({
         />
 
         <div className="col-start-3 row-span-full flex min-h-0 min-w-0 flex-col">
-          <WorkspaceTabsBar
-            onSelectTab={tabHandlers.handleTabSelect}
-            onCloseTab={tabHandlers.handleTabClose}
-            onPinToggle={tabHandlers.handleTabPinToggle}
+          <TabsBar
+            onSelectTab={handleTabSelect}
+            onCloseTab={handleTabClose}
+            onPinToggle={handleTabPinToggle}
           />
 
-          <WorkspaceTabs renderPane={renderPane} />
+          <Tabs renderPane={renderPane} />
         </div>
 
         {/* The single continuous hairline under the workspace header band. */}
@@ -265,7 +256,7 @@ function WorkspaceShell({
         />
       </div>
 
-      <WorkspaceOverlays
+      <Overlays
         contextMenu={ws.contextMenu}
         mutations={ws.mutations}
         controller={ws.controller}

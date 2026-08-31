@@ -5,7 +5,7 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { tags as t } from "@lezer/highlight";
 import type { Highlight } from "../types";
-import { markdownPreviewExtensions } from "@workspace/editor";
+import { previewExtensions } from "@workspace/editor";
 
 // Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
 // theme tokens so the preview tracks the editor's prose + code surface.
@@ -28,7 +28,7 @@ const highlightStyle = HighlightStyle.define([
 
 function languageForPath(path: string): Extension {
   if (path.endsWith(".md")) {
-    return markdownPreviewExtensions();
+    return previewExtensions();
   }
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const desc = languages.find(
@@ -118,7 +118,7 @@ function makeState(text: string, path: string): EditorState {
 
 /**
  * Module-level LRU of parsed preview states, keyed by path and file content — the
- * MarkdownEditorView per-tab cache pattern, but surviving modal mounts. Parsing a
+ * EditorView per-tab cache pattern, but surviving modal mounts. Parsing a
  * large file is the dominant preview cost (open-cold, cross-file nav); the
  * parse is correct to reuse because a hit requires the identical content
  * string, so a changed file is always re-parsed.

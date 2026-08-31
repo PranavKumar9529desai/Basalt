@@ -1,7 +1,7 @@
 import "./commands";
 
-export { EditorCommandPalette } from "./components/CommandPalette";
-export { MarkdownEditorView } from "./components/MarkdownEditorView";
+export { CommandPalette } from "./components/CommandPalette";
+export { EditorView } from "./components/EditorView";
 export { useActiveNoteStore } from "./store";
 
 export {
@@ -10,4 +10,4 @@ export {
   surgicalEdit,
   editFrontmatter,
   initFrontmatterWasm,
-} from "./frontmatter";
+} from "./logic/frontmatter";

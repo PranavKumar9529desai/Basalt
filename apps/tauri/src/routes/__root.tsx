@@ -2,7 +2,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { CommandProvider } from "@workspace/commands";
 import { KeybindingListener, KeybindingProvider } from "@workspace/keybindings";
 import { TooltipProvider } from "@workspace/ui/components/ui/tooltip";
-import { EditorCommandPalette } from "../features/editor";
+import { CommandPalette } from "../features/editor";
 import { StatusBar } from "../app-shell";
 
 export const Route = createRootRoute({
@@ -12,7 +12,7 @@ export const Route = createRootRoute({
         <KeybindingListener />
         <TooltipProvider>
           <div className="flex flex-col h-screen bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] overflow-hidden">
-            <EditorCommandPalette />
+            <CommandPalette />
             {/* Main workspace area — fills all space */}
             <div className="flex flex-1 min-h-0">
               <Outlet />

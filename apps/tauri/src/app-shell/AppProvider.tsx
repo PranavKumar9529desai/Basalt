@@ -5,7 +5,7 @@ import {
   useVaultTree,
   type FlatTreeNode,
 } from "../features/vault";
-import { useWorkspaceController } from "../shared/useWorkspace";
+import { useWorkspace } from "../shared/useWorkspace";
 import {
   type ReactNode,
   createContext,
@@ -35,7 +35,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     (s) => (activeNotePath ? getTabByPath(s.pane, s.tabs, activeNotePath) : null),
   );
 
-  const workspace = useWorkspaceController({
+  const workspace = useWorkspace({
     vaultPath,
     treeNodes,
     visibleNodes,
@@ -87,19 +87,19 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   };
 }
 
-export type WorkspaceContextValue = ReturnType<typeof useWorkspaceState>;
+export type AppContextValue = ReturnType<typeof useWorkspaceState>;
 
-const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+const AppContext = createContext<AppContextValue | null>(null);
 
 /**
  * App context for workbench views (ADR-018): owns the single instance of the
- * cross-feature composition (vault tree + useWorkspaceController) and exposes
+ * cross-feature composition (vault tree + useWorkspace) and exposes
  * it via context instead of prop drills — the role Obsidian's `app` object
  * plays for its views, and the surface future plugins will receive. Mount
- * exactly once (WorkspaceView); the hooks underneath hold state and must
+ * exactly once (Shell); the hooks underneath hold state and must
  * never be instantiated twice.
  */
-export function WorkspaceProvider({
+export function AppProvider({
   vaultPath,
   initialTree,
   children,
@@ -110,18 +110,16 @@ export function WorkspaceProvider({
 }) {
   const value = useWorkspaceState(vaultPath, initialTree);
   return (
-    <WorkspaceContext.Provider value={value}>
+    <AppContext.Provider value={value}>
       {children}
-    </WorkspaceContext.Provider>
+    </AppContext.Provider>
   );
 }
 
-export function useWorkspaceContext(): WorkspaceContextValue {
-  const ctx = useContext(WorkspaceContext);
+export function useAppContext(): AppContextValue {
+  const ctx = useContext(AppContext);
   if (!ctx) {
-    throw new Error(
-      "useWorkspaceContext must be used within a WorkspaceProvider",
-    );
+    throw new Error("useAppContext must be used within an AppProvider");
   }
   return ctx;
 }

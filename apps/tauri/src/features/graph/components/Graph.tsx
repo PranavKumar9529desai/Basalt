@@ -189,7 +189,7 @@ interface PersistedGraphState {
   camera?: { scale: number; ox: number; oy: number };
 }
 
-export function GraphView({ tab }: LeafProps) {
+export function Graph({ tab }: LeafProps) {
   const services = useLeafServices();
   const activeNotePath = services.activeNote?.path ?? null;
 

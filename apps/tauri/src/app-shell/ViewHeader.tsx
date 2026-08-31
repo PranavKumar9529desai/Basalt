@@ -19,7 +19,7 @@ import {
 } from "@workspace/ui/components/ui/context-menu";
 import type { LeafTabInfo } from "@workspace/views";
 import { useRef, useState } from "react";
-import { useRenameSignalStore } from "../features/editor/ui/renameSignal";
+  import { useRenameSignalStore } from "../features/editor/store/renameSignal";
 import { useTabsStore } from "../features/tabs";
 
 /**

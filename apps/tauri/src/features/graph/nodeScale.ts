@@ -1,7 +1,7 @@
 // Centralized node-sizing policy for the graph (ADR-021, degree-based sizing).
 //
 // One pure source of truth mapping a node's "importance" to a drawn diameter in
-// CSS px. Keeping it out of GraphView/renderer means the scaling law and its
+// CSS px. Keeping it out of Graph/renderer means the scaling law and its
 // constants live in exactly one place — unit-testable in isolation and easy to
 // expose via settings later (wrap `computeNodeSize` in a `useNodeScale` hook
 // then; the function is already the single seam).

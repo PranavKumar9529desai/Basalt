@@ -39,7 +39,7 @@ commandService.registerCommand("tabs:close-active", () => {
 **For commands that need hook data** (registered in shell):
 
 ```tsx
-// In WorkspaceView.tsx
+// In Shell.tsx
 useEffect(() => {
   commandService.registerCommand("app:new-file", controller.createNoteInstant);
   return () => commandService.unregister("app:new-file");

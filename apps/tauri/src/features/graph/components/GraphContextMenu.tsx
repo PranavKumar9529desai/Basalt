@@ -18,7 +18,7 @@ interface GraphContextMenuProps {
   onExpand: (full: number) => void;
 }
 
-// Right-click node menu. Pure presentational — `GraphView` supplies the
+// Right-click node menu. Pure presentational — `Graph` supplies the
 // callbacks (which close over refs/services and clear the menu).
 export const GraphContextMenu: FC<GraphContextMenuProps> = ({
   menu,

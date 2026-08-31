@@ -6,7 +6,7 @@ import type { ViewDescriptor, ViewSide } from "./types";
  * Same pattern as CommandService: providers register by string key,
  * consumers (side docks) look up by string key. The registry never
  * imports from features; registration happens in the shell's explicit
- * boot-time registration list (app-shell/viewRegistrations.ts) so the
+ * boot-time registration list (app-shell/registrations.ts) so the
  * set of live views is deterministic.
  */
 export class ViewRegistry {

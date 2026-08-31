@@ -1,5 +1,2 @@
-export { BacklinksView } from "./BacklinksView";
-export {
-  FileExplorerHeaderActions,
-  FileExplorerView,
-} from "./FileExplorerView";
+export { Backlinks } from "./Backlinks";
+export { FileExplorerHeaderActions, FileExplorer } from "./FileExplorer";

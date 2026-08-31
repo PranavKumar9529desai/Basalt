@@ -4,16 +4,16 @@ import {
   IconFolderPlus,
 } from "@tabler/icons-react";
 import { FileTree } from "../../features/vault";
-import { useWorkspaceContext } from "../WorkspaceProvider";
+import { useAppContext } from "../AppProvider";
 
 /**
  * File explorer view — the left dock's registered view.
  * Self-contained: reads the workspace context instead of receiving
  * prop drills from the shell.
  */
-export function FileExplorerView() {
+export function FileExplorer() {
   const { visibleNodes, openFolders, controller, mutations, selection } =
-    useWorkspaceContext();
+    useAppContext();
 
   return (
     <FileTree
@@ -40,7 +40,7 @@ export function FileExplorerView() {
  * header band while this view is active.
  */
 export function FileExplorerHeaderActions() {
-  const { controller } = useWorkspaceContext();
+  const { controller } = useAppContext();
 
   const actions = [
     {

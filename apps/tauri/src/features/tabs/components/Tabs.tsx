@@ -8,16 +8,16 @@ export interface PaneRenderContext {
   markTabDirty: (tabId: string, dirty: boolean) => void;
 }
 
-export interface WorkspaceTabsProps {
+export interface TabsProps {
   renderPane: (context: PaneRenderContext) => ReactNode;
 }
 
 /**
  * Single-pane tab host reading directly from the tabs store. The tab bar
- * itself lives in WorkspaceTabsBar, rendered by the shell as the editor
- * column's header cell in the workspace grid.
+ * itself lives in TabsBar, rendered by the shell as the editor column's
+ * header cell in the workspace grid.
  */
-export function WorkspaceTabs({ renderPane }: WorkspaceTabsProps) {
+export function Tabs({ renderPane }: TabsProps) {
   const activeTabId = useTabsStore((state) => state.pane.activeTabId);
   // Structural version: bumps on open/close/pin/move/rename. A rename
   // repoints the active tab's path in place (its id is stable), so without

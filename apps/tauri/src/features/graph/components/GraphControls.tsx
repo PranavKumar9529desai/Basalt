@@ -60,7 +60,7 @@ interface GraphControlsProps {
 }
 
 // Graph settings inspector: filter, scope, centering, display toggles, and
-// color grouping. Pure presentational — all state lives in the GraphView leaf.
+// color grouping. Pure presentational — all state lives in the Graph leaf.
 export const GraphControls: FC<GraphControlsProps> = ({
   query,
   onQueryChange,

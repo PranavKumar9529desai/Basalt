@@ -19,7 +19,7 @@ export {
   runTypingBenchmark,
 } from "./benchmark";
 export type { EditorExtensionGroups } from "./editor";
-export { createEditorExtensionGroups, createEditorExtensions, markdownPreviewExtensions } from "./editor";
+export { createEditorExtensionGroups, createEditorExtensions, previewExtensions } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
 export type {

@@ -10,11 +10,11 @@ import {
 import { useKeybindingService } from "@workspace/keybindings";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
-import { pruneClosedTabCaches } from "../pruneCache";
-import { editFrontmatter, initFrontmatterWasm } from "../frontmatter";
-import { useActiveNoteStore } from "../store";
-import { AUTOSAVE_DEBOUNCE_MS } from "../saveManager";
-import { computeStats } from "../stats";
+import { pruneClosedTabCaches } from "../logic/pruneCache";
+import { editFrontmatter, initFrontmatterWasm } from "../logic/frontmatter";
+import { useActiveNoteStore } from "../store/activeNote";
+import { AUTOSAVE_DEBOUNCE_MS } from "../logic/saveManager";
+import { computeStats } from "../logic/stats";
 
 /** Debounce for word/char stats — computed from the CM doc, never per keystroke. */
 export const STATS_DEBOUNCE_MS = 500;
@@ -37,7 +37,7 @@ export interface NoteIO {
   parseFrontmatter: (text: string) => FrontmatterModel | null;
 }
 
-export interface MarkdownEditorControllerOptions {
+export interface EditorControllerOptions {
   io: NoteIO;
   services: LeafServices;
   keybindingService: ReturnType<typeof useKeybindingService>;
@@ -68,8 +68,8 @@ export interface MarkdownEditorControllerOptions {
  * created with a different extension set, so this is an invariant, not a
  * preference.
  */
-export class MarkdownEditorController {
-  /** Empty-doc state for EditorHost's one-time mount. */
+export class EditorController {
+  /** Empty-doc state for Host's one-time mount. */
   readonly initialState: EditorState;
   readonly services: LeafServices;
   readonly io: NoteIO;
@@ -88,7 +88,7 @@ export class MarkdownEditorController {
 
   private extensions: Extension[];
 
-  constructor(options: MarkdownEditorControllerOptions) {
+  constructor(options: EditorControllerOptions) {
     this.io = options.io;
     this.services = options.services;
     this.keybindingService = options.keybindingService;
@@ -140,7 +140,7 @@ export class MarkdownEditorController {
     }
   };
 
-  /** Set the live view (called once EditorHost reports its EditorView). */
+  /** Set the live view (called once Host reports its EditorView). */
   setView(view: EditorView) {
     this.view = view;
     if (this.currentTab) void this.showTab(this.currentTab);
@@ -226,7 +226,7 @@ export class MarkdownEditorController {
       view.scrollDOM.scrollTop = 0;
       if (t.line) this.revealLine(t.line);
     } catch (err) {
-      console.error("[MarkdownEditorView] open_file failed:", err);
+      console.error("[EditorView] open_file failed:", err);
       this.io.setStatus(`Open error: ${String(err)}`);
     }
   }
@@ -296,7 +296,7 @@ export class MarkdownEditorController {
         void this.io.refreshBacklinks(meta.path);
       }
     } catch (err) {
-      console.error("[MarkdownEditorView] save_file failed:", err);
+      console.error("[EditorView] save_file failed:", err);
       this.io.setStatus(`Save error: ${String(err)}`);
       if (isActive) this.io.setSaveStatus("unsaved");
     }
@@ -340,7 +340,7 @@ export class MarkdownEditorController {
       this.io.setStatus(null);
       this.cancelScheduledSave();
     } catch (err) {
-      console.error("[MarkdownEditorView] discardAndReload failed:", err);
+      console.error("[EditorView] discardAndReload failed:", err);
     }
   }
 

@@ -17,12 +17,12 @@ import type { FileChangeEvent } from "../../vault/types";
 import { useLatestRef } from "./useLatestRef";
 import { useNoteIO } from "./useNoteIO";
 import {
-  MarkdownEditorController,
-  type MarkdownEditorControllerOptions,
-} from "../editor/MarkdownEditorController";
-import { decideReconcileAction } from "../reconcile";
-import { useActiveNoteStore } from "../store";
-import { useRenameSignalStore } from "../ui/renameSignal";
+  EditorController,
+  type EditorControllerOptions,
+} from "../controller/EditorController";
+import { decideReconcileAction } from "../logic/reconcile";
+import { useActiveNoteStore } from "../store/activeNote";
+import { useRenameSignalStore } from "../store/renameSignal";
 
 /**
  * Orchestrates the Markdown editor leaf: constructs the controller once,
@@ -34,7 +34,7 @@ import { useRenameSignalStore } from "../ui/renameSignal";
  * update listener and all per-tab caches; this hook only observes tab-level
  * events (switch, close, blur, unmount, external file change).
  */
-export function useMarkdownEditor(tab: LeafProps["tab"]) {
+export function useEditor(tab: LeafProps["tab"]) {
   const services = useLeafServices();
   const io = useNoteIO();
   const keybindingService = useKeybindingService();
@@ -54,9 +54,9 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
   // The tab argument is the mount-time tab — the controller re-targets via
   // setCurrentTab on every subsequent tab change, so fresh tabs are never
   // read from this initial value.
-  const controllerRef = useRef<MarkdownEditorController | null>(null);
+  const controllerRef = useRef<EditorController | null>(null);
   if (!controllerRef.current) {
-    const options: MarkdownEditorControllerOptions = {
+    const options: EditorControllerOptions = {
       io,
       services,
       keybindingService,
@@ -65,7 +65,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
       onStatus: io.setStatus,
       onDocumentReady: () => setDocumentRevision((revision) => revision + 1),
     };
-    controllerRef.current = new MarkdownEditorController(options);
+    controllerRef.current = new EditorController(options);
   }
   const controller = controllerRef.current;
 
@@ -146,7 +146,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
         });
         ioRef.current.setStatus(`Benchmark written to ${path}`);
       } catch (err) {
-        console.error("[MarkdownEditorView] report write failed:", err);
+        console.error("[EditorView] report write failed:", err);
         ioRef.current.setStatus(
           "Benchmark done; report write failed (see console)",
         );
@@ -160,7 +160,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
           runTypingBenchmark(view),
         );
       } catch (err) {
-        console.error("[MarkdownEditorView] benchmark failed:", err);
+        console.error("[EditorView] benchmark failed:", err);
       }
     });
 
@@ -197,7 +197,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
         ]);
         void report("Editor typing benchmark — extension isolation", results);
       } catch (err) {
-        console.error("[MarkdownEditorView] isolation benchmark failed:", err);
+        console.error("[EditorView] isolation benchmark failed:", err);
       }
     });
 
@@ -255,7 +255,7 @@ export function useMarkdownEditor(tab: LeafProps["tab"]) {
         try {
           diskText = await ioRef.current.readFile(changedPath);
         } catch (err) {
-          console.error("[MarkdownEditorView] reconcile read failed:", err);
+          console.error("[EditorView] reconcile read failed:", err);
           return;
         }
 

@@ -1,9 +1,11 @@
 import { type Command, commandService } from "@workspace/commands";
 import { useKeybindingService } from "@workspace/keybindings";
-import { CommandPalette } from "@workspace/ui/components/command-palette/CommandPalette";
+import {
+  CommandPalette as BaseCommandPalette,
+} from "@workspace/ui/components/command-palette/CommandPalette";
 import { useEffect, useState } from "react";
 
-export function EditorCommandPalette() {
+export function CommandPalette() {
   const keybindingService = useKeybindingService();
   const [open, setOpen] = useState(false);
 
@@ -17,7 +19,7 @@ export function EditorCommandPalette() {
   const commands = open ? commandService.getCommands() : [];
 
   return (
-    <CommandPalette
+    <BaseCommandPalette
       commands={commands.map((c: Command) => ({
         id: c.id,
         name: c.name,

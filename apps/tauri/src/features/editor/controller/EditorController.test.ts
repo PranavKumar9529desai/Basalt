@@ -3,15 +3,15 @@ import type { EditorView } from "@codemirror/view";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import { describe, expect, it, vi } from "vitest";
 import {
-  MarkdownEditorController,
-  type MarkdownEditorControllerOptions,
+  EditorController,
+  type EditorControllerOptions,
   type NoteIO,
-} from "./MarkdownEditorController";
+} from "./EditorController";
 
 // showTab awaits the frontmatter WASM loader, which can't resolve in vitest's
 // SSR build (the `?init` import is a Vite-only URL). Stub it to resolve
 // immediately so showTab's read-then-swap flow is what actually runs.
-vi.mock("../frontmatter-wasm", () => ({
+vi.mock("../logic/frontmatter-wasm", () => ({
   initFrontmatterWasm: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -81,9 +81,9 @@ function makeController(
     registerAction: vi.fn(),
     unregisterAction: vi.fn(),
     setContext: vi.fn(),
-  } as unknown as MarkdownEditorControllerOptions["keybindingService"];
+  } as unknown as EditorControllerOptions["keybindingService"];
 
-  const controller = new MarkdownEditorController({
+  const controller = new EditorController({
     io,
     services,
     keybindingService,
@@ -99,7 +99,7 @@ const tabB: LeafTabInfo = { id: "tab-b", path: "/v/b.md", title: "b" };
 
 const tick = () => new Promise((r) => setTimeout(r, 1));
 
-describe("MarkdownEditorController", () => {
+describe("EditorController", () => {
   it("shows the active tab by reading disk into a fresh EditorState", async () => {
     const { controller, io } = makeController(tabA);
     const { view, lastState } = makeFakeView();

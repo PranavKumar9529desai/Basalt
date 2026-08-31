@@ -1,7 +1,7 @@
 import type { EditorState } from "@codemirror/state";
 
 /**
- * Per-tab editor caches owned by MarkdownEditorView. Extracted from the
+ * Per-tab editor caches owned by EditorView. Extracted from the
  * component so the prune-on-close logic is unit-testable without a
  * CodeMirror render.
  *
@@ -23,7 +23,7 @@ export interface TabCaches<T = EditorState> {
   tabMeta: Map<string, { path: string; name: string }>;
 }
 
-/** Read-only view of the tab structure MarkdownEditorView asks the workspace for. */
+/** Read-only view of the tab structure EditorView asks the workspace for. */
 export interface TabStructureSource {
   getOpenTabIds(): Set<string>;
   getOpenTabPaths(): Set<string>;

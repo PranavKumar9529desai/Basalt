@@ -1,5 +1,5 @@
 /**
- * useWorkspaceController — Cross-feature orchestrator.
+ * useWorkspace — Cross-feature orchestrator.
  *
  * Architecture: This hook owns ALL cross-feature wiring between vault, tabs,
  * editor, and settings. It reads from multiple feature stores and composes
@@ -14,7 +14,7 @@
  * Callers pass in raw feature data (treeNodes, visibleNodes, vaultPath)
  * and editor interface callbacks. This hook returns composed controller
  * actions and UI state for the shell to render. Consume it via
- * useWorkspaceContext() — never instantiate a second time.
+ * useAppContext() — never instantiate a second time.
  */
 import { useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -71,7 +71,7 @@ interface Props {
   editor: EditorInterface;
 }
 
-export function useWorkspaceController({
+export function useWorkspace({
   vaultPath,
   treeNodes,
   visibleNodes,

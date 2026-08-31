@@ -2,7 +2,7 @@ import type { EditorView } from "@codemirror/view";
 import { commandService } from "@workspace/commands";
 import { type ContextMenuState } from "@workspace/editor";
 import {
-  ContextMenu,
+  ContextMenu as MenuRoot,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -13,7 +13,7 @@ import {
 import { useCallback, useMemo } from "react";
 import { useEditorCommands } from "../hooks/useEditorCommands";
 
-export interface EditorContextMenuProps {
+export interface ContextMenuProps {
   /** null = closed. Coordinates come from the CM contextMenu extension. */
   menuState: ContextMenuState | null;
   onMenuStateChange: (state: ContextMenuState | null) => void;
@@ -27,12 +27,12 @@ export interface EditorContextMenuProps {
  * right-click coordinates emitted by the CM contextMenu extension; the
  * menu state lives in the leaf component so it survives document swaps.
  */
-export function EditorContextMenu({
+export function ContextMenu({
   menuState,
   onMenuStateChange,
   view,
   onSearch,
-}: EditorContextMenuProps) {
+}: ContextMenuProps) {
   useEditorCommands(view);
 
   const commands = useMemo(() => commandService.getCommands(), []);
@@ -56,7 +56,7 @@ export function EditorContextMenu({
   const editorCommands = commands.filter((c) => c.category === "Editor");
 
   return (
-    <ContextMenu
+    <MenuRoot
       open={!!menuState}
       onOpenChange={(open) => !open && onMenuStateChange(null)}
     >
@@ -105,6 +105,6 @@ export function EditorContextMenu({
           </ContextMenuSub>
         </ContextMenuContent>
       )}
-    </ContextMenu>
+    </MenuRoot>
   );
 }

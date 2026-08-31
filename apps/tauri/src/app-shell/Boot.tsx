@@ -1,5 +1,5 @@
 /**
- * WorkspaceInit — Workspace initialization boundary.
+ * Boot — Workspace initialization boundary.
  *
  * Architecture: This component owns the ONE-TIME initialization of all features.
  * It receives the raw BootResult from the Rust backend and orchestrates:
@@ -10,13 +10,13 @@
  * BootResult is a SEED, not a runtime dependency — it flows through here
  * exactly once and is never stored in a Zustand store (no dual source of truth).
  *
- * This component renders WorkspaceView as its ONLY child, passing the full
- * boot object so WorkspaceView can seed useVaultTree(boot.tree). The boot
+ * This component renders Shell as its ONLY child, passing the full
+ * boot object so Shell can seed useVaultTree(boot.tree). The boot
  * object is NOT stored — it's consumed and discarded.
  *
  * Note: Command registration for vault actions (app:new-file, app:delete-file)
- * stays in WorkspaceView because those commands depend on `controller` from
- * useWorkspaceController, which is a runtime hook result — not boot data.
+ * stays in Shell because those commands depend on `controller` from
+ * useWorkspace, which is a runtime hook result — not boot data.
  */
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -25,13 +25,13 @@ import type { BootResult } from "../features/vault";
 import { initSettings } from "../features/settings";
 import { useTabPersistence } from "../features/tabs";
 import { ttiMark, writeTtiReport } from "./tti";
-import { WorkspaceView } from "./WorkspaceView";
+import { Shell } from "./Shell";
 
-interface WorkspaceInitProps {
+interface BootProps {
   boot: BootResult;
 }
 
-export function WorkspaceInit({ boot }: WorkspaceInitProps) {
+export function Boot({ boot }: BootProps) {
   // Plain function call — reads boot.settings once and writes to the Zustand
   // settings store. Idempotent: calling again with same data is a no-op.
   initSettings(boot.settings);
@@ -59,7 +59,7 @@ export function WorkspaceInit({ boot }: WorkspaceInitProps) {
       .catch((err) => {
         // Missing capability etc. must never fail silently — the 10s Rust
         // failsafe would mask it as "slow boot" (see TTI run 18:10/18:15).
-        console.error("[WorkspaceInit] window.show() failed:", err);
+        console.error("[Boot] window.show() failed:", err);
       });
     let inner = 0;
     const outer = requestAnimationFrame(() => {
@@ -87,7 +87,7 @@ export function WorkspaceInit({ boot }: WorkspaceInitProps) {
     };
   }, [boot]);
 
-  // WorkspaceView is a pure layout — reads from stores, receives boot for
+  // Shell is a pure layout — reads from stores, receives boot for
   // vault tree initialization (useVaultTree needs boot.tree).
-  return <WorkspaceView boot={boot} />;
+  return <Shell boot={boot} />;
 }

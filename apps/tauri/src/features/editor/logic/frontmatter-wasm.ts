@@ -1,4 +1,4 @@
-import init from "./components/frontmatter.wasm?init";
+import init from "../components/frontmatter.wasm?init";
 import type { FrontmatterModel } from "@workspace/editor";
 
 type FmExports = {
@@ -16,7 +16,7 @@ let failed = false;
 /**
  * Load the frontmatter engine WASM (ADR-022 rule 2). Idempotent; safe to call
  * from many tabs. The boot race is handled by awaiting this BEFORE creating an
- * EditorState that could contain frontmatter (see MarkdownEditorView.showTab).
+ * EditorState that could contain frontmatter (see EditorView.showTab).
  */
 export async function initFrontmatterWasm(): Promise<void> {
   if (ready) return ready;

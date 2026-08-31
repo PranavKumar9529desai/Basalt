@@ -7,7 +7,7 @@ import {
 } from "@workspace/editor";
 import { parseFrontmatterSync } from "./frontmatter-wasm";
 
-// Re-export the loader so MarkdownEditorView can await wasm before
+// Re-export the loader so EditorView can await wasm before
 // building EditorStates.
 export { initFrontmatterWasm } from "./frontmatter-wasm";
 

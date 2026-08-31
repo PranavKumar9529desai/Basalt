@@ -4,15 +4,15 @@ import { type LeafProps } from "@workspace/views";
 import { createRoot } from "react-dom/client";
 import { useEffect, useRef } from "react";
 import { InlineTitle } from "./InlineTitle";
-import { ReadingView } from "./ReadingView";
+import { Reading } from "./Reading";
 import "./reading.css";
 import { ConflictBanner } from "./ConflictBanner";
-import { EditorContextMenu } from "./EditorContextMenu";
-import { EditorHost } from "./EditorHost";
-import { EditorScrollContainer } from "./EditorScrollContainer";
-import { EditorStatusLine } from "./EditorStatusLine";
-import { useMarkdownEditor } from "../hooks/useMarkdownEditor";
-import { useRenameSignalStore } from "../ui/renameSignal";
+import { ContextMenu } from "./ContextMenu";
+import { Host } from "./Host";
+import { ScrollContainer } from "./ScrollContainer";
+import { StatusLine } from "./StatusLine";
+import { useEditor } from "../hooks/useEditor";
+import { useRenameSignalStore } from "../store/renameSignal";
 
 /**
  * Registered "markdown" view (ADR-018 Phase 2). One EditorView per session;
@@ -28,10 +28,10 @@ import { useRenameSignalStore } from "../ui/renameSignal";
  * path stays React-free.
  *
  * This component is intentionally thin: the controller owns the EditorView
- * and per-tab caches, and `useMarkdownEditor` owns the lifecycle effects.
+ * and per-tab caches, and `useEditor` owns the lifecycle effects.
  * What remains is pure composition of the presentational chrome.
  */
-export function MarkdownEditorView({ tab }: LeafProps) {
+export function EditorView({ tab }: LeafProps) {
   const {
     controller,
     io,
@@ -44,7 +44,7 @@ export function MarkdownEditorView({ tab }: LeafProps) {
     handleKeepMine,
     handleDiscard,
     documentRevision,
-  } = useMarkdownEditor(tab);
+  } = useEditor(tab);
   const readingScrollRatioRef = useRef(0);
 
   // Scroller-injected title root: created once when the EditorView exists,
@@ -113,8 +113,8 @@ export function MarkdownEditorView({ tab }: LeafProps) {
       {conflict && (
         <ConflictBanner onKeepMine={handleKeepMine} onDiscard={handleDiscard} />
       )}
-      <EditorScrollContainer>
-        <EditorHost
+      <ScrollContainer>
+        <Host
           initialState={controller.initialState}
           onReady={handleReady}
           className={
@@ -124,7 +124,7 @@ export function MarkdownEditorView({ tab }: LeafProps) {
           }
         />
         {tab.viewMode === "reading" && (
-          <ReadingView
+          <Reading
             key={`${tab.id}:${documentRevision}`}
             markdown={controller.getCachedDocText(tab.id)}
             sourcePath={tab.path}
@@ -136,9 +136,9 @@ export function MarkdownEditorView({ tab }: LeafProps) {
             services={services}
           />
         )}
-      </EditorScrollContainer>
-      {io.status && <EditorStatusLine status={io.status} />}
-      <EditorContextMenu
+      </ScrollContainer>
+      {io.status && <StatusLine status={io.status} />}
+      <ContextMenu
         menuState={menuState}
         onMenuStateChange={setMenuState}
         view={view}

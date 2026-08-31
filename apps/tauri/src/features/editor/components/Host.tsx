@@ -3,7 +3,7 @@ import { EditorView } from "@codemirror/view";
 import { useEffect, useRef } from "react";
 import { useLatestRef } from "../hooks/useLatestRef";
 
-export interface EditorHostProps {
+export interface HostProps {
   /**
    * The state the view is created with. The view is created ONCE on mount;
    * later document swaps are done by the owner calling `view.setState()`
@@ -22,11 +22,11 @@ export interface EditorHostProps {
  * keystrokes. This is the core of the editor performance model: typing
  * causes zero React re-renders.
  */
-export function EditorHost({
+export function Host({
   initialState,
   onReady,
   className = "",
-}: EditorHostProps) {
+}: HostProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const onReadyRef = useLatestRef(onReady);
 

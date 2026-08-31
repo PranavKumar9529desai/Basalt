@@ -19,7 +19,7 @@ const SettingsModal = lazy(() =>
   import("../features/settings").then((m) => ({ default: m.SettingsModal })),
 );
 
-interface WorkspaceOverlaysProps {
+interface OverlaysProps {
   contextMenu: {
     isOpen: boolean;
     menuState: {
@@ -49,13 +49,13 @@ interface WorkspaceOverlaysProps {
   onSearchOpen: (path: string, line?: number) => void;
 }
 
-export function WorkspaceOverlays({
+export function Overlays({
   contextMenu,
   mutations,
   controller,
   onConfirmDelete,
   onSearchOpen,
-}: WorkspaceOverlaysProps) {
+}: OverlaysProps) {
   return (
     <>
       <FileTreeContextMenu

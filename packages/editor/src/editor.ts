@@ -124,7 +124,7 @@ export function createEditorExtensions(config: EditorConfig): Extension[] {
  * Registers the frontmatter block widget in read-only "dim" mode, so previews
  * keep the tinted-YAML presentation without a parser or an interactive panel.
  */
-export function markdownPreviewExtensions(): Extension[] {
+export function previewExtensions(): Extension[] {
   return [
     markdown({
       base: markdownLanguage,

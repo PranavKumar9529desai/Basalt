@@ -83,7 +83,7 @@ export function setSetting<K extends SettingsKey>(
  * One-time initialization from the Rust boot result.
  * Merges backend values over defaults — missing keys fall back to DEFAULTS.
  *
- * Call this once in WorkspaceView (or any component that receives `boot.settings`).
+ * Call this once in Shell (or any component that receives `boot.settings`).
  *
  * @example
  * initSettings(boot.settings);

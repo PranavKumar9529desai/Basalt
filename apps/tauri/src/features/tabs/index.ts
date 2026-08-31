@@ -1,6 +1,6 @@
-export type { PaneRenderContext } from "./components/WorkspaceTabs";
-export { WorkspaceTabs } from "./components/WorkspaceTabs";
-export { WorkspaceTabsBar } from "./components/WorkspaceTabsBar";
+export type { PaneRenderContext } from "./components/Tabs";
+export { Tabs } from "./components/Tabs";
+export { TabsBar } from "./components/TabsBar";
 export { useTabDnD } from "./hooks/useTabDnD";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { getTabByPath } from "./selectors";

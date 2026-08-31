@@ -14,7 +14,7 @@ cross-feature state without importing feature stores.
 | Concept    | Registry         | Lines up with            | Where it renders            |
 | ---------- | ---------------- | ------------------------ | --------------------------- |
 | **View**   | `viewRegistry`   | Sidebar / side dock      | `SideDock` (app-shell)      |
-| **Leaf**   | `leafRegistry`   | A tab's content          | `WorkspaceView.renderPane`  |
+| **Leaf**   | `leafRegistry`   | A tab's content          | `Shell.renderPane`  |
 
 **Lexicon** (anchored to ADR-018 / VS Code): a *view* is a side-dock panel
 (file explorer, backlinks); a *leaf* is the kind of content a tab renders
@@ -33,7 +33,7 @@ packages/views/
 The registries follow the same pattern as `@workspace/commands`: providers
 register by string key; consumers look up by string key. The registries never
 import from features — registration happens in the shell's explicit boot-time
-list (`apps/tauri/src/app-shell/viewRegistrations.ts`), so the set of live
+list (`apps/tauri/src/app-shell/registrations.ts`), so the set of live
 views/leaves is deterministic.
 
 ## ViewRegistry (side docks)
@@ -46,7 +46,7 @@ viewRegistry.register({
   name: "File explorer",          // human-readable
   icon: IconFile,
   side: "left",                   // "left" | "right"
-  component: FileExplorerView,    // self-contained, reads app context
+  component: FileExplorer,       // self-contained, reads app context
   headerActions: FileExplorerHeaderActions, // optional, rendered in dock header
 });
 ```
@@ -68,7 +68,7 @@ leafRegistry.register({
   type: "markdown",
   name: "Markdown",
   extensions: [".md", ".markdown"],
-  component: MarkdownEditorView,  // receives { tab }
+  component: EditorView,          // receives { tab }
 });
 ```
 
@@ -87,7 +87,7 @@ extension.
 ### LeafProps example
 
 ```ts
-function MarkdownEditorView({ tab }: LeafProps) {
+function EditorView({ tab }: LeafProps) {
   const services = useLeafServices();
   // tab.id / tab.path / tab.title ...
 }
@@ -124,8 +124,8 @@ function useLeafServices(): LeafServices {
 ## Adding a new panel or leaf
 
 1. Implement the component (view: `ComponentType<Record<string, never>>` that
-   reads `useWorkspaceContext()`; leaf: `ComponentType<LeafProps>`).
-2. Register it in `apps/tauri/src/app-shell/viewRegistrations.ts`:
+   reads `useAppContext()`; leaf: `ComponentType<LeafProps>`).
+2. Register it in `apps/tauri/src/app-shell/registrations.ts`:
    `viewRegistry.register(...)` or `leafRegistry.register(...)` (lazy-load
    heavy leaves via `React.lazy`).
 3. Done — no shell surgery. New features and future plugins use the identical
