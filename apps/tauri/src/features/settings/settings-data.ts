@@ -16,10 +16,14 @@ import { create } from "zustand";
 
 export type TabClickOpenBehavior = "preview" | "pinned" | "vscode";
 
+/** Where pasted/dropped attachments are saved. */
+export const ATTACHMENT_FOLDER_DEFAULT = "_attachments";
+
 /** Canonical defaults for every setting. Add new settings here. */
 const DEFAULTS = {
   theme: "dark" as string,
   tabClickOpenBehavior: "vscode" as TabClickOpenBehavior,
+  attachmentFolder: ATTACHMENT_FOLDER_DEFAULT as string,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;

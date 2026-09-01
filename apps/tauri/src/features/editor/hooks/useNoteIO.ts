@@ -58,6 +58,28 @@ export function useNoteIO() {
     }
   }, []);
 
+  const onPasteImage = useCallback(
+    async (data: Uint8Array, filename: string): Promise<string | null> => {
+      try {
+        const notePath = useActiveNoteStore.getState().activeNote?.path ?? null;
+        const result = await invoke<{
+          rel_path: string;
+          abs_path: string;
+          name: string;
+        }>("save_attachment", {
+          name: filename,
+          data: Array.from(data),
+          notePath,
+        });
+        return result.rel_path;
+      } catch (err) {
+        console.error("[useNoteIO] save_attachment failed:", err);
+        return null;
+      }
+    },
+    [],
+  );
+
   return {
     status,
     setStatus,
@@ -68,7 +90,7 @@ export function useNoteIO() {
     refreshBacklinks,
     onFetchLinks,
     onFetchTags,
-
+    onPasteImage,
     parseFrontmatter,
   };
 }

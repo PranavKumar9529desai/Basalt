@@ -67,10 +67,23 @@ export interface FrontmatterFetch {
   onFetchTags?: FetchTagsFn;
   onFetchLinks?: FetchLinksFn;
 }
+
+/**
+ * Save a pasted/dropped image into the vault. The feature layer owns the IPC
+ * call; this package stays pure. Returns the vault-relative path of the saved
+ * file (e.g. `"_attachments/image.png"`) or `null` to cancel the insert.
+ */
+export type OnPasteImageFn = (
+  data: Uint8Array,
+  filename: string,
+) => Promise<string | null>;
+
 export interface EditorConfig {
   onFetchLinks?: FetchLinksFn;
   onFetchTags?: FetchTagsFn;
   onOpenLink?: (link: string) => void;
+  /** Save a pasted image and return its vault-relative path for `![[…]]`. */
+  onPasteImage?: OnPasteImageFn;
   themeExtensions?: Extension[];
   includeDefaultTheme?: boolean;
   /**

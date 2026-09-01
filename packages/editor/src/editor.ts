@@ -5,6 +5,7 @@ import { languages } from "@codemirror/language-data";
 import type { Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
+import { pasteImageExtension } from "./input/paste-image";
 import {
   createSuggestionsPlugin,
   SUGGESTIONS_THEME,
@@ -95,6 +96,7 @@ export function createEditorExtensionGroups(
       taskListPlugin,
       closeBrackets(),
       keymap.of(backticksKeymap),
+      pasteImageExtension(config.onPasteImage),
     ],
     livePreview: [LIVE_PREVIEW_THEME, livePreviewPlugin],
     suggestions: [

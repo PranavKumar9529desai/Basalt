@@ -33,6 +33,7 @@ export type {
   FrontmatterValue,
   FrontmatterDiagnostic,
   FrontmatterDiagnosticKind,
+  OnPasteImageFn,
   ParseFrontmatterFn,
 } from "./types";
 export {

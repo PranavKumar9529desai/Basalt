@@ -15,7 +15,7 @@ pub use query::run_query;
 pub use files::{
     autocomplete_links, autocomplete_tags, create_folder, create_note, create_untitled_note,
     delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks, move_paths, open_file,
-    open_files, rename_note, rename_path, save_file, save_files,
+    open_files, rename_note, rename_path, save_attachment, save_file, save_files,
 };
 
 pub use frontmatter::parse_frontmatter;

@@ -1257,6 +1257,163 @@ pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAudi
     Ok(vault.asset_index.audit())
 }
 
+// ---------------------------------------------------------------------------
+// Attachment saving (paste / drag-drop)
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+pub struct SaveAttachmentResult {
+    /// Vault-relative path, e.g. `"_attachments/image.png"`.
+    pub rel_path: String,
+    /// Absolute path on disk.
+    pub abs_path: String,
+    /// Filename written (may differ from input due to collision handling).
+    pub name: String,
+}
+
+/// Save a binary attachment (pasted/dropped image, PDF, etc.) to the vault.
+///
+/// Writes to `{vault_root}/{attachments_dir}/{name}.{ext}`, auto-appending
+/// `-1`, `-2`, … on filename collision. Registers the path as a self-write
+/// and updates the asset index so the file appears in `get_assets` immediately.
+#[tauri::command]
+pub fn save_attachment(
+    name: String,
+    data: Vec<u8>,
+    note_path: Option<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> Result<SaveAttachmentResult, String> {
+    use crate::config::load_config;
+    use basalt_vault::asset_index::{AssetInfo, compute_md5, infer_file_type, infer_mime_type};
+
+    let vault_path = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?
+        .clone()
+        .ok_or("no vault open")?;
+
+    // Read attachment folder from settings (default: "_attachments").
+    let config = load_config(&app);
+    let attachments_dir = config
+        .settings
+        .get("attachmentFolder")
+        .and_then(|v| v.as_str())
+        .unwrap_or("_attachments");
+
+    let dir = PathBuf::from(&vault_path).join(attachments_dir);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    // Determine extension from the name parameter (caller strips it before sending)
+    // or from the data's magic bytes. Fall back to "bin".
+    let ext = infer_ext_from_name(&name).or_else(|| infer_ext_from_data(&data)).unwrap_or("bin");
+    let base_name = strip_ext_from_name(&name);
+
+    // Collision handling: append -1, -2, … until we find a free name.
+    let mut final_name = format!("{base_name}.{ext}");
+    let mut final_path = dir.join(&final_name);
+    let mut counter = 1u32;
+    while final_path.exists() {
+        final_name = format!("{base_name}-{counter}.{ext}");
+        final_path = dir.join(&final_name);
+        counter += 1;
+    }
+
+    // Register self-write BEFORE writing so the watcher stays silent.
+    let abs_path = final_path.to_string_lossy().to_string();
+    register_self_writes(&state, &[final_path.clone()]);
+
+    std::fs::write(&final_path, &data).map_err(|e| {
+        // Roll back marker on failure.
+        if let Ok(mut guard) = state.self_writes.lock() {
+            guard.remove(&final_path);
+        }
+        e.to_string()
+    })?;
+
+    let rel_path = format!("{}/{}", attachments_dir, final_name);
+    let content_hash = compute_md5(&data);
+
+    // Update the asset index so get_assets returns the new file immediately.
+    if let Ok(mut vault) = state.vault.write() {
+        vault.asset_index.upsert(AssetInfo {
+            rel_path: rel_path.clone(),
+            abs_path: abs_path.clone(),
+            file_name: final_name.clone(),
+            file_type: infer_file_type(&final_name),
+            mime_type: infer_mime_type(&final_name),
+            size_bytes: data.len() as u64,
+            content_hash,
+            width: None,
+            height: None,
+            embeds_by: Vec::new(),
+            linked_by: Vec::new(),
+        });
+
+        // Register note→asset embed if caller provided a source note.
+        if let Some(ref note) = note_path {
+            let embed_target = rel_path.trim_end_matches(&format!(".{ext}")).to_string();
+            vault.asset_index.register_embeds(note, &[embed_target]);
+        }
+    }
+
+    Ok(SaveAttachmentResult {
+        rel_path,
+        abs_path,
+        name: final_name,
+    })
+}
+
+/// Infer extension from the last `.` segment of a name, if it looks like a
+/// real extension (1–8 lowercase alphanum chars).
+fn infer_ext_from_name(name: &str) -> Option<&'static str> {
+    let ext = Path::new(name)
+        .extension()?
+        .to_str()?;
+    // Match known extensions and return a static string literal (not a
+    // borrow of `name`).
+    match ext.to_ascii_lowercase().as_str() {
+        "png" => Some("png"),
+        "jpg" | "jpeg" => Some("jpg"),
+        "gif" => Some("gif"),
+        "webp" => Some("webp"),
+        "svg" => Some("svg"),
+        "bmp" => Some("bmp"),
+        "pdf" => Some("pdf"),
+        "mp3" => Some("mp3"),
+        "wav" => Some("wav"),
+        "mp4" => Some("mp4"),
+        "mov" => Some("mov"),
+        "webm" => Some("webm"),
+        "ico" => Some("ico"),
+        _ => None,
+    }
+}
+
+/// Try to guess extension from file magic bytes.
+fn infer_ext_from_data(data: &[u8]) -> Option<&'static str> {
+    if data.len() < 8 {
+        return None;
+    }
+    if data.starts_with(b"\x89PNG\r\n\x1a\n") { return Some("png"); }
+    if data.starts_with(b"\xff\xd8\xff") { return Some("jpg"); }
+    if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") { return Some("gif"); }
+    if data.starts_with(b"RIFF") && data.len() > 12 && &data[8..12] == b"WEBP" { return Some("webp"); }
+    if data.starts_with(b"%PDF") { return Some("pdf"); }
+    if data.starts_with(b"\x00\x00\x00") && data.len() > 12 && &data[4..8] == b"ftyp" {
+        // MP4 / MOV / HEIC etc — default to mp4
+        return Some("mp4");
+    }
+    None
+}
+
+/// Strip the file extension from a name, if present and known.
+fn strip_ext_from_name(name: &str) -> &str {
+    let stem = Path::new(name).file_stem().and_then(|s| s.to_str()).unwrap_or(name);
+    if stem.len() == name.len() { name } else { stem }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
