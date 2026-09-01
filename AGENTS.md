@@ -273,7 +273,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                   | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title           |
 | [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)       | ADR-024: Editor Surface Typography and Spatial Rhythm                         |
 | [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md) | ADR-025: Tab Lifecycle and Workspace Persistence                              |
-| [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md) | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline          |
+| [027-basalt-tables-crate](docs/adr/027-basalt-tables-crate.md)           | ADR-027: `basalt-tables` Crate — Query Execution and Event Tables            |
 
 <!-- ADR_INDEX_END -->
 
