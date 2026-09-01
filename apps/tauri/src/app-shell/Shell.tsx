@@ -139,6 +139,7 @@ function WorkspaceShell({
       onTabStructureChanged,
       openPinned,
       ws.renameNote,
+      ws.vaultPath,
     ],
   );
 

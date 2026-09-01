@@ -62,6 +62,10 @@ export function useNoteIO() {
   const runQuery = useCallback(
     async (dql: string): Promise<QueryResult> => {
       return invoke<QueryResult>("run_query", { dql, path: "" });
+    },
+    [],
+  );
+
   const onPasteImage = useCallback(
     async (data: Uint8Array, filename: string): Promise<string | null> => {
       try {

@@ -99,7 +99,7 @@ export function useAssetsActions() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAssets, fetchAudit]);
+  }, [fetchAssets, fetchAudit, setAssets, setAuditReport, setLoading]);
 
   const runCleanup = useCallback(async () => {
     try {

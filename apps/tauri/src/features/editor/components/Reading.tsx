@@ -137,9 +137,17 @@ function AssetEmbed({
   const base = "block max-w-full rounded border border-[var(--sat-layout-border)]";
   switch (kind) {
     case "audio":
-      return <audio controls src={url} className={`${base} my-2 w-full`} />;
+      return (
+        <audio controls src={url} className={`${base} my-2 w-full`}>
+          <track kind="captions" />
+        </audio>
+      );
     case "video":
-      return <video controls src={url} className={`${base} my-2 max-h-[70vh]`} />;
+      return (
+        <video controls src={url} className={`${base} my-2 max-h-[70vh]`}>
+          <track kind="captions" />
+        </video>
+      );
     case "pdf":
       return (
         <iframe
