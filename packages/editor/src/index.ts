@@ -55,3 +55,4 @@ export { attachScrollHeader } from "./scroll-header";
 export type { CodeToken } from "./syntax/code-highlighting";
 export { tokenizeCode } from "./syntax/code-highlighting";
 export { HTML_SANITIZE_CONFIG, sanitizeHtml } from "./preview/html-sanitize";
+export { HTML_TYPOGRAPHY_CSS } from "./preview/html-typography";

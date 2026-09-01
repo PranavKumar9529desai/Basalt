@@ -509,6 +509,36 @@ const READING_SANITIZE_CONFIG = {
 };
 ```
 
+### Typography model
+
+Markdown carries no default styling — it only dictates which HTML element a
+syntax construct becomes, and the editor's CM6 `.cm-content` strips the browser
+UA stylesheet. So for injected HTML to render distinctly (a raw `<h1>` must not
+look identical to `<p>`), the theme must style those elements, the way
+Obsidian's `.markdown-rendered` rule set does.
+
+Basalt mirrors markdown tokens so a raw `<h1>` matches `# h1`. A single shared
+stylesheet, `HTML_TYPOGRAPHY_CSS` in
+`packages/editor/src/preview/html-typography.ts`, is scoped under `.sat-html`
+and applied to the rendered block container in both surfaces:
+
+- Light-preview (`html-block.ts`): the widget's `toDOM` container carries
+  `sat-html`; a one-time, idempotent `<style data-sat-html-typography>` injects
+  the shared source.
+- Reading (`Reading.tsx`): the `HTMLBlock` div carries
+  `markdown-reading-html sat-html`; the same shared source is injected once.
+
+Both injections guard on `[data-sat-html-typography]`, so exactly one copy
+lands in `document.head`. Inline `HTMLTag` raw-source spans are excluded
+(`:not(.sat-html)`) — they keep the mono raw-tag styling and are not
+typography-rendered. `sanitizeHtml` strips user `<style>`/`<script>`, so the
+injected stylesheet is the only CSS governing the block.
+
+The rules reuse `--sat-editor-heading1..6` (sizes/weights/letter-spacing),
+`--sat-text-*`, `--sat-font-*`, `--sat-editor-*`, and `--sat-layout-*` tokens
+with the same fallbacks as `editor.css`, so there is one typography vocabulary
+for both Markdown and raw HTML.
+
 ### Phase 5: Performance budget
 
 #### 5a. Keystroke path — zero added cost

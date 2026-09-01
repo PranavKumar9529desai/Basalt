@@ -13,8 +13,17 @@ import {
   type IconProps,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
-import { tokenizeCode, sanitizeHtml, type CodeToken } from "@workspace/editor";
+import { tokenizeCode, sanitizeHtml, HTML_TYPOGRAPHY_CSS, type CodeToken } from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
+
+// Shared .sat-html typography stylesheet (same source the CM6 widget uses), so
+// raw <h1>/<p>/<span> render distinctly and match markdown tokens in Reading.
+if (typeof document !== "undefined" && !document.querySelector("[data-sat-html-typography]")) {
+  const style = document.createElement("style");
+  style.setAttribute("data-sat-html-typography", "");
+  style.textContent = HTML_TYPOGRAPHY_CSS;
+  document.head.appendChild(style);
+}
 
 interface ReadingProps {
   markdown: string;
@@ -343,13 +352,14 @@ function renderBlock(
   if (node.name === "HorizontalRule") return <hr key={key} />;
   // Render raw HTML blocks sanitized at the single render boundary: the source
   // slice is untrusted, so dangerouslySetInnerHTML is only ever fed the
-  // DOMPurify return value and never re-processed.
+  // DOMPurify return value and never re-processed. `.sat-html` applies the
+  // shared typography so <h1>/<p>/<span> render distinctly, matching markdown.
   if (node.name === "HTMLBlock") {
     const raw = source.slice(node.from, node.to);
     return (
       <div
         key={key}
-        className="markdown-reading-html"
+        className="markdown-reading-html sat-html"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw) }}
       />
     );

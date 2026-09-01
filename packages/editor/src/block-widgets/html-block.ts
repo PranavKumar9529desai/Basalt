@@ -3,6 +3,22 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { sanitizeHtml } from "../preview/html-sanitize";
+import { HTML_TYPOGRAPHY_CSS } from "../preview/html-typography";
+
+let typographyInjected = false;
+// The shared .sat-html typography stylesheet is scoped to the container class,
+// so a single document-head <style> can't leak. Injected once; idempotent (Reading
+// may have already injected it). This is the same source Reading uses, keeping
+// Live Preview and Reading in sync.
+function ensureTypographyStyle(): void {
+  if (typographyInjected || typeof document === "undefined") return;
+  typographyInjected = true;
+  if (document.querySelector("[data-sat-html-typography]")) return;
+  const style = document.createElement("style");
+  style.setAttribute("data-sat-html-typography", "");
+  style.textContent = HTML_TYPOGRAPHY_CSS;
+  document.head.appendChild(style);
+}
 
 // A raw HTMLBlock node renders as sanitized rich HTML only when the caret is
 // off the block; when the caret sits on the block, render() returns null so
@@ -30,8 +46,9 @@ class HtmlBlockWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
+    ensureTypographyStyle();
     const container = document.createElement("div");
-    container.className = "cm-live-html-block";
+    container.className = "cm-live-html-block sat-html";
     // `model.html` is already DOMPurify-clean; insert as-is and never re-process
     // the innerHTML sink afterward.
     container.innerHTML = this.model.html;

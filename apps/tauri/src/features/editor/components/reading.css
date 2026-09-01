@@ -216,8 +216,8 @@
 .markdown-reading-sizer .sat-syntax-inserted { color: var(--sat-syntax-inserted, #98c379); }
 
 /* Rendered raw HTML blocks (block context) and visible inline HTML tags.
-   Blocks get a subtle container so embedded <details>/<table>/<video>
-   reads as distinct from prose. */
+   Blocks get a subtle container (plus `.sat-html` typography shared with the
+   CM6 widget) so embedded <details>/<table>/<video> read as distinct prose. */
 .markdown-reading-sizer .markdown-reading-html {
   border: 1px solid var(--sat-layout-divider, var(--sat-layout-border));
   border-radius: var(--sat-layout-radius-md, 8px);
@@ -227,20 +227,12 @@
   overflow-x: auto;
 }
 
-/* Inline HTML tags (kept as visible raw source in reading mode). */
-.markdown-reading-html,
-.markdown-reading-sizer span.markdown-reading-html {
+/* Inline HTML tags (kept as visible raw source in reading mode) get mono
+   accent styling. Block containers carry `.sat-html`, so exclude them here and
+   let the shared typography own their descendants. */
+.markdown-reading-html:not(.sat-html) {
   color: var(--sat-editor-accent, var(--sat-accent-primary));
   opacity: 0.9;
   font-family: var(--sat-font-mono, monospace);
   font-size: 0.9em;
-}
-
-/* The block container and its inline children should not inherit the mono
-   styling meant for inline raw tags. */
-.markdown-reading-sizer div.markdown-reading-html {
-  font-family: var(--sat-font-sans);
-  font-size: inherit;
-  color: inherit;
-  opacity: 1;
 }
