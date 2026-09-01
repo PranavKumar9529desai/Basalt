@@ -861,16 +861,21 @@ pub fn rename_note(
     path: String,
     new_name: String,
     state: State<AppState>,
+    app: tauri::AppHandle,
 ) -> Result<RenameNoteResult, String> {
-    rename_note_impl(&path, &new_name, &state)
+    let config = crate::config::load_config(&app);
+    rename_note_impl(&path, &new_name, &state, Some(&config.settings))
 }
 
 /// Testable core of [`rename_note`] — separated from the Tauri `State` wrapper
 /// so a unit test can drive a real `AppState` over a temp vault.
+/// `settings`: when `Some`, enables rename-with-note (moving assets on by_note org).
+/// Tests pass `None` to use in-memory defaults.
 fn rename_note_impl(
     path: &str,
     new_name: &str,
     state: &AppState,
+    settings: Option<&std::collections::HashMap<String, serde_json::Value>>,
 ) -> Result<RenameNoteResult, String> {
     let vault_root = canonical_vault_path(state)?;
 
@@ -965,8 +970,13 @@ fn rename_note_impl(
             rewritten.push((key, next));
         }
     }
+    // 5. Rename attachments when `renameAttachmentsWithNote` + `by_note` org.
+    //    Run BEFORE the vault cache update so the old note's embeds_by
+    //    references are still present in the asset index. Updates index paths;
+    //    step 6 re-registers references against the renamed note.
+    rename_attachments_for_note(state, settings, &old_abs, &new_abs, old_stem, &new_stem)?;
 
-    // 5. Vault cache: drop the old node, (re)insert rewritten contents.
+    // 6. Vault cache: drop the old node, (re)insert rewritten contents.
     {
         let mut vault = state
             .vault
@@ -978,20 +988,175 @@ fn rename_note_impl(
         }
     }
 
-    // 6. Search index: remove the old path, upsert every rewritten doc.
+    // 7. Search index: remove the old path, upsert every rewritten doc.
     index_remove(&state, &old_path_str);
     for (p, content) in &rewritten {
         index_upsert(&state, p, content);
     }
-    // NOTE: rename-with-note (moving attachments + rewriting embed refs on
-    // note rename) requires the AppHandle for config access and is deferred
-    // to a follow-up. The infrastructure (org rules, dedup, cleanup) is in place.
 
     Ok(RenameNoteResult {
         path: new_path_str,
         name: new_stem,
         updated_files,
     })
+}
+
+/// Move assets owned by the renamed note when organization is `by_note` and
+/// `renameAttachmentsWithNote` is enabled; rewrite `![[...]]` embed targets in
+/// every note that references a moved asset.
+///
+/// `settings` is the config settings map (may be `None` in tests → defaults:
+/// enabled, org `flat`, folder `_attachments`).
+fn rename_attachments_for_note(
+    state: &AppState,
+    settings: Option<&std::collections::HashMap<String, serde_json::Value>>,
+    old_note_abs: &std::path::Path,
+    new_note_abs: &std::path::Path,
+    old_stem: &str,
+    new_stem: &str,
+) -> Result<(), String> {
+    use basalt_vault::asset_index::AssetInfo;
+
+    let get = |key: &str| {
+        settings
+            .and_then(|s| s.get(key))
+            .and_then(|v| v.as_str())
+    };
+
+    let rename_enabled = settings
+        .and_then(|s| s.get("renameAttachmentsWithNote"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    if !rename_enabled {
+        return Ok(());
+    }
+
+    let organization = get("attachmentOrganization").unwrap_or("flat");
+    if organization != "by_note" {
+        // Only by_note organization moves assets on note rename.
+        return Ok(());
+    }
+
+    let attachments_dir = get("attachmentFolder").unwrap_or("_attachments");
+    let vault_path = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?
+        .clone()
+        .ok_or("no vault open")?;
+    let vault_root = std::path::PathBuf::from(&vault_path);
+    let old_note_str = old_note_abs.to_string_lossy().to_string();
+    let old_dir = vault_root.join(attachments_dir).join(old_stem);
+    let new_dir = vault_root.join(attachments_dir).join(new_stem);
+
+    // Collect assets embedded by the old note, located under its by_note dir.
+    let assets_to_move: Vec<AssetInfo> = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+        vault
+            .asset_index
+            .all()
+            .into_iter()
+            .filter(|a| {
+                a.embeds_by.iter().any(|p| p == &old_note_str)
+                    && std::path::Path::new(&a.abs_path).starts_with(&old_dir)
+            })
+            .collect()
+    };
+
+    if assets_to_move.is_empty() {
+        return Ok(());
+    }
+
+    // Actually move files + update index; collect (old_abs, new_abs) pairs.
+    let mut moved: Vec<(String, String)> = Vec::new();
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+
+        for asset in &assets_to_move {
+            let asset_path = std::path::Path::new(&asset.abs_path);
+            let rel = asset_path
+                .strip_prefix(&old_dir)
+                .unwrap_or(std::path::Path::new(&asset.file_name));
+            let new_abs = new_dir.join(rel);
+            if let Some(parent) = new_abs.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            register_self_writes(&state, &[std::path::PathBuf::from(&asset.abs_path)]);
+            if std::fs::rename(&asset.abs_path, &new_abs).is_err() {
+                continue;
+            }
+            let new_abs_str = new_abs.to_string_lossy().to_string();
+            let new_rel = new_abs
+                .strip_prefix(&vault_root)
+                .unwrap_or(&new_abs)
+                .to_string_lossy()
+                .to_string();
+
+            vault.asset_index.remove(&asset.abs_path);
+            let mut updated = asset.clone();
+            updated.abs_path = new_abs_str.clone();
+            updated.rel_path = new_rel;
+            vault.asset_index.upsert(updated);
+
+            moved.push((asset.abs_path.clone(), new_abs_str));
+        }
+    }
+
+    // Rewrite embed targets in every note referencing a moved asset.
+    if !moved.is_empty() {
+        let candidates: Vec<String> = {
+            let vault = state
+                .vault
+                .read()
+                .map_err(|_| "vault lock poisoned".to_string())?;
+            vault
+                .arena
+                .all_strings()
+                .filter(|p| p.ends_with(".md"))
+                .cloned()
+                .collect()
+        };
+
+        for (old_abs, new_abs) in &moved {
+            // Compute embed target: rel path without extension.
+            // ![[old_target]] → ![[new_target]] preserves alias/anchor.
+            let old_path_obj = std::path::Path::new(old_abs)
+                .strip_prefix(&vault_root)
+                .unwrap_or(std::path::Path::new(old_abs));
+            let new_path_obj = std::path::Path::new(new_abs)
+                .strip_prefix(&vault_root)
+                .unwrap_or(std::path::Path::new(new_abs));
+            let old_target = strip_asset_ext(old_path_obj);
+            let new_target = strip_asset_ext(new_path_obj);
+
+            let needle = format!("![[{}", old_target);
+            let replacement = format!("![[{}", new_target);
+
+            for note_path in &candidates {
+                let Ok(content) = std::fs::read_to_string(note_path) else {
+                    continue;
+                };
+                if !content.contains(&needle) {
+                    continue;
+                }
+                let next = content.replace(&needle, &replacement);
+                if next == content {
+                    continue;
+                }
+                register_self_writes(&state, &[std::path::PathBuf::from(note_path)]);
+                std::fs::write(note_path, &next)
+                    .map_err(|e| format!("failed to update embeds in '{note_path}': {e}"))?;
+            }
+        }
+    }
+
+    Ok(())
 }
 /// document that relocated, so the frontend can repoint any open tab
 /// tracking a moved note (tabs are keyed by path for this purpose).
@@ -1321,12 +1486,10 @@ pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
             .collect();
 
         // Duplicates: keep first by sorted rel_path, delete rest.
-        // Build abs_path → rel_path map for sorting.
         let rel_map: std::collections::HashMap<&str, &str> = all_assets
             .iter()
             .map(|a| (a.abs_path.as_str(), a.rel_path.as_str()))
             .collect();
-
         for group in hash_groups.values() {
             if group.len() <= 1 {
                 continue;
@@ -1376,10 +1539,27 @@ pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
     })
 }
 
+/// Strip the extension from an asset path for use as an embed target.
+/// `"_attachments/foo/image.png"` → `"_attachments/foo/image"`.
+fn strip_asset_ext(p: &std::path::Path) -> std::borrow::Cow<'_, str> {
+    match p.file_stem() {
+        Some(stem) => {
+            let parent = p.parent().unwrap_or(std::path::Path::new(""));
+            if parent.as_os_str().is_empty() {
+                std::borrow::Cow::Owned(stem.to_string_lossy().to_string())
+            } else {
+                std::borrow::Cow::Owned(
+                    format!("{}/{}", parent.display(), stem.to_string_lossy()),
+                )
+            }
+        }
+        None => p.to_string_lossy(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Attachment saving (paste / drag-drop)
 // ---------------------------------------------------------------------------
-
 #[derive(Serialize)]
 pub struct SaveAttachmentResult {
     /// Vault-relative path, e.g. `"_attachments/image.png"`.
@@ -1773,7 +1953,7 @@ mod tests {
         let (root, state) = temp_vault();
         let b_str = root.join("b.md").to_string_lossy().to_string();
 
-        let res = rename_note_impl(&b_str, "renamedB", &state).unwrap();
+        let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
 
         assert_eq!(res.name, "renamedB");
         assert!(res.path.ends_with("renamedB.md"));
@@ -1821,7 +2001,7 @@ mod tests {
     fn rename_rewrites_self_links_inside_the_note() {
         let (root, state) = temp_vault_with_self_refs();
         let b_str = root.join("b.md").to_string_lossy().to_string();
-        let res = rename_note_impl(&b_str, "renamedB", &state).unwrap();
+        let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
         let content = std::fs::read_to_string(root.join("renamedB.md")).unwrap();
         assert!(content.contains("[[renamedB]]"));
         assert!(content.contains("[[renamedB|alias]]"));
@@ -1832,7 +2012,7 @@ mod tests {
     fn rename_rejects_collision() {
         let (root, state) = temp_vault();
         let b_str = root.join("b.md").to_string_lossy().to_string();
-        let err = rename_note_impl(&b_str, "c", &state).unwrap_err();
+        let err = rename_note_impl(&b_str, "c", &state, None).unwrap_err();
         assert!(err.contains("already exists"));
     }
 
@@ -1840,7 +2020,7 @@ mod tests {
     fn rename_rejects_same_name() {
         let (root, state) = temp_vault();
         let b_str = root.join("b.md").to_string_lossy().to_string();
-        let err = rename_note_impl(&b_str, "B", &state).unwrap_err();
+        let err = rename_note_impl(&b_str, "B", &state, None).unwrap_err();
         assert!(err.contains("already has that name"));
     }
 
@@ -1848,7 +2028,7 @@ mod tests {
     fn rename_strips_trailing_md_extension() {
         let (root, state) = temp_vault();
         let b_str = root.join("b.md").to_string_lossy().to_string();
-        let res = rename_note_impl(&b_str, "final.md", &state).unwrap();
+        let res = rename_note_impl(&b_str, "final.md", &state, None).unwrap();
         assert_eq!(res.name, "final");
         assert!(root.join("final.md").exists());
     }
@@ -1857,9 +2037,9 @@ mod tests {
     fn rename_rejects_invalid_names() {
         let (root, state) = temp_vault();
         let b_str = root.join("b.md").to_string_lossy().to_string();
-        assert!(rename_note_impl(&b_str, "   ", &state).is_err());
-        assert!(rename_note_impl(&b_str, "a/b", &state).is_err());
-        assert!(rename_note_impl(&b_str, "..", &state).is_err());
+        assert!(rename_note_impl(&b_str, "   ", &state, None).is_err());
+        assert!(rename_note_impl(&b_str, "a/b", &state, None).is_err());
+        assert!(rename_note_impl(&b_str, "..", &state, None).is_err());
     }
 
     /// Variant of `temp_vault` whose b.md references itself — used by the
@@ -2021,5 +2201,74 @@ mod tests {
         assert!(y >= 2024 && y <= 2030, "year should be around now: {y}");
         assert!(m >= 1 && m <= 12, "month should be 1..=12: {m}");
         assert!(d >= 1 && d <= 31, "day should be 1..=31: {d}");
+    }
+
+    /// Rename-with-note: when `by_note` org + `renameAttachmentsWithNote` are
+    /// enabled, assets under `_attachments/{old_stem}/` move to the new stem
+    /// and `![[...]]` embeds in other notes are rewritten.
+    #[test]
+    fn rename_with_note_moves_attachments_and_rewrites_embeds() {
+        use basalt_vault::asset_index::AssetInfo;
+        use std::collections::HashMap;
+
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let old_abs = root.join("b.md");
+        let new_abs = root.join("renamedB.md");
+
+        // Create _attachments/b/logo.png (simulating by_note org).
+        let attach_dir = root.join("_attachments").join("b");
+        std::fs::create_dir_all(&attach_dir).unwrap();
+        let png_path = attach_dir.join("logo.png");
+        std::fs::write(&png_path, &[0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic bytes
+        let attach_abs = png_path.to_string_lossy().to_string();
+        let attach_rel = "_attachments/b/logo.png".to_string();
+        let embed_target = "_attachments/b/logo".to_string();
+
+        // Register the asset in the index with embeds_by referencing note B.
+        state.vault.write().unwrap().asset_index.upsert(AssetInfo {
+            rel_path: attach_rel.clone(),
+            abs_path: attach_abs.clone(),
+            file_name: "logo.png".into(),
+            file_type: basalt_vault::asset_index::FileType::Image,
+            mime_type: "image/png".into(),
+            size_bytes: 4,
+            content_hash: "test123".into(),
+            width: None,
+            height: None,
+            embeds_by: vec![old_abs.to_string_lossy().to_string()],
+            linked_by: vec![],
+        });
+
+        // Note C references the asset via ![[embed_target]].
+        let c_str = root.join("c.md").to_string_lossy().to_string();
+        let c_content = format!("Logo: ![[{embed_target}]]\n");
+        std::fs::write(&c_str, &c_content).unwrap();
+        state.vault.write().unwrap().add_document(&c_str, &c_content);
+
+        // Simulate by_note settings.
+        let mut settings: HashMap<String, serde_json::Value> = HashMap::new();
+        settings.insert("attachmentOrganization".into(), serde_json::Value::String("by_note".into()));
+        settings.insert("renameAttachmentsWithNote".into(), serde_json::Value::Bool(true));
+        settings.insert("attachmentFolder".into(), serde_json::Value::String("_attachments".into()));
+
+        let res = rename_note_impl(&b_str, "renamedB", &state, Some(&settings)).unwrap();
+
+        assert_eq!(res.name, "renamedB");
+        assert!(root.join("renamedB.md").exists(), "note renamed");
+        assert!(!root.join("b.md").exists(), "old note gone");
+
+        // Asset moved from _attachments/b/ → _attachments/renamedB/.
+        let new_attach = root.join("_attachments").join("renamedB").join("logo.png");
+        assert!(new_attach.exists(), "asset moved to new note dir");
+        assert!(!png_path.exists(), "old asset path gone");
+
+        // Embed in note C rewritten to new path.
+        let c_after = std::fs::read_to_string(&c_str).unwrap();
+        assert!(
+            c_after.contains("_attachments/renamedB/logo"),
+            "embed rewritten: {c_after}"
+        );
+        assert!(!c_after.contains("_attachments/b/logo"), "old embed removed: {c_after}");
     }
 }
