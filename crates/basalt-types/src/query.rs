@@ -46,10 +46,21 @@ pub fn yaml_to_typed(val: &serde_yaml_ng::Value) -> TypedValue {
             value: n.as_f64().unwrap_or(0.0),
         },
         serde_yaml_ng::Value::String(s) => TypedValue::Text { value: s.clone() },
-        serde_yaml_ng::Value::Sequence(seq) => match seq.first() {
-            Some(serde_yaml_ng::Value::String(s)) => TypedValue::Text { value: s.clone() },
-            Some(v) => yaml_to_typed(v),
-            None => TypedValue::Null,
+        serde_yaml_ng::Value::Sequence(seq) => {
+            let parts: Vec<String> = seq
+                .iter()
+                .map(|v| match v {
+                    serde_yaml_ng::Value::String(s) => s.clone(),
+                    other => format!("{:?}", other),
+                })
+                .collect();
+            if parts.is_empty() {
+                TypedValue::Null
+            } else if parts.len() == 1 {
+                TypedValue::Text { value: parts[0].clone() }
+            } else {
+                TypedValue::Text { value: parts.join(", ") }
+            }
         },
         _ => TypedValue::Text { value: format!("{:?}", val) },
     }

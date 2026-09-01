@@ -258,6 +258,14 @@ function buildPreviewState(
       if (handled.found) frontmatterFound = true;
       if (handled.widgeted) frontmatterWidgeted = true;
 
+      // If a block widget matched this node but produced no replacement (cursor
+      // inside the block), still skip children to prevent mark-hiding from
+      // hiding code fence tokens (CodeMark — closing ```). Normal code blocks
+      // never reach here because handleCodeBlockNode returns true first.
+      if (handled.found && !handled.widgeted && node.type.name === "FencedCode") {
+        return false;
+      }
+
       // Horizontal rule: replace with <hr> widget when cursor is off the line
       if (node.type.name === "HorizontalRule") {
         const line = doc.lineAt(node.from);

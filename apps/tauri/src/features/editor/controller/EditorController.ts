@@ -3,6 +3,7 @@ import { EditorView } from "@codemirror/view";
 import {
   type ContextMenuState,
   type FrontmatterModel,
+  type QueryResult,
   contextMenuExtension,
   createEditorExtensions,
   editorBenchmarkState,
@@ -34,6 +35,7 @@ export interface NoteIO {
   setSaveStatus: (status: SaveStatus) => void;
   onFetchLinks: (query: string) => Promise<LinkSuggestion[]>;
   onFetchTags: (query: string) => Promise<string[]>;
+  runQuery: (dql: string) => Promise<QueryResult>;
   parseFrontmatter: (text: string) => FrontmatterModel | null;
 }
 
@@ -112,7 +114,6 @@ export class EditorController {
       this.scheduleSave();
       this.scheduleStats();
     });
-
     const extensions: Extension[] = [
       ...createEditorExtensions({
         onFetchLinks: options.io.onFetchLinks,
@@ -120,6 +121,7 @@ export class EditorController {
         onOpenLink: this.handleOpenLink,
         parseFrontmatter: options.io.parseFrontmatter,
         editFrontmatter,
+        runQuery: options.io.runQuery,
       }),
       contextMenuExtension(options.setContextMenuState),
       updateListener,

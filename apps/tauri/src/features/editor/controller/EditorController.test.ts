@@ -73,6 +73,7 @@ function makeController(
     setSaveStatus: vi.fn(),
     onFetchLinks: vi.fn().mockResolvedValue([]),
     onFetchTags: vi.fn().mockResolvedValue([]),
+    runQuery: vi.fn().mockResolvedValue({ columns: [], rows: [], total: 0 }),
     parseFrontmatter: () => null,
     ...ioOverrides,
   };

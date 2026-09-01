@@ -1,0 +1,20 @@
+[package]
+name = "basalt-tables"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+basalt-types = { path = "../basalt-types" }
+basalt-parser = { path = "../basalt-parser" }
+basalt-vault = { path = "../basalt-vault" }
+basalt-graph = { path = "../basalt-graph" }
+
+[dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+
+[[bench]]
+name = "query_execution"
+harness = false
+
+[[example]]
+name = "dql_runner"

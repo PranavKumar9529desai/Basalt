@@ -236,3 +236,108 @@
   font-family: var(--sat-font-mono, monospace);
   font-size: 0.9em;
 }
+/* ---------------------------------------------------------------------------
+   DQL query block — live table/list/task results in reading mode.
+   Matches basalt-tables backend output (QueryResult).
+   Uses --sat-* tokens only (ADR-002).
+   --------------------------------------------------------------------------- */
+.markdown-reading-sizer .dql-result {
+  padding: 0.5em 0;
+  font-size: 0.9em;
+}
+.markdown-reading-sizer .dql-loading {
+  color: var(--sat-text-secondary, #94a3b8);
+  font-style: italic;
+}
+.markdown-reading-sizer .dql-error {
+  color: var(--sat-state-error, #ef4444);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85em;
+  padding: 0.5em;
+  background: var(--sat-surface-2, #1e1e2e);
+  border-radius: 4px;
+}
+.markdown-reading-sizer .dql-empty {
+  color: var(--sat-text-secondary, #94a3b8);
+  font-style: italic;
+}
+.markdown-reading-sizer .dql-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.markdown-reading-sizer .dql-th {
+  text-align: left;
+  padding: 0.4em 0.8em;
+  border-bottom: 2px solid var(--sat-layout-border, #334155);
+  color: var(--sat-text-primary, #e2e8f0);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.markdown-reading-sizer .dql-td {
+  padding: 0.35em 0.8em;
+  border-bottom: 1px solid var(--sat-layout-border, #334155);
+  color: var(--sat-text-secondary, #cbd5e1);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.markdown-reading-sizer .dql-td:hover {
+  white-space: normal;
+  overflow: visible;
+}
+.markdown-reading-sizer .dql-link,
+.markdown-reading-sizer .dql-list-item a {
+  color: var(--sat-accent-primary, #60a5fa);
+  text-decoration: none;
+  cursor: pointer;
+}
+.markdown-reading-sizer .dql-link:hover,
+.markdown-reading-sizer .dql-list-item a:hover {
+  text-decoration: underline;
+}
+.markdown-reading-sizer .dql-list {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0;
+}
+.markdown-reading-sizer .dql-list-item {
+  padding: 0.15em 0;
+  color: var(--sat-text-secondary, #cbd5e1);
+}
+.markdown-reading-sizer .dql-task-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.markdown-reading-sizer .dql-task-item {
+  padding: 0.15em 0;
+  display: flex;
+  gap: 0.4em;
+  color: var(--sat-text-secondary, #cbd5e1);
+}
+.markdown-reading-sizer .dql-task-text {
+  color: var(--sat-text-primary, #e2e8f0);
+}
+.markdown-reading-sizer .dql-check {
+  font-weight: bold;
+}
+.markdown-reading-sizer .dql-check.on {
+  color: var(--sat-state-success, #22c55e);
+}
+.markdown-reading-sizer .dql-check.off {
+  color: var(--sat-text-muted, #64748b);
+}
+.markdown-reading-sizer .dql-date {
+  color: var(--sat-accent-secondary, #a78bfa);
+  font-variant-numeric: tabular-nums;
+}
+.markdown-reading-sizer .dql-null {
+  color: var(--sat-text-muted, #64748b);
+  font-style: italic;
+}
+.markdown-reading-sizer .dql-footer {
+  margin-top: 0.35em;
+  font-size: 0.8em;
+  color: var(--sat-text-muted, #64748b);
+}

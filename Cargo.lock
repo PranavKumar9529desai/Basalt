@@ -288,6 +288,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "basalt-tables"
+version = "0.1.0"
+dependencies = [
+ "basalt-graph",
+ "basalt-parser",
+ "basalt-types",
+ "basalt-vault",
+ "criterion",
+]
+
+[[package]]
 name = "basalt-types"
 version = "0.1.0"
 dependencies = [
@@ -4378,6 +4389,7 @@ dependencies = [
  "basalt-graph",
  "basalt-parser",
  "basalt-search",
+ "basalt-tables",
  "basalt-types",
  "basalt-vault",
  "serde",

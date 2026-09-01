@@ -1,3 +1,4 @@
+import type { EditorState } from "@codemirror/state";
 import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
@@ -134,6 +135,23 @@ export const CODE_BLOCKS_THEME = EditorView.baseTheme({
   },
 });
 
+/** Add the shared code-block background line class across a line range. */
+function addCodeLineClasses(
+  startLineNumber: number,
+  endLineNumber: number,
+  doc: EditorState["doc"],
+  collector: DecorationCollector,
+): void {
+  for (
+    let lineNumber = startLineNumber;
+    lineNumber <= endLineNumber;
+    lineNumber += 1
+  ) {
+    const line = doc.line(lineNumber);
+    collector.addLineClass(line.from, "cm-live-code");
+  }
+}
+
 /**
  * Handles FencedCode and CodeBlock nodes:
  * - Records code block ranges in context (for other handlers to check)
@@ -152,10 +170,6 @@ export function handleCodeBlockNode(
   const name = node.type.name;
   if (name !== "FencedCode" && name !== "CodeBlock") return false;
 
-  // Record this range so other handlers can skip nodes inside code blocks
-  ctx.codeBlockRanges.push({ from: node.from, to: node.to });
-
-  const hasCursor = ctx.headPos >= node.from && ctx.headPos <= node.to;
   const doc = ctx.state.doc;
   const startLine = doc.lineAt(node.from);
   const endLine = doc.lineAt(node.to);
@@ -166,21 +180,30 @@ export function handleCodeBlockNode(
   );
   const endRenderLine = Math.min(endLine.number, doc.lineAt(rangeTo).number);
 
+  // DQL/dataview blocks: add the code-block background line classes, but leave
+  // widget dispatch and child-skipping to the dql block widget (live-preview).
+  // Return false so handleBlockWidgetsNode dispatches them.
   if (name === "FencedCode") {
-    // Add line classes for code block background
-    for (
-      let lineNumber = startRenderLine;
-      lineNumber <= endRenderLine;
-      lineNumber += 1
-    ) {
-      const line = doc.line(lineNumber);
-      collector.addLineClass(line.from, "cm-live-code");
+    const langMatch = startLine.text.match(/^```([^\s]*)/);
+    const lang = langMatch ? langMatch[1].toLowerCase() : "";
+    if (lang === "dql" || lang === "dataview") {
+      addCodeLineClasses(startRenderLine, endRenderLine, doc, collector);
+      return false;
     }
+  }
 
+  // Record this range so other handlers can skip nodes inside code blocks
+  ctx.codeBlockRanges.push({ from: node.from, to: node.to });
+
+  const hasCursor = ctx.headPos >= node.from && ctx.headPos <= node.to;
+
+  // Add line classes for code block background
+  addCodeLineClasses(startRenderLine, endRenderLine, doc, collector);
+
+  if (name === "FencedCode") {
     // Add header/footer widget decorations when cursor is outside
     if (!hasCursor) {
-      const langMatch = startLine.text.match(/^```([^\s]*)/);
-      const lang = langMatch ? langMatch[1] : "";
+      const lang = startLine.text.match(/^```([^\s]*)/)?.[1] ?? "";
 
       collector.addReplace(
         startLine.from,
@@ -191,16 +214,6 @@ export function handleCodeBlockNode(
       if (endLine.number > startLine.number) {
         collector.addReplace(endLine.from, endLine.to, new CodeFooterWidget());
       }
-    }
-  } else {
-    // CodeBlock (indented code) — just line classes, no widgets
-    for (
-      let lineNumber = startRenderLine;
-      lineNumber <= endRenderLine;
-      lineNumber += 1
-    ) {
-      const line = doc.line(lineNumber);
-      collector.addLineClass(line.from, "cm-live-code");
     }
   }
 

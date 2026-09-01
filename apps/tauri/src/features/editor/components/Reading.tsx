@@ -13,6 +13,7 @@ import {
   type IconProps,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { tokenizeCode, sanitizeHtml, HTML_TYPOGRAPHY_CSS, type CodeToken } from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
 
@@ -410,12 +411,13 @@ function renderBlock(
 
       const before = lines.slice(0, tableStart).join("\n").trim();
       const after = lines.slice(tableEnd + 1).join("\n").trim();
+      // Use <div> not <p> — <table> cannot be a descendant of <p> (HTML spec).
       return (
-        <p key={key}>
+        <div key={key}>
           {before && <span key={`${key}-before`}>{before}&nbsp;</span>}
           {table}
           {after && <span key={`${key}-after`}>&nbsp;{after}</span>}
-        </p>
+        </div>
       );
     }
 
@@ -451,6 +453,14 @@ function renderBlock(
       node.name === "FencedCode"
         ? childNodes(node).find((child) => child.name === "CodeInfo")
         : undefined;
+    // DQL / dataview code blocks render as live query results in reading mode.
+    if (node.name === "FencedCode" && info) {
+      const lang = source.slice(info.from, info.to).trim().toLowerCase();
+      if (lang in DQL_LANGUAGES) {
+        const queryText = source.slice(info.to, node.to).replace(/\s*```\s*$/, "").trim();
+        return <DqlQueryBlock key={key} queryText={queryText} onOpenLink={onWikiLink} />;
+      }
+    }
     const from = codeTexts.length > 0 ? codeTexts[0].from : node.from;
     const to = codeTexts.length > 0 ? codeTexts[codeTexts.length - 1].to : node.to;
     return (
@@ -478,6 +488,110 @@ function renderBlock(
     );
   }
   return <div key={key}>{inline()}</div>;
+}
+
+// ---------------------------------------------------------------------------
+// DQL query block — renders ```dql code blocks as live table/list/task views
+// in reading mode (matches basalt-tables backend results).
+// ---------------------------------------------------------------------------
+
+const DQL_LANGUAGES: Record<string, true> = { dql: true, dataview: true };
+
+function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLink: (name: string) => void }): React.ReactNode {
+  const [html, setHtml] = useState<string>('<div class="dql-loading">Loading query…</div>');
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    invoke<{ columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string; [k: string]: unknown }>>; total: number }>("run_query", { dql: queryText, path: "" })
+      .then((result) => {
+        if (cancelled) return;
+        setHtml(renderDqlResultHtml(result));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setHtml(`<div class="dql-error">Query error: ${String(err)}</div>`);
+      });
+    return () => { cancelled = true; };
+  }, [queryText]);
+
+  // Event delegation: clicks on rendered result links open the target note.
+  // Bound via a native listener (not a JSX prop) so the a11y rules for the
+  // non-interactive container stay satisfied.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const handleClick = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest?.("a.internal-link");
+      if (!anchor) return;
+      event.preventDefault();
+      const name = anchor.getAttribute("data-name") ?? anchor.textContent ?? "";
+      if (name) onOpenLink(name.trim());
+    };
+    root.addEventListener("click", handleClick);
+    return () => root.removeEventListener("click", handleClick);
+  }, [onOpenLink]);
+
+  return <div className="dql-result" ref={rootRef} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function renderDqlResultHtml(result: { columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string; [k: string]: unknown }>>; total: number }): string {
+  const { columns, rows, total } = result;
+  if (columns.length === 0 || rows.length === 0) return '<div class="dql-empty">No results</div>';
+
+  // Infer type: list (1 link col), task (link + task), or table
+  const isList = columns.length === 1 && columns[0].type === "link" && columns[0].name === "File";
+  const isTask = columns.length === 2 && columns[0].type === "link" && columns[1].name === "Task";
+
+  if (isList) {
+    const items = rows.map((row) => {
+      const cell = row[0];
+      if (!cell || cell.type !== "link") return "";
+      const path = String(cell.path ?? "");
+      const name = String(cell.name ?? path);
+      return `<li class="dql-list-item"><a class="internal-link" data-href="${escHtml(path)}">${escHtml(name)}</a></li>`;
+    }).join("");
+    const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+    return `<ul class="dql-list">${items}</ul>${footer}`;
+  }
+
+  if (isTask) {
+    const items = rows.map((row) => {
+      const link = row[0];
+      const task = row[1];
+      const linkHtml = link?.type === "link" ? `<a class="internal-link" data-href="${escHtml(String(link.path ?? ""))}">${escHtml(String(link.name ?? ""))}</a>` : "";
+      const taskText = task?.type === "text" ? String(task.value ?? "") : "";
+      return `<li class="dql-task-item"><span class="dql-task-link">${linkHtml}</span> <span class="dql-task-text">${escHtml(taskText)}</span></li>`;
+    }).join("");
+    const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+    return `<ul class="dql-task-list">${items}</ul>${footer}`;
+  }
+
+  // TABLE
+  const ths = columns.map((col) => `<th class="dql-th">${escHtml(col.name)}</th>`).join("");
+  const trs = rows.map((row) => {
+    const tds = row.map((cell) => `<td class="dql-td">${renderCell(cell)}</td>`).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+  const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+  return `<table class="dql-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>${footer}`;
+}
+
+function escHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderCell(cell: { type: string; [k: string]: unknown }): string {
+  switch (cell.type) {
+    case "text": return escHtml(String(cell.value ?? ""));
+    case "number": return String(cell.value ?? "");
+    case "date": return `<span class="dql-date">${escHtml(String(cell.value ?? ""))}</span>`;
+    case "checkbox": return cell.value ? '<span class="dql-check on">✓</span>' : '<span class="dql-check off">✗</span>';
+    case "link": return `<a class="internal-link dql-link" data-href="${escHtml(String(cell.path ?? ""))}" data-name="${escHtml(String(cell.name ?? ""))}">${escHtml(String(cell.name ?? ""))}</a>`;
+    case "null": return '<span class="dql-null">—</span>';
+    default: return escHtml(String(cell.value ?? ""));
+  }
 }
 
 function renderDocument(

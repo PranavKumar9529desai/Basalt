@@ -185,6 +185,72 @@ fn source_link(input: &str) -> IResult<&str, SourceFilter> {
     )(input)
 }
 
+fn source_primary(input: &str) -> IResult<&str, SourceFilter> {
+    alt((source_tag, source_folder, source_link, source_group))(input)
+}
+
+fn source_group(input: &str) -> IResult<&str, SourceFilter> {
+    delimited(
+        preceded(char('('), multispace0),
+        source_or,
+        preceded(multispace0, char(')')),
+    )(input)
+}
+
+fn source_not(input: &str) -> IResult<&str, SourceFilter> {
+    let trimmed = input.trim_start();
+    let offset = input.len() - trimmed.len();
+    if trimmed.len() >= 3 && trimmed[..3].eq_ignore_ascii_case("NOT") {
+        let rest = &trimmed[3..];
+        if rest.starts_with(char::is_whitespace) {
+            let (rest, _) = multispace1(rest)?;
+            let (rest, filter) = source_not(rest)?;
+            return Ok((rest, SourceFilter::Not(Box::new(filter))));
+        }
+    }
+    source_primary(&input[offset..])
+}
+
+fn source_and(input: &str) -> IResult<&str, SourceFilter> {
+    let (mut rest, mut left) = source_not(input)?;
+    loop {
+        let trimmed = rest.trim_start();
+        let _offset = rest.len() - trimmed.len();
+        if trimmed.len() >= 3 && trimmed[..3].eq_ignore_ascii_case("AND") {
+            let after = &trimmed[3..];
+            if after.starts_with(char::is_whitespace) {
+                let (after, _) = multispace1(after)?;
+                let (after, right) = source_not(after)?;
+                left = SourceFilter::And(Box::new(left), Box::new(right));
+                rest = after;
+                continue;
+            }
+        }
+        break;
+    }
+    Ok((rest, left))
+}
+
+fn source_or(input: &str) -> IResult<&str, SourceFilter> {
+    let (mut rest, mut left) = source_and(input)?;
+    loop {
+        let trimmed = rest.trim_start();
+        let _offset = rest.len() - trimmed.len();
+        if trimmed.len() >= 2 && trimmed[..2].eq_ignore_ascii_case("OR") {
+            let after = &trimmed[2..];
+            if after.starts_with(char::is_whitespace) {
+                let (after, _) = multispace1(after)?;
+                let (after, right) = source_and(after)?;
+                left = SourceFilter::Or(Box::new(left), Box::new(right));
+                rest = after;
+                continue;
+            }
+        }
+        break;
+    }
+    Ok((rest, left))
+}
+
 fn literal(input: &str) -> IResult<&str, Literal> {
     alt((
         value(Literal::Bool(true), tag_no_case("true")),
@@ -263,7 +329,7 @@ fn data_command(input: &str) -> IResult<&str, DataCommand> {
 fn from_clause(input: &str) -> IResult<&str, SourceFilter> {
     preceded(
         tuple((tag_no_case("FROM"), multispace1)),
-        alt((source_tag, source_folder, source_link)),
+        source_or,
     )(input)
 }
 
@@ -412,5 +478,77 @@ mod tests {
     #[test]
     fn parse_bad_syntax() {
         assert!(parse_query("BANANA").is_err());
+    }
+
+    #[test]
+    fn parse_from_and() {
+        let plan = parse_query("LIST FROM #work AND #urgent").unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::And(a, b) => {
+                assert_eq!(*a, SourceFilter::Tag("work".to_string()));
+                assert_eq!(*b, SourceFilter::Tag("urgent".to_string()));
+            }
+            other => panic!("Expected And, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_from_or() {
+        let plan = parse_query("LIST FROM #work OR #personal").unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::Or(a, b) => {
+                assert_eq!(*a, SourceFilter::Tag("work".to_string()));
+                assert_eq!(*b, SourceFilter::Tag("personal".to_string()));
+            }
+            other => panic!("Expected Or, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_from_not() {
+        let plan = parse_query("LIST FROM NOT #archive").unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::Not(inner) => {
+                assert_eq!(*inner, SourceFilter::Tag("archive".to_string()));
+            }
+            other => panic!("Expected Not, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_from_parenthesized() {
+        let plan = parse_query("LIST FROM (#work OR #personal) AND NOT #archive").unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::And(left, right) => {
+                assert!(matches!(*left, SourceFilter::Or(..)));
+                assert!(matches!(*right, SourceFilter::Not(..)));
+            }
+            other => panic!("Expected And, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_from_precedence_not_binds_tighter() {
+        // NOT #a OR #b  should be  (NOT #a) OR #b
+        let plan = parse_query("LIST FROM NOT #a OR #b").unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::Or(left, right) => {
+                assert!(matches!(*left, SourceFilter::Not(..)));
+                assert_eq!(*right, SourceFilter::Tag("b".to_string()));
+            }
+            other => panic!("Expected Or, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_from_and_with_folder() {
+        let plan = parse_query(r#"TABLE FROM #work AND "notes""#).unwrap();
+        match plan.from.unwrap() {
+            SourceFilter::And(a, b) => {
+                assert_eq!(*a, SourceFilter::Tag("work".to_string()));
+                assert_eq!(*b, SourceFilter::Folder("notes".to_string()));
+            }
+            other => panic!("Expected And, got {:?}", other),
+        }
     }
 }

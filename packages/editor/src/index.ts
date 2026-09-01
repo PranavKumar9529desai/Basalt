@@ -34,7 +34,11 @@ export type {
   FrontmatterDiagnostic,
   FrontmatterDiagnosticKind,
   ParseFrontmatterFn,
+  RunQueryFn,
 } from "./types";
+
+export { dqlBlockSpec, DQL_WIDGET_THEME, clearQueryCache, runQueryFacet, openLinkFacet } from "./block-widgets/dql-widget";
+export type { QueryResult, QueryColumn, TypedValue, OpenLinkFn } from "./block-widgets/dql-widget";
 export {
   getBlockWidgetModel,
   requestPreviewRebuild,

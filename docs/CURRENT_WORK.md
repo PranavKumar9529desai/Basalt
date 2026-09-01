@@ -404,3 +404,43 @@ its `activeNoteBacklinks` now flows through `useWorkspaceContext()` (the same
 sanctioned seam the graph leaf uses). `WorkspaceContextValue` now exposes
 `activeNoteBacklinks` alongside the previously-added `activeNote`. The last
 direct `features/editor` consumer in app-shell is gone.
+
+---
+
+## DQL Query Engine (ADR-027 + ADR-028) — ACTIVE
+
+The `basalt-tables` crate is the standalone DQL engine (ADR-027). Three
+high-impact fixes shipped this session:
+
+- **Boolean FROM parser**: `AND`/`OR`/`NOT` in FROM with proper precedence
+  (NOT > AND > OR) and parenthesized groups — closes the3 failing test
+  cases.
+- **Array frontmatter preservation**: `yaml_to_typed` Sequence now joins
+  all elements as comma-separated text instead of silently dropping
+  all but the first — fixes multi-value `tags`, `aliases`, etc.
+- **Unknown function safety**: `eval_expr` returns `false` for unknown
+  functions instead of silently matching every row.
+- **Dead code cleanup**: removed unused `_graph: &NoteGraph` param from
+  `matches_source`.
+
+Test results: 62 parser tests, 5 engine tests, 20/20 query runner — all green.
+
+### Next: DQL Aggregation (ADR-028)
+
+The active scope. Priority order:
+
+1. **GROUP BY parser + engine** — group rows by field, evaluate per-group.
+   Dead `DataCommand::GroupBy` variant gets parser combinator + engine logic.
+2. **FLATTEN parser + engine** — add synthetic field to each row before
+   GROUP BY / SORT / LIMIT. Dead `DataCommand::Flatten` variant gets filled.
+3. **Aggregate functions** — `count(rows)`, `sum(rows.field)`,
+   `avg(rows.field)`, `min(rows.field)`, `max(rows.field)`.
+   New `Expr::Aggregate` variant, executed only inside GROUP BY context.
+4. **Date comparison fix** — `compare_typed` must handle `TypedValue::Date`
+   correctly before `min(rows.due)` / `max(rows.due)` work.
+5. **WHERE function extensions** — `length()`, `regexmatch()`, `date()` in
+   the expression language (currently only `contains()` exists).
+6. **Inline `key:: value` fields** — parse body-level metadata, not just
+   YAML frontmatter.
+
+Open ADR: [028-dql-aggregation.md](docs/adr/028-dql-aggregation.md).

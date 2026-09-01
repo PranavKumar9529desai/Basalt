@@ -21,6 +21,7 @@ import {
   frontmatterDimMode,
 } from "./block-widgets/frontmatter";
 import { htmlBlockSpec, HTML_BLOCK_THEME, ensureTypographyStyle } from "./block-widgets/html-block";
+import { dqlBlockSpec, DQL_WIDGET_THEME, openLinkFacet, runQueryFacet } from "./block-widgets/dql-widget";
 import { tableBlockSpec, TABLE_BLOCK_THEME } from "./block-widgets/table-widget";
 import {
   blockWidgetSpecsFacet,
@@ -115,6 +116,11 @@ export function createEditorExtensionGroups(
       // Table block widget — renders markdown tables as rich <table> HTML.
       blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
       TABLE_BLOCK_THEME,
+      // DQL query block widget — renders ```dql code blocks as live table/list/task views.
+      blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
+      DQL_WIDGET_THEME,
+      runQueryFacet.of(config.runQuery),
+      openLinkFacet.of(config.onOpenLink),
     ],
   };
 }

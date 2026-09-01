@@ -5,8 +5,10 @@ import { commandService } from "@workspace/commands";
 import {
   type BenchmarkReportRow,
   type ContextMenuState,
+  clearQueryCache,
   createEditorExtensionGroups,
   formatBenchmarkReport,
+  requestPreviewRebuild,
   runIsolationBenchmark,
   runTypingBenchmark,
 } from "@workspace/editor";
@@ -43,10 +45,10 @@ export function useEditor(tab: LeafProps["tab"]) {
   const [conflict, setConflict] = useState(false);
   const [view, setView] = useState<EditorView | null>(null);
   const [documentRevision, setDocumentRevision] = useState(0);
-
   const tabRef = useLatestRef(tab);
   const servicesRef = useLatestRef(services);
   const ioRef = useLatestRef(io);
+  const viewRef = useLatestRef(view);
 
   // Constructed once per mount. Re-construction on every render would
   // rebuild the extension list, and every EditorState created after that
@@ -173,6 +175,7 @@ export function useEditor(tab: LeafProps["tab"]) {
           onFetchTags: io.onFetchTags,
           onOpenLink: controller.handleOpenLink,
           parseFrontmatter: io.parseFrontmatter,
+          runQuery: io.runQuery,
         });
         const full = [
           ...g.base,
@@ -235,13 +238,17 @@ export function useEditor(tab: LeafProps["tab"]) {
   // duplicate OS events, marker misses, or no-op touches must never surface
   // as conflicts or destroy undo history.
   //   disk == doc        → echo / no-op → ignore
-  //   disk != doc, dirty → concurrent edit → conflict banner
-  //   disk != doc, clean → external edit → reload from disk
   useEffect(() => {
     const unlistenPromise = listen<FileChangeEvent>(
       "vault://file-changed",
       async (event) => {
         const { path: changedPath, kind } = event.payload;
+        // Any external vault change can alter DQL query results regardless of
+        // which file changed — drop the widget cache and re-render the active
+        // view so dql blocks show fresh results.
+        clearQueryCache();
+        const currentView = viewRef.current;
+        if (currentView) requestPreviewRebuild(currentView);
         const active = tabRef.current;
         if (!active || changedPath !== active.path) return;
 
@@ -284,7 +291,7 @@ export function useEditor(tab: LeafProps["tab"]) {
       // If listen() itself rejected there is nothing to unlisten.
       unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
     };
-  }, [controller, tabRef, ioRef, io]);
+  }, [controller, tabRef, ioRef, io, viewRef]);
 
   const handleKeepMine = useCallback(() => {
     const t = tabRef.current;

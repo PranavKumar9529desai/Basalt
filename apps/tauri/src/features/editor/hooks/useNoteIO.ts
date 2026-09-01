@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
+import type { QueryResult } from "@workspace/editor";
 import { useActiveNoteStore } from "../store";
 import type { LinkSuggestion, SaveStatus } from "../types";
 
@@ -58,6 +59,13 @@ export function useNoteIO() {
     }
   }, []);
 
+  const runQuery = useCallback(
+    async (dql: string): Promise<QueryResult> => {
+      return invoke<QueryResult>("run_query", { dql, path: "" });
+    },
+    [],
+  );
+
   return {
     status,
     setStatus,
@@ -68,7 +76,7 @@ export function useNoteIO() {
     refreshBacklinks,
     onFetchLinks,
     onFetchTags,
-
+    runQuery,
     parseFrontmatter,
   };
 }

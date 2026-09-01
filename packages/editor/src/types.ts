@@ -1,6 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-
+import type { RunQueryFn } from "./block-widgets/dql-widget";
+export type { RunQueryFn } from "./block-widgets/dql-widget";
 export type FetchLinksFn = (
   query: string,
 ) => Promise<Array<{ name: string; path: string }>>;
@@ -86,4 +87,10 @@ export interface EditorConfig {
    * span edit (ADR-022 rule 4).
    */
   editFrontmatter?: FrontmatterEditFn;
+  /**
+   * Execute a DQL query against the vault and return its result. Injected
+   * so `packages/editor` stays pure; the feature layer routes it to the
+   * `run_query` Tauri IPC command (basalt-tables engine).
+   */
+  runQuery?: RunQueryFn;
 }

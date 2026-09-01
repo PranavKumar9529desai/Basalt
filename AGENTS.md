@@ -274,7 +274,8 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)       | ADR-024: Editor Surface Typography and Spatial Rhythm                         |
 | [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md) | ADR-025: Tab Lifecycle and Workspace Persistence                              |
 | [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md) | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline          |
-
+|[027-dql-query-engine](docs/adr/027-dql-query-engine.md)|ADR-027: DQL Query Engine — basalt-tables Crate|
+|[028-dql-aggregation](docs/adr/028-dql-aggregation.md)|ADR-028: DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions|
 <!-- ADR_INDEX_END -->
 
 ---
