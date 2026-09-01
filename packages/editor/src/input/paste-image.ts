@@ -1,3 +1,4 @@
+import type { Extension } from "@codemirror/state";
 import type { OnPasteImageFn } from "../types";
 import { EditorView } from "@codemirror/view";
 
@@ -14,7 +15,7 @@ import { EditorView } from "@codemirror/view";
  */
 export function pasteImageExtension(
   onPasteImage?: OnPasteImageFn,
-): ReturnType<typeof EditorView.extension> {
+): Extension {
   if (!onPasteImage) return [];
 
   return EditorView.domEventHandlers({

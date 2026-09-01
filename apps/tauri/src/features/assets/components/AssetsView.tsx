@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { open } from "@tauri-apps/plugin-opener";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useAssetsStore, useFilteredAssets, useAssetsActions } from "../store";
 import type { AssetFilter } from "../types";
 import { AssetRow } from "./AssetRow";
@@ -42,7 +42,7 @@ export function AssetsView() {
 
   const handleOpen = async (absPath: string) => {
     try {
-      await open(absPath);
+      await openPath(absPath);
     } catch (err) {
       console.error("[assets] open failed:", err);
     }

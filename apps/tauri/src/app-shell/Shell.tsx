@@ -15,7 +15,7 @@
 import { commandService } from "@workspace/commands";
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
@@ -119,6 +119,14 @@ function WorkspaceShell({
       onTabStructureChanged,
       openPinned,
       renameNote: ws.renameNote,
+      resolveAsset: ws.vaultPath
+        ? (target: string) => {
+            const absPath = target.startsWith("/")
+              ? target
+              : `${ws.vaultPath}/${target}`;
+            return convertFileSrc(absPath);
+          }
+        : undefined,
     }),
     [
       ws.openNote,

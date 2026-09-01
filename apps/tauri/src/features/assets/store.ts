@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { create } from "zustand";
 import type { AssetFilter, AssetInfo, AuditReport } from "./types";
 import { useAssetsIPC } from "./hooks/useAssetsIPC";

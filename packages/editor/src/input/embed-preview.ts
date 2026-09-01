@@ -4,9 +4,9 @@ import {
   DecorationSet,
   EditorView,
   ViewPlugin,
+  WidgetType,
   type ViewUpdate,
   type PluginValue,
-  type DecorationRange,
 } from "@codemirror/view";
 
 /**
@@ -93,9 +93,8 @@ class EmbedPreviewPlugin implements PluginValue {
       this.decorations = this.buildDecorations(update.view);
     }
   }
-
   buildDecorations(view: EditorView): DecorationSet {
-    const deco: DecorationRange[] = [];
+    const deco: Array<{ from: number; to: number; value: Decoration }> = [];
     const tree = syntaxTree(view.state);
     const doc = view.state.doc;
 
@@ -108,7 +107,6 @@ class EmbedPreviewPlugin implements PluginValue {
         const to = node.to;
 
         // Check character immediately before the WikiLink's [[.
-        // The WikiLink node includes the [[ and ]], so from points at [.
         if (from < 1) return;
         const charBefore = doc.sliceString(from - 1, from);
         if (charBefore !== "!") return;
@@ -122,10 +120,9 @@ class EmbedPreviewPlugin implements PluginValue {
         if (!target) return;
 
         // Replace the entire `![[target]]` with the chip widget.
-        // The widget spans from the `!` to the closing `]]`.
         deco.push(
           Decoration.replace({
-            widget: createWidget(target),
+            widget: new EmbedChipWidget(target),
             inclusive: true,
           }).range(from - 1, to),
         );
@@ -136,14 +133,20 @@ class EmbedPreviewPlugin implements PluginValue {
   }
 }
 
-function createWidget(target: string) {
-  return {
-    toDOM() {
-      return createEmbedChip(target);
-    },
-    // Widget participates in text flow.
-    bypassFocus: true,
-  };
+/** Widget that renders the inline embed chip in live preview. */
+class EmbedChipWidget extends WidgetType {
+  constructor(private readonly target: string) {
+    super();
+  }
+
+  toDOM(): HTMLElement {
+    return createEmbedChip(this.target);
+  }
+
+  /** Two widgets are equal if they display the same target. */
+  eq(other: EmbedChipWidget): boolean {
+    return this.target === other.target;
+  }
 }
 
 /**

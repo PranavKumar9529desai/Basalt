@@ -67,6 +67,9 @@ export interface LeafServices {
     tab: { id: string; path: string },
     newName: string,
   ) => Promise<RenameResult>;
+  /** Resolve an embed target (`![[target]]`) to a loadable asset URL.
+   *  Returns `null` when the target is not a resolvable file. */
+  resolveAsset?: (target: string) => string | null;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

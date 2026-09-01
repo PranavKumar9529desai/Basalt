@@ -134,6 +134,7 @@ export function EditorView({ tab }: LeafProps) {
               readingScrollRatioRef.current = ratio;
             }}
             services={services}
+            resolveAsset={services.resolveAsset}
           />
         )}
       </ScrollContainer>
