@@ -46,6 +46,14 @@ impl NoteGraph {
             self.back_links.entry(link_id).or_default().insert(doc_id);
         }
 
+        // Embeds (`![[image.png]]`) create directed note→asset edges in the
+        // graph so the graph view can show which notes reference which assets.
+        for embed in &metadata.embeds {
+            let embed_id = arena.get_or_insert(embed);
+            new_links.insert(embed_id);
+            self.back_links.entry(embed_id).or_default().insert(doc_id);
+        }
+
         // Tags become first-class nodes, connected to this note. Nested tags
         // also get parent->child chain edges so the graph forms a tag *tree*
         // (not a flat set of disconnected nodes). See docs/tag-graph-connections.md.

@@ -1233,6 +1233,30 @@ fn rename_path_impl(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Asset management commands
+// ---------------------------------------------------------------------------
+
+/// Return all non-markdown assets tracked in the vault.
+#[tauri::command]
+pub fn get_assets(state: State<AppState>) -> Result<Vec<basalt_vault::AssetInfo>, String> {
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+    Ok(vault.asset_index.all())
+}
+
+/// Run a consistency audit: count orphans, duplicates, and broken embed refs.
+#[tauri::command]
+pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAuditReport, String> {
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?;
+    Ok(vault.asset_index.audit())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

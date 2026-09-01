@@ -423,6 +423,40 @@ mod tests {
             "[[Folder/Docs/A]] and ---\ntags: [[Folder/Docs/B]]\n---"
         );
     }
+    // -- Embed rewriting (![[...]]) -----------------------------------------
+
+    #[test]
+    fn rewrites_embeds_like_links() {
+        // Embeds are just [[...]] with a ! prefix — the scanner picks them up.
+        let out = rewrite_wikilinks("See ![[Note]] here.", &rename());
+        assert_eq!(out, "See ![[RenamedNote]] here.");
+    }
+
+    #[test]
+    fn embed_preserves_alias_and_anchor() {
+        let out = rewrite_wikilinks("![[Note#Section|Caption]]", &rename());
+        assert_eq!(out, "![[RenamedNote#Section|Caption]]");
+    }
+
+    #[test]
+    fn embed_path_form_rewrite() {
+        let out = rewrite_wikilinks("![[folder/sub/Note]]", &rename());
+        assert_eq!(out, "![[folder/sub/RenamedNote]]");
+    }
+
+    #[test]
+    fn path_rename_rewrites_embeds() {
+        let out = rewrite_wikilinks_path("![[Folder/Sub/image.png]]", &path_rename());
+        assert_eq!(out, "![[Folder/Docs/image.png]]");
+    }
+
+    #[test]
+    fn embed_of_non_md_file_not_renamed_on_note_rename() {
+        // Renaming note "Note" should NOT rewrite ![[image.png]]
+        // because image.png != note stem
+        let out = rewrite_wikilinks("![[image.png]] [[Note]]", &rename());
+        assert_eq!(out, "![[image.png]] [[RenamedNote]]");
+    }
 
     #[test]
     fn path_rename_no_match_returns_original() {

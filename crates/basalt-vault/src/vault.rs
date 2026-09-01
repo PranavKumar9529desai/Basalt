@@ -1,3 +1,4 @@
+use crate::asset_index::AssetIndex;
 use basalt_graph::StringArena;
 use basalt_parser::extract_metadata;
 use basalt_graph::NoteGraph;
@@ -7,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct Vault {
     pub arena: StringArena,
     pub graph: NoteGraph,
+    pub asset_index: AssetIndex,
 }
 
 impl Vault {
@@ -14,15 +16,20 @@ impl Vault {
         Self {
             arena: StringArena::new(),
             graph: NoteGraph::new(),
+            asset_index: AssetIndex::new(),
         }
     }
 
     pub fn add_document(&mut self, path: &str, content: &str) {
         let meta = extract_metadata(content);
+        // Register embed/link references in the asset index
+        self.asset_index.register_embeds(path, &meta.embeds);
+        self.asset_index.register_links(path, &meta.links);
         self.graph.add_document(path, meta, &mut self.arena);
     }
 
     pub fn remove_document(&mut self, path: &str) {
+        self.asset_index.remove_note_references(path);
         self.graph.remove_document(path, &mut self.arena);
     }
 }
