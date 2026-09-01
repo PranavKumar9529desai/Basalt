@@ -30,6 +30,7 @@ use commands::{
     autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note, parse_frontmatter,
     get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace,
     move_paths, open_file, open_files, open_vault_dialog, reindex_vault, rename_note, rename_path,
+    run_query,
     save_file, save_files, delete_file, delete_paths,
     search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
@@ -99,6 +100,7 @@ pub fn run() {
             search_files,
             write_dev_report,
             parse_frontmatter,
+            run_query,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

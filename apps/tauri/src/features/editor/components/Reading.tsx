@@ -276,6 +276,62 @@ function HighlightedCode({ code, info }: { code: string; info?: string }) {
 
   return <code data-language={info}>{children}</code>;
 }
+/** Render a Table node from the Lezer Table extension. */
+function renderTableNode(
+  node: SyntaxNode,
+  source: string,
+  onWikiLink: (name: string) => void,
+  key: string,
+): React.ReactNode {
+  const children = childNodes(node);
+  const headerCells: string[][] = [];
+  const bodyRows: string[][] = [];
+
+  for (const child of children) {
+    if (child.name === "TableHeader") {
+      for (const cell of childNodes(child)) {
+        if (cell.name === "TableCell") {
+          headerCells.push([source.slice(cell.from, cell.to)]);
+        }
+      }
+    } else if (child.name === "TableRow") {
+      const row: string[] = [];
+      for (const cell of childNodes(child)) {
+        if (cell.name === "TableCell") {
+          row.push(source.slice(cell.from, cell.to));
+        }
+      }
+      bodyRows.push(row);
+    }
+  }
+
+  if (headerCells.length === 0) return null;
+
+  // Transpose: headerCells is one header row → [[A], [B]], but we want [A, B]
+  const header = headerCells.map((c) => c.join(""));
+
+  return (
+    <table key={key}>
+      <thead>
+        <tr>
+          {header.map((cell, i) => (
+            <th key={`${key}-h-${i}`}>{textParts(cell, onWikiLink)}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {bodyRows.map((row, ri) => (
+          <tr key={`${key}-r-${ri}`}>
+            {row.map((cell, ci) => (
+              <td key={`${key}-r-${ri}-${ci}`}>{textParts(cell, onWikiLink)}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 
 function renderBlock(
   node: SyntaxNode,
@@ -284,6 +340,12 @@ function renderBlock(
   key: string,
 ): React.ReactNode {
   const inline = () => renderInline(node, source, onWikiLink, key);
+
+  // Table nodes — Lezer Table extension produces these for standalone tables
+  if (node.name === "Table") {
+    return renderTableNode(node, source, onWikiLink, key);
+  }
+
   if (/^ATXHeading[1-6]$/.test(node.name) || /^SetextHeading[1-2]$/.test(node.name)) {
     const level = Number(node.name.match(/\d+/)?.[0] ?? 1);
     const Heading = `h${level}` as ElementType;
@@ -291,10 +353,35 @@ function renderBlock(
   }
   if (node.name === "Paragraph") {
     const raw = source.slice(node.from, node.to);
-    const lines = raw.split("\n").map((line) => line.trim());
-    if (lines.length >= 2 && lines.every((line) => line.startsWith("|"))) {
-      const rows = lines
-        .filter((line) => !/^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(line))
+    const lines = raw.split("\n");
+    const trimmed = lines.map((line) => line.trim());
+    const isDelimiter = (line: string) =>
+      /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(line);
+
+    // Find a contiguous table run: a |row followed by a delimiter row, then
+    // more |rows. Supports tables nested inside list items (paragraphs that
+    // mix prose and table lines) plus standalone tables.
+    let tableStart = -1;
+    let tableEnd = -1;
+    for (let i = 0; i < trimmed.length - 1; i++) {
+      if (trimmed[i].startsWith("|") && isDelimiter(trimmed[i + 1])) {
+        tableStart = i;
+        tableEnd = Math.min(i + 1, trimmed.length - 1);
+        while (
+          tableEnd + 1 < trimmed.length &&
+          trimmed[tableEnd + 1].startsWith("|")
+        ) {
+          tableEnd++;
+        }
+        break;
+      }
+    }
+
+    // Whole paragraph is a table → render just the table (fast path, mirrors
+    // the previous behavior plus the Table-node path).
+    if (tableStart === 0 && tableEnd === trimmed.length - 1) {
+      const rows = trimmed
+        .filter((line) => !isDelimiter(line))
         .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
       const [head, ...body] = rows;
       if (head?.length) {
@@ -306,6 +393,32 @@ function renderBlock(
         );
       }
     }
+
+    // Mixed paragraph (prose + nested table) → split into before/table/after.
+    if (tableStart >= 0) {
+      const tableLines = trimmed.slice(tableStart, tableEnd + 1);
+      const rows = tableLines
+        .filter((line) => !isDelimiter(line))
+        .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+      const [head, ...body] = rows;
+      const table = head?.length ? (
+        <table key={`${key}-table`}>
+          <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink)}</th>)}</tr></thead>
+          <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink)}</td>)}</tr>)}</tbody>
+        </table>
+      ) : null;
+
+      const before = lines.slice(0, tableStart).join("\n").trim();
+      const after = lines.slice(tableEnd + 1).join("\n").trim();
+      return (
+        <p key={key}>
+          {before && <span key={`${key}-before`}>{before}&nbsp;</span>}
+          {table}
+          {after && <span key={`${key}-after`}>&nbsp;{after}</span>}
+        </p>
+      );
+    }
+
     return <p key={key}>{inline()}</p>;
   }
   if (node.name === "BulletList" || node.name === "OrderedList") {

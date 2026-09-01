@@ -1,5 +1,6 @@
 import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { Table } from "@lezer/markdown";
 import { languages } from "@codemirror/language-data";
 import type { Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
@@ -19,7 +20,8 @@ import {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
 } from "./block-widgets/frontmatter";
-import { htmlBlockSpec, HTML_BLOCK_THEME } from "./block-widgets/html-block";
+import { htmlBlockSpec, HTML_BLOCK_THEME, ensureTypographyStyle } from "./block-widgets/html-block";
+import { tableBlockSpec, TABLE_BLOCK_THEME } from "./block-widgets/table-widget";
 import {
   blockWidgetSpecsFacet,
   type BlockWidgetSpec,
@@ -29,6 +31,7 @@ const basaltMarkdownExtensions = [
   wikiLinkExtension,
   highlightExtension,
   yamlFrontmatterExtension,
+  Table,
 ];
 
 
@@ -66,6 +69,9 @@ export function createEditorExtensionGroups(
     themeExtensions,
     includeDefaultTheme = true,
   } = config;
+  // Inject HTML typography CSS (.sat-html + .cm-content) once per editor creation.
+  // Covers both block widgets and inline HTML elements rendered by the browser.
+  ensureTypographyStyle();
 
   const themeStack: Extension[] = [];
   if (themeExtensions) themeStack.push(...themeExtensions);
@@ -106,6 +112,9 @@ export function createEditorExtensionGroups(
       // Sanitized HTML block widget + its theme.
       blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
       HTML_BLOCK_THEME,
+      // Table block widget — renders markdown tables as rich <table> HTML.
+      blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
+      TABLE_BLOCK_THEME,
     ],
   };
 }
@@ -148,6 +157,9 @@ export function previewExtensions(): Extension[] {
     // Sanitized HTML blocks render in read-only previews too.
     blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
     HTML_BLOCK_THEME,
+    // Table block widget renders in read-only previews too.
+    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
+    TABLE_BLOCK_THEME,
     EditorView.lineWrapping,
   ];
 }

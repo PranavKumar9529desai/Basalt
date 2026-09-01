@@ -6,11 +6,10 @@ import { sanitizeHtml } from "../preview/html-sanitize";
 import { HTML_TYPOGRAPHY_CSS } from "../preview/html-typography";
 
 let typographyInjected = false;
-// The shared .sat-html typography stylesheet is scoped to the container class,
-// so a single document-head <style> can't leak. Injected once; idempotent (Reading
-// may have already injected it). This is the same source Reading uses, keeping
-// Live Preview and Reading in sync.
-function ensureTypographyStyle(): void {
+// The shared .sat-html + .cm-content typography stylesheet covers both block
+// widgets (.sat-html) and inline HTML elements rendered by the browser
+// (.cm-content). Injected once at editor creation; idempotent.
+export function ensureTypographyStyle(): void {
   if (typographyInjected || typeof document === "undefined") return;
   typographyInjected = true;
   if (document.querySelector("[data-sat-html-typography]")) return;

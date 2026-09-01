@@ -51,6 +51,7 @@ export {
   FRONTMATTER_WIDGET_THEME,
 } from "./block-widgets/frontmatter";
 
+export { tableBlockSpec, TABLE_BLOCK_THEME } from "./block-widgets/table-widget";
 export { attachScrollHeader } from "./scroll-header";
 export type { CodeToken } from "./syntax/code-highlighting";
 export { tokenizeCode } from "./syntax/code-highlighting";
