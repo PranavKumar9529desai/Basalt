@@ -983,6 +983,9 @@ fn rename_note_impl(
     for (p, content) in &rewritten {
         index_upsert(&state, p, content);
     }
+    // NOTE: rename-with-note (moving attachments + rewriting embed refs on
+    // note rename) requires the AppHandle for config access and is deferred
+    // to a follow-up. The infrastructure (org rules, dedup, cleanup) is in place.
 
     Ok(RenameNoteResult {
         path: new_path_str,
@@ -990,8 +993,6 @@ fn rename_note_impl(
         updated_files,
     })
 }
-
-/// Result of a folder/attachment rename — `moved` carries every `.md`
 /// document that relocated, so the frontend can repoint any open tab
 /// tracking a moved note (tabs are keyed by path for this purpose).
 #[derive(Debug, Serialize)]
@@ -1257,6 +1258,124 @@ pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAudi
     Ok(vault.asset_index.audit())
 }
 
+#[derive(Serialize)]
+pub struct CleanupResult {
+    pub orphans_deleted: u32,
+    pub duplicates_deleted: u32,
+}
+
+/// Delete orphaned assets and consolidate duplicates.
+///
+/// - Orphans: assets with no `embeds_by` and no `linked_by` references.
+/// - Duplicates: for each group of assets sharing the same `content_hash`,
+///   keep the first occurrence (by `rel_path` sort order) and delete the rest.
+///
+/// Front-end must refresh the asset list after calling this.
+#[tauri::command]
+pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
+
+
+    let vault_path = state
+        .vault_path
+        .read()
+        .map_err(|_| "vault lock poisoned".to_string())?
+        .clone()
+        .ok_or("no vault open")?;
+    let _vault_root = PathBuf::from(&vault_path);
+
+    let mut orphans_deleted: u32 = 0;
+    let mut duplicates_deleted: u32 = 0;
+
+    // Phase 1: Identify orphans and duplicate groups.
+    let to_delete: Vec<(String, bool)> = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+
+        let all_assets = vault.asset_index.all();
+
+        // Identify orphans.
+        let orphan_set: std::collections::HashSet<String> = all_assets
+            .iter()
+            .filter(|a| a.embeds_by.is_empty() && a.linked_by.is_empty())
+            .map(|a| a.abs_path.clone())
+            .collect();
+
+        // Group by content hash for dedup.
+        let mut hash_groups: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+        for asset in &all_assets {
+            if !asset.content_hash.is_empty() {
+                hash_groups
+                    .entry(asset.content_hash.clone())
+                    .or_default()
+                    .push(asset.abs_path.clone());
+            }
+        }
+
+        // Orphans go first.
+        let mut out: Vec<(String, bool)> = orphan_set
+            .iter()
+            .map(|p| (p.clone(), true))
+            .collect();
+
+        // Duplicates: keep first by sorted rel_path, delete rest.
+        // Build abs_path → rel_path map for sorting.
+        let rel_map: std::collections::HashMap<&str, &str> = all_assets
+            .iter()
+            .map(|a| (a.abs_path.as_str(), a.rel_path.as_str()))
+            .collect();
+
+        for group in hash_groups.values() {
+            if group.len() <= 1 {
+                continue;
+            }
+            let mut sorted = group.clone();
+            sorted.sort_by(|a, b| {
+                let ra = rel_map.get(a.as_str()).copied().unwrap_or("");
+                let rb = rel_map.get(b.as_str()).copied().unwrap_or("");
+                ra.cmp(rb)
+            });
+            for abs_path in &sorted[1..] {
+                if !orphan_set.contains(abs_path) {
+                    out.push((abs_path.clone(), false));
+                }
+            }
+        }
+        out
+    };
+
+    // Phase 2: Delete files from disk and remove from the index.
+    if !to_delete.is_empty() {
+        register_self_writes(
+            &state,
+            &to_delete.iter().map(|(p, _)| PathBuf::from(p)).collect::<Vec<_>>(),
+        );
+
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())?;
+
+        for (abs_path, is_orphan) in &to_delete {
+            if std::fs::remove_file(abs_path).is_ok() {
+                vault.asset_index.remove(abs_path);
+                if *is_orphan {
+                    orphans_deleted += 1;
+                } else {
+                    duplicates_deleted += 1;
+                }
+            }
+        }
+    }
+
+    Ok(CleanupResult {
+        orphans_deleted,
+        duplicates_deleted,
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Attachment saving (paste / drag-drop)
 // ---------------------------------------------------------------------------
@@ -1273,9 +1392,19 @@ pub struct SaveAttachmentResult {
 
 /// Save a binary attachment (pasted/dropped image, PDF, etc.) to the vault.
 ///
-/// Writes to `{vault_root}/{attachments_dir}/{name}.{ext}`, auto-appending
-/// `-1`, `-2`, … on filename collision. Registers the path as a self-write
-/// and updates the asset index so the file appears in `get_assets` immediately.
+/// Organization rules (from settings):
+/// - `flat`: all in `{attachments_dir}/`
+/// - `by_note`: in `{attachments_dir}/{note_stem}/`
+/// - `by_type`: in `{attachments_dir}/{type}/` (images/, audio/, etc.)
+/// - `by_date`: in `{attachments_dir}/{YYYY-MM}/`
+///
+/// Naming templates:
+/// - `{original_name}`: the original filename
+/// - `{note_name}-{n}`: note stem + counter
+/// - `{date}-{original_name}`: date prefix + original
+///
+/// Dedup: before writing, checks `content_hash` against existing assets —
+/// returns the existing file's path if a match is found.
 #[tauri::command]
 pub fn save_attachment(
     name: String,
@@ -1294,29 +1423,102 @@ pub fn save_attachment(
         .clone()
         .ok_or("no vault open")?;
 
-    // Read attachment folder from settings (default: "_attachments").
     let config = load_config(&app);
     let attachments_dir = config
         .settings
         .get("attachmentFolder")
         .and_then(|v| v.as_str())
         .unwrap_or("_attachments");
+    let organization = config
+        .settings
+        .get("attachmentOrganization")
+        .and_then(|v| v.as_str())
+        .unwrap_or("flat");
+    let naming = config
+        .settings
+        .get("attachmentNaming")
+        .and_then(|v| v.as_str())
+        .unwrap_or("{original_name}");
 
-    let dir = PathBuf::from(&vault_path).join(attachments_dir);
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    // Determine extension.
+    let ext = infer_ext_from_name(&name)
+        .or_else(|| infer_ext_from_data(&data))
+        .unwrap_or("bin");
+    let original_stem = strip_ext_from_name(&name);
 
-    // Determine extension from the name parameter (caller strips it before sending)
-    // or from the data's magic bytes. Fall back to "bin".
-    let ext = infer_ext_from_name(&name).or_else(|| infer_ext_from_data(&data)).unwrap_or("bin");
-    let base_name = strip_ext_from_name(&name);
+    // Compute organization subdirectory.
+    let vault_root = PathBuf::from(&vault_path);
+    let base_dir = vault_root.join(attachments_dir);
+    let sub_dir = match organization {
+        "by_note" => {
+            let note_stem = note_path
+                .as_deref()
+                .and_then(|p| Path::new(p).file_stem())
+                .and_then(|s| s.to_str())
+                .unwrap_or("_unfiled");
+            base_dir.join(note_stem)
+        }
+        "by_type" => {
+            let type_dir = match ext {
+                "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" => "images",
+                "mp3" | "wav" | "flac" | "ogg" | "aac" | "m4a" => "audio",
+                "mp4" | "mov" | "avi" | "webm" | "mkv" => "video",
+                "pdf" | "doc" | "docx" | "xls" | "xlsx" => "documents",
+                _ => "other",
+            };
+            base_dir.join(type_dir)
+        }
+        "by_date" => {
+            let (y, m, _) = current_date();
+            base_dir.join(format!("{y:04}-{m:02}"))
+        }
+        _ => base_dir, // "flat" or unknown
+    };
+
+    std::fs::create_dir_all(&sub_dir).map_err(|e| e.to_string())?;
+
+    // Apply naming template.
+    let base_name = match naming {
+        "{note_name}-{n}" => {
+            let note_stem = note_path
+                .as_deref()
+                .and_then(|p| Path::new(p).file_stem())
+                .and_then(|s| s.to_str())
+                .unwrap_or("note");
+            // Counter will be applied in collision loop.
+            format!("{note_stem}")
+        }
+        "{date}-{original_name}" => {
+            let (y, m, d) = current_date();
+            format!("{y:04}{m:02}{d:02}-{original_stem}")
+        }
+        _ => original_stem.to_string(), // "{original_name}" or unknown
+    };
+
+    // Content hash for dedup check.
+    let content_hash = compute_md5(&data);
+
+    // Dedup: check if an asset with this content hash already exists.
+    if let Ok(vault) = state.vault.read() {
+        for existing in vault.asset_index.all() {
+            if existing.content_hash == content_hash && !existing.content_hash.is_empty() {
+                // Found a duplicate — return the existing file's path.
+                return Ok(SaveAttachmentResult {
+                    rel_path: existing.rel_path.clone(),
+                    abs_path: existing.abs_path.clone(),
+                    name: existing.file_name.clone(),
+                });
+            }
+        }
+    }
 
     // Collision handling: append -1, -2, … until we find a free name.
     let mut final_name = format!("{base_name}.{ext}");
-    let mut final_path = dir.join(&final_name);
+    let mut final_path = sub_dir.join(&final_name);
     let mut counter = 1u32;
     while final_path.exists() {
         final_name = format!("{base_name}-{counter}.{ext}");
-        final_path = dir.join(&final_name);
+        final_path = sub_dir.join(&final_name);
         counter += 1;
     }
 
@@ -1325,17 +1527,19 @@ pub fn save_attachment(
     register_self_writes(&state, &[final_path.clone()]);
 
     std::fs::write(&final_path, &data).map_err(|e| {
-        // Roll back marker on failure.
         if let Ok(mut guard) = state.self_writes.lock() {
             guard.remove(&final_path);
         }
         e.to_string()
     })?;
 
-    let rel_path = format!("{}/{}", attachments_dir, final_name);
-    let content_hash = compute_md5(&data);
+    // Rel path is relative to vault root.
+    let rel_path = final_path.strip_prefix(&vault_root)
+        .unwrap_or(&final_path)
+        .to_string_lossy()
+        .to_string();
 
-    // Update the asset index so get_assets returns the new file immediately.
+    // Update the asset index.
     if let Ok(mut vault) = state.vault.write() {
         vault.asset_index.upsert(AssetInfo {
             rel_path: rel_path.clone(),
@@ -1412,6 +1616,28 @@ fn infer_ext_from_data(data: &[u8]) -> Option<&'static str> {
 fn strip_ext_from_name(name: &str) -> &str {
     let stem = Path::new(name).file_stem().and_then(|s| s.to_str()).unwrap_or(name);
     if stem.len() == name.len() { name } else { stem }
+}
+
+/// Return today's date as (year, month, day) without depending on `chrono`.
+/// Uses the Howard Hinnant civil date algorithm from epoch days.
+fn current_date() -> (i32, u32, u32) {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let days = (secs / 86400) as i64;
+    let z = days + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let yr = if m <= 2 { y + 1 } else { y };
+    (yr as i32, m as u32, d as u32)
 }
 
 #[cfg(test)]
@@ -1787,5 +2013,13 @@ mod tests {
         assert!(rename_path_impl(&folder_str, "a/b", &state).is_err());
         assert!(rename_path_impl(&folder_str, "..", &state).is_err());
         assert!(rename_path_impl(&folder_str, "   ", &state).is_err());
+    }
+
+    #[test]
+    fn current_date_returns_plausible_values() {
+        let (y, m, d) = super::current_date();
+        assert!(y >= 2024 && y <= 2030, "year should be around now: {y}");
+        assert!(m >= 1 && m <= 12, "month should be 1..=12: {m}");
+        assert!(d >= 1 && d <= 31, "day should be 1..=31: {d}");
     }
 }

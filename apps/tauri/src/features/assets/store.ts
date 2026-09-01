@@ -84,7 +84,7 @@ export function useFilteredAssets(): AssetInfo[] {
  * Call from the AssetsView component on mount / refresh.
  */
 export function useAssetsActions() {
-  const { fetchAssets, fetchAudit } = useAssetsIPC();
+  const { fetchAssets, fetchAudit, cleanup } = useAssetsIPC();
   const { setAssets, setAuditReport, setLoading } = useAssetsStore.getState();
 
   const refresh = useCallback(async () => {
@@ -100,5 +100,15 @@ export function useAssetsActions() {
     }
   }, [fetchAssets, fetchAudit]);
 
-  return { refresh };
+  const runCleanup = useCallback(async () => {
+    try {
+      await cleanup();
+      // Refresh after cleanup to update the list.
+      await refresh();
+    } catch (err) {
+      console.error("[assets] cleanup failed:", err);
+    }
+  }, [cleanup, refresh]);
+
+  return { refresh, runCleanup };
 }

@@ -24,7 +24,7 @@ export function AssetsView() {
 
   const { setFilter, setSearch, setShowDuplicatesOnly, setShowOrphansOnly } =
     useAssetsStore.getState();
-  const { refresh } = useAssetsActions();
+  const { refresh, runCleanup } = useAssetsActions();
 
   const filteredAssets = useFilteredAssets();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -63,6 +63,15 @@ export function AssetsView() {
             <span className="text-[var(--sat-state-error,#ef4444)]">
               {auditReport.duplicate_count} dup{auditReport.duplicate_count !== 1 && "s"}
             </span>
+          )}
+          {(auditReport.orphan_count > 0 || auditReport.duplicate_count > 0) && (
+            <button
+              type="button"
+              onClick={runCleanup}
+              className="ml-auto rounded bg-[var(--sat-state-error,#ef4444)]/15 px-2 py-0.5 text-[10px] text-[var(--sat-state-error,#ef4444)] hover:bg-[var(--sat-state-error,#ef4444)]/25 transition-colors"
+            >
+              Clean up
+            </button>
           )}
         </div>
       )}

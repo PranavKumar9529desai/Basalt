@@ -26,3 +26,9 @@ export interface AuditReport {
 
 /** Active filter tab in the assets panel. */
 export type AssetFilter = "all" | AssetType;
+
+/** Result of the cleanup_assets command. */
+export interface CleanupResult {
+  orphans_deleted: number;
+  duplicates_deleted: number;
+}
