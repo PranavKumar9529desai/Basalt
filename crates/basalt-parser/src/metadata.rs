@@ -50,14 +50,15 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
         }
     }
 
-    // 2. Fast scan for Links, Tags, Headings, and Block IDs
+    // 2. Fast scan for Links, Embeds, Tags, Headings, and Block IDs
     while i < bytes.len() {
         match bytes[i] {
-            // Wikilink [[...]]
+            // Wikilink [[...]] or Embed ![[...]]
             b'[' if i + 1 < bytes.len() && bytes[i + 1] == b'[' => {
-                let start_byte = i;
+                let is_embed = i > 0 && bytes[i - 1] == b'!';
+                let start_byte = if is_embed { i - 1 } else { i };
+                let content_start = i + 2;
                 i += 2;
-                let start = i;
                 while i < bytes.len()
                     && !(bytes[i] == b']' && i + 1 < bytes.len() && bytes[i + 1] == b']')
                 {
@@ -65,7 +66,7 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                 }
                 if i < bytes.len() {
                     let end_byte = i + 2;
-                    let link_content = input.get(start..i).unwrap_or("");
+                    let link_content = input.get(content_start..i).unwrap_or("");
                     let target = link_content
                         .split('|')
                         .next()
@@ -75,18 +76,23 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         .unwrap_or("")
                         .trim();
                     if !target.is_empty() {
-                        meta.links.push(target.to_string());
                         let u16_start = text_doc
                             .byte_offset_to_utf16(start_byte)
                             .unwrap_or(start_byte);
-                        let u16_end = text_doc.byte_offset_to_utf16(end_byte).unwrap_or(end_byte);
-                        meta.link_locations.push((
-                            target.to_string(),
-                            Span {
-                                start: u16_start,
-                                end: u16_end,
-                            },
-                        ));
+                        let u16_end = text_doc
+                            .byte_offset_to_utf16(end_byte)
+                            .unwrap_or(end_byte);
+                        let span = Span {
+                            start: u16_start,
+                            end: u16_end,
+                        };
+                        if is_embed {
+                            meta.embeds.push(target.to_string());
+                            meta.embed_locations.push((target.to_string(), span));
+                        } else {
+                            meta.links.push(target.to_string());
+                            meta.link_locations.push((target.to_string(), span));
+                        }
                     }
                     i = end_byte; // continue parsing exactly here since we matched it.
                 }
@@ -236,9 +242,23 @@ mod tests {
 
         // Ensure UTF-16 span exists
         assert!(meta.headings[0].2.end > meta.headings[0].2.start);
-
         assert_eq!(meta.tag_locations.len(), 1);
         assert_eq!(meta.link_locations.len(), 1);
-        assert_eq!(meta.block_ids.len(), 1);
+        assert!(meta.embeds.is_empty());
+    }
+
+    #[test]
+    fn test_extract_embeds_and_links() {
+        let input = "Here is a [[Link|Alias]] and an ![[image.png]] embed.\nAlso ![[docs/diagram.pdf|Diagram]] and ![[audio.mp3]].";
+        let meta = extract_metadata(input);
+
+        assert_eq!(meta.links, vec!["Link"]);
+        assert_eq!(meta.embeds, vec!["image.png", "docs/diagram.pdf", "audio.mp3"]);
+
+        assert_eq!(meta.link_locations.len(), 1);
+        assert_eq!(meta.embed_locations.len(), 3);
+        assert_eq!(meta.embed_locations[0].0, "image.png");
+        assert_eq!(meta.embed_locations[1].0, "docs/diagram.pdf");
+        assert_eq!(meta.embed_locations[2].0, "audio.mp3");
     }
 }

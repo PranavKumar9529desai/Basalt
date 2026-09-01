@@ -27,12 +27,12 @@ pub fn process_uptime_ms() -> Option<u64> {
 }
 
 use commands::{
-    autocomplete_links, autocomplete_tags, boot, create_folder, create_note, create_untitled_note, parse_frontmatter,
-    get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace,
-    move_paths, open_file, open_files, open_vault_dialog, reindex_vault, rename_note, rename_path,
-    run_query,
-    save_file, save_files, delete_file, delete_paths,
-    search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
+    autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
+    create_untitled_note, parse_frontmatter, delete_file, delete_paths, get_asset_audit,
+    get_assets, get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace, move_paths,
+    open_file, open_files, open_vault_dialog, reindex_vault, reorganize_assets, rename_note,
+    rename_path, run_query, save_attachment, save_file, save_files, search_content,
+    search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -80,11 +80,14 @@ pub fn run() {
             open_vault_dialog,
             open_file,
             open_files,
+            save_attachment,
             save_file,
-            save_files,
             get_backlinks,
+            get_assets,
+            get_asset_audit,
+            cleanup_assets,
+            reorganize_assets,
             get_graph,
-            autocomplete_links,
             autocomplete_tags,
             get_workspace,
             set_workspace_key,

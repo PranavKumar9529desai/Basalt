@@ -1,8 +1,14 @@
 import { lazy } from "react";
-import { IconFileText, IconFolder, IconLink } from "@tabler/icons-react";
+import {
+  IconFileText,
+  IconFolder,
+  IconLink,
+  IconPaperclip,
+} from "@tabler/icons-react";
 import { leafRegistry, viewRegistry } from "@workspace/views";
 import { EditorView } from "../features/editor";
 import { Backlinks } from "./views/Backlinks";
+import { AssetsView } from "./views/AssetsView";
 
 import { FileExplorerHeaderActions, FileExplorer } from "./views/FileExplorer";
 
@@ -35,6 +41,14 @@ viewRegistry.register({
   icon: IconLink,
   side: "right",
   component: Backlinks,
+});
+
+viewRegistry.register({
+  type: "assets",
+  name: "Assets",
+  icon: IconPaperclip,
+  side: "right",
+  component: AssetsView,
 });
 
 leafRegistry.register({

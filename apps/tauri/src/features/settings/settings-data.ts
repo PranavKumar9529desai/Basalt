@@ -16,10 +16,20 @@ import { create } from "zustand";
 
 export type TabClickOpenBehavior = "preview" | "pinned" | "vscode";
 
+/** Where pasted/dropped attachments are saved. */
+export const ATTACHMENT_FOLDER_DEFAULT = "_attachments";
+
 /** Canonical defaults for every setting. Add new settings here. */
 const DEFAULTS = {
   theme: "dark" as string,
   tabClickOpenBehavior: "vscode" as TabClickOpenBehavior,
+  attachmentFolder: ATTACHMENT_FOLDER_DEFAULT as string,
+  /** How attachments are organized under the attachment folder. */
+  attachmentOrganization: "flat" as "flat" | "by_note" | "by_type" | "by_date",
+  /** Template for attachment file naming. */
+  attachmentNaming: "{original_name}" as "{original_name}" | "{note_name}-{n}" | "{date}-{original_name}",
+  /** Auto-rename attachments when the parent note is renamed. */
+  renameAttachmentsWithNote: true as boolean,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;

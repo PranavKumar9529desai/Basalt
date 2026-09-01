@@ -33,6 +33,12 @@ interface ReadingProps {
   initialScrollRatio?: number;
   onScrollRatioChange?: (ratio: number) => void;
   services: Pick<LeafServices, "openNote" | "findNote">;
+  /**
+   * Resolve an embedded `![[target]]` to a loadable asset URL (e.g. via
+   * `convertFileSrc`). Return `null` when the target is not a resolvable file.
+   * Optional — when omitted, embeds render as visible raw text.
+   */
+  resolveAsset?: (target: string) => string | null;
 }
 
 interface ReadingProperty {
@@ -96,10 +102,89 @@ function safeHref(value: string): string | null {
   if (/^(https?:|mailto:|#)/i.test(href)) return href;
   return null;
 }
+function embedMediaKind(
+  target: string,
+): "image" | "audio" | "video" | "pdf" | null {
+  const ext = target.split(".")?.pop()?.toLowerCase() ?? "";
+  if (["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(ext)) return "image";
+  if (["mp3", "wav", "ogg", "aac", "flac", "m4a", "opus"].includes(ext)) return "audio";
+  if (["mp4", "webm", "mov", "mkv", "avi", "m4v"].includes(ext)) return "video";
+  if (ext === "pdf") return "pdf";
+  // No extension: default to image (Obsidian convention for bare embeds).
+  if (!ext) return "image";
+  // Unknown extension: treat as image fallback (let the browser decide).
+  return "image";
+}
 
-function textParts(text: string, onWikiLink: (name: string) => void) {
-  const parts = text.split(/(\[\[[^\]]+\]\]|==[^=]+==)/g);
+function AssetEmbed({
+  target,
+  resolveAsset,
+  className,
+}: {
+  target: string;
+  resolveAsset?: (target: string) => string | null;
+  className?: string;
+}) {
+  const url = resolveAsset?.(target);
+  if (!url) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-[var(--sat-surface-2)] px-1.5 py-0.5 text-xs text-[var(--sat-text-muted)]">
+        ⚠ {target}
+      </span>
+    );
+  }
+  const kind = embedMediaKind(target);
+  const base = "block max-w-full rounded border border-[var(--sat-layout-border)]";
+  switch (kind) {
+    case "audio":
+      return <audio controls src={url} className={`${base} my-2 w-full`} />;
+    case "video":
+      return <video controls src={url} className={`${base} my-2 max-h-[70vh]`} />;
+    case "pdf":
+      return (
+        <iframe
+          src={url}
+          title={target}
+          className={`${base} my-2 h-[70vh] w-full`}
+        />
+      );
+    default:
+      return (
+        <img
+          src={url}
+          alt={target}
+          className={`${base} my-2 max-h-[70vh] object-contain ${className ?? ""}`}
+          loading="lazy"
+        />
+      );
+  }
+}
+
+function textParts(
+  text: string,
+  onWikiLink: (name: string) => void,
+  resolveAsset?: (target: string) => string | null,
+) {
+  const parts = text.split(/(!?\[\[[^\]]+\]\]|==[^=]+==)/g);
   return parts.map((part, index) => {
+    // Embed: ![[target]] → render media element when resolver is available.
+    const embed = part.match(
+      /^!\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]$/,
+    );
+    if (embed) {
+      const name = embed[1].trim();
+      if (resolveAsset) {
+        return (
+          <AssetEmbed
+            key={`embed-${index}`}
+            target={name}
+            resolveAsset={resolveAsset}
+          />
+        );
+      }
+      // Fallback: render as raw text when no resolver.
+      return <span key={`embed-${index}`} className="text-[var(--sat-text-muted)]">![[{name}]]</span>;
+    }
     const wiki = part.match(/^\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]$/);
     if (wiki) {
       const name = wiki[1].trim();
@@ -127,7 +212,6 @@ function textParts(text: string, onWikiLink: (name: string) => void) {
     return <span key={`text-${index}`}>{part}</span>;
   });
 }
-
 function childNodes(node: SyntaxNode) {
   const children: SyntaxNode[] = [];
   for (let child = node.firstChild; child; child = child.nextSibling) {
@@ -147,6 +231,7 @@ function renderInline(
   source: string,
   onWikiLink: (name: string) => void,
   keyPrefix: string,
+  resolveAsset?: (target: string) => string | null,
 ) {
   const children = childNodes(node);
   const rendered: React.ReactNode[] = [];
@@ -155,37 +240,37 @@ function renderInline(
   for (const child of children) {
     if (child.from > cursor) {
       rendered.push(
-        ...textParts(source.slice(cursor, child.from), onWikiLink),
+        ...textParts(source.slice(cursor, child.from), onWikiLink, resolveAsset),
       );
     }
     if (!/^(HeaderMark|EmphasisMark|LinkMark|CodeMark)$/.test(child.name)) {
       rendered.push(
-        renderInlineNode(child, source, onWikiLink, `${keyPrefix}-${child.from}`),
+        renderInlineNode(child, source, onWikiLink, `${keyPrefix}-${child.from}`, resolveAsset),
       );
     }
     cursor = child.to;
   }
   if (cursor < node.to) {
-    rendered.push(...textParts(source.slice(cursor, node.to), onWikiLink));
+    rendered.push(...textParts(source.slice(cursor, node.to), onWikiLink, resolveAsset));
   }
   return rendered.map((child, index) => (
     <span key={`${keyPrefix}-${index}`}>{child}</span>
   ));
 }
-
 function renderInlineNode(
   node: SyntaxNode,
   source: string,
   onWikiLink: (name: string) => void,
   key: string,
+  resolveAsset?: (target: string) => string | null,
 ): React.ReactNode {
   switch (node.name) {
     case "StrongEmphasis":
-      return <strong key={key}>{renderInline(node, source, onWikiLink, key)}</strong>;
+      return <strong key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</strong>;
     case "Emphasis":
-      return <em key={key}>{renderInline(node, source, onWikiLink, key)}</em>;
+      return <em key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</em>;
     case "Strikethrough":
-      return <del key={key}>{renderInline(node, source, onWikiLink, key)}</del>;
+      return <del key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</del>;
     case "InlineCode":
       return <code key={key}>{source.slice(node.from, node.to).replace(/^`+|`+$/g, "")}</code>;
     // Inline HTML tags render as safe, visible raw text in reading mode
@@ -210,7 +295,7 @@ function renderInlineNode(
       const match = raw.match(/^\[([^\]]*)\]\(([^\s)]+)(?:\s+[^)]*)?\)$/);
       const href = safeHref(match?.[2] ?? "");
       const label = match?.[1] ?? raw;
-      if (!href) return <span key={key}>{textParts(label, onWikiLink)}</span>;
+      if (!href) return <span key={key}>{textParts(label, onWikiLink, resolveAsset)}</span>;
       return (
         <a
           key={key}
@@ -222,12 +307,12 @@ function renderInlineNode(
             if (href.startsWith("#")) event.preventDefault();
           }}
         >
-          {textParts(label, onWikiLink)}
+          {textParts(label, onWikiLink, resolveAsset)}
         </a>
       );
     }
     default:
-      return <span key={key}>{renderInline(node, source, onWikiLink, key)}</span>;
+      return <span key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</span>;
   }
 }
 
@@ -283,6 +368,7 @@ function renderTableNode(
   source: string,
   onWikiLink: (name: string) => void,
   key: string,
+  resolveAsset?: (target: string) => string | null,
 ): React.ReactNode {
   const children = childNodes(node);
   const headerCells: string[][] = [];
@@ -316,7 +402,7 @@ function renderTableNode(
       <thead>
         <tr>
           {header.map((cell, i) => (
-            <th key={`${key}-h-${i}`}>{textParts(cell, onWikiLink)}</th>
+            <th key={`${key}-h-${i}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>
           ))}
         </tr>
       </thead>
@@ -324,7 +410,7 @@ function renderTableNode(
         {bodyRows.map((row, ri) => (
           <tr key={`${key}-r-${ri}`}>
             {row.map((cell, ci) => (
-              <td key={`${key}-r-${ri}-${ci}`}>{textParts(cell, onWikiLink)}</td>
+              <td key={`${key}-r-${ri}-${ci}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>
             ))}
           </tr>
         ))}
@@ -339,12 +425,13 @@ function renderBlock(
   source: string,
   onWikiLink: (name: string) => void,
   key: string,
+  resolveAsset?: (target: string) => string | null,
 ): React.ReactNode {
-  const inline = () => renderInline(node, source, onWikiLink, key);
+  const inline = () => renderInline(node, source, onWikiLink, key, resolveAsset);
 
   // Table nodes — Lezer Table extension produces these for standalone tables
   if (node.name === "Table") {
-    return renderTableNode(node, source, onWikiLink, key);
+    return renderTableNode(node, source, onWikiLink, key, resolveAsset);
   }
 
   if (/^ATXHeading[1-6]$/.test(node.name) || /^SetextHeading[1-2]$/.test(node.name)) {
@@ -388,8 +475,8 @@ function renderBlock(
       if (head?.length) {
         return (
           <table key={key}>
-            <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink)}</th>)}</tr></thead>
-            <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink)}</td>)}</tr>)}</tbody>
+            <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>)}</tr></thead>
+            <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>)}</tr>)}</tbody>
           </table>
         );
       }
@@ -404,8 +491,8 @@ function renderBlock(
       const [head, ...body] = rows;
       const table = head?.length ? (
         <table key={`${key}-table`}>
-          <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink)}</th>)}</tr></thead>
-          <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink)}</td>)}</tr>)}</tbody>
+          <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>)}</tr></thead>
+          <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>)}</tr>)}</tbody>
         </table>
       ) : null;
 
@@ -425,10 +512,10 @@ function renderBlock(
   }
   if (node.name === "BulletList" || node.name === "OrderedList") {
     const List = node.name === "BulletList" ? "ul" : "ol";
-    return <List key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`))}</List>;
+    return <List key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</List>;
   }
   if (node.name === "ListItem") {
-    return <li key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`))}</li>;
+    return <li key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</li>;
   }
   if (node.name === "Blockquote") {
     const raw = source.slice(node.from, node.to);
@@ -438,11 +525,11 @@ function renderBlock(
       return (
         <aside key={key} className="markdown-reading-callout">
           <strong>{callout[1]}</strong>
-          <p>{textParts(body, onWikiLink)}</p>
+          <p>{textParts(body, onWikiLink, resolveAsset)}</p>
         </aside>
       );
     }
-    return <blockquote key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`))}</blockquote>;
+    return <blockquote key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</blockquote>;
   }
   // Fenced (```/~~~) and indented (4-space) code blocks. A block may split
   // into several `CodeText` children (nested in lists/quotes), so code runs
@@ -598,13 +685,14 @@ function renderDocument(
   tree: Tree,
   source: string,
   onWikiLink: (name: string) => void,
+  resolveAsset?: (target: string) => string | null,
 ) {
   return childNodes(tree.topNode).map((node) =>
-    renderBlock(node, source, onWikiLink, `block-${node.from}`),
+    renderBlock(node, source, onWikiLink, `block-${node.from}`, resolveAsset),
   );
 }
 
-export function Reading({ markdown, sourcePath, title, services, initialScrollRatio = 0, onScrollRatioChange }: ReadingProps) {
+export function Reading({ markdown, sourcePath, title, services, initialScrollRatio = 0, onScrollRatioChange, resolveAsset }: ReadingProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(() => maskFrontmatter(markdown), [markdown]);
   const parseSource = useMemo(() => maskReadingOnlySyntax(parsed.masked), [parsed.masked]);
@@ -614,8 +702,8 @@ export function Reading({ markdown, sourcePath, title, services, initialScrollRa
       renderDocument(tree, parsed.masked, (name) => {
         const target = services.findNote(name) ?? services.findNote(`${name}.md`);
         if (target) services.openNote(target.path);
-      }),
-    [parsed.masked, services, tree],
+      }, resolveAsset),
+    [parsed.masked, services, tree, resolveAsset],
   );
 
   useEffect(() => {

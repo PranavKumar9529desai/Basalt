@@ -37,6 +37,7 @@ export interface NoteIO {
   onFetchTags: (query: string) => Promise<string[]>;
   runQuery: (dql: string) => Promise<QueryResult>;
   parseFrontmatter: (text: string) => FrontmatterModel | null;
+  onPasteImage?: (data: Uint8Array, filename: string) => Promise<string | null>;
 }
 
 export interface EditorControllerOptions {
@@ -119,6 +120,7 @@ export class EditorController {
         onFetchLinks: options.io.onFetchLinks,
         onFetchTags: options.io.onFetchTags,
         onOpenLink: this.handleOpenLink,
+        onPasteImage: options.io.onPasteImage,
         parseFrontmatter: options.io.parseFrontmatter,
         editFrontmatter,
         runQuery: options.io.runQuery,

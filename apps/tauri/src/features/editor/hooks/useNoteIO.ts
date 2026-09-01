@@ -62,6 +62,24 @@ export function useNoteIO() {
   const runQuery = useCallback(
     async (dql: string): Promise<QueryResult> => {
       return invoke<QueryResult>("run_query", { dql, path: "" });
+  const onPasteImage = useCallback(
+    async (data: Uint8Array, filename: string): Promise<string | null> => {
+      try {
+        const notePath = useActiveNoteStore.getState().activeNote?.path ?? null;
+        const result = await invoke<{
+          rel_path: string;
+          abs_path: string;
+          name: string;
+        }>("save_attachment", {
+          name: filename,
+          data: Array.from(data),
+          notePath,
+        });
+        return result.rel_path;
+      } catch (err) {
+        console.error("[useNoteIO] save_attachment failed:", err);
+        return null;
+      }
     },
     [],
   );
@@ -77,6 +95,7 @@ export function useNoteIO() {
     onFetchLinks,
     onFetchTags,
     runQuery,
+    onPasteImage,
     parseFrontmatter,
   };
 }
