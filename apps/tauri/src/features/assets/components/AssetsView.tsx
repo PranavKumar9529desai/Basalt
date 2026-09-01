@@ -24,8 +24,7 @@ export function AssetsView() {
 
   const { setFilter, setSearch, setShowDuplicatesOnly, setShowOrphansOnly } =
     useAssetsStore.getState();
-  const { refresh, runCleanup } = useAssetsActions();
-
+  const { refresh, runCleanup, runReorganize } = useAssetsActions();
   const filteredAssets = useFilteredAssets();
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -64,13 +63,23 @@ export function AssetsView() {
               {auditReport.duplicate_count} dup{auditReport.duplicate_count !== 1 && "s"}
             </span>
           )}
-          {(auditReport.orphan_count > 0 || auditReport.duplicate_count > 0) && (
+          {auditReport.orphan_count > 0 || auditReport.duplicate_count > 0 ? (
             <button
               type="button"
               onClick={runCleanup}
+              title="Delete orphaned assets and consolidate duplicates"
               className="ml-auto rounded bg-[var(--sat-state-error,#ef4444)]/15 px-2 py-0.5 text-[10px] text-[var(--sat-state-error,#ef4444)] hover:bg-[var(--sat-state-error,#ef4444)]/25 transition-colors"
             >
               Clean up
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={runReorganize}
+              title="Apply current organization/naming rules to every attachment"
+              className="ml-auto rounded bg-[var(--sat-accent-primary)]/15 px-2 py-0.5 text-[10px] text-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-primary)]/25 transition-colors"
+            >
+              Reorganize
             </button>
           )}
         </div>

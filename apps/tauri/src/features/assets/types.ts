@@ -26,6 +26,11 @@ export interface AuditReport {
 
 /** Active filter tab in the assets panel. */
 export type AssetFilter = "all" | AssetType;
+/** Result of the reorganize_assets command. */
+export interface ReorganizeResult {
+  files_moved: number;
+  embeds_rewritten: number;
+}
 
 /** Result of the cleanup_assets command. */
 export interface CleanupResult {

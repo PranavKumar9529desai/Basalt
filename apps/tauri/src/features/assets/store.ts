@@ -85,7 +85,7 @@ export function useFilteredAssets(): AssetInfo[] {
  * Call from the AssetsView component on mount / refresh.
  */
 export function useAssetsActions() {
-  const { fetchAssets, fetchAudit, cleanup } = useAssetsIPC();
+  const { fetchAssets, fetchAudit, cleanup, reorganize } = useAssetsIPC();
   const { setAssets, setAuditReport, setLoading } = useAssetsStore.getState();
 
   const refresh = useCallback(async () => {
@@ -111,5 +111,15 @@ export function useAssetsActions() {
     }
   }, [cleanup, refresh]);
 
-  return { refresh, runCleanup };
+  const runReorganize = useCallback(async () => {
+    try {
+      await reorganize();
+      // Refresh after reorganize to update paths + embeds.
+      await refresh();
+    } catch (err) {
+      console.error("[assets] reorganize failed:", err);
+    }
+  }, [reorganize, refresh]);
+
+  return { refresh, runCleanup, runReorganize };
 }
