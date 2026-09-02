@@ -8,9 +8,14 @@ fn populate_vault(size: usize) -> Vault {
         let path = format!("notes/note-{}.md", i);
         let tags = if i % 3 == 0 { "#work" } else { "#personal" };
         let priority = i % 5;
+        let label_count = (i % 3) + 1;
+        let labels_yaml: String = (0..label_count)
+            .map(|l| format!("l{}", l))
+            .collect::<Vec<_>>()
+            .join(", ");
         let content = format!(
-            "---\npriority: {}\n---\n# Note {}\n\nTags: {}\n\nSome content.\n",
-            priority, i, tags
+            "---\npriority: {}\nlabels: [{}]\n---\n# Note {}\n\nTags: {}\n\nSome content.\n",
+            priority, labels_yaml, i, tags
         );
         vault.add_document(&path, &content);
     }
@@ -71,6 +76,32 @@ fn bench_aggregation(c: &mut Criterion) {
                 execute_query(v, "TABLE file.name FROM #work WHERE priority > 2").unwrap()
             });
         });
+        group.bench_with_input(
+            BenchmarkId::new("flatten_list_group_by", size),
+            &vault,
+            |b, v| {
+                b.iter(|| {
+                    execute_query(
+                        v,
+                        "TABLE label, count(rows) FROM #work FLATTEN labels AS \"label\" GROUP BY label",
+                    )
+                    .unwrap()
+                });
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("where_contains_list", size),
+            &vault,
+            |b, v| {
+                b.iter(|| {
+                    execute_query(
+                        v,
+                        "TABLE file.name FROM #work WHERE contains(labels, \"l0\")",
+                    )
+                    .unwrap()
+                });
+            },
+        );
     }
     group.finish();
 }

@@ -7,11 +7,11 @@ fn populate_vault() -> Vault {
 
     vault.add_document(
         "notes/work/project-alpha.md",
-        "---\ntags: [work, projects]\npriority: 3\nstatus: active\n---\n# Project Alpha\n\nCompleted the initial prototype. See [[project-beta]] for follow-up.\n",
+        "---\ntags: [work, projects]\npriority: 3\nstatus: active\nlabels: [frontend, rust]\n---\n# Project Alpha\n\nCompleted the initial prototype. See [[project-beta]] for follow-up.\n",
     );
     vault.add_document(
         "notes/work/project-beta.md",
-        "---\ntags: [work, projects]\npriority: 5\nstatus: active\n---\n# Project Beta\n\nFollow-up to [[project-alpha]]. High priority migration work.\n",
+        "---\ntags: [work, projects]\npriority: 5\nstatus: active\nlabels: [backend, rust]\n---\n# Project Beta\n\nFollow-up to [[project-alpha]]. High priority migration work.\n",
     );
     vault.add_document(
         "notes/personal/journal.md",
@@ -113,8 +113,11 @@ fn main() {
         ("GROUP BY status SORT by key", "TABLE status, count(rows) FROM #work GROUP BY status SORT key ASC"),
         ("FLATTEN priority as p, then GROUP BY", "TABLE p, count(rows) FROM #work FLATTEN priority AS \"p\" GROUP BY p"),
         ("SUM + AVG per status", "TABLE status, sum(rows.priority) AS \"sum\", avg(rows.priority) AS \"avg\" FROM #work GROUP BY status"),
-        ("WHERE on numeric field", "TABLE file.name FROM #work WHERE priority > 2"),
-    ];
+        ("FLATTEN labels AS \"label\"", "TABLE file.name, label FROM #work FLATTEN labels AS \"label\""),
+        ("FLATTEN + GROUP BY count per label", "TABLE label, count(rows) FROM #work FLATTEN labels AS \"label\" GROUP BY label"),
+        ("WHERE contains(labels, \"rust\")", "TABLE file.name FROM #work WHERE contains(labels, \"rust\")"),
+        ("WHERE length(labels) > 1", "TABLE file.name FROM #work WHERE length(labels) > 1"),
+     ];
 
     println!("\nDQL Query Runner — {} queries\n", queries.len());
 
