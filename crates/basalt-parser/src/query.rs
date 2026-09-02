@@ -131,15 +131,6 @@ fn is_ident_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == '-'
 }
 
-fn ident(input: &str) -> IResult<&str, String> {
-    map(
-        verify(
-            take_while1(is_ident_char),
-            |s: &str| !is_keyword(s),
-        ),
-        |s: &str| s.to_string(),
-    )(input)
-}
 
 fn field_ref(input: &str) -> IResult<&str, FieldRef> {
     let (input, first) = field_first_segment(input)?;
@@ -818,4 +809,15 @@ LIMIT 10"#,
         assert!(matches!(&plan.commands[2], DataCommand::Sort { .. }));
     }
 
+    #[test]
+    fn parse_group_by_without_expr_errors() {
+        assert!(parse_query("LIST GROUP BY").is_err());
+        assert!(parse_query("LIST GROUP BY AS \"x\"").is_err());
+    }
+
+    #[test]
+    fn parse_group_by_multi_key_rejected() {
+        // GROUP BY takes a single expression; a comma is trailing text.
+        assert!(parse_query("LIST GROUP BY a, b").is_err());
+    }
 }
