@@ -67,6 +67,21 @@ fn sort_orders_by_field() {
 }
 
 #[test]
+fn where_contains_filters_pages() {
+    let vault = vault_with_docs();
+    let result = execute_query(
+        &vault,
+        r#"TABLE file.name WHERE contains(file.name, "alpha")"#,
+    )
+    .unwrap();
+    assert_total(&result, 1);
+    assert_eq!(result.rows.len(), 1);
+    match &result.rows[0][0] {
+        TypedValue::Text { value } => assert_eq!(value, "alpha"),
+        other => panic!("expected Text, got {:?}", other),
+    }
+}
+#[test]
 fn malformed_query_returns_error() {
     let vault = vault_with_docs();
     assert!(execute_query(&vault, "NOT A VALID QUERY").is_err());

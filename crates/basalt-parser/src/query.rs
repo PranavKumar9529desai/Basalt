@@ -5,7 +5,7 @@ use nom::{
     combinator::{map, opt, value, verify},
     multi::{separated_list0, separated_list1},
     number::complete::double,
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, pair, preceded, tuple},
     IResult,
 };
 
@@ -139,6 +139,41 @@ fn field_ref(input: &str) -> IResult<&str, FieldRef> {
     map(
         separated_list1(char('.'), ident),
         FieldRef,
+    )(input)
+}
+// Function-call names: alphanumeric + underscore, must start with a letter or
+// underscore. Unlike `ident`, keywords are allowed — `contains` is a DQL
+// keyword but a legal function name here.
+fn fn_name(input: &str) -> IResult<&str, String> {
+    map(
+        verify(
+            take_while1(|c: char| c.is_alphanumeric() || c == '_'),
+            |s: &str| s.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_'),
+        ),
+        |s: &str| s.to_string(),
+    )(input)
+}
+
+/// A function call like `contains(field, "needle")` or `sum(rows.priority)`.
+/// Arguments are expressions, so calls nest. Names are normalized to
+/// lowercase so engine dispatch is case-stable.
+fn call(input: &str) -> IResult<&str, Expr> {
+    map(
+        pair(
+            fn_name,
+            delimited(
+                char('('),
+                separated_list0(
+                    tuple((multispace0, char(','), multispace0)),
+                    simple_expr,
+                ),
+                char(')'),
+            ),
+        ),
+        |(name, args)| Expr::Func {
+            name: name.to_ascii_lowercase(),
+            args,
+        },
     )(input)
 }
 
@@ -275,6 +310,10 @@ fn compare_op(input: &str) -> IResult<&str, CompareOp> {
 fn simple_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(literal, Expr::Literal),
+        // Call must precede field_ref: a non-keyword name like `length`
+        // would otherwise parse as a field and leave the `(` unconsumed.
+        call,
+        paren_expr,
         map(field_ref, Expr::Field),
     ))(input)
 }
@@ -294,6 +333,15 @@ fn where_expr(input: &str) -> IResult<&str, Expr> {
         }
         (input, None) => Ok((input, left)),
     }
+}
+/// A parenthesized expression: `(expr)` — the shape needed for computed
+/// GROUP BY / FLATTEN keys, usable anywhere a simple expression is valid.
+fn paren_expr(input: &str) -> IResult<&str, Expr> {
+    delimited(
+        preceded(char('('), multispace0),
+        where_expr,
+        preceded(multispace0, char(')')),
+    )(input)
 }
 
 fn sort_direction(input: &str) -> IResult<&str, SortDirection> {
@@ -551,4 +599,77 @@ mod tests {
             other => panic!("Expected And, got {:?}", other),
         }
     }
+    #[test]
+    fn parse_where_function_call() {
+        let plan = parse_query(r#"TABLE file.name WHERE contains(file.name, "beta")"#).unwrap();
+        assert_eq!(plan.commands.len(), 1);
+        match &plan.commands[0] {
+            DataCommand::Where(Expr::Func { name, args }) => {
+                assert_eq!(name, "contains");
+                assert_eq!(args.len(), 2);
+                assert_eq!(args[0], Expr::Field(FieldRef(vec!["file".into(), "name".into()])));
+                assert_eq!(args[1], Expr::Literal(Literal::Text("beta".into())));
+            }
+            other => panic!("Expected Func, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_function_in_comparison() {
+        let plan = parse_query("TABLE file.name WHERE length(tags) > 2").unwrap();
+        match &plan.commands[0] {
+            DataCommand::Where(Expr::Comparison { left, op, right }) => {
+                assert_eq!(*op, CompareOp::Gt);
+                assert!(matches!(left.as_ref(), Expr::Func { name, .. } if name == "length"));
+                assert_eq!(right.as_ref(), &Expr::Literal(Literal::Number(2.0)));
+            }
+            other => panic!("Expected comparison, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_nested_function_calls() {
+        let plan = parse_query("TABLE file.name WHERE sum(length(rows.tags)) > 0").unwrap();
+        match &plan.commands[0] {
+            DataCommand::Where(Expr::Comparison { left, .. }) => {
+                if let Expr::Func { name, args } = left.as_ref() {
+                    assert_eq!(name, "sum");
+                    assert_eq!(args.len(), 1);
+                    if let Expr::Func { name: inner_name, args: inner_args } = &args[0] {
+                        assert_eq!(inner_name, "length");
+                        assert_eq!(inner_args[0], Expr::Field(FieldRef(vec!["rows".into(), "tags".into()])));
+                    } else {
+                        panic!("expected nested func");
+                    }
+                } else {
+                    panic!("expected func");
+                }
+            }
+            other => panic!("Expected comparison, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_keyword_function_name() {
+        // `contains` is a DQL keyword but must parse as a function call.
+        let plan = parse_query(r#"TABLE file.name WHERE contains(file.name, "x")"#).unwrap();
+        assert!(
+            matches!(&plan.commands[0], DataCommand::Where(Expr::Func { name, .. }) if name == "contains"),
+            "contains should parse as a function call"
+        );
+    }
+
+    #[test]
+    fn parse_paren_expr_grouping() {
+        let plan = parse_query("TABLE file.name WHERE (rating > 5)").unwrap();
+        match &plan.commands[0] {
+            DataCommand::Where(Expr::Comparison { op, left, right }) => {
+                assert_eq!(*op, CompareOp::Gt);
+                assert_eq!(left.as_ref(), &Expr::Field(FieldRef(vec!["rating".into()])));
+                assert_eq!(right.as_ref(), &Expr::Literal(Literal::Number(5.0)));
+            }
+            other => panic!("Expected comparison, got {:?}", other),
+        }
+    }
+
 }
