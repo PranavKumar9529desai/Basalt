@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (2026-09-02)
+Accepted (2026-09-02)
 
 ## Context
 
@@ -179,3 +179,62 @@ No new variants needed. Aggregates return existing types:
   additions and repeated field access O(1)
 - Unknown functions in WHERE currently return `false` (safe default) —
   extend with `length()`, `regexmatch()`, `date()` in a follow-up
+
+## Amendments (2026-09-02)
+
+The initial proposal was refined during implementation. The changes below
+supersede the corresponding sections above.
+
+### Order-executed command walk
+
+The proposal sketched a fixed `FROM → WHERE → FLATTEN → SORT → LIMIT →
+GROUP BY` pipeline. The engine instead walks commands in the written order,
+matching documented Dataview semantics: `LIMIT 5 SORT date ASC` is legal,
+duplicates are allowed, and `GROUP BY` may sit anywhere in the chain. GROUP BY
+transforms rows into groups; subsequent WHERE/SORT/LIMIT operate on groups.
+
+### No `Expr::Aggregate` variant
+
+Aggregates are not a distinct `Expr` variant. The engine routes by function
+name (`count`, `length`, `sum`, `avg`, `average`, `min`, `max`) and only when
+the evaluation context is a group. `min`/`max` are variadic scalar functions
+that resolve to the group's extremum when a group is in scope. An aggregate
+outside a GROUP BY context evaluates to `TypedValue::Null` (deferred, matching
+Dataview's rejection of that form).
+
+### `GroupBy`/`Flatten` take an `Expr` (not just a `FieldRef`)
+
+`GroupBy { expr, alias }` and `Flatten { expr, alias }` accept a full
+expression, so computed GROUP BY / FLATTEN are representable. Multi-key
+`GROUP BY a, b` is rejected by the parser. A simple-field GROUP BY keeps its
+`group_by_path`, letting the original field resolve to the group key in output
+columns (Dataview swizzling); computed GROUP BY exposes only `key` / `rows.X`.
+
+### Aggregate function library (final)
+
+| Function | Semantics |
+|---|---|
+| `count(rows)` / `length(rows)` | Group size (Basalt ergonomics extension) |
+| `count(field)` / `length(field)` | Non-null count of `field` across members |
+| `sum(field)` | Sum of numeric values across members |
+| `avg(field)` / `average(field)` | Arithmetic mean of numeric values |
+| `min(field)` / `max(field)` | Extremum of numeric values |
+
+The argument is evaluated per member with a leading `rows.` prefix stripped, so
+`rows.priority` and bare `priority` are equivalent. Unknown functions return
+`TypedValue::Null`.
+
+### FLATTEN scope
+
+Scalar FLATTEN is implemented: the expression is evaluated per page and the
+result injected as a synthetic frontmatter entry under the alias (or the
+expression text when unnamed), available to later WHERE/SORT/GROUP BY. This
+does not depend on a `TypedValue::List` variant. **List-splitting FLATTEN is
+deferred** until `TypedValue::List` exists, and FLATTEN applied to group rows
+(i.e. after GROUP BY) is currently a no-op.
+
+### Date comparison
+
+`compare_typed` now orders `Date`-vs-`Date` lexicographically, which is correct
+for ISO-8601 strings, so `SORT date` and `min`/`max` over dates work. The
+"Known debt" note about `compare_typed` falling through to `Equal` is resolved.

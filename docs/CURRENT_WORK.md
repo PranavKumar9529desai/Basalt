@@ -409,38 +409,55 @@ direct `features/editor` consumer in app-shell is gone.
 
 ## DQL Query Engine (ADR-027 + ADR-028) — ACTIVE
 
-The `basalt-tables` crate is the standalone DQL engine (ADR-027). Three
-high-impact fixes shipped this session:
+The `basalt-tables` crate is the standalone DQL engine (ADR-027). Earlier
+shipped: boolean FROM parser (AND/OR/NOT precedence), array frontmatter
+preservation (comma-joined), unknown-function safety, dead-code cleanup.
 
-- **Boolean FROM parser**: `AND`/`OR`/`NOT` in FROM with proper precedence
-  (NOT > AND > OR) and parenthesized groups — closes the3 failing test
-  cases.
-- **Array frontmatter preservation**: `yaml_to_typed` Sequence now joins
-  all elements as comma-separated text instead of silently dropping
-  all but the first — fixes multi-value `tags`, `aliases`, etc.
-- **Unknown function safety**: `eval_expr` returns `false` for unknown
-  functions instead of silently matching every row.
-- **Dead code cleanup**: removed unused `_graph: &NoteGraph` param from
-  `matches_source`.
+### DQL Aggregation (ADR-028) — IMPLEMENTED on `feat/dql-aggregation`
 
-Test results: 62 parser tests, 5 engine tests, 20/20 query runner — all green.
+Phase-complete in the worktree `/home/pranav/Projects/.worktrees/
+basalt-feat/dql-aggregation` (branch `feat/dql-aggregation`, based at
+`3e50958`). ADR-028 flipped to **Accepted** with amendments. Commits:
 
-### Next: DQL Aggregation (ADR-028)
+| Commit | Phase |
+|---|---|
+| `0994d5f` | 0 — function-call expression grammar (`fn_name`/`call`/`paren_expr`) |
+| `c51038b` | 1 — `QueryField`/`DataCommand::GroupBy|Flatten`, shared `alias_clause`/`query_field`, `field_ref` allows keyword first segment |
+| `dcad219` | 2 — order-executed command walk, GROUP BY, aggregates (count/sum/avg/min/max/length) |
+| `0182df6` | 3 — ISO-8601 date detection (`TypedValue::Date`) + Date-vs-Date compare |
+| `b1b7e62` | 4 — scalar FLATTEN (synthetic frontmatter field) |
+| (uncommitted) | 5 — 25k benches + `dql_runner` examples + ADR/README/handoff |
 
-The active scope. Priority order:
+Key decisions (see ADR-028 Amendments):
+- Commands execute in **written order** (Dataview semantics), not a fixed
+  pipeline — `LIMIT 5 SORT date ASC` and mid-chain GROUP BY are legal.
+- No `Expr::Aggregate` variant: aggregate routing by function name + group
+  context; aggregates outside GROUP BY → `Null`.
+- `count(rows)` = group size; `count(field)` = non-null count (Basalt
+  ergonomics extension). `avg`/`average`, `count`/`length` both work.
+- GROUP BY swizzling via `group_by_path`: the original field resolves to the
+  group key in output; only `key` / group-by field / `rows.X` resolve.
+- Scalar FLATTEN injects a synthetic frontmatter entry under the alias;
+  list-splitting deferred pending `TypedValue::List`; FLATTEN after GROUP BY
+  is a no-op.
+- `where_expr` no longer consumes trailing whitespace (data-command
+  separator fix).
 
-1. **GROUP BY parser + engine** — group rows by field, evaluate per-group.
-   Dead `DataCommand::GroupBy` variant gets parser combinator + engine logic.
-2. **FLATTEN parser + engine** — add synthetic field to each row before
-   GROUP BY / SORT / LIMIT. Dead `DataCommand::Flatten` variant gets filled.
-3. **Aggregate functions** — `count(rows)`, `sum(rows.field)`,
-   `avg(rows.field)`, `min(rows.field)`, `max(rows.field)`.
-   New `Expr::Aggregate` variant, executed only inside GROUP BY context.
-4. **Date comparison fix** — `compare_typed` must handle `TypedValue::Date`
-   correctly before `min(rows.due)` / `max(rows.due)` work.
-5. **WHERE function extensions** — `length()`, `regexmatch()`, `date()` in
-   the expression language (currently only `contains()` exists).
-6. **Inline `key:: value` fields** — parse body-level metadata, not just
-   YAML frontmatter.
+Test results: **82 parser + 19 engine + 2 basalt-types** all green
+(`cargo test -p basalt-parser -p basalt-tables -p basalt-types`); `dql_runner`
+example 25/25.
+
+### Remaining DQL scope (deferred)
+
+1. **List-splitting FLATTEN** — needs `TypedValue::List` (IPC contract
+   change); currently scalar FLATTEN only.
+2. **FLATTEN after GROUP BY** — currently a no-op on group rows.
+3. **Multi-field GROUP BY** — parser rejects `GROUP BY a, b`.
+4. **Aggregates without GROUP BY** — return `Null` (Dataview rejects too).
+5. **WHERE function extensions** — `length()`, `regexmatch()`, `date()`.
+6. **Inline `key:: value` fields** — body-level metadata, not just YAML
+   frontmatter.
+7. Merge the worktree branch into main (main has unrelated uncommitted WIP
+   in `crates/basalt-vault` + `apps/tauri` — coordinate).
 
 Open ADR: [028-dql-aggregation.md](docs/adr/028-dql-aggregation.md).
