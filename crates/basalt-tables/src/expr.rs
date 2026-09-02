@@ -53,8 +53,14 @@ pub fn eval_expr(expr: &Expr, ctx: &EvalCtx) -> bool {
                     (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
                         hay.contains(needle.as_str())
                     }
+                    (TypedValue::List { items }, needle) => {
+                        items.iter().any(|item| compare_typed(item, needle) == Ordering::Equal)
+                    }
                     _ => false,
                 }
+            } else if name == "length" && args.len() == 1 {
+                // length(x) is truthy when x is non-empty.
+                is_truthy(&eval_to_typed(expr, ctx))
             } else if is_aggregate(name) {
                 // A bare aggregate predicate (`WHERE count(rows) > 3` is the
                 // comparison form above; this is the lone-`count(rows)` case).
@@ -89,8 +95,19 @@ pub fn eval_to_typed(expr: &Expr, ctx: &EvalCtx) -> TypedValue {
                         (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
                             hay.contains(needle.as_str())
                         }
+                        (TypedValue::List { items }, needle) => {
+                            items.iter().any(|item| compare_typed(item, needle) == Ordering::Equal)
+                        }
                         _ => false,
                     },
+                };
+            }
+            if name == "length" && args.len() == 1 {
+                return match eval_to_typed(&args[0], ctx) {
+                    TypedValue::List { items } => TypedValue::Number { value: items.len() as f64 },
+                    TypedValue::Text { value } => TypedValue::Number { value: value.chars().count() as f64 },
+                    TypedValue::Number { value } => TypedValue::Number { value },
+                    _ => TypedValue::Null,
                 };
             }
             // An aggregate outside a GROUP BY context is deferred (Dataview

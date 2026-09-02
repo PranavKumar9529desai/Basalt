@@ -422,3 +422,49 @@ fn flatten_list_then_group_by_count() {
     assert_eq!(nom_row[1], TypedValue::Number { value: 2.0 });
     assert_eq!(rust_row[1], TypedValue::Number { value: 1.0 });
 }
+
+fn length_of_list_returns_count() {
+    let mut vault = Vault::new();
+    vault.add_document("notes/multi.md", "---\nlabels: [rust, nom, tokio]\n---\nMulti\n\nTags: #work\n");
+    vault.add_document("notes/single.md", "---\nlabels: [rust]\n---\nSingle\n\nTags: #work\n");
+    // FLATTEN splits lists, then GROUP BY file.name counts elements per file.
+    let result = execute_query(
+        &vault,
+        "TABLE file.name, count(rows) FROM #work FLATTEN labels AS \"label\" GROUP BY file.name",
+    )
+    .unwrap();
+    // multi has 3 labels, single has 1.
+    assert_total(&result, 2);
+    let multi_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Link { name, .. } if name == "multi")).unwrap();
+    let single_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Link { name, .. } if name == "single")).unwrap();
+    assert_eq!(multi_row[1], TypedValue::Number { value: 3.0 });
+    assert_eq!(single_row[1], TypedValue::Number { value: 1.0 });
+}
+
+#[test]
+fn contains_list_matches_element() {
+    let vault = vault_with_array_frontmatter();
+    // WHERE contains(labels, "rust") filters to only docs with "rust" in labels.
+    let result = execute_query(
+        &vault,
+        "TABLE file.name FROM #work WHERE contains(labels, \"rust\")",
+    )
+    .unwrap();
+    // Only doc "a" has rust in labels.
+    assert_total(&result, 1);
+    assert_eq!(result.rows.len(), 1);
+}
+
+#[test]
+fn where_length_filters_list() {
+    let vault = vault_with_array_frontmatter();
+    // WHERE length(labels) > 1 filters to only docs with >1 label.
+    // a: [rust, nom] -> length 2 -> included. b: [nom] -> length 1 -> excluded.
+    let result = execute_query(
+        &vault,
+        "TABLE file.name FROM #work WHERE length(labels) > 1",
+    )
+    .unwrap();
+    assert_eq!(result.rows.len(), 1);
+    assert_eq!(result.rows[0][0], TypedValue::Text { value: "a".into() });
+}
