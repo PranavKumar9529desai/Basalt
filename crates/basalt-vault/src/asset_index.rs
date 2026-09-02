@@ -8,6 +8,7 @@ use std::path::Path;
 
 /// Classification of non-markdown file types by extension.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
 pub enum FileType {
     Image,
     Video,
@@ -187,9 +188,12 @@ impl AssetIndex {
         self.assets.values()
     }
 
-    /// Return all assets as a `Vec` (for Tauri IPC serialization).
+    /// Return all assets as a `Vec`, sorted by `rel_path` for a stable,
+    /// deterministic UI order (the backing `HashMap` is unordered).
     pub fn all(&self) -> Vec<AssetInfo> {
-        self.assets.values().cloned().collect()
+        let mut v: Vec<AssetInfo> = self.assets.values().cloned().collect();
+        v.sort_by(|a, b| a.rel_path.cmp(&b.rel_path));
+        v
     }
 
     /// Number of tracked assets.
@@ -309,7 +313,12 @@ impl AssetIndex {
     /// Tries, in order:
     /// 1. Exact match on `rel_path` (case-insensitive)
     /// 2. Bare filename match (basename only, case-insensitive)
-    fn resolve_asset(&self, target: &str) -> Option<&AssetInfo> {
+    /// 3. Stem match (extension-less target like `![[image]]` → `image.png`),
+    ///    preferring the shortest `rel_path` when several files share a stem.
+    ///
+    /// Stem matching is what lets extension-less embeds be counted as
+    /// referenced — without it every `![[image]]` looks orphaned and Clean up
+    pub fn resolve_asset(&self, target: &str) -> Option<&AssetInfo> {
         let target_lower = target.trim().to_lowercase();
 
         // 1. Exact rel_path match
@@ -327,6 +336,38 @@ impl AssetIndex {
             for asset in self.assets.values() {
                 if asset.file_name.to_lowercase() == target_name {
                     return Some(asset);
+                }
+            }
+        }
+
+        // 3. Stem match — `![[image]]` (no extension) → `image.png`.
+        let target_stem = Path::new(&target_lower)
+            .file_stem()
+            .and_then(|s| s.to_str());
+        if let Some(stem) = target_stem {
+            if !stem.is_empty() {
+                let mut best: Option<&AssetInfo> = None;
+                for asset in self.assets.values() {
+                    let file_stem = Path::new(&asset.file_name)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("");
+                    if file_stem.eq_ignore_ascii_case(stem) {
+                        let better = match best {
+                            None => true,
+                            Some(cur) => {
+                                asset.rel_path.len() < cur.rel_path.len()
+                                    || (asset.rel_path.len() == cur.rel_path.len()
+                                        && asset.rel_path < cur.rel_path)
+                            }
+                        };
+                        if better {
+                            best = Some(asset);
+                        }
+                    }
+                }
+                if best.is_some() {
+                    return best;
                 }
             }
         }
@@ -522,5 +563,52 @@ mod tests {
 
         assert!(idx.resolve_asset("assets/photo.png").is_some());
         assert!(idx.resolve_asset("Assets/Photo.PNG").is_some());
+    }
+    #[test]
+    fn test_resolve_asset_stem_match() {
+        let mut idx = AssetIndex::new();
+        idx.upsert(sample_asset("_attachments/image.png"));
+
+        // Extension-less target resolves via stem match
+        assert!(idx.resolve_asset("image").is_some());
+        // With extension resolves via exact file_name (pass 2)
+        assert!(idx.resolve_asset("image.png").is_some());
+        // Fully-qualified rel_path resolves (pass 1)
+        assert!(idx.resolve_asset("_attachments/image.png").is_some());
+        // Non-existent name
+        assert!(idx.resolve_asset("video.mp4").is_none());
+    }
+
+    #[test]
+    fn test_resolve_asset_stem_deterministic_tiebreak() {
+        let mut idx = AssetIndex::new();
+        // Two assets share the stem "image" — shorter rel_path wins.
+        idx.upsert(sample_asset("z/image.png"));
+        idx.upsert(sample_asset("a/image.png"));
+
+        let resolved = idx.resolve_asset("image").unwrap();
+        assert_eq!(resolved.rel_path, "a/image.png");
+    }
+
+    #[test]
+    fn test_all_sorted_by_rel_path() {
+        let mut idx = AssetIndex::new();
+        idx.upsert(sample_asset("z.png"));
+        idx.upsert(sample_asset("a.png"));
+        idx.upsert(sample_asset("m.png"));
+        let paths: Vec<String> = idx.all().into_iter().map(|a| a.rel_path).collect();
+        assert_eq!(paths, vec!["a.png".to_string(), "m.png".to_string(), "z.png".to_string()]);
+    }
+
+    #[test]
+    fn test_resolve_asset_stem_prefers_file_name_when_possible() {
+        let mut idx = AssetIndex::new();
+        idx.upsert(sample_asset("_attachments/photo.png"));
+        idx.upsert(sample_asset("_attachments/other/photo.jpg"));
+
+        // Pass 2 (exact file_name) fires before pass 3 (stem) — file_name
+        // "photo.png" == target "photo.png" matches the first asset directly.
+        let resolved = idx.resolve_asset("photo.png").unwrap();
+        assert_eq!(resolved.rel_path, "_attachments/photo.png");
     }
 }

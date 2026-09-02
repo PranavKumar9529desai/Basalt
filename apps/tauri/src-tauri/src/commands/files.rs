@@ -1414,13 +1414,67 @@ pub fn get_assets(state: State<AppState>) -> Result<Vec<basalt_vault::AssetInfo>
 }
 
 /// Run a consistency audit: count orphans, duplicates, and broken embed refs.
+///
+/// `broken_embed_count` is computed here (not in `AssetIndex::audit`, which
+/// only sees assets) because resolving an embed target requires the note
+/// graph + arena as well as the asset index.
 #[tauri::command]
 pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAuditReport, String> {
     let vault = state
         .vault
         .read()
         .map_err(|_| "vault lock poisoned".to_string())?;
-    Ok(vault.asset_index.audit())
+    let mut report = vault.asset_index.audit();
+    report.broken_embed_count = count_broken_embeds(&vault);
+    Ok(report)
+}
+
+/// Number of notes whose `![[target]]` resolves to neither a tracked asset
+/// nor a note in the vault. Reads only the in-memory graph metadata + arena —
+/// no disk I/O.
+fn count_broken_embeds(vault: &basalt_vault::Vault) -> usize {
+    // Index of note stems (lowercased, no extension) for O(1) note-target lookup.
+    let note_stems: std::collections::HashSet<String> = vault
+        .arena
+        .all_strings()
+        .filter(|p| p.ends_with(".md"))
+        .map(|p| {
+            Path::new(p)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_lowercase()
+        })
+        .collect();
+
+    let mut broken = 0usize;
+    for path in vault.arena.all_strings().filter(|p| p.ends_with(".md")) {
+        let Some(node_id) = vault.arena.get_id(path) else {
+            continue;
+        };
+        let Some(meta) = vault.graph.metadata_cache.get(&node_id) else {
+            continue;
+        };
+        for target in &meta.embeds {
+            if vault.asset_index.resolve_asset(target).is_some() {
+                continue;
+            }
+            let t = target.trim().to_lowercase();
+            let t_no_md = t.strip_suffix(".md").unwrap_or(&t).to_string();
+            let t_stem = Path::new(&t_no_md)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            if note_stems.contains(&t_no_md)
+                || (!t_stem.is_empty() && note_stems.contains(&t_stem))
+            {
+                continue;
+            }
+            broken += 1;
+        }
+    }
+    broken
 }
 
 #[derive(Serialize)]
@@ -1431,27 +1485,32 @@ pub struct CleanupResult {
 
 /// Delete orphaned assets and consolidate duplicates.
 ///
-/// - Orphans: assets with no `embeds_by` and no `linked_by` references.
-/// - Duplicates: for each group of assets sharing the same `content_hash`,
-///   keep the first occurrence (by `rel_path` sort order) and delete the rest.
+/// Safety contract — cleanup NEVER breaks a note's references:
+/// - Only assets with zero `embeds_by`/`linked_by` references are deleted;
+///   a referenced asset is never removed, even as a byte-identical duplicate.
+/// - Within a same-`content_hash` group where no copy is referenced, exactly
+///   one copy (shortest `rel_path`) is kept so cleanup never destroys the
+///   last remaining copy of an asset.
 ///
 /// Front-end must refresh the asset list after calling this.
 #[tauri::command]
 pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
+    cleanup_assets_impl(state.inner())
+}
 
-
-    let vault_path = state
+/// Testable core of `cleanup_assets` (no `tauri::State`).
+fn cleanup_assets_impl(state: &AppState) -> Result<CleanupResult, String> {
+    let _vault_path = state
         .vault_path
         .read()
         .map_err(|_| "vault lock poisoned".to_string())?
         .clone()
         .ok_or("no vault open")?;
-    let _vault_root = PathBuf::from(&vault_path);
 
     let mut orphans_deleted: u32 = 0;
     let mut duplicates_deleted: u32 = 0;
 
-    // Phase 1: Identify orphans and duplicate groups.
+    // Phase 1: Identify deletable assets.
     let to_delete: Vec<(String, bool)> = {
         let vault = state
             .vault
@@ -1460,51 +1519,46 @@ pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
 
         let all_assets = vault.asset_index.all();
 
-        // Identify orphans.
-        let orphan_set: std::collections::HashSet<String> = all_assets
-            .iter()
-            .filter(|a| a.embeds_by.is_empty() && a.linked_by.is_empty())
-            .map(|a| a.abs_path.clone())
-            .collect();
-
-        // Group by content hash for dedup.
-        let mut hash_groups: std::collections::HashMap<String, Vec<String>> =
+        // Group by content hash; membership in a >1 group flags duplicates.
+        let mut hash_groups: std::collections::HashMap<String, Vec<&basalt_vault::AssetInfo>> =
             std::collections::HashMap::new();
         for asset in &all_assets {
             if !asset.content_hash.is_empty() {
                 hash_groups
                     .entry(asset.content_hash.clone())
                     .or_default()
-                    .push(asset.abs_path.clone());
+                    .push(asset);
             }
         }
 
-        // Orphans go first.
-        let mut out: Vec<(String, bool)> = orphan_set
-            .iter()
-            .map(|p| (p.clone(), true))
-            .collect();
-
-        // Duplicates: keep first by sorted rel_path, delete rest.
-        let rel_map: std::collections::HashMap<&str, &str> = all_assets
-            .iter()
-            .map(|a| (a.abs_path.as_str(), a.rel_path.as_str()))
-            .collect();
-        for group in hash_groups.values() {
-            if group.len() <= 1 {
+        // One keeper per unreferenced duplicate group (shortest rel_path).
+        let mut keep: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for group in hash_groups.values().filter(|g| g.len() > 1) {
+            let referenced = group
+                .iter()
+                .any(|a| !a.embeds_by.is_empty() || !a.linked_by.is_empty());
+            if referenced {
+                // Content survives in the referenced copy(ies); every
+                // unreferenced member is a spare copy and safe to delete.
                 continue;
             }
-            let mut sorted = group.clone();
-            sorted.sort_by(|a, b| {
-                let ra = rel_map.get(a.as_str()).copied().unwrap_or("");
-                let rb = rel_map.get(b.as_str()).copied().unwrap_or("");
-                ra.cmp(rb)
-            });
-            for abs_path in &sorted[1..] {
-                if !orphan_set.contains(abs_path) {
-                    out.push((abs_path.clone(), false));
-                }
+            let keeper = group
+                .iter()
+                .min_by(|a, b| a.rel_path.cmp(&b.rel_path))
+                .expect("group is non-empty");
+            keep.insert(keeper.abs_path.clone());
+        }
+
+        let mut out: Vec<(String, bool)> = Vec::new();
+        for asset in &all_assets {
+            let referenced = !asset.embeds_by.is_empty() || !asset.linked_by.is_empty();
+            if referenced || keep.contains(&asset.abs_path) {
+                continue;
             }
+            let is_duplicate = hash_groups
+                .get(&asset.content_hash)
+                .is_some_and(|g| g.len() > 1);
+            out.push((asset.abs_path.clone(), !is_duplicate));
         }
         out
     };
@@ -1512,8 +1566,11 @@ pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
     // Phase 2: Delete files from disk and remove from the index.
     if !to_delete.is_empty() {
         register_self_writes(
-            &state,
-            &to_delete.iter().map(|(p, _)| PathBuf::from(p)).collect::<Vec<_>>(),
+            state,
+            &to_delete
+                .iter()
+                .map(|(p, _)| PathBuf::from(p))
+                .collect::<Vec<_>>(),
         );
 
         let mut vault = state
@@ -1557,6 +1614,69 @@ fn strip_asset_ext(p: &std::path::Path) -> std::borrow::Cow<'_, str> {
     }
 }
 
+/// Strip only the final extension segment of a path-like string, keeping any
+/// directory components. `"_attachments/foo.png"` → `"_attachments/foo"`;
+/// `"_attachments/foo"` (no dot) is returned unchanged.
+fn strip_last_ext(s: &str) -> &str {
+    let slash = s.rfind('/').map_or(0, |v| v + 1);
+    match s[slash..].rfind('.') {
+        Some(dot) => &s[..slash + dot],
+        None => s,
+    }
+}
+
+/// Rewrite `[[old_target]]` / `![[old_target]]` wikilink targets (preserving
+/// aliases, anchors, and the target's extension) to `new_target`.
+///
+/// Boundary-aware: a target only matches when its extension-stripped form
+/// equals `old_target`, so moving `_attachments/foo.png` never corrupts
+/// `![[foobar.png]]` or `![[foo/bar.png]]`. Both plain links and embeds are
+/// rewritten. Matching is case-insensitive; the canonical `new_target` (with
+/// the original extension) is written back.
+fn rewrite_asset_embeds(content: &str, old_target: &str, new_target: &str) -> String {
+    let bytes = content.as_bytes();
+    let n = bytes.len();
+    let mut out = String::with_capacity(content.len() + 16);
+    let mut last = 0usize;
+    let mut i = 0usize;
+    while i < n {
+        let is_embed = i + 2 < n
+            && bytes[i] == b'!'
+            && bytes[i + 1] == b'['
+            && bytes[i + 2] == b'[';
+        let is_link = i + 1 < n && bytes[i] == b'[' && bytes[i + 1] == b'[';
+        if !(is_embed || is_link) {
+            i += 1;
+            continue;
+        }
+        let target_start = i + if is_embed { 3 } else { 2 };
+        let mut j = target_start;
+        while j < n && !matches!(bytes[j], b']' | b'|' | b'#') {
+            j += 1;
+        }
+        let raw_target = &content[target_start..j];
+        let trimmed = raw_target.trim();
+        if strip_last_ext(trimmed).eq_ignore_ascii_case(old_target) {
+            out.push_str(&content[last..i]);
+            out.push_str(&content[i..target_start]); // keep `![[` / `[[`
+            out.push_str(new_target);
+            if let Some(ext) = Path::new(trimmed).extension().and_then(|e| e.to_str()) {
+                out.push('.');
+                out.push_str(ext);
+            }
+            let trailing = &content[target_start + trimmed.len()..j];
+            out.push_str(trailing);
+            last = j;
+            i = j;
+        } else {
+            i = j; // skip past this target, keep scanning
+        }
+    }
+    out.push_str(&content[last..]);
+    out
+}
+
+
 // ---------------------------------------------------------------------------
 // Bulk reorganize
 // ---------------------------------------------------------------------------
@@ -1565,7 +1685,8 @@ fn strip_asset_ext(p: &std::path::Path) -> std::borrow::Cow<'_, str> {
 pub struct ReorganizeResult {
     /// Number of attachment files moved to their correct location.
     pub files_moved: u32,
-    /// Number of notes whose `![[...]]` embed targets were rewritten.
+    /// Number of notes whose `![[...]]` / `[[...]]` asset targets were
+    /// rewritten.
     pub embeds_rewritten: u32,
 }
 
@@ -1681,12 +1802,20 @@ fn reorganize_assets_impl(
                 let note_stem = note_from_embeds(&asset.embeds_by)
                     .map(|(s, _)| s)
                     .unwrap_or_else(|| "note".to_string());
-                let original_stem = Path::new(&asset.file_name)
+                // Parity with save_attachment: `{n}` is a collision counter
+                // (`foo.png`, `foo-1.png`, …), not the original stem. Preserve
+                // an existing `-N` suffix so reorganize doesn't renumber
+                // already-filed assets.
+                let cur_stem = Path::new(&asset.file_name)
                     .file_stem()
                     .and_then(|s| s.to_str())
-                    .unwrap_or(&asset.file_name)
-                    .to_string();
-                format!("{note_stem}-{original_stem}")
+                    .unwrap_or("");
+                if let Some(rest) = cur_stem.strip_prefix(&format!("{note_stem}-")) {
+                    if !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()) {
+                        return format!("{note_stem}-{rest}");
+                    }
+                }
+                note_stem
             }
             "{date}-{original_name}" => {
                 let (y, m, d) = file_mtime_date(std::path::Path::new(&asset.abs_path));
@@ -1848,17 +1977,14 @@ fn reorganize_assets_impl(
             let old_target = strip_asset_ext(old_path_obj);
             let new_target = strip_asset_ext(new_path_obj);
 
-            let needle = format!("![[{}", old_target);
-            let replacement = format!("![[{}", new_target);
-
             for note_path in &candidates {
                 let Ok(content) = std::fs::read_to_string(note_path) else {
                     continue;
                 };
-                if !content.contains(&needle) {
+                if !content.contains(old_target.as_ref()) {
                     continue;
                 }
-                let next = content.replace(&needle, &replacement);
+                let next = rewrite_asset_embeds(&content, old_target.as_ref(), new_target.as_ref());
                 if next == content {
                     continue;
                 }
@@ -2054,10 +2180,11 @@ pub fn save_attachment(
             linked_by: Vec::new(),
         });
 
-        // Register note→asset embed if caller provided a source note.
-        if let Some(ref note) = note_path {
-            let embed_target = rel_path.trim_end_matches(&format!(".{ext}")).to_string();
-            vault.asset_index.register_embeds(note, &[embed_target]);
+        // Register note→asset embed if caller provided a source note. Use the
+        // full `rel_path` (with extension) — it resolves via exact match, and
+        // the pasted note writes `![[rel_path]]` verbatim.
+        if let Some(note) = &note_path {
+            vault.asset_index.register_embeds(note, &[rel_path.clone()]);
         }
     }
 
@@ -2659,15 +2786,16 @@ mod tests {
 
         assert_eq!(res.files_moved, 1, "one asset moved");
 
-        // Asset should now live under _attachments/b/ (note B is the embedder).
-        let new_path = root.join("_attachments").join("b").join("logo.png");
+        // Asset should now live under _attachments/a/ (note A embeds it via
+        // ![[...]] and "a" sorts first alphabetically in note_from_embeds).
+        let new_path = root.join("_attachments").join("a").join("logo.png");
         assert!(new_path.exists(), "asset moved to by_note dir: {}", new_path.display());
         assert!(!png_path.exists(), "old flat asset gone");
 
         // Embed in note A rewritten.
         let a_after = std::fs::read_to_string(&a_str).unwrap();
         assert!(
-            a_after.contains("_attachments/b/logo"),
+            a_after.contains("_attachments/a/logo"),
             "embed rewritten: {a_after}"
         );
         assert!(!a_after.contains("_attachments/logo"), "old flat target gone: {a_after}");
@@ -2705,5 +2833,160 @@ mod tests {
         let res = reorganize_assets_impl(&state, &settings).unwrap();
         assert_eq!(res.files_moved, 0, "no files should move");
         assert!(png_path.exists(), "asset unchanged");
+    }
+    #[test]
+    fn rewrite_asset_embeds_boundary() {
+        let content = concat!(
+            "A ![[_attachments/foo.png]] and ![[_attachments/foobar.png]] and\n",
+            "![[_attachments/foo/bar.png]] and [[_attachments/foo.png|alias]] and\n",
+            "![[_attachments/foo.png#anchor]]",
+        );
+        let out = rewrite_asset_embeds(content, "_attachments/foo", "_attachments/images/foo");
+        assert!(out.contains("![[_attachments/images/foo.png]]"), "exact embed rewritten");
+        assert!(
+            out.contains("![[_attachments/foobar.png]]"),
+            "sibling prefix must not be rewritten: {out}"
+        );
+        assert!(
+            out.contains("![[_attachments/foo/bar.png]]"),
+            "nested target must not be rewritten: {out}"
+        );
+        assert!(
+            out.contains("[[_attachments/images/foo.png|alias]]"),
+            "plain link + alias preserved: {out}"
+        );
+        assert!(
+            out.contains("![[_attachments/images/foo.png#anchor]]"),
+            "anchor preserved: {out}"
+        );
+    }
+
+    /// Cleanup must never delete a referenced asset (even a byte-identical
+    /// duplicate), and must keep one copy per unreferenced duplicate group.
+    #[test]
+    fn cleanup_preserves_referenced_duplicates_and_keeps_one_copy() {
+        use basalt_vault::asset_index::AssetInfo;
+
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+
+        let add_asset = |name: &str, hash: &str, embeds_by: Vec<String>| {
+            let abs = root.join(name).to_string_lossy().to_string();
+            std::fs::write(root.join(name), &[0x89u8]).unwrap();
+            state.vault.write().unwrap().asset_index.upsert(AssetInfo {
+                rel_path: name.into(),
+                abs_path: abs,
+                file_name: name.into(),
+                file_type: basalt_vault::asset_index::FileType::Image,
+                mime_type: "image/png".into(),
+                size_bytes: 1,
+                content_hash: hash.into(),
+                width: None,
+                height: None,
+                embeds_by,
+                linked_by: vec![],
+            });
+        };
+
+        // Referenced asset + an unreferenced identical copy.
+        add_asset("ref.png", "H", vec![b_str.clone()]);
+        add_asset("refdup.png", "H", vec![]);
+        // Unique orphan.
+        add_asset("orphan.png", "O", vec![]);
+        // Unreferenced duplicate pair — exactly one copy must survive.
+        add_asset("k1.png", "K", vec![]);
+        add_asset("k2.png", "K", vec![]);
+
+        let res = cleanup_assets_impl(&state).unwrap();
+
+        assert!(root.join("ref.png").exists(), "referenced asset kept");
+        assert!(
+            !root.join("refdup.png").exists(),
+            "unreferenced duplicate of referenced content deleted"
+        );
+        assert!(!root.join("orphan.png").exists(), "unique orphan deleted");
+        assert!(root.join("k1.png").exists(), "keeper of unreferenced dup group kept");
+        assert!(!root.join("k2.png").exists(), "extra unreferenced dup deleted");
+
+        assert_eq!(res.orphans_deleted, 1, "only the unique orphan");
+        assert_eq!(res.duplicates_deleted, 2, "refdup + k2");
+    }
+
+    /// `{note_name}-{n}` naming must match save_attachment's scheme: base is
+    /// the note stem, `-N` is a collision counter, not the original stem.
+    #[test]
+    fn reorganize_note_name_counter_parity() {
+        use basalt_vault::asset_index::AssetInfo;
+        use std::collections::HashMap;
+
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+
+        let attach_dir = root.join("_attachments");
+        std::fs::create_dir_all(&attach_dir).unwrap();
+        for name in ["logo.png", "logo2.png"] {
+            let abs = attach_dir.join(name).to_string_lossy().to_string();
+            std::fs::write(attach_dir.join(name), &[0x89u8]).unwrap();
+            state.vault.write().unwrap().asset_index.upsert(AssetInfo {
+                rel_path: format!("_attachments/{name}"),
+                abs_path: abs,
+                file_name: name.into(),
+                file_type: basalt_vault::asset_index::FileType::Image,
+                mime_type: "image/png".into(),
+                size_bytes: 1,
+                content_hash: "hash123".into(),
+                width: None,
+                height: None,
+                embeds_by: vec![b_str.clone()],
+                linked_by: vec![],
+            });
+        }
+
+        let mut settings: HashMap<String, serde_json::Value> = HashMap::new();
+        settings.insert("attachmentOrganization".into(), serde_json::Value::String("by_note".into()));
+        settings.insert("attachmentNaming".into(), serde_json::Value::String("{note_name}-{n}".into()));
+        settings.insert("attachmentFolder".into(), serde_json::Value::String("_attachments".into()));
+
+        let res = reorganize_assets_impl(&state, &settings).unwrap();
+        assert_eq!(res.files_moved, 2, "both assets filed under the note");
+
+        assert!(root.join("_attachments").join("b").join("b.png").exists());
+        assert!(root.join("_attachments").join("b").join("b-1.png").exists());
+        assert!(!root.join("_attachments").join("logo.png").exists());
+        assert!(!root.join("_attachments").join("logo2.png").exists());
+    }
+
+    /// Broken-embed count resolves both asset and note targets, and counts a
+    /// note only when at least one embed resolves to neither.
+    #[test]
+    fn count_broken_embeds_resolves_assets_and_notes() {
+        use basalt_vault::asset_index::AssetInfo;
+
+        let (root, state) = temp_vault();
+        let note1 = root.join("note1.md").to_string_lossy().to_string();
+        let note2 = root.join("note2.md").to_string_lossy().to_string();
+
+        state.vault.write().unwrap().add_document(
+            &note1,
+            "A ![[present.png]] and a broken ![[missing.png]]",
+        );
+        state.vault.write().unwrap().add_document(&note2, "Note embed ![[b]]");
+
+        state.vault.write().unwrap().asset_index.upsert(AssetInfo {
+            rel_path: "present.png".into(),
+            abs_path: root.join("present.png").to_string_lossy().to_string(),
+            file_name: "present.png".into(),
+            file_type: basalt_vault::asset_index::FileType::Image,
+            mime_type: "image/png".into(),
+            size_bytes: 1,
+            content_hash: "h".into(),
+            width: None,
+            height: None,
+            embeds_by: vec![],
+            linked_by: vec![],
+        });
+
+        let vault = state.vault.read().unwrap();
+        assert_eq!(count_broken_embeds(&vault), 1, "only ![[missing.png]] is broken");
     }
 }
