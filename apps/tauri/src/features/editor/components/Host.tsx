@@ -22,11 +22,7 @@ export interface HostProps {
  * keystrokes. This is the core of the editor performance model: typing
  * causes zero React re-renders.
  */
-export function Host({
-  initialState,
-  onReady,
-  className = "",
-}: HostProps) {
+export function Host({ initialState, onReady, className = "" }: HostProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const onReadyRef = useLatestRef(onReady);
 

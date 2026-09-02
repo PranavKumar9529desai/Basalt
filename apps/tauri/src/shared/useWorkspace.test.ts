@@ -49,7 +49,11 @@ type MockEditor = Omit<
 
 interface CapturedControllerOpts {
   editor: {
-    loadNote: (note: { path: string; name: string; renameOnOpen?: boolean }) => void;
+    loadNote: (note: {
+      path: string;
+      name: string;
+      renameOnOpen?: boolean;
+    }) => void;
     closeNote: () => void;
   };
   onFileOpen: (node: FlatTreeNode, mode: "preview" | "pinned") => void;
@@ -57,13 +61,19 @@ interface CapturedControllerOpts {
 }
 
 function makeEditor(
-  overrides: Partial<Pick<EditorInterface, "activeNote" | "activeNoteTab">> = {},
+  overrides: Partial<
+    Pick<EditorInterface, "activeNote" | "activeNoteTab">
+  > = {},
 ): MockEditor {
   return {
     activeNote: null,
     activeNoteTab: null,
-    openInPreview: vi.fn(({ path }: { path: string; title: string }) => `preview:${path}`),
-    openPinned: vi.fn(({ path }: { path: string; title: string }) => `pinned:${path}`),
+    openInPreview: vi.fn(
+      ({ path }: { path: string; title: string }) => `preview:${path}`,
+    ),
+    openPinned: vi.fn(
+      ({ path }: { path: string; title: string }) => `pinned:${path}`,
+    ),
     setTabTitle: vi.fn((_tabId: string, _title: string) => {}),
     closeTab: vi.fn((_tabId: string, _opts: { force: boolean }) => {}),
     ...overrides,
@@ -116,12 +126,21 @@ function setup(opts: SetupOpts = {}) {
     }),
   );
 
-  const controllerOpts = vi.mocked(useVaultController).mock.calls[0][0] as unknown as CapturedControllerOpts;
-  return { result, editor, handleConfirmDelete, updateTabPaths, closeTab, controllerOpts, refreshTree };
+  const controllerOpts = vi.mocked(useVaultController).mock
+    .calls[0][0] as unknown as CapturedControllerOpts;
+  return {
+    result,
+    editor,
+    handleConfirmDelete,
+    updateTabPaths,
+    closeTab,
+    controllerOpts,
+    refreshTree,
+  };
 }
 
 const node = (path: string, name: string) =>
-  ({ path, name } as unknown as FlatTreeNode);
+  ({ path, name }) as unknown as FlatTreeNode;
 
 describe("useWorkspace", () => {
   beforeEach(() => {
@@ -133,7 +152,10 @@ describe("useWorkspace", () => {
       const { editor, controllerOpts } = setup();
       editor.openInPreview.mockReturnValue("tab-1");
       controllerOpts.editor.loadNote({ path: "a/b.md", name: "b" });
-      expect(editor.openInPreview).toHaveBeenCalledWith({ path: "a/b.md", title: "b" });
+      expect(editor.openInPreview).toHaveBeenCalledWith({
+        path: "a/b.md",
+        title: "b",
+      });
       expect(editor.setTabTitle).toHaveBeenCalledWith("tab-1", "b");
     });
 
@@ -176,7 +198,9 @@ describe("useWorkspace", () => {
 
     it("returns {ok:false} with the backend error and does not touch tabs or tree on failure", async () => {
       const { result, refreshTree, updateTabPaths } = setup();
-      vi.mocked(invoke).mockRejectedValue(new Error("a note named 'old' already exists"));
+      vi.mocked(invoke).mockRejectedValue(
+        new Error("a note named 'old' already exists"),
+      );
 
       const out = await result.current.renameNote(
         { id: "t1", path: "/vault/old.md" },
@@ -196,40 +220,57 @@ describe("useWorkspace", () => {
     it("vscode behavior respects the mode arg (pinned)", () => {
       const { editor, controllerOpts } = setup({ setting: "vscode" });
       controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
-      expect(editor.openPinned).toHaveBeenCalledWith({ path: "x.md", title: "x" });
+      expect(editor.openPinned).toHaveBeenCalledWith({
+        path: "x.md",
+        title: "x",
+      });
       expect(editor.setTabTitle).toHaveBeenCalledWith("pinned:x.md", "x");
     });
 
     it("vscode behavior respects the mode arg (preview)", () => {
       const { editor, controllerOpts } = setup({ setting: "vscode" });
       controllerOpts.onFileOpen(node("x.md", "x"), "preview");
-      expect(editor.openInPreview).toHaveBeenCalledWith({ path: "x.md", title: "x" });
+      expect(editor.openInPreview).toHaveBeenCalledWith({
+        path: "x.md",
+        title: "x",
+      });
     });
 
     it("preview behavior overrides the mode arg and opens in preview", () => {
       const { editor, controllerOpts } = setup({ setting: "preview" });
       controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
-      expect(editor.openInPreview).toHaveBeenCalledWith({ path: "x.md", title: "x" });
+      expect(editor.openInPreview).toHaveBeenCalledWith({
+        path: "x.md",
+        title: "x",
+      });
       expect(editor.openPinned).not.toHaveBeenCalled();
     });
 
     it("pinned behavior overrides the mode arg and opens pinned", () => {
       const { editor, controllerOpts } = setup({ setting: "pinned" });
       controllerOpts.onFileOpen(node("x.md", "x"), "preview");
-      expect(editor.openPinned).toHaveBeenCalledWith({ path: "x.md", title: "x" });
+      expect(editor.openPinned).toHaveBeenCalledWith({
+        path: "x.md",
+        title: "x",
+      });
       expect(editor.openInPreview).not.toHaveBeenCalled();
     });
   });
 
   describe("closeNote", () => {
     it("no-ops when there is no active note tab", () => {
-      const { editor, controllerOpts } = setup({ editor: { activeNoteTab: null } });
+      const { editor, controllerOpts } = setup({
+        editor: { activeNoteTab: null },
+      });
       controllerOpts.editor.closeNote();
       expect(editor.closeTab).not.toHaveBeenCalled();
     });
 
     it("closes the active tab with force when present", () => {
-      const activeNoteTab = { id: "tab-7", path: "x.md" } as unknown as TabModel;
+      const activeNoteTab = {
+        id: "tab-7",
+        path: "x.md",
+      } as unknown as TabModel;
       const { editor, controllerOpts } = setup({ editor: { activeNoteTab } });
       controllerOpts.editor.closeNote();
       expect(editor.closeTab).toHaveBeenCalledWith("tab-7", { force: true });
@@ -268,11 +309,16 @@ describe("useWorkspace", () => {
         tabs: { t4: { id: "t4", path: "src" } },
       });
       controllerOpts.onPathsMoved(["src"], "moved");
-      expect(updateTabPaths).toHaveBeenCalledWith([{ from: "src", to: "/vault/moved" }]);
+      expect(updateTabPaths).toHaveBeenCalledWith([
+        { from: "src", to: "/vault/moved" },
+      ]);
     });
 
     it("no-ops when vaultPath is null", () => {
-      const { controllerOpts, updateTabPaths } = setup({ vaultPath: null, tabs });
+      const { controllerOpts, updateTabPaths } = setup({
+        vaultPath: null,
+        tabs,
+      });
       controllerOpts.onPathsMoved(["src"], "moved");
       expect(updateTabPaths).not.toHaveBeenCalled();
     });

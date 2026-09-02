@@ -41,10 +41,7 @@ const ICONS: Record<FrontmatterIconName, FrontmatterIconSpec> = {
   clock: {
     name: "clock",
     label: "Date time",
-    paths: [
-      "M12 6v6l4 2",
-      "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
-    ],
+    paths: ["M12 6v6l4 2", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"],
   },
   tag: {
     name: "tag",
@@ -77,20 +74,12 @@ const ICONS: Record<FrontmatterIconName, FrontmatterIconSpec> = {
   check: {
     name: "check",
     label: "Checkbox",
-    paths: [
-      "m9 12 2 2 4-4",
-      "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
-    ],
+    paths: ["m9 12 2 2 4-4", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"],
   },
   hash: {
     name: "hash",
     label: "Number",
-    paths: [
-      "M4 9h16",
-      "M4 15h16",
-      "M10 3 8 21",
-      "M16 3l-2 18",
-    ],
+    paths: ["M4 9h16", "M4 15h16", "M10 3 8 21", "M16 3l-2 18"],
   },
   note: {
     name: "note",
@@ -118,11 +107,16 @@ function createSvg(paths: string[]): SVGSVGElement {
   return svg;
 }
 
-function isFrontmatterObject(v: FrontmatterValue): v is Exclude<FrontmatterValue, "None"> {
+function isFrontmatterObject(
+  v: FrontmatterValue,
+): v is Exclude<FrontmatterValue, "None"> {
   return typeof v !== "string";
 }
 
-function variantKey(v: Exclude<FrontmatterValue, "None">, name: string): boolean {
+function variantKey(
+  v: Exclude<FrontmatterValue, "None">,
+  name: string,
+): boolean {
   const lower = name.toLowerCase();
   return Object.keys(v).some((key) => key.toLowerCase() === lower);
 }
@@ -131,7 +125,11 @@ function resolveIconName(entry: FrontmatterEntry): FrontmatterIconName {
   const key = entry.key.trim().toLowerCase();
   if (key === "title") return "file-text";
   if (key === "created_at" || key === "created at") return "calendar";
-  if (key === "last_updated_at" || key === "updated_at" || key === "last updated at") {
+  if (
+    key === "last_updated_at" ||
+    key === "updated_at" ||
+    key === "last updated at"
+  ) {
     return "clock";
   }
   if (key === "tags") return "tag";

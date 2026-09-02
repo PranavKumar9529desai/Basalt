@@ -30,7 +30,10 @@ export interface TabsState {
 
   openInPreview: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;
   openPinned: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;
-  openView: (leafType: string, options?: { title?: string; path?: string; activate?: boolean }) => TabId;
+  openView: (
+    leafType: string,
+    options?: { title?: string; path?: string; activate?: boolean },
+  ) => TabId;
   activateTab: (tabId: TabId) => void;
   markTabDirty: (tabId: TabId, isDirty: boolean) => void;
   setTabTitle: (tabId: TabId, title: string) => void;

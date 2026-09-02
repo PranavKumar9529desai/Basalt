@@ -3,7 +3,9 @@ import { sanitizeHtml } from "@workspace/editor";
 
 describe("sanitizeHtml (ADR-026 render-boundary sanitizer)", () => {
   it("allows safe formatting and container tags", () => {
-    const out = sanitizeHtml('<details><summary>Title</summary><p>Body</p></details>');
+    const out = sanitizeHtml(
+      "<details><summary>Title</summary><p>Body</p></details>",
+    );
     expect(out).toContain("<details>");
     expect(out).toContain("<summary>");
     expect(out).toContain("<p>");

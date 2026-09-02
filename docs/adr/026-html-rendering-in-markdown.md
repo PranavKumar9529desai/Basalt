@@ -31,15 +31,15 @@ preview.
 
 ### Why HTML rendering matters
 
-| Use case | Examples | Frequency |
-|----------|----------|-----------|
-| Collapsible sections | `<details><summary>...</summary>` | Very common — Obsidian community heavily uses these |
-| Styled content | `<div style="...">`, `<span class="...">` | Common — paste from web, cross-editor notes |
-| Embedded media | `<video>`, `<audio>`, `<img>` (non-markdown) | Occasional — vaults with media annotations |
-| HTML tables | `<table>` with colspan/rowspan | Occasional — data-heavy notes |
-| Plugin output | Dataview, Charts, Excalidraw HTML exports | Common in Obsidian plugin ecosystem |
-| Callout variants | `<div class="admonition note">` | Common — legacy callout syntax |
-| CSS snippet styling | `<div class="custom-class">` + CSS snippets | Obsidian power-user workflow |
+| Use case             | Examples                                     | Frequency                                           |
+| -------------------- | -------------------------------------------- | --------------------------------------------------- |
+| Collapsible sections | `<details><summary>...</summary>`            | Very common — Obsidian community heavily uses these |
+| Styled content       | `<div style="...">`, `<span class="...">`    | Common — paste from web, cross-editor notes         |
+| Embedded media       | `<video>`, `<audio>`, `<img>` (non-markdown) | Occasional — vaults with media annotations          |
+| HTML tables          | `<table>` with colspan/rowspan               | Occasional — data-heavy notes                       |
+| Plugin output        | Dataview, Charts, Excalidraw HTML exports    | Common in Obsidian plugin ecosystem                 |
+| Callout variants     | `<div class="admonition note">`              | Common — legacy callout syntax                      |
+| CSS snippet styling  | `<div class="custom-class">` + CSS snippets  | Obsidian power-user workflow                        |
 
 ### How Obsidian handles HTML
 
@@ -142,18 +142,18 @@ and unnecessary for XSS in this application:
 The single render-boundary is enough because every HTML sink feeds through
 it:
 
-| Render surface | Reads from | Sanitizer |
-|----------------|-----------|-----------|
-| CM6 live-preview block widget | raw text buffer | DOMPurify |
-| CM6 live-preview inline tag widget | raw text buffer | DOMPurify |
+| Render surface                          | Reads from        | Sanitizer |
+| --------------------------------------- | ----------------- | --------- |
+| CM6 live-preview block widget           | raw text buffer   | DOMPurify |
+| CM6 live-preview inline tag widget      | raw text buffer   | DOMPurify |
 | `Reading.tsx` (`HTMLBlock` / `HTMLTag`) | raw markdown text | DOMPurify |
-| Search `PreviewPane` (CM6) | raw text | DOMPurify |
+| Search `PreviewPane` (CM6)              | raw text          | DOMPurify |
 
 DOMPurify runs once per block when it first enters the widget (not per
 keystroke), and the `WidgetType.eq()` guard skips re-render when content is
 unchanged. `dangerouslySetInnerHTML` is used only with the DOMPurify return
 value, and the result is never post-processed (per DOMPurify's own guidance:
-*sanitize for the sink, insert without post-processing*).
+_sanitize for the sink, insert without post-processing_).
 
 **Security boundary adopted:** rendered markdown semantic markup is trusted
 only after DOMPurify. Graphic/backlink/search metadata is treated as opaque
@@ -272,19 +272,61 @@ truth in `packages/editor/src/preview/html-sanitize.ts`):
 ```typescript
 export const HTML_SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    "div", "span", "p", "br", "hr", "pre", "code",
-    "details", "summary",
-    "table", "thead", "tbody", "tr", "th", "td", "caption",
-    "figure", "figcaption",
-    "strong", "em", "del", "ins", "mark", "sub", "sup", "abbr",
-    "ul", "ol", "li",
-    "a", "img", "video", "audio", "source", "track",
+    "div",
+    "span",
+    "p",
+    "br",
+    "hr",
+    "pre",
+    "code",
+    "details",
+    "summary",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "caption",
+    "figure",
+    "figcaption",
+    "strong",
+    "em",
+    "del",
+    "ins",
+    "mark",
+    "sub",
+    "sup",
+    "abbr",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "img",
+    "video",
+    "audio",
+    "source",
+    "track",
   ],
   ALLOWED_ATTR: [
-    "class", "style", "id",
-    "href", "src", "alt", "title", "width", "height",
-    "colspan", "rowspan", "scope",
-    "controls", "autoplay", "loop", "muted", "poster", "preload",
+    "class",
+    "style",
+    "id",
+    "href",
+    "src",
+    "alt",
+    "title",
+    "width",
+    "height",
+    "colspan",
+    "rowspan",
+    "scope",
+    "controls",
+    "autoplay",
+    "loop",
+    "muted",
+    "poster",
+    "preload",
   ],
   ALLOW_DATA_ATTR: false,
 };
@@ -303,14 +345,14 @@ Follows the `frontmatter.ts` pattern exactly.
 
 **BlockWidgetSpec:**
 
-| Field | Value |
-|-------|-------|
-| `id` | `"html-block"` |
-| `matches(node)` | `node.type.name === "HTMLBlock"` |
-| `parse(state, node)` | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()` (the single render-boundary sanitizer), return `{ html: string, lineCount: number }` |
-| `render(model, state)` | `HtmlBlockWidget` — cursor-aware (see below) |
-| `span(model, state)` | `{ from: node.from, to: node.to }` |
-| `theme` | CSS for `.cm-live-html-block` |
+| Field                  | Value                                                                                                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `"html-block"`                                                                                                                                                                    |
+| `matches(node)`        | `node.type.name === "HTMLBlock"`                                                                                                                                                  |
+| `parse(state, node)`   | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()` (the single render-boundary sanitizer), return `{ html: string, lineCount: number }` |
+| `render(model, state)` | `HtmlBlockWidget` — cursor-aware (see below)                                                                                                                                      |
+| `span(model, state)`   | `{ from: node.from, to: node.to }`                                                                                                                                                |
+| `theme`                | CSS for `.cm-live-html-block`                                                                                                                                                     |
 
 **HtmlBlockWidget (WidgetType):**
 
@@ -344,7 +386,9 @@ class HtmlBlockWidget extends WidgetType {
     return container;
   }
 
-  ignoreEvent() { return true; }
+  ignoreEvent() {
+    return true;
+  }
 
   private isCursorInside(view: EditorView): boolean {
     const pos = state.selection.main.head;
@@ -377,11 +421,11 @@ presentation (showing a faded preview of the HTML content).
 
 ```css
 .cm-live-html-block {
-  border: 1px solid var(--sat-layout-divider, rgba(255,255,255,0.1));
+  border: 1px solid var(--sat-layout-divider, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   padding: 0.75rem 1rem;
   margin: 0.5rem 0;
-  background: var(--sat-surface-2, rgba(255,255,255,0.03));
+  background: var(--sat-surface-2, rgba(255, 255, 255, 0.03));
   overflow-x: auto;
 }
 
@@ -413,7 +457,12 @@ if (name === "HTMLTag") {
   // contain HTML — only CSS classes.
   const raw = state.doc.sliceString(node.from, node.to);
   const sanitized = domPurify.sanitize(raw, DOMPURIFY_INLINE_CONFIG);
-  collector.addReplace(node.from, node.to, new HtmlInlineWidget(sanitized, raw), false);
+  collector.addReplace(
+    node.from,
+    node.to,
+    new HtmlInlineWidget(sanitized, raw),
+    false,
+  );
   return true;
 }
 ```
@@ -491,19 +540,61 @@ case "HTMLTag": {
 ```typescript
 const READING_SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    "div", "span", "p", "br", "hr", "pre", "code",
-    "details", "summary",
-    "table", "thead", "tbody", "tr", "th", "td", "caption",
-    "figure", "figcaption",
-    "strong", "em", "del", "ins", "mark", "sub", "sup", "abbr",
-    "ul", "ol", "li",
-    "a", "img", "video", "audio", "source", "track",
+    "div",
+    "span",
+    "p",
+    "br",
+    "hr",
+    "pre",
+    "code",
+    "details",
+    "summary",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "caption",
+    "figure",
+    "figcaption",
+    "strong",
+    "em",
+    "del",
+    "ins",
+    "mark",
+    "sub",
+    "sup",
+    "abbr",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "img",
+    "video",
+    "audio",
+    "source",
+    "track",
   ],
   ALLOWED_ATTR: [
-    "class", "style", "id",
-    "href", "src", "alt", "title", "width", "height",
-    "colspan", "rowspan", "scope",
-    "controls", "autoplay", "loop", "muted", "poster", "preload",
+    "class",
+    "style",
+    "id",
+    "href",
+    "src",
+    "alt",
+    "title",
+    "width",
+    "height",
+    "colspan",
+    "rowspan",
+    "scope",
+    "controls",
+    "autoplay",
+    "loop",
+    "muted",
+    "poster",
+    "preload",
   ],
   ALLOW_DATA_ATTR: false,
 };
@@ -553,13 +644,13 @@ for both Markdown and raw HTML.
 
 #### 5b. Expected benchmark impact
 
-| Variant | p50 | p95 | Gate |
-|---------|-----|-----|------|
-| Full (no HTML) | ≤2ms | 4ms | Current |
-| +HTML blocks (small) | ≤2ms | 4ms | No regression — blocks cached after first parse |
-| +HTML blocks (large, in viewport) | ≤3ms | 5ms | Acceptable — viewport-gated |
-| +HTML blocks (large, off-screen) | ≤2ms | 4ms | No regression — skipped |
-| +HTML inline | ≤2ms | 4ms | No regression — mark cost is O(1) per tag |
+| Variant                           | p50  | p95 | Gate                                            |
+| --------------------------------- | ---- | --- | ----------------------------------------------- |
+| Full (no HTML)                    | ≤2ms | 4ms | Current                                         |
+| +HTML blocks (small)              | ≤2ms | 4ms | No regression — blocks cached after first parse |
+| +HTML blocks (large, in viewport) | ≤3ms | 5ms | Acceptable — viewport-gated                     |
+| +HTML blocks (large, off-screen)  | ≤2ms | 4ms | No regression — skipped                         |
+| +HTML inline                      | ≤2ms | 4ms | No regression — mark cost is O(1) per tag       |
 
 #### 5c. Verification
 

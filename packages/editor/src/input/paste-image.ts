@@ -13,9 +13,7 @@ import { EditorView } from "@codemirror/view";
  * Returns an empty extension array when no callback is provided (no-op).
  * The `![[…]]` insert is undoable via CM6's built-in undo history.
  */
-export function pasteImageExtension(
-  onPasteImage?: OnPasteImageFn,
-): Extension {
+export function pasteImageExtension(onPasteImage?: OnPasteImageFn): Extension {
   if (!onPasteImage) return [];
 
   return EditorView.domEventHandlers({

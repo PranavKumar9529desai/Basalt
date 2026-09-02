@@ -265,7 +265,9 @@ export class EditorController {
       const state =
         this.view?.state ?? (t ? this.statesRef.get(t.id) : undefined);
       if (!state) return;
-      useActiveNoteStore.getState().setStats(computeStats(state.doc.toString()));
+      useActiveNoteStore
+        .getState()
+        .setStats(computeStats(state.doc.toString()));
     }, STATS_DEBOUNCE_MS);
   }
 

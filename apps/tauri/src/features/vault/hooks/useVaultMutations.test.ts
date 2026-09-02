@@ -44,7 +44,9 @@ describe("useVaultMutations", () => {
   describe("ghost / inline creation", () => {
     it("createNoteInline seeds an editing, non-folder ghost node", () => {
       const { result } = setup();
-      act(() => result.current.createNoteInline({ parentRelPath: "dir", depth: 2 }));
+      act(() =>
+        result.current.createNoteInline({ parentRelPath: "dir", depth: 2 }),
+      );
       expect(result.current.ghostNode).toMatchObject({
         id: "__ghost__",
         name: "",
@@ -97,7 +99,9 @@ describe("useVaultMutations", () => {
 
     it("uses the single item name as the label", () => {
       const { result } = setup();
-      act(() => result.current.requestDeleteMany([{ path: "a.md", name: "A" }]));
+      act(() =>
+        result.current.requestDeleteMany([{ path: "a.md", name: "A" }]),
+      );
       expect(result.current.pendingDeleteName).toBe("A");
     });
 
@@ -118,7 +122,9 @@ describe("useVaultMutations", () => {
         ok = await result.current.confirmDelete();
       });
       expect(ok).toBe(true);
-      expect(vi.mocked(invoke)).toHaveBeenCalledWith("delete_file", { path: "a.md" });
+      expect(vi.mocked(invoke)).toHaveBeenCalledWith("delete_file", {
+        path: "a.md",
+      });
       expect(result.current.pendingDeletePaths).toEqual([]);
       expect(result.current.isDeleteConfirmOpen).toBe(false);
       expect(result.current.pendingDeleteName).toBe("");
@@ -157,8 +163,13 @@ describe("useVaultMutations", () => {
   describe("createNote", () => {
     it("invokes create_note with parent null when omitted and returns the result", async () => {
       const { result } = setup();
-      vi.mocked(invoke).mockResolvedValue({ path: "dir/x.md", name: "x.md" } as CreateNoteResult);
-      const res = await act(async () => result.current.createNote("x.md", "dir"));
+      vi.mocked(invoke).mockResolvedValue({
+        path: "dir/x.md",
+        name: "x.md",
+      } as CreateNoteResult);
+      const res = await act(async () =>
+        result.current.createNote("x.md", "dir"),
+      );
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("create_note", {
         name: "x.md",
         parent: "dir",
@@ -182,7 +193,10 @@ describe("useVaultMutations", () => {
   describe("createUntitledNote", () => {
     it("invokes create_untitled_note with parent null", async () => {
       const { result } = setup();
-      vi.mocked(invoke).mockResolvedValue({ path: "untitled.md", name: "untitled" } as CreateNoteResult);
+      vi.mocked(invoke).mockResolvedValue({
+        path: "untitled.md",
+        name: "untitled",
+      } as CreateNoteResult);
       await act(async () => result.current.createUntitledNote("dir"));
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("create_untitled_note", {
         parent: "dir",
@@ -194,7 +208,9 @@ describe("useVaultMutations", () => {
     it("invokes create_folder with parent null when omitted", async () => {
       const { result } = setup();
       vi.mocked(invoke).mockResolvedValue("new-folder");
-      const res = await act(async () => result.current.createFolder("new-folder"));
+      const res = await act(async () =>
+        result.current.createFolder("new-folder"),
+      );
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("create_folder", {
         name: "new-folder",
         parent: null,
@@ -214,7 +230,9 @@ describe("useVaultMutations", () => {
     it("invokes move_paths with the normalized destination and returns true", async () => {
       const { result } = setup();
       vi.mocked(invoke).mockResolvedValue(undefined);
-      const ok = await act(async () => result.current.movePaths(["a.md", "b.md"], "dest"));
+      const ok = await act(async () =>
+        result.current.movePaths(["a.md", "b.md"], "dest"),
+      );
       expect(ok).toBe(true);
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("move_paths", {
         sourcePaths: ["a.md", "b.md"],
@@ -238,10 +256,16 @@ describe("useVaultMutations", () => {
       const { result, invalidate } = setup();
       vi.mocked(invoke)
         .mockResolvedValueOnce("/vault")
-        .mockResolvedValueOnce({ vault_path: "/vault", note_count: 0, status: "full_index" });
+        .mockResolvedValueOnce({
+          vault_path: "/vault",
+          note_count: 0,
+          status: "full_index",
+        });
       await act(async () => result.current.pickAndSetVault());
       expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(1, "open_vault_dialog");
-      expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(2, "set_vault", { path: "/vault" });
+      expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(2, "set_vault", {
+        path: "/vault",
+      });
       expect(invalidate).toHaveBeenCalledTimes(1);
       expect(result.current.isIndexing).toBe(false);
       expect(result.current.status).toBe(null);
@@ -258,7 +282,9 @@ describe("useVaultMutations", () => {
 
     it("records an error status when set_vault fails", async () => {
       const { result } = setup();
-      vi.mocked(invoke).mockResolvedValueOnce("/vault").mockRejectedValue(new Error("nope"));
+      vi.mocked(invoke)
+        .mockResolvedValueOnce("/vault")
+        .mockRejectedValue(new Error("nope"));
       await act(async () => result.current.pickAndSetVault());
       expect(result.current.status).toContain("Error");
     });

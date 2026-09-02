@@ -11,13 +11,13 @@ cross-feature state without importing feature stores.
 
 ## When to use which
 
-| Concept    | Registry         | Lines up with            | Where it renders            |
-| ---------- | ---------------- | ------------------------ | --------------------------- |
-| **View**   | `viewRegistry`   | Sidebar / side dock      | `SideDock` (app-shell)      |
-| **Leaf**   | `leafRegistry`   | A tab's content          | `Shell.renderPane`  |
+| Concept  | Registry       | Lines up with       | Where it renders       |
+| -------- | -------------- | ------------------- | ---------------------- |
+| **View** | `viewRegistry` | Sidebar / side dock | `SideDock` (app-shell) |
+| **Leaf** | `leafRegistry` | A tab's content     | `Shell.renderPane`     |
 
-**Lexicon** (anchored to ADR-018 / VS Code): a *view* is a side-dock panel
-(file explorer, backlinks); a *leaf* is the kind of content a tab renders
+**Lexicon** (anchored to ADR-018 / VS Code): a _view_ is a side-dock panel
+(file explorer, backlinks); a _leaf_ is the kind of content a tab renders
 (markdown, graph, later html). They are distinct concepts.
 
 ## Architecture
@@ -42,11 +42,11 @@ views/leaves is deterministic.
 import { viewRegistry } from "@workspace/views";
 
 viewRegistry.register({
-  type: "file-explorer",          // stable unique id
-  name: "File explorer",          // human-readable
+  type: "file-explorer", // stable unique id
+  name: "File explorer", // human-readable
   icon: IconFile,
-  side: "left",                   // "left" | "right"
-  component: FileExplorer,       // self-contained, reads app context
+  side: "left", // "left" | "right"
+  component: FileExplorer, // self-contained, reads app context
   headerActions: FileExplorerHeaderActions, // optional, rendered in dock header
 });
 ```
@@ -68,7 +68,7 @@ leafRegistry.register({
   type: "markdown",
   name: "Markdown",
   extensions: [".md", ".markdown"],
-  component: EditorView,          // receives { tab }
+  component: EditorView, // receives { tab }
 });
 ```
 
@@ -100,23 +100,24 @@ Leaves stay decoupled from feature stores by reading only through
 (wrapped around leaf content by the shell). Its role is Obsidian's `app`
 object.
 
-| Member                | Purpose                                                              |
-| --------------------- | -------------------------------------------------------------------- |
-| `openNote(path)`      | Open a note in a (preview) tab — wikilinks, backlinks, search        |
-| `markTabDirty(id, b)` | Flip a tab's dirty flag in the tabs store                            |
-| `findNote(name)`      | Resolve a wikilink target / note name to `{name, path}`              |
-| `getOpenTabIds()`     | Snapshot of every open tab id (per-tab cache pruning)                |
-| `getOpenTabPaths()`   | Snapshot of every open tab note path (path-based pruning)            |
-| `getTabInfo(id)`      | Live `{path, title}` for a tab id, or `null` if closed               |
-| `onTabStructureChanged(cb)` | Subscribe to structural tab mutations (open/close/pin/rename), returns unsubscribe |
-| `activeNote`          | Active note `{path, name}` or `null` (e.g. graph's local-graph root) |
-| `openPinned(note, opts?)` | Open a note as a pinned (non-preview) tab, returns tab id            |
-| `renameNote(tab, newName)` | Rename the note behind a tab; repoints path/title, refreshes tree, rewrites wikilinks |
+| Member                      | Purpose                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| `openNote(path)`            | Open a note in a (preview) tab — wikilinks, backlinks, search                         |
+| `markTabDirty(id, b)`       | Flip a tab's dirty flag in the tabs store                                             |
+| `findNote(name)`            | Resolve a wikilink target / note name to `{name, path}`                               |
+| `getOpenTabIds()`           | Snapshot of every open tab id (per-tab cache pruning)                                 |
+| `getOpenTabPaths()`         | Snapshot of every open tab note path (path-based pruning)                             |
+| `getTabInfo(id)`            | Live `{path, title}` for a tab id, or `null` if closed                                |
+| `onTabStructureChanged(cb)` | Subscribe to structural tab mutations (open/close/pin/rename), returns unsubscribe    |
+| `activeNote`                | Active note `{path, name}` or `null` (e.g. graph's local-graph root)                  |
+| `openPinned(note, opts?)`   | Open a note as a pinned (non-preview) tab, returns tab id                             |
+| `renameNote(tab, newName)`  | Rename the note behind a tab; repoints path/title, refreshes tree, rewrites wikilinks |
 
 ```ts
 function useLeafServices(): LeafServices {
   const services = useContext(LeafServicesContext);
-  if (!services) throw new Error("useLeafServices must be used within LeafServicesProvider");
+  if (!services)
+    throw new Error("useLeafServices must be used within LeafServicesProvider");
   return services;
 }
 ```

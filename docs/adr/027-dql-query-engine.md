@@ -72,6 +72,7 @@ to avoid ambiguity with identifiers that share keyword prefixes.
 ### Expression evaluator
 
 `eval_expr` returns `bool` (row matches or not). Currently supports:
+
 - Field references, literals, comparison operators (`=`, `!=`, `<`, `>`, `<=`, `>=`)
 - `contains(field, substring)` function
 - Unknown functions return `false` (no match) — safety over silent
@@ -87,6 +88,7 @@ directly. Empty sequences return `TypedValue::Null`.
 ### PageRow
 
 Built from `graph.metadata_cache` (O(n) per query). Each row carries:
+
 - `path`, `name`, `folder` — derived from string arena
 - `tags`, `links` — from `NoteMetadata`
 - `frontmatter: Vec<(String, TypedValue)>` — from YAML frontmatter via
@@ -98,6 +100,7 @@ no `_graph` parameter (removed as dead code).
 ## Consequences
 
 ### Achieved
+
 - Parser and engine are independently testable (62 parser tests, 5 engine
   tests, 20-query example runner)
 - Clean crate separation: parser/types/executor/data — no cycles
@@ -107,6 +110,7 @@ no `_graph` parameter (removed as dead code).
 - Unknown WHERE functions don't silently match everything
 
 ### Known limitations (in scope for ADR-028)
+
 - No GROUP BY / FLATTEN (enum variants exist but parser/engine don't use them)
 - No aggregation functions (count, sum, avg, min, max)
 - TASK query is a stub (no checkbox extraction from body)
@@ -115,6 +119,7 @@ no `_graph` parameter (removed as dead code).
 - Column type inference is based on first non-null row only
 
 ### Performance
+
 - Every query re-scans `graph.metadata_cache` — acceptable at current
   scale, but a query index (ADR-028 scope) is needed for repeated/reactive
   queries at 25k+ notes

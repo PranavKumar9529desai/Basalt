@@ -5,9 +5,24 @@ import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
 export type GraphColorMode = "single" | "tag" | "folder" | "cluster";
 
-function ToggleRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
+function ToggleRow({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: () => void;
+}) {
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--sat-text-primary)" }}>
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        color: "var(--sat-text-primary)",
+      }}
+    >
       <Switch.Root
         checked={checked}
         onCheckedChange={onChange}
@@ -21,7 +36,9 @@ function ToggleRow({ checked, label, onChange }: { checked: boolean; label: stri
           padding: 2,
           border: "1px solid var(--sat-layout-border)",
           borderRadius: "var(--sat-layout-radius-pill)",
-          background: checked ? "var(--sat-accent-primary)" : "var(--sat-surface-1)",
+          background: checked
+            ? "var(--sat-accent-primary)"
+            : "var(--sat-surface-1)",
           cursor: "pointer",
         }}
       >
@@ -30,7 +47,9 @@ function ToggleRow({ checked, label, onChange }: { checked: boolean; label: stri
             width: 12,
             height: 12,
             borderRadius: "var(--sat-radius-pill)",
-            background: checked ? "var(--sat-text-inverse)" : "var(--sat-text-muted)",
+            background: checked
+              ? "var(--sat-text-inverse)"
+              : "var(--sat-text-muted)",
             transform: checked ? "translateX(12px)" : "translateX(0)",
             transition: "transform 120ms ease",
           }}
@@ -101,15 +120,38 @@ export const GraphControls: FC<GraphControlsProps> = ({
         zIndex: 10,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <strong style={{ color: "var(--sat-text-primary)", fontSize: "calc(var(--sat-editor-font-size) * 0.875)", fontWeight: "var(--sat-editor-section-label-weight)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <strong
+          style={{
+            color: "var(--sat-text-primary)",
+            fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
+            fontWeight: "var(--sat-editor-section-label-weight)",
+          }}
+        >
           Graph settings
         </strong>
-        <Button variant="ghost" size="icon-xs" aria-label="Hide graph settings" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Hide graph settings"
+          onClick={onClose}
+        >
           x
         </Button>
       </div>
-      <div style={{ color: "var(--sat-editor-section-label-color)", fontSize: "calc(var(--sat-editor-font-size) * 0.875)", fontWeight: "var(--sat-editor-section-label-weight)" }}>
+      <div
+        style={{
+          color: "var(--sat-editor-section-label-color)",
+          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
+          fontWeight: "var(--sat-editor-section-label-weight)",
+        }}
+      >
         Filter
       </div>
       <Input
@@ -118,11 +160,21 @@ export const GraphControls: FC<GraphControlsProps> = ({
         placeholder="Filter: tag:foo  path:docs  name  (space = AND)"
         style={{ width: "100%" }}
       />
-      <div style={{ color: "var(--sat-editor-section-label-color)", fontSize: "calc(var(--sat-editor-font-size) * 0.875)", fontWeight: "var(--sat-editor-section-label-weight)" }}>
+      <div
+        style={{
+          color: "var(--sat-editor-section-label-color)",
+          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
+          fontWeight: "var(--sat-editor-section-label-weight)",
+        }}
+      >
         Scope
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <ToggleRow checked={local} label="Local graph" onChange={onToggleLocal} />
+        <ToggleRow
+          checked={local}
+          label="Local graph"
+          onChange={onToggleLocal}
+        />
         <Button variant="outline" size="sm" onClick={onCenter}>
           Center
         </Button>
@@ -151,11 +203,25 @@ export const GraphControls: FC<GraphControlsProps> = ({
           {localDepth}
         </label>
       )}
-      <div style={{ color: "var(--sat-editor-section-label-color)", fontSize: "calc(var(--sat-editor-font-size) * 0.875)", fontWeight: "var(--sat-editor-section-label-weight)" }}>
+      <div
+        style={{
+          color: "var(--sat-editor-section-label-color)",
+          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
+          fontWeight: "var(--sat-editor-section-label-weight)",
+        }}
+      >
         Display
       </div>
-      <ToggleRow checked={showOrphans} label="Show orphans" onChange={onToggleOrphans} />
-      <ToggleRow checked={showAttach} label="Show attachments" onChange={onToggleAttach} />
+      <ToggleRow
+        checked={showOrphans}
+        label="Show orphans"
+        onChange={onToggleOrphans}
+      />
+      <ToggleRow
+        checked={showAttach}
+        label="Show attachments"
+        onChange={onToggleAttach}
+      />
       <Select.Root
         value={colorMode}
         onValueChange={(value) => onColorModeChange(value as GraphColorMode)}
@@ -187,7 +253,9 @@ export const GraphControls: FC<GraphControlsProps> = ({
                   ? "Color: folder"
                   : "Color: cluster"}
           </Select.Value>
-          <Select.Icon style={{ color: "var(--sat-text-muted)" }}>v</Select.Icon>
+          <Select.Icon style={{ color: "var(--sat-text-muted)" }}>
+            v
+          </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
           <Select.Positioner sideOffset={4} style={{ zIndex: 50 }}>
@@ -202,12 +270,14 @@ export const GraphControls: FC<GraphControlsProps> = ({
                 boxShadow: "var(--sat-layout-shadow-md)",
               }}
             >
-              {([
-                ["single", "Color: single"],
-                ["tag", "Color: tag"],
-                ["folder", "Color: folder"],
-                ["cluster", "Color: cluster"],
-              ] as const).map(([value, label]) => (
+              {(
+                [
+                  ["single", "Color: single"],
+                  ["tag", "Color: tag"],
+                  ["folder", "Color: folder"],
+                  ["cluster", "Color: cluster"],
+                ] as const
+              ).map(([value, label]) => (
                 <Select.Item
                   key={value}
                   value={value}
@@ -219,7 +289,7 @@ export const GraphControls: FC<GraphControlsProps> = ({
                     padding: "0 8px",
                     borderRadius: "var(--sat-layout-radius-sm)",
                     color: "var(--sat-text-primary)",
-                fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
+                    fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
                     cursor: "pointer",
                   }}
                 >

@@ -14,12 +14,20 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { tokenizeCode, sanitizeHtml, HTML_TYPOGRAPHY_CSS, type CodeToken } from "@workspace/editor";
+import {
+  tokenizeCode,
+  sanitizeHtml,
+  HTML_TYPOGRAPHY_CSS,
+  type CodeToken,
+} from "@workspace/editor";
 import type { LeafServices } from "@workspace/views";
 
 // Shared .sat-html typography stylesheet (same source the CM6 widget uses), so
 // raw <h1>/<p>/<span> render distinctly and match markdown tokens in Reading.
-if (typeof document !== "undefined" && !document.querySelector("[data-sat-html-typography]")) {
+if (
+  typeof document !== "undefined" &&
+  !document.querySelector("[data-sat-html-typography]")
+) {
   const style = document.createElement("style");
   style.setAttribute("data-sat-html-typography", "");
   style.textContent = HTML_TYPOGRAPHY_CSS;
@@ -56,7 +64,10 @@ function parseListValue(value: string): string[] {
     .filter(Boolean);
 }
 
-function maskFrontmatter(source: string): { masked: string; entries: ReadingProperty[] } {
+function maskFrontmatter(source: string): {
+  masked: string;
+  entries: ReadingProperty[];
+} {
   if (!source.startsWith("---\n")) return { masked: source, entries: [] };
   const end = source.indexOf("\n---", 4);
   if (end < 0) return { masked: source, entries: [] };
@@ -71,7 +82,8 @@ function maskFrontmatter(source: string): { masked: string; entries: ReadingProp
       tags: match[1].toLowerCase() === "tags" ? parseListValue(match[2]) : [],
     }));
   return {
-    masked: source.slice(0, end + 4).replace(/[^\n]/g, " ") + source.slice(end + 4),
+    masked:
+      source.slice(0, end + 4).replace(/[^\n]/g, " ") + source.slice(end + 4),
     entries,
   };
 }
@@ -80,8 +92,10 @@ function propertyIcon(key: string, value: string) {
   const normalized = key.toLowerCase();
   let Icon: (props: IconProps) => React.ReactNode = IconNote;
   if (normalized === "title" || normalized === "type") Icon = IconFileText;
-  else if (normalized === "created_at" || normalized === "created at") Icon = IconCalendar;
-  else if (normalized.includes("updated") || normalized.includes("modified")) Icon = IconClock;
+  else if (normalized === "created_at" || normalized === "created at")
+    Icon = IconCalendar;
+  else if (normalized.includes("updated") || normalized.includes("modified"))
+    Icon = IconClock;
   else if (normalized === "tags") Icon = IconTag;
   else if (normalized === "aliases") Icon = IconLink;
   else if (normalized === "status") Icon = IconCheck;
@@ -94,7 +108,10 @@ function maskReadingOnlySyntax(source: string): string {
   // The base Lezer Markdown grammar treats the inner `[label]` of a wikilink
   // as a normal link. Preserve offsets while hiding only the delimiters so
   // the Reading renderer can own wikilink semantics.
-  return source.replace(/\[\[([^\]]+)\]\]/g, (_match, body: string) => `  ${body}  `);
+  return source.replace(
+    /\[\[([^\]]+)\]\]/g,
+    (_match, body: string) => `  ${body}  `,
+  );
 }
 
 function safeHref(value: string): string | null {
@@ -106,8 +123,14 @@ function embedMediaKind(
   target: string,
 ): "image" | "audio" | "video" | "pdf" | null {
   const ext = target.split(".")?.pop()?.toLowerCase() ?? "";
-  if (["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(ext)) return "image";
-  if (["mp3", "wav", "ogg", "aac", "flac", "m4a", "opus"].includes(ext)) return "audio";
+  if (
+    ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(
+      ext,
+    )
+  )
+    return "image";
+  if (["mp3", "wav", "ogg", "aac", "flac", "m4a", "opus"].includes(ext))
+    return "audio";
   if (["mp4", "webm", "mov", "mkv", "avi", "m4v"].includes(ext)) return "video";
   if (ext === "pdf") return "pdf";
   // No extension: default to image (Obsidian convention for bare embeds).
@@ -134,7 +157,8 @@ function AssetEmbed({
     );
   }
   const kind = embedMediaKind(target);
-  const base = "block max-w-full rounded border border-[var(--sat-layout-border)]";
+  const base =
+    "block max-w-full rounded border border-[var(--sat-layout-border)]";
   switch (kind) {
     case "audio":
       return (
@@ -191,7 +215,11 @@ function textParts(
         );
       }
       // Fallback: render as raw text when no resolver.
-      return <span key={`embed-${index}`} className="text-[var(--sat-text-muted)]">![[{name}]]</span>;
+      return (
+        <span key={`embed-${index}`} className="text-[var(--sat-text-muted)]">
+          ![[{name}]]
+        </span>
+      );
     }
     const wiki = part.match(/^\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]$/);
     if (wiki) {
@@ -230,7 +258,8 @@ function childNodes(node: SyntaxNode) {
 
 function blockChildren(node: SyntaxNode) {
   return childNodes(node).filter(
-    (child) => !/^(ListMark|QuoteMark|LinkMark|EmphasisMark|CodeMark)$/.test(child.name),
+    (child) =>
+      !/^(ListMark|QuoteMark|LinkMark|EmphasisMark|CodeMark)$/.test(child.name),
   );
 }
 
@@ -248,18 +277,30 @@ function renderInline(
   for (const child of children) {
     if (child.from > cursor) {
       rendered.push(
-        ...textParts(source.slice(cursor, child.from), onWikiLink, resolveAsset),
+        ...textParts(
+          source.slice(cursor, child.from),
+          onWikiLink,
+          resolveAsset,
+        ),
       );
     }
     if (!/^(HeaderMark|EmphasisMark|LinkMark|CodeMark)$/.test(child.name)) {
       rendered.push(
-        renderInlineNode(child, source, onWikiLink, `${keyPrefix}-${child.from}`, resolveAsset),
+        renderInlineNode(
+          child,
+          source,
+          onWikiLink,
+          `${keyPrefix}-${child.from}`,
+          resolveAsset,
+        ),
       );
     }
     cursor = child.to;
   }
   if (cursor < node.to) {
-    rendered.push(...textParts(source.slice(cursor, node.to), onWikiLink, resolveAsset));
+    rendered.push(
+      ...textParts(source.slice(cursor, node.to), onWikiLink, resolveAsset),
+    );
   }
   return rendered.map((child, index) => (
     <span key={`${keyPrefix}-${index}`}>{child}</span>
@@ -274,19 +315,39 @@ function renderInlineNode(
 ): React.ReactNode {
   switch (node.name) {
     case "StrongEmphasis":
-      return <strong key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</strong>;
+      return (
+        <strong key={key}>
+          {renderInline(node, source, onWikiLink, key, resolveAsset)}
+        </strong>
+      );
     case "Emphasis":
-      return <em key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</em>;
+      return (
+        <em key={key}>
+          {renderInline(node, source, onWikiLink, key, resolveAsset)}
+        </em>
+      );
     case "Strikethrough":
-      return <del key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</del>;
+      return (
+        <del key={key}>
+          {renderInline(node, source, onWikiLink, key, resolveAsset)}
+        </del>
+      );
     case "InlineCode":
-      return <code key={key}>{source.slice(node.from, node.to).replace(/^`+|`+$/g, "")}</code>;
+      return (
+        <code key={key}>
+          {source.slice(node.from, node.to).replace(/^`+|`+$/g, "")}
+        </code>
+      );
     // Inline HTML tags render as safe, visible raw text in reading mode
     // (container-tag render-reveal is deferred to avoid nesting issues and
     // mXSS risk). This keeps the source visible and fully editable.
     case "HTMLTag":
     case "Comment":
-      return <span key={key} className="markdown-reading-html">{source.slice(node.from, node.to)}</span>;
+      return (
+        <span key={key} className="markdown-reading-html">
+          {source.slice(node.from, node.to)}
+        </span>
+      );
     case "Link": {
       const raw = source.slice(node.from, node.to);
       if (/^\[[ xX]\]$/.test(raw)) {
@@ -303,7 +364,10 @@ function renderInlineNode(
       const match = raw.match(/^\[([^\]]*)\]\(([^\s)]+)(?:\s+[^)]*)?\)$/);
       const href = safeHref(match?.[2] ?? "");
       const label = match?.[1] ?? raw;
-      if (!href) return <span key={key}>{textParts(label, onWikiLink, resolveAsset)}</span>;
+      if (!href)
+        return (
+          <span key={key}>{textParts(label, onWikiLink, resolveAsset)}</span>
+        );
       return (
         <a
           key={key}
@@ -320,7 +384,11 @@ function renderInlineNode(
       );
     }
     default:
-      return <span key={key}>{renderInline(node, source, onWikiLink, key, resolveAsset)}</span>;
+      return (
+        <span key={key}>
+          {renderInline(node, source, onWikiLink, key, resolveAsset)}
+        </span>
+      );
   }
 }
 
@@ -410,7 +478,9 @@ function renderTableNode(
       <thead>
         <tr>
           {header.map((cell, i) => (
-            <th key={`${key}-h-${i}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>
+            <th key={`${key}-h-${i}`}>
+              {textParts(cell, onWikiLink, resolveAsset)}
+            </th>
           ))}
         </tr>
       </thead>
@@ -418,7 +488,9 @@ function renderTableNode(
         {bodyRows.map((row, ri) => (
           <tr key={`${key}-r-${ri}`}>
             {row.map((cell, ci) => (
-              <td key={`${key}-r-${ri}-${ci}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>
+              <td key={`${key}-r-${ri}-${ci}`}>
+                {textParts(cell, onWikiLink, resolveAsset)}
+              </td>
             ))}
           </tr>
         ))}
@@ -427,7 +499,6 @@ function renderTableNode(
   );
 }
 
-
 function renderBlock(
   node: SyntaxNode,
   source: string,
@@ -435,14 +506,18 @@ function renderBlock(
   key: string,
   resolveAsset?: (target: string) => string | null,
 ): React.ReactNode {
-  const inline = () => renderInline(node, source, onWikiLink, key, resolveAsset);
+  const inline = () =>
+    renderInline(node, source, onWikiLink, key, resolveAsset);
 
   // Table nodes — Lezer Table extension produces these for standalone tables
   if (node.name === "Table") {
     return renderTableNode(node, source, onWikiLink, key, resolveAsset);
   }
 
-  if (/^ATXHeading[1-6]$/.test(node.name) || /^SetextHeading[1-2]$/.test(node.name)) {
+  if (
+    /^ATXHeading[1-6]$/.test(node.name) ||
+    /^SetextHeading[1-2]$/.test(node.name)
+  ) {
     const level = Number(node.name.match(/\d+/)?.[0] ?? 1);
     const Heading = `h${level}` as ElementType;
     return <Heading key={key}>{inline()}</Heading>;
@@ -478,13 +553,36 @@ function renderBlock(
     if (tableStart === 0 && tableEnd === trimmed.length - 1) {
       const rows = trimmed
         .filter((line) => !isDelimiter(line))
-        .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+        .map((line) =>
+          line
+            .replace(/^\||\|$/g, "")
+            .split("|")
+            .map((cell) => cell.trim()),
+        );
       const [head, ...body] = rows;
       if (head?.length) {
         return (
           <table key={key}>
-            <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>)}</tr></thead>
-            <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>)}</tr>)}</tbody>
+            <thead>
+              <tr>
+                {head.map((cell, index) => (
+                  <th key={`${key}-h-${index}`}>
+                    {textParts(cell, onWikiLink, resolveAsset)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.map((row, rowIndex) => (
+                <tr key={`${key}-r-${rowIndex}`}>
+                  {row.map((cell, index) => (
+                    <td key={`${key}-${rowIndex}-${index}`}>
+                      {textParts(cell, onWikiLink, resolveAsset)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
           </table>
         );
       }
@@ -495,17 +593,43 @@ function renderBlock(
       const tableLines = trimmed.slice(tableStart, tableEnd + 1);
       const rows = tableLines
         .filter((line) => !isDelimiter(line))
-        .map((line) => line.replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+        .map((line) =>
+          line
+            .replace(/^\||\|$/g, "")
+            .split("|")
+            .map((cell) => cell.trim()),
+        );
       const [head, ...body] = rows;
       const table = head?.length ? (
         <table key={`${key}-table`}>
-          <thead><tr>{head.map((cell, index) => <th key={`${key}-h-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</th>)}</tr></thead>
-          <tbody>{body.map((row, rowIndex) => <tr key={`${key}-r-${rowIndex}`}>{row.map((cell, index) => <td key={`${key}-${rowIndex}-${index}`}>{textParts(cell, onWikiLink, resolveAsset)}</td>)}</tr>)}</tbody>
+          <thead>
+            <tr>
+              {head.map((cell, index) => (
+                <th key={`${key}-h-${index}`}>
+                  {textParts(cell, onWikiLink, resolveAsset)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {body.map((row, rowIndex) => (
+              <tr key={`${key}-r-${rowIndex}`}>
+                {row.map((cell, index) => (
+                  <td key={`${key}-${rowIndex}-${index}`}>
+                    {textParts(cell, onWikiLink, resolveAsset)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
         </table>
       ) : null;
 
       const before = lines.slice(0, tableStart).join("\n").trim();
-      const after = lines.slice(tableEnd + 1).join("\n").trim();
+      const after = lines
+        .slice(tableEnd + 1)
+        .join("\n")
+        .trim();
       // Use <div> not <p> — <table> cannot be a descendant of <p> (HTML spec).
       return (
         <div key={key}>
@@ -520,10 +644,34 @@ function renderBlock(
   }
   if (node.name === "BulletList" || node.name === "OrderedList") {
     const List = node.name === "BulletList" ? "ul" : "ol";
-    return <List key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</List>;
+    return (
+      <List key={key}>
+        {blockChildren(node).map((child) =>
+          renderBlock(
+            child,
+            source,
+            onWikiLink,
+            `${key}-${child.from}`,
+            resolveAsset,
+          ),
+        )}
+      </List>
+    );
   }
   if (node.name === "ListItem") {
-    return <li key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</li>;
+    return (
+      <li key={key}>
+        {blockChildren(node).map((child) =>
+          renderBlock(
+            child,
+            source,
+            onWikiLink,
+            `${key}-${child.from}`,
+            resolveAsset,
+          ),
+        )}
+      </li>
+    );
   }
   if (node.name === "Blockquote") {
     const raw = source.slice(node.from, node.to);
@@ -537,13 +685,27 @@ function renderBlock(
         </aside>
       );
     }
-    return <blockquote key={key}>{blockChildren(node).map((child) => renderBlock(child, source, onWikiLink, `${key}-${child.from}`, resolveAsset))}</blockquote>;
+    return (
+      <blockquote key={key}>
+        {blockChildren(node).map((child) =>
+          renderBlock(
+            child,
+            source,
+            onWikiLink,
+            `${key}-${child.from}`,
+            resolveAsset,
+          ),
+        )}
+      </blockquote>
+    );
   }
   // Fenced (```/~~~) and indented (4-space) code blocks. A block may split
   // into several `CodeText` children (nested in lists/quotes), so code runs
   // from the first to the last of them — never just the first.
   if (node.name === "FencedCode" || node.name === "CodeBlock") {
-    const codeTexts = childNodes(node).filter((child) => child.name === "CodeText");
+    const codeTexts = childNodes(node).filter(
+      (child) => child.name === "CodeText",
+    );
     const info =
       node.name === "FencedCode"
         ? childNodes(node).find((child) => child.name === "CodeInfo")
@@ -552,12 +714,22 @@ function renderBlock(
     if (node.name === "FencedCode" && info) {
       const lang = source.slice(info.from, info.to).trim().toLowerCase();
       if (lang in DQL_LANGUAGES) {
-        const queryText = source.slice(info.to, node.to).replace(/\s*```\s*$/, "").trim();
-        return <DqlQueryBlock key={key} queryText={queryText} onOpenLink={onWikiLink} />;
+        const queryText = source
+          .slice(info.to, node.to)
+          .replace(/\s*```\s*$/, "")
+          .trim();
+        return (
+          <DqlQueryBlock
+            key={key}
+            queryText={queryText}
+            onOpenLink={onWikiLink}
+          />
+        );
       }
     }
     const from = codeTexts.length > 0 ? codeTexts[0].from : node.from;
-    const to = codeTexts.length > 0 ? codeTexts[codeTexts.length - 1].to : node.to;
+    const to =
+      codeTexts.length > 0 ? codeTexts[codeTexts.length - 1].to : node.to;
     return (
       <pre key={key}>
         <HighlightedCode
@@ -592,13 +764,25 @@ function renderBlock(
 
 const DQL_LANGUAGES: Record<string, true> = { dql: true, dataview: true };
 
-function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLink: (name: string) => void }): React.ReactNode {
-  const [html, setHtml] = useState<string>('<div class="dql-loading">Loading query…</div>');
+function DqlQueryBlock({
+  queryText,
+  onOpenLink,
+}: {
+  queryText: string;
+  onOpenLink: (name: string) => void;
+}): React.ReactNode {
+  const [html, setHtml] = useState<string>(
+    '<div class="dql-loading">Loading query…</div>',
+  );
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    invoke<{ columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string;[k: string]: unknown }>>; total: number }>("run_query", { dql: queryText, path: "" })
+    invoke<{
+      columns: Array<{ name: string; type: string }>;
+      rows: Array<Array<{ type: string; [k: string]: unknown }>>;
+      total: number;
+    }>("run_query", { dql: queryText, path: "" })
       .then((result) => {
         if (cancelled) return;
         setHtml(renderDqlResultHtml(result));
@@ -607,7 +791,9 @@ function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLin
         if (cancelled) return;
         setHtml(`<div class="dql-error">Query error: ${String(err)}</div>`);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [queryText]);
 
   // Event delegation: clicks on rendered result links open the target note.
@@ -628,66 +814,120 @@ function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLin
     return () => root.removeEventListener("click", handleClick);
   }, [onOpenLink]);
 
-  return <div className="dql-result" ref={rootRef} dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div
+      className="dql-result"
+      ref={rootRef}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
-function renderDqlResultHtml(result: { columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string;[k: string]: unknown }>>; total: number }): string {
+function renderDqlResultHtml(result: {
+  columns: Array<{ name: string; type: string }>;
+  rows: Array<Array<{ type: string; [k: string]: unknown }>>;
+  total: number;
+}): string {
   const { columns, rows, total } = result;
-  if (columns.length === 0 || rows.length === 0) return '<div class="dql-empty">No results</div>';
+  if (columns.length === 0 || rows.length === 0)
+    return '<div class="dql-empty">No results</div>';
 
   // Infer type: list (1 link col), task (link + task), or table
-  const isList = columns.length === 1 && columns[0].type === "link" && columns[0].name === "File";
-  const isTask = columns.length === 2 && columns[0].type === "link" && columns[1].name === "Task";
+  const isList =
+    columns.length === 1 &&
+    columns[0].type === "link" &&
+    columns[0].name === "File";
+  const isTask =
+    columns.length === 2 &&
+    columns[0].type === "link" &&
+    columns[1].name === "Task";
 
   if (isList) {
-    const items = rows.map((row) => {
-      const cell = row[0];
-      if (!cell || cell.type !== "link") return "";
-      const path = String(cell.path ?? "");
-      const name = String(cell.name ?? path);
-      return `<li class="dql-list-item"><a class="internal-link" data-href="${escHtml(path)}">${escHtml(name)}</a></li>`;
-    }).join("");
-    const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+    const items = rows
+      .map((row) => {
+        const cell = row[0];
+        if (!cell || cell.type !== "link") return "";
+        const path = String(cell.path ?? "");
+        const name = String(cell.name ?? path);
+        return `<li class="dql-list-item"><a class="internal-link" data-href="${escHtml(path)}">${escHtml(name)}</a></li>`;
+      })
+      .join("");
+    const footer =
+      total > rows.length
+        ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>`
+        : "";
     return `<ul class="dql-list">${items}</ul>${footer}`;
   }
 
   if (isTask) {
-    const items = rows.map((row) => {
-      const link = row[0];
-      const task = row[1];
-      const linkHtml = link?.type === "link" ? `<a class="internal-link" data-href="${escHtml(String(link.path ?? ""))}">${escHtml(String(link.name ?? ""))}</a>` : "";
-      const taskText = task?.type === "text" ? String(task.value ?? "") : "";
-      return `<li class="dql-task-item"><span class="dql-task-link">${linkHtml}</span> <span class="dql-task-text">${escHtml(taskText)}</span></li>`;
-    }).join("");
-    const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+    const items = rows
+      .map((row) => {
+        const link = row[0];
+        const task = row[1];
+        const linkHtml =
+          link?.type === "link"
+            ? `<a class="internal-link" data-href="${escHtml(String(link.path ?? ""))}">${escHtml(String(link.name ?? ""))}</a>`
+            : "";
+        const taskText = task?.type === "text" ? String(task.value ?? "") : "";
+        return `<li class="dql-task-item"><span class="dql-task-link">${linkHtml}</span> <span class="dql-task-text">${escHtml(taskText)}</span></li>`;
+      })
+      .join("");
+    const footer =
+      total > rows.length
+        ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>`
+        : "";
     return `<ul class="dql-task-list">${items}</ul>${footer}`;
   }
 
   // TABLE
-  const ths = columns.map((col) => `<th class="dql-th">${escHtml(col.name)}</th>`).join("");
-  const trs = rows.map((row) => {
-    const tds = row.map((cell) => `<td class="dql-td">${renderCell(cell)}</td>`).join("");
-    return `<tr>${tds}</tr>`;
-  }).join("");
-  const footer = total > rows.length ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>` : "";
+  const ths = columns
+    .map((col) => `<th class="dql-th">${escHtml(col.name)}</th>`)
+    .join("");
+  const trs = rows
+    .map((row) => {
+      const tds = row
+        .map((cell) => `<td class="dql-td">${renderCell(cell)}</td>`)
+        .join("");
+      return `<tr>${tds}</tr>`;
+    })
+    .join("");
+  const footer =
+    total > rows.length
+      ? `<div class="dql-footer">Showing ${rows.length} of ${total}</div>`
+      : "";
   return `<table class="dql-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>${footer}`;
 }
 
 function escHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function renderCell(cell: { type: string;[k: string]: unknown }): string {
+function renderCell(cell: { type: string; [k: string]: unknown }): string {
   switch (cell.type) {
-    case "text": return escHtml(String(cell.value ?? ""));
-    case "number": return String(cell.value ?? "");
-    case "date": return `<span class="dql-date">${escHtml(String(cell.value ?? ""))}</span>`;
-    case "checkbox": return cell.value ? '<span class="dql-check on">✓</span>' : '<span class="dql-check off">✗</span>';
+    case "text":
+      return escHtml(String(cell.value ?? ""));
+    case "number":
+      return String(cell.value ?? "");
+    case "date":
+      return `<span class="dql-date">${escHtml(String(cell.value ?? ""))}</span>`;
+    case "checkbox":
+      return cell.value
+        ? '<span class="dql-check on">✓</span>'
+        : '<span class="dql-check off">✗</span>';
     case "list": {
       const items = Array.isArray(cell.items) ? cell.items : [];
-      return items.map((item: { type: string; [k: string]: unknown }) => renderCell(item)).join(", ");
+      return items
+        .map((item: { type: string; [k: string]: unknown }) => renderCell(item))
+        .join(", ");
     }
-    case "null": return '<span class="dql-null">—</span>';
+    case "null":
+      return '<span class="dql-null">—</span>';
+    default:
+      return escHtml(String(cell.value ?? ""));
   }
 }
 
@@ -702,17 +942,34 @@ function renderDocument(
   );
 }
 
-export function Reading({ markdown, sourcePath, title, services, initialScrollRatio = 0, onScrollRatioChange, resolveAsset }: ReadingProps) {
+export function Reading({
+  markdown,
+  sourcePath,
+  title,
+  services,
+  initialScrollRatio = 0,
+  onScrollRatioChange,
+  resolveAsset,
+}: ReadingProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const parsed = useMemo(() => maskFrontmatter(markdown), [markdown]);
-  const parseSource = useMemo(() => maskReadingOnlySyntax(parsed.masked), [parsed.masked]);
+  const parseSource = useMemo(
+    () => maskReadingOnlySyntax(parsed.masked),
+    [parsed.masked],
+  );
   const tree = useMemo(() => parser.parse(parseSource), [parseSource]);
   const rendered = useMemo(
     () =>
-      renderDocument(tree, parsed.masked, (name) => {
-        const target = services.findNote(name) ?? services.findNote(`${name}.md`);
-        if (target) services.openNote(target.path);
-      }, resolveAsset),
+      renderDocument(
+        tree,
+        parsed.masked,
+        (name) => {
+          const target =
+            services.findNote(name) ?? services.findNote(`${name}.md`);
+          if (target) services.openNote(target.path);
+        },
+        resolveAsset,
+      ),
     [parsed.masked, services, tree, resolveAsset],
   );
 
@@ -733,22 +990,36 @@ export function Reading({ markdown, sourcePath, title, services, initialScrollRa
   }, [initialScrollRatio, onScrollRatioChange, rendered]);
 
   return (
-    <div ref={scrollRef} className="markdown-reading-view flex min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]">
+    <div
+      ref={scrollRef}
+      className="markdown-reading-view flex min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--sat-layout-divider)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--sat-layout-divider)]"
+    >
       <article
         data-source-path={sourcePath}
         className="markdown-reading-sizer mx-auto w-full max-w-[var(--sat-editor-readable-width,70ch)] text-[var(--sat-text-primary)]"
       >
-        <h1 className="markdown-reading-title">{title.replace(/\.md$/i, "")}</h1>
+        <h1 className="markdown-reading-title">
+          {title.replace(/\.md$/i, "")}
+        </h1>
         {parsed.entries.length > 0 && (
-          <section className="markdown-reading-properties" aria-label="Properties">
+          <section
+            className="markdown-reading-properties"
+            aria-label="Properties"
+          >
             <h2>Properties</h2>
             {parsed.entries.map(({ key, value, tags }) => (
               <div className="markdown-reading-property" key={key}>
-                <span className="markdown-reading-property-icon">{propertyIcon(key, value)}</span>
+                <span className="markdown-reading-property-icon">
+                  {propertyIcon(key, value)}
+                </span>
                 <span className="markdown-reading-property-key">{key}</span>
                 {tags.length > 0 ? (
                   <span className="markdown-reading-property-tags">
-                    {tags.map((tag) => <span className="markdown-reading-tag" key={tag}>{tag}</span>)}
+                    {tags.map((tag) => (
+                      <span className="markdown-reading-tag" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
                   </span>
                 ) : (
                   <strong>{value || "Empty"}</strong>

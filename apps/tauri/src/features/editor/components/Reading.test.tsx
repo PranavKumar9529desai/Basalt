@@ -13,7 +13,9 @@ describe("Reading", () => {
       <Reading
         title="A note"
         sourcePath="A note.md"
-        markdown={"---\nstatus: draft\ntags: [react, typescript]\n---\n# Heading\n\n**bold** and [[Target]]"}
+        markdown={
+          "---\nstatus: draft\ntags: [react, typescript]\n---\n# Heading\n\n**bold** and [[Target]]"
+        }
         services={services}
       />,
     );
@@ -23,7 +25,9 @@ describe("Reading", () => {
     expect(screen.getByText("draft")).toBeTruthy();
     expect(screen.getByText("react")).toBeTruthy();
     expect(screen.getByText("typescript")).toBeTruthy();
-    expect(screen.getByLabelText("Properties").querySelector("svg")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Properties").querySelector("svg"),
+    ).toBeTruthy();
     expect(screen.getByText("bold").closest("strong")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Target" })).toBeTruthy();
     expect(screen.queryByText("# Heading")).toBeNull();
@@ -56,9 +60,7 @@ describe("Reading", () => {
       />,
     );
 
-    const preBlocks = document.querySelectorAll(
-      ".markdown-reading-sizer pre",
-    );
+    const preBlocks = document.querySelectorAll(".markdown-reading-sizer pre");
     expect(preBlocks.length).toBe(2);
     const [fenced, indented] = Array.from(preBlocks);
     expect(fenced.querySelector("code")?.textContent).toContain(
@@ -145,9 +147,14 @@ describe("Reading", () => {
 
   it("strips script and event handlers from rendered HTML", () => {
     const markdown =
-      "<div onclick=\"alert(1)\"><script>alert(2)</script><img src=x onerror=alert(3)>safe</div>";
+      '<div onclick="alert(1)"><script>alert(2)</script><img src=x onerror=alert(3)>safe</div>';
     render(
-      <Reading title="Xss" sourcePath="Xss.md" markdown={markdown} services={services} />,
+      <Reading
+        title="Xss"
+        sourcePath="Xss.md"
+        markdown={markdown}
+        services={services}
+      />,
     );
 
     expect(document.querySelector("script")).toBeNull();
@@ -161,7 +168,7 @@ describe("Reading", () => {
       <Reading
         title="Inline"
         sourcePath="Inline.md"
-        markdown={"Hello <span style=\"color:red\">world</span>!"}
+        markdown={'Hello <span style="color:red">world</span>!'}
         services={services}
       />,
     );

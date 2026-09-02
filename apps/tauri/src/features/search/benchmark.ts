@@ -103,8 +103,7 @@ function genMarkdown(seed: number, targetBytes: number): string {
 function makeHighlights(line: string): Highlight[] {
   const spans: Highlight[] = [];
   const push = (start: number, end: number) => {
-    if (start < end && end <= line.length)
-      spans.push({ start, end });
+    if (start < end && end <= line.length) spans.push({ start, end });
   };
   let from = 0;
   while (true) {

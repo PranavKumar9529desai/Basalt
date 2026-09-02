@@ -1,7 +1,7 @@
 # Tag Connections in the Graph — Design Note
 
 **Status:** Agreed design (2026-08-29). Implements the most-liked Obsidian graph
-request — forum *"View Structure of Nested Tags on Graph"* (91 posts / 17.2k
+request — forum _"View Structure of Nested Tags on Graph"_ (91 posts / 17.2k
 views / 396 likes). Drives the `crates/basalt-graph` changes. Supersedes the
 flat-tag behavior where tags were parsed but never wired into the graph.
 

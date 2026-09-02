@@ -11,10 +11,7 @@ export interface ConflictBannerProps {
  * "keep" vs "discard" do to the per-tab cache) lives in the controller and
  * the reconcile path, not here.
  */
-export function ConflictBanner({
-  onKeepMine,
-  onDiscard,
-}: ConflictBannerProps) {
+export function ConflictBanner({ onKeepMine, onDiscard }: ConflictBannerProps) {
   return (
     <div className="flex items-center gap-3 px-3 py-2 bg-[color-mix(in_srgb,var(--sat-state-danger) 18%,transparent)] border-b border-[var(--sat-state-danger)] text-sm text-[var(--sat-text-primary)] shrink-0">
       <span className="flex-1 text-xs leading-snug">

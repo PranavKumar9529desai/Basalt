@@ -60,7 +60,10 @@ export interface LeafServices {
   /** Active note {path,name} (or null) — graph's local-graph root. */
   activeNote: { path: string; name: string } | null;
   /** Open a note as a pinned (non-preview) tab — graph node "open in new tab". */
-  openPinned: (note: { path: string; title?: string }, options?: { activate?: boolean }) => string;
+  openPinned: (
+    note: { path: string; title?: string },
+    options?: { activate?: boolean },
+  ) => string;
   /** Rename the open note behind a tab (inline-title commit). Repoints the
    * tab's path/title, refreshes the tree, and rewrites wikilinks backend-side. */
   renameNote: (

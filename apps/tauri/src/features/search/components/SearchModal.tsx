@@ -10,13 +10,7 @@ import { FileRow, MatchRow } from "./SearchResultRows";
 import type { FileMatch, LineMatch } from "../types";
 
 /** Centered placeholder for an empty pane. */
-function EmptyPane({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
+function EmptyPane({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-2 px-6 text-center text-[var(--sat-text-muted)]">
       <div className="opacity-60">{icon}</div>
@@ -52,20 +46,28 @@ export function SearchModal({ onOpen }: SearchModalProps) {
   } = useSearchStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Flatten file groups into the ordered match list used for navigation/preview.
   const flatMatches = useMemo(
     () =>
       searchResults.flatMap((f: FileMatch) =>
-        f.matches.map((m: LineMatch) => ({ ...m, path: f.path, title: f.title })),
+        f.matches.map((m: LineMatch) => ({
+          ...m,
+          path: f.path,
+          title: f.title,
+        })),
       ),
     [searchResults],
   );
 
   const selected = flatMatches[searchSelectedIndex];
-  const selectedFile = selected ? searchResults.find((f) => f.path === selected.path) : undefined;
+  const selectedFile = selected
+    ? searchResults.find((f) => f.path === selected.path)
+    : undefined;
   const totalMatches = flatMatches.length;
   // Flatten into a windowed list model for virtualization (25k-vault safe).
   const flatItems = useMemo(() => {
@@ -189,7 +191,9 @@ export function SearchModal({ onOpen }: SearchModalProps) {
               role="combobox"
               aria-expanded={flatItems.length > 0}
               aria-controls="search-result-list"
-              aria-activedescendant={selected ? `search-result-${searchSelectedIndex}` : undefined}
+              aria-activedescendant={
+                selected ? `search-result-${searchSelectedIndex}` : undefined
+              }
               aria-autocomplete="list"
               placeholder="Search in vault…"
               spellCheck={false}
@@ -220,7 +224,10 @@ export function SearchModal({ onOpen }: SearchModalProps) {
             className="overflow-y-auto min-h-0 border-r border-[var(--sat-layout-border)]"
           >
             {searchError ? (
-              <EmptyPane icon={<IconFileSearch className="size-8" />} text={searchError} />
+              <EmptyPane
+                icon={<IconFileSearch className="size-8" />}
+                text={searchError}
+              />
             ) : flatItems.length === 0 ? (
               <EmptyPane
                 icon={<IconFileSearch className="size-8" />}
@@ -269,7 +276,9 @@ export function SearchModal({ onOpen }: SearchModalProps) {
           </div>
 
           <div className="overflow-y-auto min-h-0" aria-live="polite">
-            {selectedFile && previewPath === selectedFile.path && previewText !== null ? (
+            {selectedFile &&
+            previewPath === selectedFile.path &&
+            previewText !== null ? (
               <PreviewPane
                 text={previewText}
                 path={selectedFile.path}
@@ -277,9 +286,15 @@ export function SearchModal({ onOpen }: SearchModalProps) {
                 highlights={selected.highlights}
               />
             ) : isPreviewLoading ? (
-              <EmptyPane icon={<IconFileSearch className="size-8" />} text="Loading preview…" />
+              <EmptyPane
+                icon={<IconFileSearch className="size-8" />}
+                text="Loading preview…"
+              />
             ) : previewError ? (
-              <EmptyPane icon={<IconFileSearch className="size-8" />} text={previewError} />
+              <EmptyPane
+                icon={<IconFileSearch className="size-8" />}
+                text={previewError}
+              />
             ) : (
               <EmptyPane
                 icon={<IconFileSearch className="size-8" />}

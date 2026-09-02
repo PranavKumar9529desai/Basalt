@@ -58,8 +58,8 @@ export function EditorView({ tab }: LeafProps) {
   // F2 / "rename note" signals from chrome targeting THIS tab produce an
   // increasing epoch here; the InlineTitle baselines its mount-time epoch so
   // tab switches never re-enter edit mode, only fresh signals do.
-  const renameEpoch = useRenameSignalStore(
-    (s) => (s.tabId === tab.id ? s.seq : 0),
+  const renameEpoch = useRenameSignalStore((s) =>
+    s.tabId === tab.id ? s.seq : 0,
   );
 
   useEffect(() => {
@@ -98,13 +98,15 @@ export function EditorView({ tab }: LeafProps) {
     if (!view) return;
     if (tab.viewMode === "reading") {
       const range = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
-      readingScrollRatioRef.current = range > 0 ? view.scrollDOM.scrollTop / range : 0;
+      readingScrollRatioRef.current =
+        range > 0 ? view.scrollDOM.scrollTop / range : 0;
     } else {
       const range = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
       // Scroll restoration intentionally mutates the CodeMirror DOM after the
       // mode transition; the editor controller remains the state owner.
       // eslint-disable-next-line react/immutability
-      if (range > 0) view.scrollDOM.scrollTop = readingScrollRatioRef.current * range;
+      if (range > 0)
+        view.scrollDOM.scrollTop = readingScrollRatioRef.current * range;
     }
   }, [tab.viewMode, view]);
 

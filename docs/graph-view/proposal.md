@@ -6,9 +6,9 @@
 
 ## Working name
 
-**NoteGraph** — registered as a *view* (`registerView()` in
+**NoteGraph** — registered as a _view_ (`registerView()` in
 `app-shell/viewRegistrations.ts`): side-dock panels, never a route (ADR-004).
-A future fullscreen/global-graph tab would be a *leaf* registration.
+A future fullscreen/global-graph tab would be a _leaf_ registration.
 
 ---
 
@@ -59,11 +59,11 @@ the ADR-017 harness).
 
 Where does the force simulation run?
 
-| Option | Mechanism | Pros | Cons |
-| --- | --- | --- | --- |
-| **(a)** | Physics in Rust, positions streamed to webview via Tauri `Channel` (ADR-020 moves 4+6) | One engine everywhere (future mobile/server); heaviest compute native | 25k nodes × 60fps position streams ≈ megabytes/sec of IPC — saturation risk |
-| **(b)** | Same Rust physics crate compiled to **WASM, running in a web worker** in-webview | Zero per-frame IPC; UI thread untouched; deterministic | Duplicate runtime paths (native + wasm builds of one crate) |
-| **(c)** **← proposed lean** | **Hybrid**: WASM worker for interactive simulation; Rust for expensive one-shot analytics (centrality, communities) on graph-change events | Best of both; analytics shared with basalt-graph's existing role; IPC only for rare bulk updates | Two integration surfaces to maintain |
+| Option                      | Mechanism                                                                                                                                  | Pros                                                                                             | Cons                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **(a)**                     | Physics in Rust, positions streamed to webview via Tauri `Channel` (ADR-020 moves 4+6)                                                     | One engine everywhere (future mobile/server); heaviest compute native                            | 25k nodes × 60fps position streams ≈ megabytes/sec of IPC — saturation risk |
+| **(b)**                     | Same Rust physics crate compiled to **WASM, running in a web worker** in-webview                                                           | Zero per-frame IPC; UI thread untouched; deterministic                                           | Duplicate runtime paths (native + wasm builds of one crate)                 |
+| **(c)** **← proposed lean** | **Hybrid**: WASM worker for interactive simulation; Rust for expensive one-shot analytics (centrality, communities) on graph-change events | Best of both; analytics shared with basalt-graph's existing role; IPC only for rare bulk updates | Two integration surfaces to maintain                                        |
 
 Proposal: author the simulation once as a workspace crate (e.g.
 `crates/basalt-layout` or inside `basalt-graph`) compiled to both `wasm32`

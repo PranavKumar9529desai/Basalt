@@ -19,7 +19,12 @@ function fakeView(): {
   content.className = "cm-content";
   scrollDOM.appendChild(content);
   editorDom.appendChild(scrollDOM);
-  return { view: { dom: editorDom, scrollDOM } as unknown as EditorView, editorDom, scrollDOM, content };
+  return {
+    view: { dom: editorDom, scrollDOM } as unknown as EditorView,
+    editorDom,
+    scrollDOM,
+    content,
+  };
 }
 
 describe("attachScrollHeader", () => {

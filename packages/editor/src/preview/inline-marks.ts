@@ -106,6 +106,8 @@ export function handleInlineNode(
   return false;
 }
 
+const MAX_TAG_ITERATIONS = 1000;
+
 /**
  * Scans a single line for #tags and adds cm-live-tag marks.
  * Skips matches inside code blocks. Call from the ViewPlugin pass.
@@ -116,21 +118,40 @@ export function handleTagsInLine(
   codeBlockRanges: { from: number; to: number }[],
   collector: DecorationCollector,
 ): void {
+  performance.mark("basalt:handleTagsInLine:start");
   const TAG_RE = /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
   let match: RegExpExecArray | null = TAG_RE.exec(lineText);
+  let iterations = 0;
 
   while (match !== null) {
+    if (++iterations > MAX_TAG_ITERATIONS) {
+      console.warn(
+        `[WATCHDOG] handleTagsInLine exceeded ${MAX_TAG_ITERATIONS} iterations on line: "${lineText.slice(0, 80)}"`,
+      );
+      break;
+    }
+
     const from = lineFrom + match.index;
     const to = from + match[0].length;
+    const prevMatch = match;
+    // Advance regex BEFORE any continue — prevents infinite loop when a
+    // match is inside a code block or not preceded by whitespace.
+    match = TAG_RE.exec(lineText);
 
     // Use binary-search-based isInCodeBlock (assumes ranges are sorted)
     if (isInCodeBlock(from, codeBlockRanges)) continue;
 
     // Must be preceded by whitespace or start of line
-    if (match.index > 0 && !/\s/.test(lineText[match.index - 1])) continue;
+    if (prevMatch.index > 0 && !/\s/.test(lineText[prevMatch.index - 1]))
+      continue;
 
     collector.addMark(from, to, "cm-live-tag");
-
-    match = TAG_RE.exec(lineText);
   }
+
+  performance.mark("basalt:handleTagsInLine:end");
+  performance.measure(
+    "basalt:handleTagsInLine",
+    "basalt:handleTagsInLine:start",
+    "basalt:handleTagsInLine:end",
+  );
 }

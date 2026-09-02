@@ -56,7 +56,8 @@ export function useFilteredAssets(): AssetInfo[] {
   const showOrphansOnly = useAssetsStore((s) => s.showOrphansOnly);
 
   return useMemo(
-    () => filterAssets(assets, filter, search, showDuplicatesOnly, showOrphansOnly),
+    () =>
+      filterAssets(assets, filter, search, showDuplicatesOnly, showOrphansOnly),
     [assets, filter, search, showDuplicatesOnly, showOrphansOnly],
   );
 }
@@ -78,7 +79,9 @@ export function filterAssets(
 
   // Orphans only
   if (showOrphansOnly) {
-    list = list.filter((a) => a.embeds_by.length === 0 && a.linked_by.length === 0);
+    list = list.filter(
+      (a) => a.embeds_by.length === 0 && a.linked_by.length === 0,
+    );
   }
 
   // Duplicates only — group by content_hash, keep groups with >1 member

@@ -64,8 +64,8 @@ export const createPersistenceSlice: StateCreator<
     const paneData = snapshot.panes ?? snapshot.groups;
     const firstPane = paneData?.[0];
 
-    const tabIds = (firstPane?.tabIds ?? []).filter(
-      (tabId) => Boolean(tabs[tabId]),
+    const tabIds = (firstPane?.tabIds ?? []).filter((tabId) =>
+      Boolean(tabs[tabId]),
     );
     const pane: TabPane = {
       id: (firstPane?.id as TabPaneId) ?? (ROOT_PANE_ID as TabPaneId),

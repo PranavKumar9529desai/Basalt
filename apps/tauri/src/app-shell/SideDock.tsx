@@ -62,27 +62,27 @@ export function SideDock({
       <div className="flex h-10 shrink-0 items-center bg-[var(--sat-surface-2)] px-2 pt-1 gap-1">
         {views.length > 1
           ? views.map((view) => {
-            const isActive = view.type === active.type;
-            const Icon = view.icon;
-            return (
-              <button
-                key={view.type}
-                type="button"
-                aria-label={view.name}
-                title={view.name}
-                aria-pressed={isActive}
-                onClick={() => setActiveType(view.type)}
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded transition-colors outline-none",
-                  isActive
-                    ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
-                    : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
-                )}
-              >
-                <Icon size={18} stroke={1.5} />
-              </button>
-            );
-          })
+              const isActive = view.type === active.type;
+              const Icon = view.icon;
+              return (
+                <button
+                  key={view.type}
+                  type="button"
+                  aria-label={view.name}
+                  title={view.name}
+                  aria-pressed={isActive}
+                  onClick={() => setActiveType(view.type)}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded transition-colors outline-none",
+                    isActive
+                      ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
+                      : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
+                  )}
+                >
+                  <Icon size={18} stroke={1.5} />
+                </button>
+              );
+            })
           : null}
 
         {ActiveHeaderActions ? (

@@ -19,7 +19,11 @@ export {
   runTypingBenchmark,
 } from "./benchmark";
 export type { EditorExtensionGroups } from "./editor";
-export { createEditorExtensionGroups, createEditorExtensions, previewExtensions } from "./editor";
+export {
+  createEditorExtensionGroups,
+  createEditorExtensions,
+  previewExtensions,
+} from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
 export type {
@@ -38,8 +42,19 @@ export type {
   RunQueryFn,
 } from "./types";
 
-export { dqlBlockSpec, DQL_WIDGET_THEME, clearQueryCache, runQueryFacet, openLinkFacet } from "./block-widgets/dql-widget";
-export type { QueryResult, QueryColumn, TypedValue, OpenLinkFn } from "./block-widgets/dql-widget";
+export {
+  dqlBlockSpec,
+  DQL_WIDGET_THEME,
+  clearQueryCache,
+  runQueryFacet,
+  openLinkFacet,
+} from "./block-widgets/dql-widget";
+export type {
+  QueryResult,
+  QueryColumn,
+  TypedValue,
+  OpenLinkFn,
+} from "./block-widgets/dql-widget";
 export {
   getBlockWidgetModel,
   requestPreviewRebuild,
@@ -56,9 +71,20 @@ export {
   FRONTMATTER_WIDGET_THEME,
 } from "./block-widgets/frontmatter";
 
-export { tableBlockSpec, TABLE_BLOCK_THEME } from "./block-widgets/table-widget";
+export {
+  tableBlockSpec,
+  TABLE_BLOCK_THEME,
+} from "./block-widgets/table-widget";
 export { attachScrollHeader } from "./scroll-header";
 export type { CodeToken } from "./syntax/code-highlighting";
 export { tokenizeCode } from "./syntax/code-highlighting";
 export { HTML_SANITIZE_CONFIG, sanitizeHtml } from "./preview/html-sanitize";
 export { HTML_TYPOGRAPHY_CSS } from "./preview/html-typography";
+export { handleTagsInLine } from "./preview/inline-marks";
+export type { WatchdogEvent, WatchdogStats } from "./watchdog";
+export {
+  startWatchdog,
+  stopWatchdog,
+  getWatchdogStats,
+  formatWatchdogReport,
+} from "./watchdog";

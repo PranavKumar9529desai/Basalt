@@ -29,7 +29,10 @@ export function attachScrollHeader(
   return () => {
     if (slot.parentNode === view.scrollDOM) slot.remove();
     // Clear the layout flag if this slot was the only one.
-    if (!hadTitle && !view.scrollDOM.querySelector("[data-basalt-title-slot]")) {
+    if (
+      !hadTitle &&
+      !view.scrollDOM.querySelector("[data-basalt-title-slot]")
+    ) {
       editorDom.removeAttribute("data-basalt-title");
     }
   };

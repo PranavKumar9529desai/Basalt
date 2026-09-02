@@ -5,7 +5,7 @@ Rust backend (`src-tauri/`), wired together by the app-layer source tree in
 `src/`.
 
 This README is a **runtime / data-flow / navigation map** for anyone (human or
-agent) working in `src/`. The authoritative *rules* live in
+agent) working in `src/`. The authoritative _rules_ live in
 [`AGENTS.md`](../../AGENTS.md) and [`CONVENTIONS.md`](../../CONVENTIONS.md);
 read those for the standards. This file tells you where things are and how
 they connect.
@@ -28,7 +28,7 @@ crates/       Rust compute (searched from the backend)
 The two rules that trip up most newcomers:
 
 - **Features never import each other** — `features/{vault,tabs,editor,search,
-  settings,graph}` have no imports between them. If two features must talk,
+settings,graph}` have no imports between them. If two features must talk,
   the wiring lives in `shared/` or `app-shell/`. The one exception is
   type-only imports via a feature's `types.ts`.
 - **The shell renders from registries, not hardcoded imports** — new panels and
@@ -103,21 +103,21 @@ TTI instrumentation (ADR-017) is spread across two sides:
 - **Rust:** `BootResult.timings` (µs map) — `process_to_invoke`,
   `rust:vault_load_or_index`, `rust:search_init`, `rust:build_flat_tree`, …
 - **Frontend:** `app-shell/tti.ts` — `ttiMark("js_entry" | "loader_start" |
-  "boot_resolved")`; `writeTtiReport()` merges both → `invoke("write_dev_report")`.
+"boot_resolved")`; `writeTtiReport()` merges both → `invoke("write_dev_report")`.
 
 ---
 
 ## 4. Where state lives
 
-| Concern | Home | Notes |
-|---|---|---|
-| Cross-feature orchestration | `shared/useWorkspace.ts` + `app-shell/AppProvider.tsx` | Consumed via `useAppContext()` |
-| Vault tree / CRUD / selection | `features/vault/` | `useVaultTree`, `useVaultController`, `useVaultMutations` |
-| Tabs + persistence | `features/tabs/store/` | `core.ts` (single pane) + `persistence.ts` (debounced save) |
-| Active note + stats | `features/editor/store.ts` | `useActiveNoteStore` — **stats only, never content** |
-| Search + switcher | `features/search/store.ts` | Seq guards against out-of-order IPC |
-| Settings | `features/settings/` | `useSetting(key)` selector + settings-section registry |
-| Command/keybinding registries | `packages/commands`, `packages/keybindings` | `CommandProvider`/`KeybindingProvider` at root |
+| Concern                       | Home                                                   | Notes                                                       |
+| ----------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| Cross-feature orchestration   | `shared/useWorkspace.ts` + `app-shell/AppProvider.tsx` | Consumed via `useAppContext()`                              |
+| Vault tree / CRUD / selection | `features/vault/`                                      | `useVaultTree`, `useVaultController`, `useVaultMutations`   |
+| Tabs + persistence            | `features/tabs/store/`                                 | `core.ts` (single pane) + `persistence.ts` (debounced save) |
+| Active note + stats           | `features/editor/store.ts`                             | `useActiveNoteStore` — **stats only, never content**        |
+| Search + switcher             | `features/search/store.ts`                             | Seq guards against out-of-order IPC                         |
+| Settings                      | `features/settings/`                                   | `useSetting(key)` selector + settings-section registry      |
+| Command/keybinding registries | `packages/commands`, `packages/keybindings`            | `CommandProvider`/`KeybindingProvider` at root              |
 
 ---
 
@@ -138,7 +138,7 @@ All IPC goes through `invoke(...)` (Tauri) against `src-tauri/src/lib.rs`
 - **`rename_note` / `rename_path`** → `updateTabPaths` keeps stable tab ids so
   EditorState caches, undo history, and dirty state survive moves/renames.
 - **Write contract (backend):** every app-initiated mutation registers
-  self-write markers *before* touching disk, updates vault cache + search index
+  self-write markers _before_ touching disk, updates vault cache + search index
   directly, and emits **nothing** — the frontend refreshes its own tree.
 
 ### Backend surface (`src-tauri/src/`)
@@ -163,13 +163,13 @@ commands/
 
 ## 6. Registries — the ADR-018 spine
 
-| Registry | Package file | Entries | Rendered by |
-|---|---|---|---|
-| `viewRegistry` | `packages/views/src/registry.ts` | `file-explorer` (left), `backlinks` (right) | `app-shell/SideDock.tsx` (generic) |
-| `leafRegistry` | `packages/views/src/leaf.tsx` | `markdown`, `graph` (lazy) | tab content resolution in `Shell` |
-| `commandService` | `packages/commands` | editor/search/settings/tab commands | `CommandProvider` + Ctrl+P UI |
-| `keybindingService` | `packages/keybindings` | `keybindings.json` rules + `when` clauses | `KeybindingListener` (single window listener) |
-| Settings sections | `features/settings/store.ts` | `registerSection` (plugin seam) | `SettingsModal` |
+| Registry            | Package file                     | Entries                                     | Rendered by                                   |
+| ------------------- | -------------------------------- | ------------------------------------------- | --------------------------------------------- |
+| `viewRegistry`      | `packages/views/src/registry.ts` | `file-explorer` (left), `backlinks` (right) | `app-shell/SideDock.tsx` (generic)            |
+| `leafRegistry`      | `packages/views/src/leaf.tsx`    | `markdown`, `graph` (lazy)                  | tab content resolution in `Shell`             |
+| `commandService`    | `packages/commands`              | editor/search/settings/tab commands         | `CommandProvider` + Ctrl+P UI                 |
+| `keybindingService` | `packages/keybindings`           | `keybindings.json` rules + `when` clauses   | `KeybindingListener` (single window listener) |
+| Settings sections   | `features/settings/store.ts`     | `registerSection` (plugin seam)             | `SettingsModal`                               |
 
 **If you're adding a view or leaf:** register it in
 `app-shell/registrations.ts`. That is the entire wiring step — the shell
@@ -179,14 +179,14 @@ renders whatever the registries hold.
 
 ## 7. Key entry points for an agent
 
-| Task | Look at |
-|---|---|
-| Add a sidebar dock / leaf | `app-shell/registrations.ts` + `packages/views` |
-| Wire two features together | `shared/` (never inside a feature) |
-| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `logic/saveManager` |
-| Understand the editor typing path | `packages/editor` (CM6 extensions) — **keep the keystroke path React-free** |
-| Add an IPC command | `src-tauri/src/lib.rs` + `commands/*`; expose via a feature hook |
-| Understand boot / TTI | `app-shell/Boot.tsx`, `routes/index.tsx`, `app-shell/tti.ts`, `commands/boot.rs` |
+| Task                              | Look at                                                                          |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| Add a sidebar dock / leaf         | `app-shell/registrations.ts` + `packages/views`                                  |
+| Wire two features together        | `shared/` (never inside a feature)                                               |
+| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `logic/saveManager`                     |
+| Understand the editor typing path | `packages/editor` (CM6 extensions) — **keep the keystroke path React-free**      |
+| Add an IPC command                | `src-tauri/src/lib.rs` + `commands/*`; expose via a feature hook                 |
+| Understand boot / TTI             | `app-shell/Boot.tsx`, `routes/index.tsx`, `app-shell/tti.ts`, `commands/boot.rs` |
 
 ## 8. Non-negotiables (quick list)
 

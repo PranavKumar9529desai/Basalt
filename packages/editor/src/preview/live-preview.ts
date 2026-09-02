@@ -73,10 +73,7 @@ const HR_THEME = EditorView.baseTheme({
 import { BLOCKQUOTES_THEME, handleBlockquoteNode } from "./blockquotes";
 import { CALLOUTS_THEME, handleCalloutNode } from "./callouts";
 import { CODE_BLOCKS_THEME, handleCodeBlockNode } from "./code-blocks";
-import {
-  FRONTMATTER_THEME,
-  handleFrontmatterFallback,
-} from "./frontmatter";
+import { FRONTMATTER_THEME, handleFrontmatterFallback } from "./frontmatter";
 import {
   blockWidgetsFor,
   handleBlockWidgetsNode,
@@ -186,12 +183,13 @@ function buildPreviewState(
     // During typing, the empty selection is the authoritative active-line
     // signal; hiding a heading marker before the next input breaks DOM-to-doc
     // mapping and can insert the next character before `#`.
-    activeLine: hasFocus || state.selection.main.empty
-      ? (() => {
-          const l = doc.lineAt(headPos);
-          return { from: l.from, to: l.to, number: l.number };
-        })()
-      : null,
+    activeLine:
+      hasFocus || state.selection.main.empty
+        ? (() => {
+            const l = doc.lineAt(headPos);
+            return { from: l.from, to: l.to, number: l.number };
+          })()
+        : null,
     headPos,
     state,
     codeBlockRanges: [],
@@ -254,7 +252,13 @@ function buildPreviewState(
       // registered block widget replaces/dims/none-s its matched blocks from
       // this single walk. Widget models are collected per-view for external
       // reads (properties panel).
-      const handled = handleBlockWidgetsNode(node, ctx, collector, models, specs);
+      const handled = handleBlockWidgetsNode(
+        node,
+        ctx,
+        collector,
+        models,
+        specs,
+      );
       if (handled.found) frontmatterFound = true;
       if (handled.widgeted) frontmatterWidgeted = true;
 
@@ -262,7 +266,11 @@ function buildPreviewState(
       // inside the block), still skip children to prevent mark-hiding from
       // hiding code fence tokens (CodeMark — closing ```). Normal code blocks
       // never reach here because handleCodeBlockNode returns true first.
-      if (handled.found && !handled.widgeted && node.type.name === "FencedCode") {
+      if (
+        handled.found &&
+        !handled.widgeted &&
+        node.type.name === "FencedCode"
+      ) {
         return false;
       }
 
@@ -486,6 +494,7 @@ class TagMarksPlugin {
 }
 
 function buildTagMarks(view: EditorView): DecorationSet {
+  performance.mark("basalt:buildTagMarks:start");
   const { collector, finish } = makeCollector();
   const ranges = view.state.field(livePreviewField).codeBlockRanges;
 
@@ -497,6 +506,12 @@ function buildTagMarks(view: EditorView): DecorationSet {
       handleTagsInLine(line.from, line.text, ranges, collector);
     }
   }
+  performance.mark("basalt:buildTagMarks:end");
+  performance.measure(
+    "basalt:buildTagMarks",
+    "basalt:buildTagMarks:start",
+    "basalt:buildTagMarks:end",
+  );
   return finish();
 }
 
@@ -513,10 +528,7 @@ export const livePreviewPlugin = [
 
 /** Read the first parsed model for a block widget id off a view. Per-view —
  * never a module global — so split panes each render their own state. */
-export function getBlockWidgetModel<M>(
-  view: EditorView,
-  id: string,
-): M | null {
+export function getBlockWidgetModel<M>(view: EditorView, id: string): M | null {
   const field = view.state.field(livePreviewField, false);
   if (!field) return null;
   return (field.widgetModels[id]?.[0] as M | undefined) ?? null;

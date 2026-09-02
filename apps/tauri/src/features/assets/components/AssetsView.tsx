@@ -55,12 +55,14 @@ export function AssetsView() {
           <span>{filteredAssets.length} assets</span>
           {auditReport.orphan_count > 0 && (
             <span className="text-[var(--sat-state-warning,#f59e0b)]">
-              {auditReport.orphan_count} orphan{auditReport.orphan_count !== 1 && "s"}
+              {auditReport.orphan_count} orphan
+              {auditReport.orphan_count !== 1 && "s"}
             </span>
           )}
           {auditReport.duplicate_count > 0 && (
             <span className="text-[var(--sat-state-error,#ef4444)]">
-              {auditReport.duplicate_count} dup{auditReport.duplicate_count !== 1 && "s"}
+              {auditReport.duplicate_count} dup
+              {auditReport.duplicate_count !== 1 && "s"}
             </span>
           )}
           {auditReport.orphan_count > 0 || auditReport.duplicate_count > 0 ? (

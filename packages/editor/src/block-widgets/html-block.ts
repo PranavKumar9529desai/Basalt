@@ -72,9 +72,13 @@ class HtmlBlockWidget extends WidgetType {
   }
 }
 
-const matches = (node: SyntaxNodeRef): boolean => node.type.name === "HTMLBlock";
+const matches = (node: SyntaxNodeRef): boolean =>
+  node.type.name === "HTMLBlock";
 
-const parse = (state: EditorState, node: SyntaxNodeRef): HtmlBlockModel | null => {
+const parse = (
+  state: EditorState,
+  node: SyntaxNodeRef,
+): HtmlBlockModel | null => {
   const raw = state.doc.sliceString(node.from, node.to);
   const html = sanitizeHtml(raw);
   const head = state.selection.main.head;

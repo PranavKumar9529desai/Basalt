@@ -257,7 +257,10 @@ export function useWorkspace({
   // path in place (id stays stable → leaf editor caches and dirty state
   // survive). The new absolute path comes from the backend result.
   const renameNote = useCallback(
-    async (tab: { id: string; path: string }, newName: string): Promise<RenameResult> => {
+    async (
+      tab: { id: string; path: string },
+      newName: string,
+    ): Promise<RenameResult> => {
       try {
         const result = await invoke<{
           path: string;

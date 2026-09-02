@@ -75,6 +75,7 @@ GROUP BY status
 ```
 
 Execution:
+
 1. FROM → WHERE → apply pipeline to get filtered rows
 2. Group rows by the GROUP BY field value (HashMap<String, Vec<PageRow>>)
 3. For each group, evaluate the field list where aggregate functions
@@ -95,6 +96,7 @@ FLATTEN length(tags) AS tag_count
 ```
 
 Execution:
+
 1. FROM → WHERE → build PageRows
 2. For each row, evaluate the FLATTEN expression and add the result as
    a new virtual field on the PageRow
@@ -106,13 +108,13 @@ name so `field_value` can resolve it naturally.
 
 ### Aggregate function library
 
-| Function | Signature | Description |
-|---|---|---|
-| `count` | `count(rows)` | Number of rows in the group |
-| `sum` | `sum(rows.field)` | Sum of numeric field values |
-| `avg` | `avg(rows.field)` | Arithmetic mean of numeric field values |
-| `min` | `min(rows.field)` | Minimum value (supports Number, Text, Date) |
-| `max` | `max(rows.field)` | Maximum value (supports Number, Text, Date) |
+| Function | Signature            | Description                                   |
+| -------- | -------------------- | --------------------------------------------- |
+| `count`  | `count(rows)`        | Number of rows in the group                   |
+| `sum`    | `sum(rows.field)`    | Sum of numeric field values                   |
+| `avg`    | `avg(rows.field)`    | Arithmetic mean of numeric field values       |
+| `min`    | `min(rows.field)`    | Minimum value (supports Number, Text, Date)   |
+| `max`    | `max(rows.field)`    | Maximum value (supports Number, Text, Date)   |
 | `length` | `length(rows.field)` | Length of array/text field per row (existing) |
 
 Unknown aggregate functions: return `TypedValue::Null` (graceful degrade,
@@ -149,6 +151,7 @@ execute_query:
 ### `TypedValue` additions
 
 No new variants needed. Aggregates return existing types:
+
 - `count` → `TypedValue::Number`
 - `sum`/`avg` → `TypedValue::Number`
 - `min`/`max` → inherits type of the compared field
@@ -156,6 +159,7 @@ No new variants needed. Aggregates return existing types:
 ## Consequences
 
 ### Achieved (when implemented)
+
 - `TASK FROM #work GROUP BY status` shows count per status — the most
   common Dataview query pattern
 - `TABLE file.name, length(tags) AS "Tags" FROM #work FLATTEN length(tags) AS "Tags"` works
@@ -164,6 +168,7 @@ No new variants needed. Aggregates return existing types:
   implementation is filling in, not redesigning
 
 ### Scope
+
 - Single-field GROUP BY only (no multi-field `GROUP BY status, assignee`)
   — covers 90% of use cases; multi-field is a future extension
 - Aggregate functions only inside GROUP BY context (not standalone
@@ -172,6 +177,7 @@ No new variants needed. Aggregates return existing types:
 - FLATTEN is pre-GROUP BY (flattened fields available for GROUP BY key)
 
 ### Known debt to address alongside
+
 - `compare_typed`: Date comparison falls through to `Equal` — must be
   fixed before `min(rows.due)` / `max(rows.due)` work correctly
 - `field_value`: linear scan per row — acceptable for MVP, but a
@@ -212,13 +218,13 @@ columns (Dataview swizzling); computed GROUP BY exposes only `key` / `rows.X`.
 
 ### Aggregate function library (final)
 
-| Function | Semantics |
-|---|---|
-| `count(rows)` / `length(rows)` | Group size (Basalt ergonomics extension) |
+| Function                         | Semantics                                |
+| -------------------------------- | ---------------------------------------- |
+| `count(rows)` / `length(rows)`   | Group size (Basalt ergonomics extension) |
 | `count(field)` / `length(field)` | Non-null count of `field` across members |
-| `sum(field)` | Sum of numeric values across members |
-| `avg(field)` / `average(field)` | Arithmetic mean of numeric values |
-| `min(field)` / `max(field)` | Extremum of numeric values |
+| `sum(field)`                     | Sum of numeric values across members     |
+| `avg(field)` / `average(field)`  | Arithmetic mean of numeric values        |
+| `min(field)` / `max(field)`      | Extremum of numeric values               |
 
 The argument is evaluated per member with a leading `rows.` prefix stripped, so
 `rows.priority` and bare `priority` are equivalent. Unknown functions return

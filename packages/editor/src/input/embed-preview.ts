@@ -54,7 +54,8 @@ const EMBED_THEME = EditorView.baseTheme({
 /** Icon by file type (inferred from extension). */
 function embedIcon(target: string): string {
   const ext = target.split(".").pop()?.toLowerCase() ?? "";
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext)) return "🖼";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext))
+    return "🖼";
   if (["mp4", "mov", "avi", "webm", "mkv"].includes(ext)) return "🎬";
   if (["mp3", "wav", "flac", "ogg", "aac", "m4a"].includes(ext)) return "🎵";
   if (["pdf"].includes(ext)) return "📄";
@@ -112,9 +113,10 @@ class EmbedPreviewPlugin implements PluginValue {
         if (charBefore !== "!") return;
 
         // Extract the target: text between [[ and ]]
-        const target = doc.sliceString(from + 2, to - 2)
-          .split("|")[0]   // strip alias
-          .split("#")[0]   // strip anchor
+        const target = doc
+          .sliceString(from + 2, to - 2)
+          .split("|")[0] // strip alias
+          .split("#")[0] // strip anchor
           .trim();
 
         if (!target) return;

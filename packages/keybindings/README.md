@@ -35,7 +35,7 @@ packages/keybindings/
 
 ```ts
 import {
-  keybindingService,          // singleton
+  keybindingService, // singleton
   KeybindingService,
   parseHotkey,
   matchesHotkey,
@@ -47,19 +47,19 @@ import {
 
 ### Service
 
-| Method                      | Purpose                                              |
-| --------------------------- | ---------------------------------------------------- |
-| `register(binding)`         | Add a binding at runtime                             |
-| `unregister(key)`           | Remove a binding by its `key` string                 |
-| `registerAction(name, fn)`  | Register a plain action handler (non-command)        |
-| `unregisterAction(name)`    | Remove an action handler                             |
-| `setContext(key, value)`    | Set a `when` context flag (e.g. `editorFocused`)     |
-| `updateContext(values)`     | Bulk-set context flags                               |
-| `getContext()`              | Snapshot of the current context                      |
-| `evaluateWhen(when?)`       | Evaluate a when clause against context               |
-| `resolve(event)`            | Find matching binding, or `null`                     |
-| `execute(binding)`          | Run the binding's command/action                     |
-| `handleKeydown(event)`      | Resolve + execute; returns `true` if handled         |
+| Method                     | Purpose                                          |
+| -------------------------- | ------------------------------------------------ |
+| `register(binding)`        | Add a binding at runtime                         |
+| `unregister(key)`          | Remove a binding by its `key` string             |
+| `registerAction(name, fn)` | Register a plain action handler (non-command)    |
+| `unregisterAction(name)`   | Remove an action handler                         |
+| `setContext(key, value)`   | Set a `when` context flag (e.g. `editorFocused`) |
+| `updateContext(values)`    | Bulk-set context flags                           |
+| `getContext()`             | Snapshot of the current context                  |
+| `evaluateWhen(when?)`      | Evaluate a when clause against context           |
+| `resolve(event)`           | Find matching binding, or `null`                 |
+| `execute(binding)`         | Run the binding's command/action                 |
+| `handleKeydown(event)`     | Resolve + execute; returns `true` if handled     |
 
 `handleKeydown` returns `false` (and does **not** `preventDefault`) when no
 binding matches, letting other handlers see the event.
@@ -84,13 +84,13 @@ ones, so context-gated editor bindings win over same-key global ones.
 
 ### Modifier semantics
 
-| Specified  | Matches                    | Notes                                   |
-| ---------- | -------------------------- | --------------------------------------- |
-| `CmdOrCtrl` / `mod` | ctrl **or** meta | The canonical, cross-platform form      |
-| `Cmd` / `Meta`       | ctrl-or-meta     | Mapped to the same behavior             |
-| `Ctrl`               | ctrl-or-meta     | Mapped to the same behavior             |
-| `Shift`              | `event.shiftKey` |                                         |
-| `Alt`                | `event.altKey`   |                                         |
+| Specified           | Matches          | Notes                              |
+| ------------------- | ---------------- | ---------------------------------- |
+| `CmdOrCtrl` / `mod` | ctrl **or** meta | The canonical, cross-platform form |
+| `Cmd` / `Meta`      | ctrl-or-meta     | Mapped to the same behavior        |
+| `Ctrl`              | ctrl-or-meta     | Mapped to the same behavior        |
+| `Shift`             | `event.shiftKey` |                                    |
+| `Alt`               | `event.altKey`   |                                    |
 
 The key portion matches `KeyboardEvent.key` (lowercased).
 
@@ -113,7 +113,7 @@ import {
 <KeybindingProvider>
   <KeybindingListener />
   <App />
-</KeybindingProvider>
+</KeybindingProvider>;
 
 // Inside a feature that wants to gate a binding:
 function Editor() {

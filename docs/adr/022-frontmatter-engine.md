@@ -33,7 +33,7 @@ it. Basalt must treat it as a first-class citizen, not decoration.
 
 ### The concrete gap (a real defect today)
 
-`extract_metadata` sets its link/tag scan cursor *past* the frontmatter before
+`extract_metadata` sets its link/tag scan cursor _past_ the frontmatter before
 scanning (`metadata.rs:21`, `i = after_frontmatter`). Consequently **`[[links]]`
 and `tags:` declared inside frontmatter are never added to `meta.links` /
 `meta.tags`.** That is exactly the Obsidian "quoted wikilink in frontmatter is
@@ -54,13 +54,13 @@ plus the
    `pages` on a site ("sub-pages"). Obsidian cannot scope it; a
    [forum FR for a type system](https://forum.obsidian.md/t/super-fr-enhance-obsidian-with-a-type-system-for-notes-and-database-like-views-metadata-object-oriented-model/46444)
    has stalled.
-2. **Type mismatch = silent dead end.** Odd values turn orange and the *visual
-   editor refuses to edit them*; you must drop to Source.
+2. **Type mismatch = silent dead end.** Odd values turn orange and the _visual
+   editor refuses to edit them_; you must drop to Source.
 3. **The `---` must be byte-0.** A blank line above it silently demotes the
    whole block to plain text.
 4. **Duplicate keys / malformed YAML** require manual cleanup.
 5. **The quoted-wikilink trap.** `parent: "[[Note]]"` is a link for Dataview but
-   *not* for Obsidian (no graph/backlinks). The visual editor quotes for you;
+   _not_ for Obsidian (no graph/backlinks). The visual editor quotes for you;
    templates/scripts must hand-handle it.
 6. **Dates-as-strings ruin sorting; types matter on day one.**
 7. **Metadata sprawl**: synonyms, `Status` vs `status` (different properties),
@@ -73,7 +73,7 @@ plus the
 10. **Indexing speed**: Datacore is described as a "WIP successor to Dataview
     with a focus on UX and speed," acknowledging Dataview's vault-wide indexing
     is slow.
-11. **Bases** (1.9.10) are views *over* Markdown + YAML properties; data stays in
+11. **Bases** (1.9.10) are views _over_ Markdown + YAML properties; data stays in
     the file, the base is config. Dashboard-first, complementary to Dataview.
 
 ### Properties UX research — what Obsidian does well and badly (2026-08)
@@ -90,11 +90,11 @@ official-forum threads (data-loss reports and the type-system FR cited above).
 
 **What Obsidian does well**
 
-- **Plain-text, portable storage.** The panel is a friendly editor *over* the
+- **Plain-text, portable storage.** The panel is a friendly editor _over_ the
   same YAML frontmatter any tool can read; the files-first model survives.
 - **Type-aware widgets.** The type drives the field: date → picker, checkbox →
   toggle, list → pill editor, link → note-autocomplete picker.
-- **Vault-wide autocompletion** of property *names* and previously-used *values*
+- **Vault-wide autocompletion** of property _names_ and previously-used _values_
   — a cheap, effective anti-fragmentation device.
 - **Behavioral default properties** (`tags`, `aliases`, `cssclasses`) get real
   integrations: aliases feed the quick switcher, tags feed the tag pane, and
@@ -114,7 +114,7 @@ official-forum threads (data-loss reports and the type-system FR cited above).
   the panel (research point 2). ADR-022 already rejects this: diagnostics are
   non-blocking, editing never disabled.
 - **One invalid value can destroy the whole section.** A single unquoted colon
-  invalidates *all* properties, and adding a new property afterwards can
+  invalidates _all_ properties, and adding a new property afterwards can
   silently rewrite away the existing section (forum: "Invalid properties may
   cause data loss"). Whole-block rewrites are a hard no for us.
 - **types.json is a partial, guessed sidecar** — only explicitly chosen types
@@ -141,7 +141,7 @@ This ADR sits on three accepted foundations: **ADR-007** (Rust owns heavy
 parse/index; TS owns gestures), **ADR-019** (one keystroke = one pass; no nested
 dispatch; benchmark-gated; "why not Rust per keystroke"), and **ADR-018** (shell
 renders from registries — dock-appropriate panels are `registerView`s; Properties
-is deliberately *not* one, see rule 7). **ADR-020**
+is deliberately _not_ one, see rule 7). **ADR-020**
 sets the ≥25k-note perf tier and the WASM-compute path we reuse.
 
 ## Decision
@@ -158,9 +158,9 @@ graph, search, and backlinks natively — never as a render-only layer.**
 1. **One parser of truth.** Fix `extract_metadata` so its link/tag scan also
    covers the frontmatter block (extract `[[…]]` and `tags:`/`aliases:` from it).
    Add `parse_frontmatter(input) -> FrontmatterModel { values: Vec<(key,
-   FrontmatterValue, Span)>, diagnostics: Vec<Diag> }` returning **typed** values
+FrontmatterValue, Span)>, diagnostics: Vec<Diag> }` returning **typed** values
    and **UTF-16 per-key/value spans**. The vault indexer and the live editor call
-   the *same* function → no live/indexed drift.
+   the _same_ function → no live/indexed drift.
 2. **Parser injection keeps `packages/editor` pure.** The editor receives the
    parser through `EditorConfig.parseFrontmatter`, exactly like the existing
    `onFetchLinks` / `onFetchTags` callbacks (`packages/editor/src/editor.ts`).
@@ -192,14 +192,14 @@ graph, search, and backlinks natively — never as a render-only layer.**
    shows it. There is **no side-dock properties panel** and no window
    header-band strip: the window's 40px header band is chrome (tabs/ribbon/dock
    headers), and Obsidian puts properties in the note, not the chrome. In
-   *reading / live-preview* the same block renders dim (rule 11); editing
+   _reading / live-preview_ the same block renders dim (rule 11); editing
    happens where the note is.
 8. **Benchmark-gated (ADR-019 / ADR-020).** Add a `blockWidgets` entry to
-    `EditorExtensionGroups` (`packages/editor/src/editor.ts`) so the isolation
-    benchmark attributes per-keystroke cost. Extend `parse_metadata` to a **25k-note
-    frontmatter corpus** (ADR-020's scale rule). Acceptance: keystroke p95 stays
-    flat with vs without frontmatter; vault-wide extraction stays within its
-    Criterion budget.
+   `EditorExtensionGroups` (`packages/editor/src/editor.ts`) so the isolation
+   benchmark attributes per-keystroke cost. Extend `parse_metadata` to a **25k-note
+   frontmatter corpus** (ADR-020's scale rule). Acceptance: keystroke p95 stays
+   flat with vs without frontmatter; vault-wide extraction stays within its
+   Criterion budget.
 
 ### Widget architecture (update 2026-08-30)
 
@@ -210,23 +210,23 @@ span-scoped edits. The architecture that makes the widget scalable, multi-pane
 safe, and extensible to future property types:
 
 9. **Synchronous model via WASM; IPC stays off the keystroke path.** The editor
-    parses frontmatter **in the webview** through the standalone
-    `crates/frontmatter-wasm` (C-ABI `fm_parse`, the same `?init` load path as
-    `crates/graph-wasm`; `basalt-wasm` lives in the main workspace, which cannot
-    target wasm32), wrapped and injected as `EditorConfig.parseFrontmatter`
-    (rule 2). A frontmatter-region transaction reparses and re-renders the
-    widget in the same frame — no async gap, no "widget lags the keystroke."
-    The Tauri `parse_frontmatter` **command** remains for the vault
-    indexer/batch only. *Landing note (2026-08-30 amend): the previous
-    deviation (feature-layer IPC + module-global cache/debounce/reparse
-    effect) is deleted; the sync WASM path is the code.**
+   parses frontmatter **in the webview** through the standalone
+   `crates/frontmatter-wasm` (C-ABI `fm_parse`, the same `?init` load path as
+   `crates/graph-wasm`; `basalt-wasm` lives in the main workspace, which cannot
+   target wasm32), wrapped and injected as `EditorConfig.parseFrontmatter`
+   (rule 2). A frontmatter-region transaction reparses and re-renders the
+   widget in the same frame — no async gap, no "widget lags the keystroke."
+   The Tauri `parse_frontmatter` **command** remains for the vault
+   indexer/batch only. _Landing note (2026-08-30 amend): the previous
+   deviation (feature-layer IPC + module-global cache/debounce/reparse
+   effect) is deleted; the sync WASM path is the code._*
 10. **Per-view state, never module globals.** The live-preview field's
     `widgetModels` (kernel) is the single per-editor holder of the model;
     `surgicalEdit` is bound to its own `EditorView`; the widget binds its view
     at `toDOM`. There is **no `activeView` singleton, no shared
     cache, no global refresh timer** — split panes (ADR-018 Phase 3) each own their
     model and widget, so panes can never render each other's state. The inline
-    Properties surface (rule 7) *is* the widget; it reads the model from its own
+    Properties surface (rule 7) _is_ the widget; it reads the model from its own
     field and there is no separate panel store to keep in sync.
 11. **Explicit render-mode facet.** `blockWidgetModeFacet` (per widget id) ∈
     `"widget"` (editing surfaces: the inline Properties widget — Obsidian's
@@ -248,12 +248,12 @@ safe, and extensible to future property types:
 13. **Data-loss-safe by construction.** Diagnostics are non-blocking; edits are
     span-scoped; **no code path may rewrite the whole block or drop a section to
     "fix" a value** (Obsidian's silent-rewrite class of bug). A malformed entry
-    offers a *fix action* (quote it, coerce to type, drop duplicate) instead of a
+    offers a _fix action_ (quote it, coerce to type, drop duplicate) instead of a
     silent rewrite, and `created` / `updated` / `viewed` auto-date maintenance is
     a first-class `frontmatterDefaults` behavior (gated behind config), where
     Obsidian leaves it to templates or plugins.
 14. **One kernel, many block widgets (extensibility rule — added 2026-08-30).**
-    The Properties widget is the **first** of a family of *block widgets*:
+    The Properties widget is the **first** of a family of _block widgets_:
     syntax-node-matched blocks (frontmatter, and tomorrow callouts and embeds,
     citations, datasheets…) replaced on screen by an interactive widget while the
     document text stays untouched. They all render through one registry
@@ -314,7 +314,7 @@ Webview (per keystroke, synchronous via frontmatter-wasm)
   ADR-007. Reuse Rust via WASM.
 - **Rust per keystroke over Tauri IPC.** Re-litigates ADR-019's "Why not Rust for
   the keystroke path": serializing document state across IPC each keystroke costs
-  more than the compute and breaks CM6's synchronous-tree contract. WASM runs *in*
+  more than the compute and breaks CM6's synchronous-tree contract. WASM runs _in_
   the webview (no IPC), so it is acceptable; full re-parse of the FM block is
   still avoided via the intersect guard.
 - **Full re-serialize of the block on every edit.** Formatting loss, CRLF-wipe

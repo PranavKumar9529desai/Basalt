@@ -30,7 +30,7 @@ The graph is drawn as **two stacked, transparent canvases plus a DOM tooltip**:
 
 **Why not draw labels in WebGL?** Text in GL is painful: you must rasterize
 glyphs to a texture atlas, manage SDFs or quad per glyph, and re-layout on
-zoom. For a graph where labels are a *secondary* cue (shown only past
+zoom. For a graph where labels are a _secondary_ cue (shown only past
 `LABEL_SCALE` and below `LABEL_CAP` nodes), that cost is unjustified. Drawing
 text on a transparent Canvas2D overlay is the canonical pattern used by
 sigma.js, deck.gl, and Mapbox — geometry on the GPU, text on the 2D layer.
@@ -49,11 +49,11 @@ node count.
 Three GL primitives, three programs (the two "scene" programs share one vertex
 shader; attribute locations 0/1/2 are identical so the VAOs are interchangeable):
 
-| Primitive      | Program            | Buffer                         | Call                       |
-|----------------|--------------------|--------------------------------|----------------------------|
-| Nodes          | `progScene`        | `posBuf` / `colorBuf` / `flagBuf` | `drawArrays(POINTS, …)`    |
-| Edges          | `progSceneLines`   | same + `edgeIdxBuf` (indices)  | `drawElements(LINES, …)`   |
-| Arrowheads     | `progArrows`       | `arrowBuf`                     | `drawArrays(TRIANGLES, …)` |
+| Primitive  | Program          | Buffer                            | Call                       |
+| ---------- | ---------------- | --------------------------------- | -------------------------- |
+| Nodes      | `progScene`      | `posBuf` / `colorBuf` / `flagBuf` | `drawArrays(POINTS, …)`    |
+| Edges      | `progSceneLines` | same + `edgeIdxBuf` (indices)     | `drawElements(LINES, …)`   |
+| Arrowheads | `progArrows`     | `arrowBuf`                        | `drawArrays(TRIANGLES, …)` |
 
 - **Nodes** are `gl.POINTS` with a circular mask (`discard` outside the point's
   inscribed circle in the fragment shader). `gl_PointSize` scales with zoom and
@@ -104,7 +104,7 @@ backing store and allocates fresh storage, so the upload never blocks on a
 buffer the GPU is still consuming.
 
 **We deliberately avoided `bufferSubData` here.** A WebGL dev-list report
-(documents a ~50% drop in *final* render performance from per-frame
+(documents a ~50% drop in _final_ render performance from per-frame
 `bufferSubData` due to pipeline stalls when writing into a GPU-in-use buffer).
 Orphaning sidesteps the stall at the cost of re-allocating GPU storage each
 frame — cheap, and the recommended streaming pattern for data that changes
@@ -116,7 +116,7 @@ once on rebuild.
 > **Diagnostic probe:** the constructor logs a WebGL2 capability probe
 > (`[graph] WebGL2 context probe`) before linking. A `webgl2` context can be
 > returned even when the underlying driver only accepts GLSL ES 1.00, which
-> makes `#version 300 es` fail to compile with a *null* info log. The probe
+> makes `#version 300 es` fail to compile with a _null_ info log. The probe
 > surfaces the truth (version / shading-language / renderer / vendor /
 > context-lost) so a silent shader failure is diagnosable instead of a blank
 > canvas.
@@ -159,19 +159,19 @@ feature side), not every frame.
 
 ## API (`GraphRenderer`)
 
-| Method                              | When to call                              |
-|-------------------------------------|-------------------------------------------|
-| `constructor(canvas)`               | once; throws if WebGL2 unavailable        |
-| `resize(cssW, cssH, dpr)`           | on layout change; sets `gl.viewport`      |
-| `setPositions(Float32Array)`        | every frame (orphaned `DYNAMIC_DRAW`)     |
-| `setColors(Float32Array)`           | on rebuild (`STATIC_DRAW`)                |
-| `setFlags(Float32Array)`            | on hover change (`DYNAMIC_DRAW`)          |
-| `setEdges(Uint32Array, count)`      | on rebuild (`STATIC_DRAW`)                |
-| `setArrows(Float32Array)`           | throttled (see feature layer)             |
-| `setView({ scale, ox, oy })`        | every frame                               |
-| `setHasHover(bool)` / `setShowArrows(bool)` | on hover / toggle                 |
-| `render()`                          | every dirty frame                         |
-| `dispose()`                         | on unmount; deletes GL objects (**no** `loseContext`) |
+| Method                                      | When to call                                          |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `constructor(canvas)`                       | once; throws if WebGL2 unavailable                    |
+| `resize(cssW, cssH, dpr)`                   | on layout change; sets `gl.viewport`                  |
+| `setPositions(Float32Array)`                | every frame (orphaned `DYNAMIC_DRAW`)                 |
+| `setColors(Float32Array)`                   | on rebuild (`STATIC_DRAW`)                            |
+| `setFlags(Float32Array)`                    | on hover change (`DYNAMIC_DRAW`)                      |
+| `setEdges(Uint32Array, count)`              | on rebuild (`STATIC_DRAW`)                            |
+| `setArrows(Float32Array)`                   | throttled (see feature layer)                         |
+| `setView({ scale, ox, oy })`                | every frame                                           |
+| `setHasHover(bool)` / `setShowArrows(bool)` | on hover / toggle                                     |
+| `render()`                                  | every dirty frame                                     |
+| `dispose()`                                 | on unmount; deletes GL objects (**no** `loseContext`) |
 
 `render()` issues exactly three draws (points, then lines if any edges, then
 triangles if arrows are shown) and early-returns when `nodeCount === 0`.
@@ -180,7 +180,7 @@ triangles if arrows are shown) and early-returns when `nodeCount === 0`.
 
 ## Relationship to the feature layer
 
-This package is the dumb drawing surface. Everything that decides *what* to
+This package is the dumb drawing surface. Everything that decides _what_ to
 draw lives in `apps/tauri/src/graph/`:
 
 - **`GraphWorker.ts`** — a **Web Worker** running the WASM force simulation;
@@ -195,12 +195,12 @@ draw lives in `apps/tauri/src/graph/`:
 - **Render-on-dirty** — the rAF loop redraws only when something changed (new
   sim frame, camera move, hover, resize, rebuild). Once the sim cools the worker
   stops posting frames, so an idle graph costs zero GPU/CPU work.
-- **Arrow throttling** — arrowheads depend on positions *and* zoom, so they are
+- **Arrow throttling** — arrowheads depend on positions _and_ zoom, so they are
   rebuilt only when a new frame arrives or zoom changes meaningfully, written
   into a reused `Float32Array`.
 
-These decisions are documented there; this README covers *why the renderer
-itself* is shaped the way it is.
+These decisions are documented there; this README covers _why the renderer
+itself_ is shaped the way it is.
 
 ---
 

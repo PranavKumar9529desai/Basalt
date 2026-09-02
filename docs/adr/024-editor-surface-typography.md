@@ -33,15 +33,15 @@ one-off typography or color values when a token exists.
 
 The editor defines these visual roles:
 
-| Role | Responsibility |
-| --- | --- |
-| Note title | Filename identity and rename surface; strongest editor heading |
-| Section label | UI label such as `Properties`; distinct from body text, subordinate to the title |
-| Property key | Metadata name; muted relative to its value |
-| Property value | Editable metadata; primary editor text |
-| Empty value | Explicitly empty metadata; readable but faint |
-| Editor control | Inputs, chips, checkboxes, suggestions, and focus states |
-| Body prose | Markdown content and normal paragraph rhythm |
+| Role           | Responsibility                                                                   |
+| -------------- | -------------------------------------------------------------------------------- |
+| Note title     | Filename identity and rename surface; strongest editor heading                   |
+| Section label  | UI label such as `Properties`; distinct from body text, subordinate to the title |
+| Property key   | Metadata name; muted relative to its value                                       |
+| Property value | Editable metadata; primary editor text                                           |
+| Empty value    | Explicitly empty metadata; readable but faint                                    |
+| Editor control | Inputs, chips, checkboxes, suggestions, and focus states                         |
+| Body prose     | Markdown content and normal paragraph rhythm                                     |
 
 ### Token ownership
 

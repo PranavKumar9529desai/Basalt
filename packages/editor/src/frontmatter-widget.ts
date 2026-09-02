@@ -14,7 +14,10 @@ function isFrontmatterObject(v: FrontmatterValue): v is FrontmatterVariant {
   return typeof v !== "string";
 }
 
-function getVariantKey(v: FrontmatterVariant, name: string): string | undefined {
+function getVariantKey(
+  v: FrontmatterVariant,
+  name: string,
+): string | undefined {
   const lower = name.toLowerCase();
   for (const key of Object.keys(v)) {
     if (key.toLowerCase() === lower) return key;
@@ -74,12 +77,15 @@ function coerce(text: string, original?: FrontmatterValue): FrontmatterValue {
     if (variantValue<boolean>(original, "Checkbox") !== undefined) {
       return { Checkbox: t === "true" || t === "yes" || t === "1" };
     }
-    if (variantValue<string>(original, "Date") !== undefined) return { Date: t };
-    if (variantValue<string>(original, "DateTime") !== undefined) return { DateTime: t };
+    if (variantValue<string>(original, "Date") !== undefined)
+      return { Date: t };
+    if (variantValue<string>(original, "DateTime") !== undefined)
+      return { DateTime: t };
     if (variantValue<string>(original, "Link") !== undefined) {
       return { Link: t.replace(/^\[\[|\]\]$/g, "") };
     }
-    if (variantValue<string>(original, "Text") !== undefined) return { Text: t };
+    if (variantValue<string>(original, "Text") !== undefined)
+      return { Text: t };
   }
   return inferValue(t);
 }
@@ -105,7 +111,11 @@ export class FrontmatterWidget extends WidgetType {
   /** Dispatch a frontmatter edit through the view captured at toDOM. No-ops
    * safely if toDOM hasn't run (defensive; the widget is only visible once a
    * view exists). */
-  private editWith(key: string, value?: FrontmatterValue, newKey?: string): void {
+  private editWith(
+    key: string,
+    value?: FrontmatterValue,
+    newKey?: string,
+  ): void {
     const v = this.view;
     if (!v) return;
     this.edit(v, key, value, newKey);
@@ -237,8 +247,11 @@ export class FrontmatterWidget extends WidgetType {
       }
     }
     const input = document.createElement("input");
-    const date = typeof v !== "string" && variantValue<string>(v, "Date") !== undefined;
-    const dateTime = typeof v !== "string" && variantValue<string>(v, "DateTime") !== undefined;
+    const date =
+      typeof v !== "string" && variantValue<string>(v, "Date") !== undefined;
+    const dateTime =
+      typeof v !== "string" &&
+      variantValue<string>(v, "DateTime") !== undefined;
     input.type = date ? "date" : dateTime ? "datetime-local" : "text";
     input.className = "cm-fm-value";
     input.value = dateTime ? displayValue(v).slice(0, 16) : displayValue(v);
@@ -246,7 +259,8 @@ export class FrontmatterWidget extends WidgetType {
       input.classList.add("cm-fm-empty");
       input.placeholder = "Empty";
     }
-    const commit = () => this.editWith(entry.key, coerce(input.value, entry.value));
+    const commit = () =>
+      this.editWith(entry.key, coerce(input.value, entry.value));
     input.addEventListener("blur", commit);
     input.addEventListener("keydown", (e) => {
       if ((e as KeyboardEvent).key === "Enter") input.blur();
@@ -288,30 +302,43 @@ export class FrontmatterWidget extends WidgetType {
       suggestions.hidden = true;
       const populate = async () => {
         const prefix = add.value.trim().replace(/^#/, "");
-        const tags = key === "tags" ? await this.fetch.onFetchTags?.(prefix) : undefined;
-        const links = key === "aliases" ? await this.fetch.onFetchLinks?.(add.value) : undefined;
-        const opts: string[] = key === "tags" ? (tags ?? []) : (links ?? []).map((l) => l.name);
+        const tags =
+          key === "tags" ? await this.fetch.onFetchTags?.(prefix) : undefined;
+        const links =
+          key === "aliases"
+            ? await this.fetch.onFetchLinks?.(add.value)
+            : undefined;
+        const opts: string[] =
+          key === "tags" ? (tags ?? []) : (links ?? []).map((l) => l.name);
         const present = new Set(items.map(displayValue));
         suggestions.replaceChildren(
-          ...opts.filter((o) => !present.has(o)).map((o) => {
-            const option = document.createElement("button");
-            option.type = "button";
-            option.className = "cm-fm-suggestion";
-            option.textContent = o;
-            option.addEventListener("mousedown", (event) => event.preventDefault());
-            option.addEventListener("click", () => {
-              add.value = o;
-              add.focus();
-              suggestions.hidden = true;
-            });
-            return option;
-          }),
+          ...opts
+            .filter((o) => !present.has(o))
+            .map((o) => {
+              const option = document.createElement("button");
+              option.type = "button";
+              option.className = "cm-fm-suggestion";
+              option.textContent = o;
+              option.addEventListener("mousedown", (event) =>
+                event.preventDefault(),
+              );
+              option.addEventListener("click", () => {
+                add.value = o;
+                add.focus();
+                suggestions.hidden = true;
+              });
+              return option;
+            }),
         );
         suggestions.hidden = suggestions.childElementCount === 0;
       };
       add.addEventListener("focus", populate);
       add.addEventListener("input", populate);
-      add.addEventListener("blur", () => window.setTimeout(() => { suggestions.hidden = true; }, 120));
+      add.addEventListener("blur", () =>
+        window.setTimeout(() => {
+          suggestions.hidden = true;
+        }, 120),
+      );
       wrap.appendChild(suggestions);
     }
 

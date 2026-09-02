@@ -14,12 +14,18 @@ function makeServices(overrides: Partial<LeafServices> = {}): LeafServices {
     onTabStructureChanged: () => () => {},
     activeNote: null,
     openPinned: () => "",
-    renameNote: vi.fn().mockResolvedValue({ ok: true as const, path: "/vault/note.md" }),
+    renameNote: vi
+      .fn()
+      .mockResolvedValue({ ok: true as const, path: "/vault/note.md" }),
     ...overrides,
   };
 }
 
-const tab: LeafTabInfo = { id: "tab:/vault/Note.md", path: "/vault/Note.md", title: "Note" };
+const tab: LeafTabInfo = {
+  id: "tab:/vault/Note.md",
+  path: "/vault/Note.md",
+  title: "Note",
+};
 
 describe("InlineTitle", () => {
   beforeEach(() => {
@@ -35,7 +41,9 @@ describe("InlineTitle", () => {
   });
 
   it("enters edit mode with the name selected on click", () => {
-    const services = makeServices({ getTabInfo: () => ({ path: tab.path, title: "Note" }) });
+    const services = makeServices({
+      getTabInfo: () => ({ path: tab.path, title: "Note" }),
+    });
     render(<InlineTitle tab={tab} services={services} />);
     fireEvent.click(screen.getByRole("button"));
 
@@ -47,7 +55,9 @@ describe("InlineTitle", () => {
   });
 
   it("auto-enters edit mode with the name selected when autoEdit (note creation)", () => {
-    const services = makeServices({ getTabInfo: () => ({ path: tab.path, title: "Note" }) });
+    const services = makeServices({
+      getTabInfo: () => ({ path: tab.path, title: "Note" }),
+    });
     render(<InlineTitle tab={tab} services={services} autoEdit />);
     const input = screen.getByRole("textbox") as HTMLInputElement;
     expect(input.value).toBe("Note");
@@ -83,13 +93,7 @@ describe("InlineTitle", () => {
   it("notifies the leaf after an explicit Enter commit", async () => {
     const onSubmit = vi.fn();
     const services = makeServices();
-    render(
-      <InlineTitle
-        tab={tab}
-        services={services}
-        onSubmit={onSubmit}
-      />,
-    );
+    render(<InlineTitle tab={tab} services={services} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByRole("button"));
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Renamed" },
@@ -176,7 +180,9 @@ describe("InlineTitle", () => {
       renameNote,
       getTabInfo: () => ({ path: tab.path, title: "Note" }),
     });
-    const { rerender } = render(<InlineTitle tab={tab} services={services} autoEdit />);
+    const { rerender } = render(
+      <InlineTitle tab={tab} services={services} autoEdit />,
+    );
 
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "MidEdit" } });

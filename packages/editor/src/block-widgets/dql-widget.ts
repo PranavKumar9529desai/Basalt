@@ -33,14 +33,20 @@ export interface QueryResult {
 
 export type RunQueryFn = (dql: string) => Promise<QueryResult>;
 
-export const runQueryFacet = Facet.define<RunQueryFn | undefined, RunQueryFn | undefined>({
+export const runQueryFacet = Facet.define<
+  RunQueryFn | undefined,
+  RunQueryFn | undefined
+>({
   combine: (values) => values[0],
 });
 
 /** Open a note by name (resolved to a path by the feature layer). */
 export type OpenLinkFn = (name: string) => void;
 
-export const openLinkFacet = Facet.define<OpenLinkFn | undefined, OpenLinkFn | undefined>({
+export const openLinkFacet = Facet.define<
+  OpenLinkFn | undefined,
+  OpenLinkFn | undefined
+>({
   combine: (values) => values[0],
 });
 
@@ -99,9 +105,10 @@ function renderTableHtml(result: QueryResult): string {
         `<tr>${row.map((cell) => `<td class="cm-dql-td">${renderCellHtml(cell)}</td>`).join("")}</tr>`,
     )
     .join("");
-  const footer = result.total > result.rows.length
-    ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-    : "";
+  const footer =
+    result.total > result.rows.length
+      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
+      : "";
   return `<table class="cm-dql-table"><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml}</tbody></table>${footer}`;
 }
 
@@ -112,12 +119,15 @@ function renderListHtml(result: QueryResult): string {
   const itemsHtml = result.rows
     .map((row) => {
       const cell = row[0];
-      return cell ? `<li class="cm-dql-list-item">${renderCellHtml(cell)}</li>` : "";
+      return cell
+        ? `<li class="cm-dql-list-item">${renderCellHtml(cell)}</li>`
+        : "";
     })
     .join("");
-  const footer = result.total > result.rows.length
-    ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-    : "";
+  const footer =
+    result.total > result.rows.length
+      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
+      : "";
   return `<ul class="cm-dql-list">${itemsHtml}</ul>${footer}`;
 }
 
@@ -134,9 +144,10 @@ function renderTaskHtml(result: QueryResult): string {
       return `<li class="cm-dql-task-item"><span class="cm-dql-task-link">${linkHtml}</span> <span class="cm-dql-task-text">${escapeHtml(taskText)}</span></li>`;
     })
     .join("");
-  const footer = result.total > result.rows.length
-    ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-    : "";
+  const footer =
+    result.total > result.rows.length
+      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
+      : "";
   return `<ul class="cm-dql-task-list">${itemsHtml}</ul>${footer}`;
 }
 
@@ -205,7 +216,8 @@ class DqlResultWidget extends WidgetType {
           div.innerHTML = `<div class="cm-dql-error">Query error: ${escapeHtml(String(err))}</div>`;
         });
     } else {
-      div.innerHTML = '<div class="cm-dql-error">Query engine not available</div>';
+      div.innerHTML =
+        '<div class="cm-dql-error">Query engine not available</div>';
     }
 
     return div;
@@ -363,7 +375,10 @@ interface DqlBlockSpecModel extends DqlModel {
   inCursor: boolean;
 }
 
-const parse = (state: EditorState, node: SyntaxNodeRef): DqlBlockSpecModel | null => {
+const parse = (
+  state: EditorState,
+  node: SyntaxNodeRef,
+): DqlBlockSpecModel | null => {
   if (node.type.name !== "FencedCode") return null;
 
   const doc = state.doc;
@@ -387,14 +402,23 @@ const parse = (state: EditorState, node: SyntaxNodeRef): DqlBlockSpecModel | nul
   return { queryText, from: node.from, to: endLine.to, inCursor };
 };
 
-const span = (model: DqlBlockSpecModel): { from: number; to: number } | null => {
+const span = (
+  model: DqlBlockSpecModel,
+): { from: number; to: number } | null => {
   if (model.inCursor) return null;
   return { from: model.from, to: model.to };
 };
 
-const renderWidget = (model: DqlBlockSpecModel, state: EditorState): DqlResultWidget | null => {
+const renderWidget = (
+  model: DqlBlockSpecModel,
+  state: EditorState,
+): DqlResultWidget | null => {
   if (model.inCursor) return null;
-  return new DqlResultWidget(model.queryText, state.facet(runQueryFacet), state.facet(openLinkFacet));
+  return new DqlResultWidget(
+    model.queryText,
+    state.facet(runQueryFacet),
+    state.facet(openLinkFacet),
+  );
 };
 
 export const dqlBlockSpec: BlockWidgetSpec<DqlBlockSpecModel> = {

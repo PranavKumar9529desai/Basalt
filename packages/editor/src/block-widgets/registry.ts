@@ -1,10 +1,7 @@
 import { Facet, type Extension, type EditorState } from "@codemirror/state";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { WidgetType } from "@codemirror/view";
-import type {
-  DecorationCollector,
-  DecorationContext,
-} from "../preview/types";
+import type { DecorationCollector, DecorationContext } from "../preview/types";
 
 /**
  * Generic block-widget kernel (ADR-022 rule 14).
@@ -77,7 +74,10 @@ export function blockWidgetsFor(
   return state.facet(blockWidgetSpecsFacet);
 }
 
-export function blockWidgetMode(state: EditorState, id: string): BlockWidgetMode {
+export function blockWidgetMode(
+  state: EditorState,
+  id: string,
+): BlockWidgetMode {
   return state.facet(blockWidgetModeFacet)[id] ?? "widget";
 }
 
@@ -118,7 +118,10 @@ export function handleBlockWidgetsNode(
     if (!widget) continue;
     const span =
       spec.span?.(model, ctx.state) ??
-      ({ from: node.from, to: ctx.state.doc.lineAt(node.to).to } as { from: number; to: number });
+      ({ from: node.from, to: ctx.state.doc.lineAt(node.to).to } as {
+        from: number;
+        to: number;
+      });
     if (!span) continue;
     // block:false — a block:true replace yanks the range out of line flow so
     // ArrowUp/Down can't place the caret across it (live-preview.ts invariant).

@@ -69,19 +69,44 @@ export const GraphContextMenu: FC<GraphContextMenuProps> = ({
         </>
       ) : (
         <>
-          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpen(menu.full)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onOpen(menu.full)}
+          >
             Open
           </Button>
-          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpenInNewTab(menu.full)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onOpenInNewTab(menu.full)}
+          >
             Open in New Tab
           </Button>
-          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onCenter(menu.full)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onCenter(menu.full)}
+          >
             Center in Graph
           </Button>
-          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onOpenLocalGraph(menu.full)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onOpenLocalGraph(menu.full)}
+          >
             Open Local Graph
           </Button>
-          <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => onExpand(menu.full)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start w-full"
+            onClick={() => onExpand(menu.full)}
+          >
             Expand neighborhood
           </Button>
         </>

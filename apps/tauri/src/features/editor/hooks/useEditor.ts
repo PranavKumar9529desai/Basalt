@@ -8,9 +8,13 @@ import {
   clearQueryCache,
   createEditorExtensionGroups,
   formatBenchmarkReport,
+  formatWatchdogReport,
+  getWatchdogStats,
   requestPreviewRebuild,
   runIsolationBenchmark,
   runTypingBenchmark,
+  startWatchdog,
+  stopWatchdog,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
 import { type LeafProps, useLeafServices } from "@workspace/views";
@@ -87,7 +91,9 @@ export function useEditor(tab: LeafProps["tab"]) {
 
     controller.setCurrentTab(t);
 
-    useActiveNoteStore.getState().setActiveNote({ path: t.path, name: t.title });
+    useActiveNoteStore
+      .getState()
+      .setActiveNote({ path: t.path, name: t.title });
     void ioRef.current.refreshBacklinks(t.path);
     void controller.showTab(t);
   }, [tab.id, tab.path, tab.line, controller, tabRef, ioRef]);
@@ -195,7 +201,10 @@ export function useEditor(tab: LeafProps["tab"]) {
           { name: "+suggestions", extensions: [...g.base, ...g.suggestions] },
           { name: "+links", extensions: [...g.base, ...g.links] },
 
-          { name: "+block-widgets", extensions: [...g.base, ...g.blockWidgets] },
+          {
+            name: "+block-widgets",
+            extensions: [...g.base, ...g.blockWidgets],
+          },
           { name: "full", extensions: full },
         ]);
         void report("Editor typing benchmark — extension isolation", results);
@@ -204,9 +213,40 @@ export function useEditor(tab: LeafProps["tab"]) {
       }
     });
 
+    // Dev: main-thread watchdog. Toggle on/off; report writes to temp file.
+    let watchdogActive = false;
+    commandService.registerCommand("dev:watchdog", () => {
+      if (watchdogActive) {
+        stopWatchdog();
+        watchdogActive = false;
+        ioRef.current.setStatus("Watchdog stopped");
+      } else {
+        startWatchdog(100);
+        watchdogActive = true;
+        ioRef.current.setStatus("Watchdog started (100ms threshold)");
+      }
+    });
+    commandService.registerCommand("dev:watchdog-report", async () => {
+      const s = getWatchdogStats();
+      const md = formatWatchdogReport(s);
+      try {
+        const path = await invoke<string>("write_dev_report", {
+          fileName: "watchdog-report.md",
+          contents: md,
+        });
+        ioRef.current.setStatus(`Watchdog report written to ${path}`);
+      } catch (err) {
+        console.error("[EditorView] watchdog report write failed:", err);
+        ioRef.current.setStatus("Watchdog report failed (see console)");
+      }
+    });
+
     return () => {
       commandService.unregister("dev:editor-benchmark");
       commandService.unregister("dev:editor-benchmark-isolation");
+      commandService.unregister("dev:watchdog");
+      commandService.unregister("dev:watchdog-report");
+      if (watchdogActive) stopWatchdog();
     };
   }, [view, io, ioRef, controller]);
 

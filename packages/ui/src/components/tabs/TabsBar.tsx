@@ -274,7 +274,7 @@ export function TabsBar({
         const target =
           event.target instanceof HTMLElement
             ? event.target.closest<HTMLElement>("[data-tab-id]")
-          : null;
+            : null;
         const currentId = target?.dataset.tabId;
         if (!currentId) return;
         const currentIndex = tabs.findIndex((tab) => tab.id === currentId);
@@ -336,7 +336,8 @@ export function TabsBar({
                 dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined
               }
               hidden={
-                index < visibleTabStart || index >= visibleTabStart + visibleTabCount
+                index < visibleTabStart ||
+                index >= visibleTabStart + visibleTabCount
               }
             />
           ))}

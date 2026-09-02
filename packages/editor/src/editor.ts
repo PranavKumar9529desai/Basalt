@@ -22,9 +22,21 @@ import {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
 } from "./block-widgets/frontmatter";
-import { htmlBlockSpec, HTML_BLOCK_THEME, ensureTypographyStyle } from "./block-widgets/html-block";
-import { dqlBlockSpec, DQL_WIDGET_THEME, openLinkFacet, runQueryFacet } from "./block-widgets/dql-widget";
-import { tableBlockSpec, TABLE_BLOCK_THEME } from "./block-widgets/table-widget";
+import {
+  htmlBlockSpec,
+  HTML_BLOCK_THEME,
+  ensureTypographyStyle,
+} from "./block-widgets/html-block";
+import {
+  dqlBlockSpec,
+  DQL_WIDGET_THEME,
+  openLinkFacet,
+  runQueryFacet,
+} from "./block-widgets/dql-widget";
+import {
+  tableBlockSpec,
+  TABLE_BLOCK_THEME,
+} from "./block-widgets/table-widget";
 import {
   blockWidgetSpecsFacet,
   type BlockWidgetSpec,
@@ -36,8 +48,6 @@ const basaltMarkdownExtensions = [
   yamlFrontmatterExtension,
   Table,
 ];
-
-
 
 /**
  * Editor extensions grouped by concern, so the benchmark harness can run
@@ -100,7 +110,12 @@ export function createEditorExtensionGroups(
       keymap.of(backticksKeymap),
       pasteImageExtension(config.onPasteImage),
     ],
-    livePreview: [LIVE_PREVIEW_THEME, livePreviewPlugin, EMBED_PREVIEW_THEME, embedPreviewPlugin],
+    livePreview: [
+      LIVE_PREVIEW_THEME,
+      livePreviewPlugin,
+      EMBED_PREVIEW_THEME,
+      embedPreviewPlugin,
+    ],
     suggestions: [
       SUGGESTIONS_THEME,
       createSuggestionsPlugin(onFetchLinks, onFetchTags),

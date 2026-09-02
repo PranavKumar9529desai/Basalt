@@ -195,7 +195,12 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     const seq = ++latestSwitcherSeq;
     const q = query.trim();
     if (q.length < 2) {
-      set({ switcherResults: [], switcherSelectedIndex: 0, isSwitcherLoading: false, switcherError: null });
+      set({
+        switcherResults: [],
+        switcherSelectedIndex: 0,
+        isSwitcherLoading: false,
+        switcherError: null,
+      });
       return;
     }
     set({ isSwitcherLoading: true, switcherError: null });
@@ -205,7 +210,11 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         limit: 20,
       });
       if (seq !== latestSwitcherSeq) return; // stale response, discard
-      set({ switcherResults: results, switcherSelectedIndex: 0, isSwitcherLoading: false });
+      set({
+        switcherResults: results,
+        switcherSelectedIndex: 0,
+        isSwitcherLoading: false,
+      });
     } catch (err) {
       if (seq !== latestSwitcherSeq) return;
       console.error("[search] search_files error:", err);

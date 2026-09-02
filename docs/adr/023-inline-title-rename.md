@@ -15,17 +15,17 @@ renames the file on commit and updates when the file is renamed elsewhere.
 Three interacting requirements shaped the design:
 
 1. **Rename must be a single, atomic, recorded action.** Obsidian rewrites
-   `[[wikilinks]]` in *other* notes when you rename (its backup-misrename bug
+   `[[wikilinks]]` in _other_ notes when you rename (its backup-misrename bug
    made this table-stakes). A rename is one user intent and must mutate the
    filesystem, the graph, the index, and the UI consistently.
 2. **The title must never touch the typing hot path.** The editor's
    <16ms-typing model (ADR-020/ADR-019) requires a React-free CodeMirror
    pipeline. A React `state` change on every keystroke inside the title would
-   be fine — but the title lives *above a 5k-line-document scroller*, which
+   be fine — but the title lives _above a 5k-line-document scroller_, which
    must stay virtualized.
 3. **The filename is the single source of truth.** Documents can carry a
    frontmatter `title` property (ADR-022) for display/backlinks, but disk is
-   authoritative. The inline title *is* the filename surface, not a cosmetic
+   authoritative. The inline title _is_ the filename surface, not a cosmetic
    label.
 
 ## Decision
@@ -34,11 +34,11 @@ Three interacting requirements shaped the design:
 
 Basalt has exactly three "names" for a note, and this ADR pins their roles:
 
-| Surface | Owner | Purpose | Authoritative? |
-| ------- | ----- | ------- | -------------- |
-| On-disk stem (`Note` from `Note.md`) | filesystem | identity, persistence | **Yes** |
-| Inline title (scroller UI) | leaf chrome | rename UX, display | reflect ✓, edits → rename |
-| Frontmatter `title` property | document (ADR-022) | prose display, backlink labels | No — cosmetic, can differ |
+| Surface                              | Owner              | Purpose                        | Authoritative?            |
+| ------------------------------------ | ------------------ | ------------------------------ | ------------------------- |
+| On-disk stem (`Note` from `Note.md`) | filesystem         | identity, persistence          | **Yes**                   |
+| Inline title (scroller UI)           | leaf chrome        | rename UX, display             | reflect ✓, edits → rename |
+| Frontmatter `title` property         | document (ADR-022) | prose display, backlink labels | No — cosmetic, can differ |
 
 Renaming flows **downhill**: the inline title edits the on-disk stem; the
 frontmatter `title` is left untouched by rename. Backlink labels keep using
@@ -122,7 +122,7 @@ mutations belong there):
 4. Under the vault write lock: drop the old document and re-add the renamed
    note + changed candidates; `index_remove(old)` + `index_upsert` the
    rewritten set.
-5. Returns `{ path, name, updated_files }` — only *changed* paths. **Emits
+5. Returns `{ path, name, updated_files }` — only _changed_ paths. **Emits
    no update event**: the frontend refreshes its own tree.
 
 Frontend orchestration (`renameNote` in `shared/useWorkspace.ts`): invoke →

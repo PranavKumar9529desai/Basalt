@@ -18,13 +18,13 @@ The precedent is `basalt-graph`: originally part of `basalt-vault`, it was extra
 
 Create **`crates/basalt-tables/`** — a new Rust crate owning:
 
-| Concern | Current location | Destination |
-|---------|-----------------|-------------|
-| DQL query execution (filter, sort, limit, group) | `commands/query.rs` | `basalt-tables::engine` |
-| `PageRow` construction from vault metadata | `commands/query.rs` | `basalt-tables::engine` |
-| Expression evaluation (`eval_expr`, `eval_to_typed`) | `commands/query.rs` | `basalt-tables::engine` |
+| Concern                                                 | Current location    | Destination             |
+| ------------------------------------------------------- | ------------------- | ----------------------- |
+| DQL query execution (filter, sort, limit, group)        | `commands/query.rs` | `basalt-tables::engine` |
+| `PageRow` construction from vault metadata              | `commands/query.rs` | `basalt-tables::engine` |
+| Expression evaluation (`eval_expr`, `eval_to_typed`)    | `commands/query.rs` | `basalt-tables::engine` |
 | Column/row building (`build_columns`, `resolve_column`) | `commands/query.rs` | `basalt-tables::engine` |
-| Event-table streams (future) | — | `basalt-tables::events` |
+| Event-table streams (future)                            | —                   | `basalt-tables::events` |
 
 The Tauri command `run_query` becomes a thin wrapper: parse DQL → call `basalt-tables::execute_query` → return result.
 

@@ -19,7 +19,7 @@ import {
 } from "@workspace/ui/components/ui/context-menu";
 import type { LeafTabInfo } from "@workspace/views";
 import { useRef, useState } from "react";
-  import { useRenameSignalStore } from "../features/editor/store/renameSignal";
+import { useRenameSignalStore } from "../features/editor/store/renameSignal";
 import { useTabsStore } from "../features/tabs";
 
 /**
@@ -62,7 +62,7 @@ export function ViewHeader({
     const parts = relative.replace(/\.md$/i, "").split("/").filter(Boolean);
     return parts.length >= 2
       ? `${parts[parts.length - 2]} / ${parts[parts.length - 1]}`
-      : parts[0] ?? "";
+      : (parts[0] ?? "");
   })();
   const relativePath =
     vaultPath && tab.path.startsWith(`${vaultPath}/`)
@@ -117,11 +117,19 @@ export function ViewHeader({
           variant="ghost"
           size="icon-xs"
           aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
-          title={viewMode === "reading" ? "Edit note (Ctrl/Cmd+E)" : "Reading view (Ctrl/Cmd+E)"}
+          title={
+            viewMode === "reading"
+              ? "Edit note (Ctrl/Cmd+E)"
+              : "Reading view (Ctrl/Cmd+E)"
+          }
           onClick={handleModeClick}
           className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
         >
-          {viewMode === "reading" ? <PenLineIcon size={14} /> : <BookOpenIcon size={14} />}
+          {viewMode === "reading" ? (
+            <PenLineIcon size={14} />
+          ) : (
+            <BookOpenIcon size={14} />
+          )}
         </Button>
 
         <ContextMenu open={open} onOpenChange={setOpen}>

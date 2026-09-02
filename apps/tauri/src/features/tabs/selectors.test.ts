@@ -56,9 +56,13 @@ describe("getTabByPath", () => {
     // original path-derived id. Lookup must use path.
     const moved = tab("old/notes/a.md", "new/notes/a.md");
     const t: Record<TabId, TabModel> = { ...tabs, "old/notes/a.md": moved };
-    expect(getTabByPath(pane(["old/notes/a.md"]), t, "new/notes/a.md")).toBe(moved);
+    expect(getTabByPath(pane(["old/notes/a.md"]), t, "new/notes/a.md")).toBe(
+      moved,
+    );
     // The old path the id was derived from must NOT match.
-    expect(getTabByPath(pane(["old/notes/a.md"]), t, "old/notes/a.md")).toBe(null);
+    expect(getTabByPath(pane(["old/notes/a.md"]), t, "old/notes/a.md")).toBe(
+      null,
+    );
   });
 
   it("returns the first pane-ordered tab when several share a path", () => {

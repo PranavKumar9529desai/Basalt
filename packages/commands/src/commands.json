@@ -78,6 +78,18 @@
     "icon": "IconGauge"
   },
   {
+    "id": "dev:watchdog",
+    "name": "Toggle Main-Thread Watchdog",
+    "category": "App",
+    "icon": "IconGauge"
+  },
+  {
+    "id": "dev:watchdog-report",
+    "name": "Write Watchdog Report",
+    "category": "App",
+    "icon": "IconGauge"
+  },
+  {
     "id": "vault:pick-and-set",
     "name": "Change Vault Location",
     "category": "Vault",

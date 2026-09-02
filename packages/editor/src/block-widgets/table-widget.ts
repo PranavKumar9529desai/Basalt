@@ -90,14 +90,11 @@ function renderInlineCell(text: string): string {
   let result = escapeHtml(text);
 
   // [[target]] or [[target|alias]]
-  result = result.replace(
-    /\[\[([^\]]+)\]\]/g,
-    (_match, inner: string) => {
-      const [target, alias] = inner.split("|");
-      const display = alias ?? target;
-      return `<span class="cm-table-link">${escapeHtml(display)}</span>`;
-    },
-  );
+  result = result.replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
+    const [target, alias] = inner.split("|");
+    const display = alias ?? target;
+    return `<span class="cm-table-link">${escapeHtml(display)}</span>`;
+  });
 
   // **bold**
   result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
@@ -119,10 +116,13 @@ function buildTableHtml(model: TableBlockModel): string {
   for (let i = 0; i < headers.length; i++) {
     const a = alignments[i] ?? "none";
     const styleAttr =
-      a === "left" ? ' style="text-align:left"'
-      : a === "center" ? ' style="text-align:center"'
-      : a === "right" ? ' style="text-align:right"'
-      : "";
+      a === "left"
+        ? ' style="text-align:left"'
+        : a === "center"
+          ? ' style="text-align:center"'
+          : a === "right"
+            ? ' style="text-align:right"'
+            : "";
     html += `<th${styleAttr}>${renderInlineCell(headers[i])}</th>`;
   }
   html += "</tr></thead>";
@@ -135,10 +135,13 @@ function buildTableHtml(model: TableBlockModel): string {
     for (let c = 0; c < headers.length; c++) {
       const a = alignments[c] ?? "none";
       const styleAttr =
-        a === "left" ? ' style="text-align:left"'
-        : a === "center" ? ' style="text-align:center"'
-        : a === "right" ? ' style="text-align:right"'
-        : "";
+        a === "left"
+          ? ' style="text-align:left"'
+          : a === "center"
+            ? ' style="text-align:center"'
+            : a === "right"
+              ? ' style="text-align:right"'
+              : "";
       const cell = body[r]?.[c] ?? "";
       html += `<td${styleAttr}>${renderInlineCell(cell)}</td>`;
     }
@@ -178,10 +181,12 @@ class TableBlockWidget extends WidgetType {
 // BlockWidgetSpec
 // ---------------------------------------------------------------------------
 
-const matches = (node: SyntaxNodeRef): boolean =>
-  node.type.name === "Table";
+const matches = (node: SyntaxNodeRef): boolean => node.type.name === "Table";
 
-const parse = (state: EditorState, node: SyntaxNodeRef): TableBlockModel | null => {
+const parse = (
+  state: EditorState,
+  node: SyntaxNodeRef,
+): TableBlockModel | null => {
   const raw = state.doc.sliceString(node.from, node.to);
   const { headers, body, alignments } = parseMarkdownTable(raw);
   if (headers.length === 0) return null;
@@ -192,7 +197,15 @@ const parse = (state: EditorState, node: SyntaxNodeRef): TableBlockModel | null 
   const blockToLine = state.doc.lineAt(node.to).number;
   const active = headLine >= blockFromLine && headLine <= blockToLine;
 
-  return { raw, headers, body, alignments, active, from: node.from, to: node.to };
+  return {
+    raw,
+    headers,
+    body,
+    alignments,
+    active,
+    from: node.from,
+    to: node.to,
+  };
 };
 
 const span = (model: TableBlockModel): { from: number; to: number } => ({
@@ -220,7 +233,6 @@ export const tableBlockSpec: BlockWidgetSpec<TableBlockModel> = {
 // ---------------------------------------------------------------------------
 // Theme
 // ---------------------------------------------------------------------------
-
 
 export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-table-block": {

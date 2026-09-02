@@ -14,15 +14,15 @@ correctness — a bloated context window degrades an agent's recall (the
 "context rot" / lost-in-the-middle effects) and stale docs actively poison
 decisions.
 
-| File | Load when… | Always loaded? |
-| ---- | ---------- | -------------- |
-| **`AGENTS.md`** (this file) | Every session | ✅ yes — keep lean |
-| [`CONVENTIONS.md`](./CONVENTIONS.md) | Writing/refactoring code (naming, state, comments) | ⚠️ on demand |
-| [`root README.md`](./README.md) | Human orientation / quick start | ⚠️ on demand |
-| [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md) | Working inside `apps/tauri/` (app-layer rules) | ⚠️ auto via nesting |
-| [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md) | Starting a session — the active workstream handoff | ✅ every session |
-| [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine) | ⚠️ on demand |
-| [`docs/webview-costs.md`](./docs/webview-costs.md) | Remaining WebView / Obsidian-class costs (keystroke DOM, reading mode, JSON IPC) | ⚠️ on demand |
+| File                                                             | Load when…                                                                       | Always loaded?      |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------- |
+| **`AGENTS.md`** (this file)                                      | Every session                                                                    | ✅ yes — keep lean  |
+| [`CONVENTIONS.md`](./CONVENTIONS.md)                             | Writing/refactoring code (naming, state, comments)                               | ⚠️ on demand        |
+| [`root README.md`](./README.md)                                  | Human orientation / quick start                                                  | ⚠️ on demand        |
+| [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md)                   | Working inside `apps/tauri/` (app-layer rules)                                   | ⚠️ auto via nesting |
+| [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md)                 | Starting a session — the active workstream handoff                               | ✅ every session    |
+| [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine)                    | ⚠️ on demand        |
+| [`docs/webview-costs.md`](./docs/webview-costs.md)               | Remaining WebView / Obsidian-class costs (keystroke DOM, reading mode, JSON IPC) | ⚠️ on demand        |
 
 Rules for keeping this lean:
 
@@ -45,25 +45,25 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 
 ## Current State (as of 2026-08-31)
 
-| Area                                                                | Status                                          |
-| ------------------------------------------------------------------- | ----------------------------------------------- |
-| Four-layer architecture                                             | ✅ Established                                  |
-| CommandService + KeybindingService (registry pattern)               | ✅ Complete                                     |
-| Workspace grid + unified header band (`HeaderBandRule`)             | ✅ Complete                                     |
-| Tab system (single pane, DnD, persistence, overflow dropdown)       | ✅ Complete                                     |
-| Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete                                     |
-| Command palette / quick switcher / search (tantivy + nucleo)        | ✅ Complete                                     |
-| File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                     |
-| **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                     |
-| **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                     |
-| Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                  |
-| Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB |
-| **Inline title + rename (ADR-023)**                                 | ✅ Complete                                     |
-| Markdown reading mode (ADR-024)                                     | ✅ Complete                                     |
+| Area                                                                | Status                                                                                                                                |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Four-layer architecture                                             | ✅ Established                                                                                                                        |
+| CommandService + KeybindingService (registry pattern)               | ✅ Complete                                                                                                                           |
+| Workspace grid + unified header band (`HeaderBandRule`)             | ✅ Complete                                                                                                                           |
+| Tab system (single pane, DnD, persistence, overflow dropdown)       | ✅ Complete                                                                                                                           |
+| Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete                                                                                                                           |
+| Command palette / quick switcher / search (tantivy + nucleo)        | ✅ Complete                                                                                                                           |
+| File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                                                                                                           |
+| **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                                                                                                           |
+| **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                                                                                                           |
+| Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                                                                                                        |
+| Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                    |
+| **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                           |
+| Markdown reading mode (ADR-024)                                     | ✅ Complete                                                                                                                           |
 | Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
-| **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                     |
-| Rust acceleration (batched IPC)                                     | ⏳ Not started                                  |
-| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4 |
+| **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                           |
+| Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                        |
+| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                       |
 
 > **Freshness:** the authoritative "what's done / what's next" is
 > [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md). If this table disagrees with
@@ -268,14 +268,15 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [018-registry-driven-workbench](docs/adr/018-registry-driven-workbench.md)               | ADR-018: Registry-Driven Workbench                                          |
 | [019-editor-decoration-pipeline](docs/adr/019-editor-decoration-pipeline.md)             | ADR-019: Editor Decoration Pipeline — Single-Pass Architecture              |
 | [020-desktop-tier-performance](docs/adr/020-desktop-tier-performance.md)                 | ADR-020: Desktop-Tier Performance Architecture                              |
-| [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)     | ADR-021: Graph View Architecture                                          |
-| [022-frontmatter-engine](docs/adr/022-frontmatter-engine.md)                    | ADR-022: Frontmatter Engine — Structured, Typed, First-Class Properties       |
-| [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                   | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title           |
-| [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)       | ADR-024: Editor Surface Typography and Spatial Rhythm                         |
-| [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md) | ADR-025: Tab Lifecycle and Workspace Persistence                              |
-| [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md) | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline          |
-|[027-dql-query-engine](docs/adr/027-dql-query-engine.md)|ADR-027: DQL Query Engine — basalt-tables Crate|
-|[028-dql-aggregation](docs/adr/028-dql-aggregation.md)|ADR-028: DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions|
+| [021-graph-view-architecture](docs/adr/021-graph-view-architecture.md)                   | ADR-021: Graph View Architecture                                            |
+| [022-frontmatter-engine](docs/adr/022-frontmatter-engine.md)                             | ADR-022: Frontmatter Engine — Structured, Typed, First-Class Properties     |
+| [023-inline-title-rename](docs/adr/023-inline-title-rename.md)                           | ADR-023: Inline Note Title + Rename — Scroller-Injected React Title         |
+| [024-editor-surface-typography](docs/adr/024-editor-surface-typography.md)               | ADR-024: Editor Surface Typography and Spatial Rhythm                       |
+| [025-tab-lifecycle-and-persistence](docs/adr/025-tab-lifecycle-and-persistence.md)       | ADR-025: Tab Lifecycle and Workspace Persistence                            |
+| [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md)             | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline   |
+| [027-dql-query-engine](docs/adr/027-dql-query-engine.md)                                 | ADR-027: DQL Query Engine — basalt-tables Crate                             |
+| [028-dql-aggregation](docs/adr/028-dql-aggregation.md)                                   | ADR-028: DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions           |
+
 <!-- ADR_INDEX_END -->
 
 ---
@@ -288,7 +289,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add a shadcn primitive                | `packages/ui/src/components/ui/`           |
 | Add tab/pane business logic           | `apps/tauri/src/features/tabs/`            |
 | Add editor business logic             | `apps/tauri/src/features/editor/`          |
-| Add graph view/leaf UI + engine | `apps/tauri/src/features/graph/`            |
+| Add graph view/leaf UI + engine       | `apps/tauri/src/features/graph/`           |
 | Add vault/sidebar business logic      | `apps/tauri/src/features/vault/`           |
 | Add search business logic             | `apps/tauri/src/features/search/`          |
 | Wire sidebar + tabs + editor together | `apps/tauri/src/shared/`                   |

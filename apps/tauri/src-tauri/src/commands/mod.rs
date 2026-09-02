@@ -1,22 +1,34 @@
+pub mod assets;
 pub mod boot;
+pub mod common;
 pub mod dev;
 pub mod files;
+pub mod folders;
+pub mod frontmatter;
+pub mod notes;
+pub mod query;
 pub mod search;
 pub mod settings;
 pub mod vault;
-
-pub mod frontmatter;
-pub mod query;
 
 pub use boot::{boot, set_vault};
 pub use dev::write_dev_report;
 pub use query::run_query;
 
-pub use files::{
-    autocomplete_links, autocomplete_tags, cleanup_assets, create_folder, create_note,
-    create_untitled_note, delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks,
-    move_paths, open_file, open_files, reorganize_assets, rename_note, rename_path,
-    save_attachment, save_file, save_files,
+pub use files::{open_file, open_files, save_file, save_files};
+
+pub use notes::{
+    autocomplete_links, autocomplete_tags, create_note, create_untitled_note,
+    get_backlinks, rename_note,
+};
+
+pub use folders::{
+    create_folder, delete_file, delete_paths, move_paths, rename_path,
+};
+
+pub use assets::{
+    cleanup_assets, get_asset_audit, get_assets, reorganize_assets,
+    save_attachment,
 };
 
 pub use frontmatter::parse_frontmatter;

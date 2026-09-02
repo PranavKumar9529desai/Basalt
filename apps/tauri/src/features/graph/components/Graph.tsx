@@ -37,9 +37,7 @@ type GraphFrame = {
   alpha: number;
 };
 
-type GraphWorkerMessage =
-  | GraphFrame
-  | { action: "error"; message: string };
+type GraphWorkerMessage = GraphFrame | { action: "error"; message: string };
 
 const NODE_R = 2.6; // node radius in screen px
 const MIN_SCALE = 0.02;
@@ -48,7 +46,6 @@ const LABEL_SCALE = 1.4; // show node labels once zoomed past this
 const LABEL_CAP = 1500; // skip labels above this many visible nodes
 const CENTER_SCALE = 2.2; // zoom level used when flying to a node
 const ARROW_EDGE_CAP = 20000; // skip per-frame arrowheads past this many edges
-
 
 // Build a triangle (3 verts) at the target end of each edge for arrowheads.
 // `r`/`w` are the tip offset and half-width in world units (so they shrink
@@ -124,7 +121,10 @@ const FALLBACK_COLORS: ThemeColors = {
 const readThemeColors = (): ThemeColors => {
   const tmp = document.createElement("canvas").getContext("2d")!;
   const cs = getComputedStyle(document.documentElement);
-  const resolve = (name: string, fallback: string): [number, number, number] => {
+  const resolve = (
+    name: string,
+    fallback: string,
+  ): [number, number, number] => {
     tmp.fillStyle = "#000";
     tmp.fillStyle = cs.getPropertyValue(name).trim() || fallback;
     const norm = tmp.fillStyle;
@@ -133,7 +133,9 @@ const readThemeColors = (): ThemeColors => {
       return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
     }
     const m = norm.match(/[\d.]+/g);
-    return m ? [Number(m[0]) / 255, Number(m[1]) / 255, Number(m[2]) / 255] : [0, 0, 0];
+    return m
+      ? [Number(m[0]) / 255, Number(m[1]) / 255, Number(m[2]) / 255]
+      : [0, 0, 0];
   };
   const resolveCss = (name: string, fallback: string): string => {
     tmp.fillStyle = "#000";
@@ -283,9 +285,12 @@ export function Graph({ tab }: LeafProps) {
   const excerptCacheRef = useRef<Map<string, string>>(new Map());
   const hoverFetchRef = useRef(0);
   const hoverFullRef = useRef(-1);
-  const [menu, setMenu] = useState<{ x: number; y: number; full: number; isTag: boolean } | null>(
-    null,
-  );
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    full: number;
+    isTag: boolean;
+  } | null>(null);
   queryRef.current = query;
   colorModeRef.current = colorMode;
   activeNotePathRef.current = activeNotePath;
@@ -302,7 +307,10 @@ export function Graph({ tab }: LeafProps) {
       rendererRef.current?.setHoverColors(tc.hoverFill, tc.hoverRing);
       recolorRef.current?.();
     });
-    ro.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
+    ro.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+    });
     return () => ro.disconnect();
   }, []);
 
@@ -311,7 +319,9 @@ export function Graph({ tab }: LeafProps) {
     void invoke<Record<string, unknown>>("get_workspace")
       .then((workspace) => {
         if (cancelled) return;
-        const saved = workspace[`graphState:${tab.path}`] as PersistedGraphState | undefined;
+        const saved = workspace[`graphState:${tab.path}`] as
+          | PersistedGraphState
+          | undefined;
         if (saved) {
           setQuery(saved.query ?? "");
           setLocal(Boolean(saved.local));
@@ -349,10 +359,24 @@ export function Graph({ tab }: LeafProps) {
       },
     };
     const timer = window.setTimeout(() => {
-      void invoke("set_workspace_key", { key: `graphState:${tab.path}`, value: state });
+      void invoke("set_workspace_key", {
+        key: `graphState:${tab.path}`,
+        value: state,
+      });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [stateReady, tab.path, query, local, localDepth, localRoot, showOrphans, showAttach, colorMode, controlsOpen]);
+  }, [
+    stateReady,
+    tab.path,
+    query,
+    local,
+    localDepth,
+    localRoot,
+    showOrphans,
+    showAttach,
+    colorMode,
+    controlsOpen,
+  ]);
   const colorFor = (full: number): [number, number, number] => {
     const tc = themeColorsRef.current;
     const mode = colorModeRef.current;
@@ -479,7 +503,10 @@ export function Graph({ tab }: LeafProps) {
         clusterRef.current = Uint32Array.from(g.nodes.map((n) => n.cluster));
         clusterCountRef.current = new Set(clusterRef.current).size;
         syntheticRef.current = false;
-        const adj: number[][] = Array.from({ length: g.nodes.length }, () => []);
+        const adj: number[][] = Array.from(
+          { length: g.nodes.length },
+          () => [],
+        );
         for (let e = 0; e < g.edges.length; e += 2) {
           const u = g.edges[e];
           const v = g.edges[e + 1];
@@ -544,7 +571,11 @@ export function Graph({ tab }: LeafProps) {
       const tags = tagsRef.current;
       const fullEdges = edgesRef.current;
 
-      const tokens = queryRef.current.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const tokens = queryRef.current
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
       const tagToks: string[] = [];
       const pathToks: string[] = [];
       const textToks: string[] = [];
@@ -557,16 +588,27 @@ export function Graph({ tab }: LeafProps) {
         const isTag = isTagRef.current[i];
         if (isTag) {
           // Tags participate only via tag: queries; no active filter shows them.
-          if (tagToks.length === 0 && pathToks.length === 0 && textToks.length === 0) return true;
-          if (tagToks.length) return tagToks.every((tok) => paths[i].toLowerCase().includes(tok));
+          if (
+            tagToks.length === 0 &&
+            pathToks.length === 0 &&
+            textToks.length === 0
+          )
+            return true;
+          if (tagToks.length)
+            return tagToks.every((tok) => paths[i].toLowerCase().includes(tok));
           return false;
         }
         const p = paths[i].toLowerCase();
         const name = basename(p).replace(/\.md$/, "");
-        if (pathToks.length && !pathToks.every((tok) => p.includes(tok))) return false;
+        if (pathToks.length && !pathToks.every((tok) => p.includes(tok)))
+          return false;
         if (tagToks.length) {
           const ts = tags[i] ?? [];
-          if (!tagToks.every((tok) => ts.some((x) => x.toLowerCase().includes(tok))))
+          if (
+            !tagToks.every((tok) =>
+              ts.some((x) => x.toLowerCase().includes(tok)),
+            )
+          )
             return false;
         }
         if (textToks.length && !textToks.every((tok) => name.includes(tok)))
@@ -639,7 +681,7 @@ export function Graph({ tab }: LeafProps) {
           subEdgeWeights.push(fullW[e >> 1] ?? 1);
         }
       }
-        const subAdj: number[][] = map.map(() => []);
+      const subAdj: number[][] = map.map(() => []);
       for (let e = 0; e < subEdges.length; e += 2) {
         subAdj[subEdges[e]].push(subEdges[e + 1]);
         subAdj[subEdges[e + 1]].push(subEdges[e]);
@@ -745,7 +787,13 @@ export function Graph({ tab }: LeafProps) {
     const hitTest = (sx: number, sy: number): number => {
       // Grid is rebuilt each render (screen-space binning); reused while idle,
       // so this is O(local cells) instead of O(node count) per mousemove.
-      return gridRef.current.query(sx, sy, 8, sizesRef.current, viewRef.current.scale);
+      return gridRef.current.query(
+        sx,
+        sy,
+        8,
+        sizesRef.current,
+        viewRef.current.scale,
+      );
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -807,7 +855,10 @@ export function Graph({ tab }: LeafProps) {
       hoverRef.current = hit;
       if (hit >= 0) {
         const f = frameRef.current!;
-        const [px, py] = toScreen(f.positions[hit * 2], f.positions[hit * 2 + 1]);
+        const [px, py] = toScreen(
+          f.positions[hit * 2],
+          f.positions[hit * 2 + 1],
+        );
         const full = activeMapRef.current[hit];
         const nb = activeAdjRef.current[hit];
         // Hover flags: hovered = 1, neighbor = 2, else 0.
@@ -925,7 +976,12 @@ export function Graph({ tab }: LeafProps) {
       const my = e.clientY - rect.top;
       const hit = hitTest(mx, my);
       if (hit >= 0) {
-        setMenu({ x: mx, y: my, full: activeMapRef.current[hit], isTag: isTagRef.current[activeMapRef.current[hit]] });
+        setMenu({
+          x: mx,
+          y: my,
+          full: activeMapRef.current[hit],
+          isTag: isTagRef.current[activeMapRef.current[hit]],
+        });
       } else {
         setMenu(null);
       }
@@ -959,10 +1015,21 @@ export function Graph({ tab }: LeafProps) {
             const tc = themeColorsRef.current;
             renderer.setEdgeColor(tc.edge);
             renderer.setHoverColors(tc.hoverFill, tc.hoverRing);
-            renderer.resize(glCanvas.clientWidth || 800, glCanvas.clientHeight || 600, window.devicePixelRatio || 1);
+            renderer.resize(
+              glCanvas.clientWidth || 800,
+              glCanvas.clientHeight || 600,
+              window.devicePixelRatio || 1,
+            );
             renderer.setSizes(sizesRef.current);
-            renderer.setColors(new Float32Array(activeMapRef.current.flatMap((full) => colorFor(full))));
-            renderer.setEdges(activeEdgesRef.current, activeEdgesRef.current.length / 2);
+            renderer.setColors(
+              new Float32Array(
+                activeMapRef.current.flatMap((full) => colorFor(full)),
+              ),
+            );
+            renderer.setEdges(
+              activeEdgesRef.current,
+              activeEdgesRef.current.length / 2,
+            );
             renderer.setEdgeWeights(activeEdgeWeightsRef.current);
             renderer.setFlags(flagsRef.current);
             renderer.setEdgeFlags(edgeFlagsRef.current);
@@ -978,8 +1045,14 @@ export function Graph({ tab }: LeafProps) {
             edgeFlagsDirtyRef.current = false;
           }
           // Arrowheads depend on positions AND zoom; rebuild only when either changed.
-          if (f !== lastArrowFrameRef.current || v.scale !== lastArrowScaleRef.current) {
-            const n = Math.min(activeEdgesRef.current.length / 2, ARROW_EDGE_CAP);
+          if (
+            f !== lastArrowFrameRef.current ||
+            v.scale !== lastArrowScaleRef.current
+          ) {
+            const n = Math.min(
+              activeEdgesRef.current.length / 2,
+              ARROW_EDGE_CAP,
+            );
             if (arrowOutRef.current.length !== n * 6) {
               arrowOutRef.current = new Float32Array(n * 6);
             }
@@ -1011,7 +1084,8 @@ export function Graph({ tab }: LeafProps) {
         // On hover, the focused node's neighborhood is always labeled (Obsidian
         // behavior); outside hover, labels appear once the user zooms in.
         // LABEL_CAP stays as a hard safety bound either way.
-        const showLabels = count < LABEL_CAP && (hoverMode || v.scale > LABEL_SCALE);
+        const showLabels =
+          count < LABEL_CAP && (hoverMode || v.scale > LABEL_SCALE);
         if (showLabels) {
           labelCtx.font = "10px system-ui, sans-serif";
           labelCtx.fillStyle = themeColorsRef.current.label;
@@ -1019,10 +1093,13 @@ export function Graph({ tab }: LeafProps) {
             if (i * 2 + 1 >= p.length) break;
             const full = map[i];
             const [px, py] = toScreen(p[i * 2], p[i * 2 + 1]);
-            const related = hoverMode && (i === hov || (neighborSet && neighborSet.has(i)));
+            const related =
+              hoverMode && (i === hov || (neighborSet && neighborSet.has(i)));
             if (hoverMode && !related) continue;
             labelCtx.globalAlpha = 1;
-            const lbl = isTagRef.current[full] ? `#${pathsRef.current[full] ?? ""}` : basename(pathsRef.current[full] ?? "");
+            const lbl = isTagRef.current[full]
+              ? `#${pathsRef.current[full] ?? ""}`
+              : basename(pathsRef.current[full] ?? "");
             labelCtx.fillText(lbl, px + NODE_R + 2, py + 3);
           }
           labelCtx.globalAlpha = 1;
@@ -1058,7 +1135,16 @@ export function Graph({ tab }: LeafProps) {
   useEffect(() => {
     const t = setTimeout(() => rebuildRef.current(), 120);
     return () => clearTimeout(t);
-  }, [query, showOrphans, showAttach, local, localDepth, localRoot, rebuildOnActiveNote, loaded]);
+  }, [
+    query,
+    showOrphans,
+    showAttach,
+    local,
+    localDepth,
+    localRoot,
+    rebuildOnActiveNote,
+    loaded,
+  ]);
 
   const centerActive = () => {
     const p = activeNotePathRef.current;
@@ -1110,26 +1196,28 @@ export function Graph({ tab }: LeafProps) {
         backgroundColor: "var(--sat-graph-background)",
       }}
     >
-      {controlsOpen && <GraphControls
-        colorMode={colorMode}
-        onColorModeChange={setColorMode}
-        query={query}
-        onQueryChange={setQuery}
-        local={local}
-        onToggleLocal={() => setLocal((l) => !l)}
-        localDepth={localDepth}
-        onLocalDepthChange={setLocalDepth}
-        onCenter={centerActive}
-        onFit={() => {
-          viewRef.current.fitted = false;
-          dirtyRef.current = true;
-        }}
-        showOrphans={showOrphans}
-        onToggleOrphans={() => setShowOrphans((o) => !o)}
-        showAttach={showAttach}
-        onToggleAttach={() => setShowAttach((a) => !a)}
-        onClose={() => setControlsOpen(false)}
-      />}
+      {controlsOpen && (
+        <GraphControls
+          colorMode={colorMode}
+          onColorModeChange={setColorMode}
+          query={query}
+          onQueryChange={setQuery}
+          local={local}
+          onToggleLocal={() => setLocal((l) => !l)}
+          localDepth={localDepth}
+          onLocalDepthChange={setLocalDepth}
+          onCenter={centerActive}
+          onFit={() => {
+            viewRef.current.fitted = false;
+            dirtyRef.current = true;
+          }}
+          showOrphans={showOrphans}
+          onToggleOrphans={() => setShowOrphans((o) => !o)}
+          showAttach={showAttach}
+          onToggleAttach={() => setShowAttach((a) => !a)}
+          onClose={() => setControlsOpen(false)}
+        />
+      )}
       <div
         ref={wrapRef}
         style={{
@@ -1140,125 +1228,130 @@ export function Graph({ tab }: LeafProps) {
           backgroundColor: "var(--sat-graph-background)",
         }}
       >
-      {!controlsOpen && (
-        <Button
-          variant="outline"
-          size="sm"
-          style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
-          onClick={() => setControlsOpen(true)}
-        >
-          Graph settings
-        </Button>
-      )}
-      {error && (
-        <div
+        {!controlsOpen && (
+          <Button
+            variant="outline"
+            size="sm"
+            style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
+            onClick={() => setControlsOpen(true)}
+          >
+            Graph settings
+          </Button>
+        )}
+        {error && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 24,
+              textAlign: "center",
+              color: "var(--sat-text-primary)",
+              fontSize: 13,
+              lineHeight: 1.5,
+              zIndex: 6,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                Graph failed to load
+              </div>
+              <div style={{ opacity: 0.75 }}>{error}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  setError(null);
+                  setLoaded(false);
+                  setReloadNonce((value) => value + 1);
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+        <canvas
+          ref={glRef}
           style={{
             position: "absolute",
             inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-            textAlign: "center",
-            color: "var(--sat-text-primary)",
-            fontSize: 13,
-            lineHeight: 1.5,
-            zIndex: 6,
+            width: "100%",
+            height: "100%",
+            background: "var(--sat-graph-background)",
+            display: "block",
+            cursor: "grab",
           }}
-        >
-          <div>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              Graph failed to load
-            </div>
-            <div style={{ opacity: 0.75 }}>{error}</div>
-            <Button
-              variant="outline"
-              size="sm"
-              style={{ marginTop: 12 }}
-              onClick={() => {
-                setError(null);
-                setLoaded(false);
-                setReloadNonce((value) => value + 1);
-              }}
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
-      )}
-      <canvas
-        ref={glRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          background: "var(--sat-graph-background)",
-          display: "block",
-          cursor: "grab",
-        }}
-      />
-      <canvas
-        ref={labelRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-      />
-      {hover && (
-        <div
+        />
+        <canvas
+          ref={labelRef}
           style={{
             position: "absolute",
-            left: hover.x + 10,
-            top: hover.y + 10,
-            maxWidth: 280,
-            padding: "6px 8px",
-            background: "var(--sat-surface-1)",
-            color: "var(--sat-text-primary)",
-            fontSize: 12,
-            borderRadius: 6,
+            inset: 0,
+            width: "100%",
+            height: "100%",
             pointerEvents: "none",
-            whiteSpace: "pre-wrap",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.45)",
-            zIndex: 5,
           }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: hover.isTag || !preview ? 0 : 4 }}>
-            {hover.title}
-          </div>
-          {!hover.isTag && preview && preview.excerpt && (
+        />
+        {hover && (
+          <div
+            style={{
+              position: "absolute",
+              left: hover.x + 10,
+              top: hover.y + 10,
+              maxWidth: 280,
+              padding: "6px 8px",
+              background: "var(--sat-surface-1)",
+              color: "var(--sat-text-primary)",
+              fontSize: 12,
+              borderRadius: 6,
+              pointerEvents: "none",
+              whiteSpace: "pre-wrap",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.45)",
+              zIndex: 5,
+            }}
+          >
             <div
               style={{
-                opacity: 0.85,
-                lineHeight: 1.45,
-                maxHeight: 120,
-                overflow: "hidden",
-                display: "-webkit-box",
-                WebkitLineClamp: 6,
-                WebkitBoxOrient: "vertical",
+                fontWeight: 600,
+                marginBottom: hover.isTag || !preview ? 0 : 4,
               }}
             >
-              {preview.excerpt}
+              {hover.title}
             </div>
-          )}
-        </div>
-      )}
-      <GraphContextMenu
-        menu={menu}
-        isTag={menu?.isTag ?? false}
-        onOpen={handleMenuOpen}
-        onOpenInNewTab={handleMenuOpenInNewTab}
-        onCenter={handleMenuCenter}
-        onOpenLocalGraph={handleMenuLocalGraph}
-        onExpand={handleMenuExpand}
-        onFilter={(full) => {
-          setQuery(`tag:${pathsRef.current[full]}`);
-          setMenu(null);
-        }}
-      />
+            {!hover.isTag && preview && preview.excerpt && (
+              <div
+                style={{
+                  opacity: 0.85,
+                  lineHeight: 1.45,
+                  maxHeight: 120,
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 6,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
+                {preview.excerpt}
+              </div>
+            )}
+          </div>
+        )}
+        <GraphContextMenu
+          menu={menu}
+          isTag={menu?.isTag ?? false}
+          onOpen={handleMenuOpen}
+          onOpenInNewTab={handleMenuOpenInNewTab}
+          onCenter={handleMenuCenter}
+          onOpenLocalGraph={handleMenuLocalGraph}
+          onExpand={handleMenuExpand}
+          onFilter={(full) => {
+            setQuery(`tag:${pathsRef.current[full]}`);
+            setMenu(null);
+          }}
+        />
       </div>
     </div>
   );

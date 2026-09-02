@@ -25,7 +25,11 @@ const content = (path: string, title: string): FileMatch => ({
   ],
 });
 
-const file = (path: string, title: string): FileResult => ({ path, title, score: 1 });
+const file = (path: string, title: string): FileResult => ({
+  path,
+  title,
+  score: 1,
+});
 
 const initial = {
   isSearchOpen: false,
@@ -49,7 +53,10 @@ describe("useSearchStore", () => {
 
   describe("search modal", () => {
     it("openSearch opens and resets all search state", () => {
-      useSearchStore.setState({ isSearchLoading: true, searchSelectedIndex: 3 });
+      useSearchStore.setState({
+        isSearchLoading: true,
+        searchSelectedIndex: 3,
+      });
       useSearchStore.getState().openSearch();
       expect(useSearchStore.getState().isSearchOpen).toBe(true);
       expect(useSearchStore.getState().searchQuery).toBe("");
@@ -88,7 +95,9 @@ describe("useSearchStore", () => {
         query: "needle",
         limit: 20,
       });
-      expect(useSearchStore.getState().searchResults).toEqual([content("a.md", "A")]);
+      expect(useSearchStore.getState().searchResults).toEqual([
+        content("a.md", "A"),
+      ]);
       expect(useSearchStore.getState().searchTotalHits).toBe(5);
       expect(useSearchStore.getState().isSearchLoading).toBe(false);
     });
@@ -100,7 +109,9 @@ describe("useSearchStore", () => {
       vi.mocked(invoke).mockRejectedValue(new Error("boom"));
       await useSearchStore.getState().runSearch("old");
       expect(useSearchStore.getState().isSearchLoading).toBe(false);
-      expect(useSearchStore.getState().searchResults).toEqual([content("old.md", "Old")]);
+      expect(useSearchStore.getState().searchResults).toEqual([
+        content("old.md", "Old"),
+      ]);
     });
 
     it("searchSelectNext is a no-op with no results", () => {
@@ -110,7 +121,11 @@ describe("useSearchStore", () => {
 
     it("searchSelectNext wraps to the first result at the last", () => {
       useSearchStore.setState({
-        searchResults: [content("a", "A"), content("b", "B"), content("c", "C")],
+        searchResults: [
+          content("a", "A"),
+          content("b", "B"),
+          content("c", "C"),
+        ],
         searchSelectedIndex: 1,
       });
       useSearchStore.getState().searchSelectNext();
@@ -121,7 +136,11 @@ describe("useSearchStore", () => {
 
     it("searchSelectPrev wraps to the last result at the first", () => {
       useSearchStore.setState({
-        searchResults: [content("a", "A"), content("b", "B"), content("c", "C")],
+        searchResults: [
+          content("a", "A"),
+          content("b", "B"),
+          content("c", "C"),
+        ],
         searchSelectedIndex: 0,
       });
       useSearchStore.getState().searchSelectPrev();
@@ -142,7 +161,9 @@ describe("useSearchStore", () => {
         query: "",
         limit: 20,
       });
-      expect(useSearchStore.getState().switcherResults).toEqual([file("f.md", "F")]);
+      expect(useSearchStore.getState().switcherResults).toEqual([
+        file("f.md", "F"),
+      ]);
     });
 
     it("closeSwitcher flips the open flag", () => {
@@ -158,7 +179,10 @@ describe("useSearchStore", () => {
 
     it("runSwitcher invokes search_files and resets the selected index", async () => {
       useSearchStore.setState({ switcherSelectedIndex: 3 });
-      vi.mocked(invoke).mockResolvedValue([file("a.md", "A"), file("b.md", "B")]);
+      vi.mocked(invoke).mockResolvedValue([
+        file("a.md", "A"),
+        file("b.md", "B"),
+      ]);
       await useSearchStore.getState().runSwitcher("ab");
       expect(vi.mocked(invoke)).toHaveBeenCalledWith("search_files", {
         query: "ab",
@@ -175,7 +199,9 @@ describe("useSearchStore", () => {
       useSearchStore.setState({ switcherResults: [file("old.md", "Old")] });
       vi.mocked(invoke).mockRejectedValue(new Error("boom"));
       await useSearchStore.getState().runSwitcher("old");
-      expect(useSearchStore.getState().switcherResults).toEqual([file("old.md", "Old")]);
+      expect(useSearchStore.getState().switcherResults).toEqual([
+        file("old.md", "Old"),
+      ]);
     });
 
     it("switcherSelectNext clamps at the last result", () => {
@@ -190,7 +216,10 @@ describe("useSearchStore", () => {
     });
 
     it("switcherSelectPrev clamps at 0", () => {
-      useSearchStore.setState({ switcherResults: [file("a", "A")], switcherSelectedIndex: 1 });
+      useSearchStore.setState({
+        switcherResults: [file("a", "A")],
+        switcherSelectedIndex: 1,
+      });
       useSearchStore.getState().switcherSelectPrev();
       expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
     });

@@ -6,7 +6,8 @@ export const FRONTMATTER_THEME = EditorView.baseTheme({
   ".cm-line.cm-live-frontmatter": {
     backgroundColor: "transparent",
     color: "var(--sat-frontmatter-text, #94a3b8)",
-    borderLeft: "2px solid color-mix(in srgb, var(--sat-text-muted) 22%, transparent)",
+    borderLeft:
+      "2px solid color-mix(in srgb, var(--sat-text-muted) 22%, transparent)",
     paddingLeft: "10px",
   },
   ".cm-line.cm-live-frontmatter-fence": {

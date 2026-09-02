@@ -1,8 +1,5 @@
 import { SidebarActionButtons } from "@workspace/ui/components/sidebar";
-import {
-  IconFilePlus,
-  IconFolderPlus,
-} from "@tabler/icons-react";
+import { IconFilePlus, IconFolderPlus } from "@tabler/icons-react";
 import { FileTree } from "../../features/vault";
 import { useAppContext } from "../AppProvider";
 

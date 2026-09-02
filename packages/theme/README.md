@@ -31,7 +31,7 @@ document.documentElement.setAttribute("data-theme", "catppuccin-mocha");
 | `--sat-text-*`    | Text colors (primary, muted, inverse)            |
 | `--sat-accent-*`  | Accent / interactive colors                      |
 | `--sat-layout-*`  | Layout chrome (borders, shadows, radii)          |
-| `--sat-editor-*`  | Editor-specific (headings, code blocks, caret)    |
+| `--sat-editor-*`  | Editor-specific (headings, code blocks, caret)   |
 | `--sat-state-*`   | Semantic states (success, warning, danger, info) |
 | `--sat-palette-*` | Raw palette values (used internally)             |
 | `--sat-radius-*`  | Border radius scale                              |

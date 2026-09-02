@@ -66,9 +66,17 @@ export function surgicalEdit(
     const changes: { from: number; to: number; insert: string }[] = [];
     if (newKey && newKey !== entry.key) {
       // Rename: replace the key span (the key text only, not the colon).
-      changes.push({ from: entry.keySpan.start, to: entry.keySpan.end, insert: newKey });
+      changes.push({
+        from: entry.keySpan.start,
+        to: entry.keySpan.end,
+        insert: newKey,
+      });
     }
-    changes.push({ from: entry.valueSpan.start, to: entry.valueSpan.end, insert: serialized });
+    changes.push({
+      from: entry.valueSpan.start,
+      to: entry.valueSpan.end,
+      insert: serialized,
+    });
     view.dispatch({ changes });
     return;
   }
@@ -76,12 +84,18 @@ export function surgicalEdit(
   if (!model.blockSpan) {
     // No block yet — create one so the properties panel can add from scratch.
     view.dispatch({
-      changes: { from: 0, insert: `---\n${newKey ?? key}: ${serialized}\n---\n\n` },
+      changes: {
+        from: 0,
+        insert: `---\n${newKey ?? key}: ${serialized}\n---\n\n`,
+      },
     });
     return;
   }
   view.dispatch({
-    changes: { from: model.blockSpan.end, insert: `${newKey ?? key}: ${serialized}\n` },
+    changes: {
+      from: model.blockSpan.end,
+      insert: `${newKey ?? key}: ${serialized}\n`,
+    },
   });
 }
 

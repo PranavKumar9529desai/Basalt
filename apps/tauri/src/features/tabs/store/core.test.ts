@@ -14,19 +14,20 @@ vi.mock("@workspace/views", () => ({
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
 function createTestStore(): TestStore {
-  return create<TabsState>()((set, get, api) =>
-    ({
-      tabs: {} as Record<TabId, TabModel>,
-      pane: {
-        id: ROOT_PANE_ID,
-        tabIds: [],
-        activeTabId: null,
-        previewTabId: null,
-      } as TabPane,
-      persistVersion: 0,
-      ...createCoreSlice(set, get, api),
-      ...createPersistenceSlice(set, get, api),
-    }) as unknown as TabsState,
+  return create<TabsState>()(
+    (set, get, api) =>
+      ({
+        tabs: {} as Record<TabId, TabModel>,
+        pane: {
+          id: ROOT_PANE_ID,
+          tabIds: [],
+          activeTabId: null,
+          previewTabId: null,
+        } as TabPane,
+        persistVersion: 0,
+        ...createCoreSlice(set, get, api),
+        ...createPersistenceSlice(set, get, api),
+      }) as unknown as TabsState,
   );
 }
 
@@ -55,7 +56,9 @@ describe("tabs core slice", () => {
     });
 
     it("uses an explicit title when provided", () => {
-      const id = store.getState().openInPreview({ path: "docs/intro.md", title: "Introduction" });
+      const id = store
+        .getState()
+        .openInPreview({ path: "docs/intro.md", title: "Introduction" });
       expect(store.getState().tabs[id].title).toBe("Introduction");
     });
 
@@ -89,7 +92,9 @@ describe("tabs core slice", () => {
       expect(ids).toHaveLength(2);
       expect(store.getState().tabs[id1].isPinned).toBe(true);
       expect(store.getState().tabs[id1].isPreview).toBe(false);
-      const preview = Object.values(store.getState().tabs).find((t) => t.isPreview);
+      const preview = Object.values(store.getState().tabs).find(
+        (t) => t.isPreview,
+      );
       expect(preview?.path).toBe("b.md");
     });
 
@@ -102,7 +107,9 @@ describe("tabs core slice", () => {
 
     it("re-finds a moved tab by path and keeps its original id (stranding guard)", () => {
       const id1 = store.getState().openInPreview({ path: "docs/old.md" });
-      store.getState().updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
+      store
+        .getState()
+        .updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
       expect(store.getState().tabs[id1].path).toBe("docs/new.md");
 
       // Opening the note at its new path must resolve to the SAME tab id,
@@ -113,7 +120,9 @@ describe("tabs core slice", () => {
     });
 
     it("does not change activeTabId when activate is false", () => {
-      const id = store.getState().openInPreview({ path: "a.md" }, { activate: false });
+      const id = store
+        .getState()
+        .openInPreview({ path: "a.md" }, { activate: false });
       expect(store.getState().pane.activeTabId).toBe(null);
       expect(store.getState().pane.previewTabId).toBe(id);
     });
@@ -293,7 +302,9 @@ describe("tabs core slice", () => {
     it("repoints path + title while preserving the tab id and bumps version", () => {
       const id = store.getState().openInPreview({ path: "docs/old.md" });
       const v0 = store.getState().persistVersion;
-      store.getState().updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
+      store
+        .getState()
+        .updateTabPaths([{ from: "docs/old.md", to: "docs/new.md" }]);
       expect(store.getState().tabs[id].path).toBe("docs/new.md");
       expect(store.getState().tabs[id].title).toBe("new");
       expect(store.getState().tabs[id].id).toBe(id);

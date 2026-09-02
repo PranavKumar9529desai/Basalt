@@ -134,9 +134,7 @@ describe("EditorController", () => {
     await tick(); // A loads
 
     let resolveB!: (s: string) => void;
-    io.readFile = vi.fn(
-      () => new Promise<string>((res) => (resolveB = res)),
-    );
+    io.readFile = vi.fn(() => new Promise<string>((res) => (resolveB = res)));
 
     controller.setCurrentTab(tabB);
     const pendingShow = controller.showTab(tabB);

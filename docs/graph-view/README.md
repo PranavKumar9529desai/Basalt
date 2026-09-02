@@ -6,9 +6,9 @@
 
 ## Files
 
-| File | Contents |
-| --- | --- |
-| [`research.md`](./research.md) | Obsidian graph inventory, forum pain points (with demand signals), competitor/plugin analysis |
+| File                           | Contents                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| [`research.md`](./research.md) | Obsidian graph inventory, forum pain points (with demand signals), competitor/plugin analysis         |
 | [`proposal.md`](./proposal.md) | Proposed phased scope, performance gates, and the open architecture questions to settle before coding |
 
 ## Status
@@ -22,6 +22,6 @@
 ## One-line direction
 
 Obsidian ships a passive visualization; every serious plugin/competitor treats
-the graph as an *instrument* — something you arrange, query, save, and reason
+the graph as an _instrument_ — something you arrange, query, save, and reason
 with. Basalt's Rust backend lets us make that instrument instant at vault
 scales where Obsidian's graph freezes.

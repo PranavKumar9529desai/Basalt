@@ -1,8 +1,6 @@
 import { type Command, commandService } from "@workspace/commands";
 import { useKeybindingService } from "@workspace/keybindings";
-import {
-  CommandPalette as BaseCommandPalette,
-} from "@workspace/ui/components/command-palette/CommandPalette";
+import { CommandPalette as BaseCommandPalette } from "@workspace/ui/components/command-palette/CommandPalette";
 import { useEffect, useState } from "react";
 
 export function CommandPalette() {

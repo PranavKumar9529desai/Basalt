@@ -21,7 +21,7 @@ community, and the weaknesses our competitive research surfaced:
 - **"Looks great, but useless."** Recurring sentiment
   ([forum](https://forum.obsidian.md/t/you-all-say-the-graph-is-useless-let-me-show-you-how-to-use-it/116738),
   [Dan Holloran](https://danholloran.me/posts/making-obsidians-graph-view-actually-useful)):
-  top ask is *actionable* value (surface orphans, broken/duplicate links, jump
+  top ask is _actionable_ value (surface orphans, broken/duplicate links, jump
   to a neighborhood), not a decorative picture.
 - **Filters too weak.** Tag-frequency (`tag used in ≥N notes` —
   [forum](https://forum.obsidian.md/t/new-filter-for-graph-view-filter-based-on-tags-frequency/114559)),
@@ -34,12 +34,12 @@ community, and the weaknesses our competitive research surfaced:
 
 ### What other apps prove
 
-| App | Lesson | Takeaway |
-| --- | ------ | -------- |
-| **Logseq** | Graph DB (DataScript) with queries in a **DB worker thread** so UI stays responsive ([DeepWiki](https://deepwiki.com/logseq/logseq/2-architecture-overview)) | Separate the model/query tier from the render tier; compute off main thread |
-| **Tana** | "Write information, not documents" — nodes/supertags first-class, graph is a query surface ([tana.inc](https://outliner.tana.inc/knowledge-graph)) | Graph is for navigation, not screensaver |
-| **Heptabase** | Infinite **spatial whiteboard** of connected cards as primary metaphor ([review](https://aiindigo.com/blog/heptabase-review-2026-the-visual-brain-for-complex-knowledge)) | Spatial canvas + graph are complementary modes |
-| **Kinopio** | Playful node+arrow canvas with tactile motion | Physics *feel* is a feature |
+| App           | Lesson                                                                                                                                                                    | Takeaway                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Logseq**    | Graph DB (DataScript) with queries in a **DB worker thread** so UI stays responsive ([DeepWiki](https://deepwiki.com/logseq/logseq/2-architecture-overview))              | Separate the model/query tier from the render tier; compute off main thread |
+| **Tana**      | "Write information, not documents" — nodes/supertags first-class, graph is a query surface ([tana.inc](https://outliner.tana.inc/knowledge-graph))                        | Graph is for navigation, not screensaver                                    |
+| **Heptabase** | Infinite **spatial whiteboard** of connected cards as primary metaphor ([review](https://aiindigo.com/blog/heptabase-review-2026-the-visual-brain-for-complex-knowledge)) | Spatial canvas + graph are complementary modes                              |
+| **Kinopio**   | Playful node+arrow canvas with tactile motion                                                                                                                             | Physics _feel_ is a feature                                                 |
 
 ### What is already built here
 

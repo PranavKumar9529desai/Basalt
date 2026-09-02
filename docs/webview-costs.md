@@ -54,7 +54,7 @@ The three places that tax still shows up:
 5. **WebKit** style → layout → paint → composite
 
 Steps 1–4 we own. Step 5 we do not. CM "virtualization" only means
-off-screen *lines* are not in the DOM. The visible page is still a pile
+off-screen _lines_ are not in the DOM. The visible page is still a pile
 of spans and CSS. That last stretch is the same bill Obsidian pays.
 
 ### What we already did
@@ -86,10 +86,10 @@ CM6's synchronous-tree contract.
 `NoteViewMode = "edit" | "reading"` (`features/tabs/types.ts`). Toggle is
 `editor:toggle-view-mode` (Ctrl/Cmd+E).
 
-| Mode | Engine | DOM |
-| ---- | ------ | --- |
-| `edit` (default) | CM6 live preview, marks hidden off the caret line | CM viewport (visible lines only) |
-| `reading` | `Reading.tsx`: mask YAML + wikilink delimiters → `@lezer/markdown` `parser.parse()` → `renderDocument` / `renderBlock` / `renderInline` | **every block as a React element** |
+| Mode             | Engine                                                                                                                                  | DOM                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `edit` (default) | CM6 live preview, marks hidden off the caret line                                                                                       | CM viewport (visible lines only)   |
+| `reading`        | `Reading.tsx`: mask YAML + wikilink delimiters → `@lezer/markdown` `parser.parse()` → `renderDocument` / `renderBlock` / `renderInline` | **every block as a React element** |
 
 There is no source-only mode and no split preview. The CM host stays
 mounted in reading mode (`invisible pointer-events-none`) so switching
@@ -132,7 +132,7 @@ decoration pass + `EditorView` create. ADR-020 already says official
 Tauri docs call JSON IPC something that "slows down your application"
 for large returns.
 
-Tab *switch* is cheaper: `EditorController` keeps `Map<tabId, EditorState>`.
+Tab _switch_ is cheaper: `EditorController` keeps `Map<tabId, EditorState>`.
 First open of a note is not. Every new leaf pays the copy. Search
 preview is a third CM instance (`PreviewPane.tsx`) and pays a parse of
 whatever it is showing.
@@ -180,13 +180,13 @@ on the paint path. Display parse is Lezer.
 
 ## Pointers
 
-| Thing | Where |
-| ----- | ----- |
-| Decoration pipeline | `packages/editor/src/preview/live-preview.ts`, [ADR-019](adr/019-editor-decoration-pipeline.md) |
-| Editor host | `apps/tauri/src/features/editor/components/Host.tsx` |
-| Per-tab state | `apps/tauri/src/features/editor/controller/EditorController.ts` |
-| Reading mode | `apps/tauri/src/features/editor/components/Reading.tsx` |
-| File IPC | `apps/tauri/src-tauri/src/commands/files.rs` (`open_file`, `save_file`) |
-| TS vs Rust split | [ADR-007](adr/007-typescript-rust-responsibilities.md) |
-| Binary IPC (proposed) | [ADR-020](adr/020-desktop-tier-performance.md) move 3 |
-| Typing benchmark | `packages/editor/src/benchmark.ts` |
+| Thing                 | Where                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| Decoration pipeline   | `packages/editor/src/preview/live-preview.ts`, [ADR-019](adr/019-editor-decoration-pipeline.md) |
+| Editor host           | `apps/tauri/src/features/editor/components/Host.tsx`                                            |
+| Per-tab state         | `apps/tauri/src/features/editor/controller/EditorController.ts`                                 |
+| Reading mode          | `apps/tauri/src/features/editor/components/Reading.tsx`                                         |
+| File IPC              | `apps/tauri/src-tauri/src/commands/files.rs` (`open_file`, `save_file`)                         |
+| TS vs Rust split      | [ADR-007](adr/007-typescript-rust-responsibilities.md)                                          |
+| Binary IPC (proposed) | [ADR-020](adr/020-desktop-tier-performance.md) move 3                                           |
+| Typing benchmark      | `packages/editor/src/benchmark.ts`                                                              |

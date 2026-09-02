@@ -164,7 +164,8 @@ export const FRONTMATTER_WIDGET_THEME = EditorView.baseTheme({
     overflowY: "auto",
     padding: "4px",
     background: "var(--sat-editor-popover-bg, var(--sat-surface-2))",
-    border: "1px solid var(--sat-editor-popover-border, var(--sat-layout-border))",
+    border:
+      "1px solid var(--sat-editor-popover-border, var(--sat-layout-border))",
     borderRadius: "var(--sat-layout-radius-sm, 4px)",
     boxShadow: "var(--sat-layout-shadow-md)",
   },
@@ -188,7 +189,8 @@ export const FRONTMATTER_WIDGET_THEME = EditorView.baseTheme({
     alignItems: "center",
     gap: "var(--sat-spacing-xs, 4px)",
     background: "color-mix(in srgb, var(--sat-text-primary) 8%, transparent)",
-    border: "1px solid color-mix(in srgb, var(--sat-text-primary) 12%, transparent)",
+    border:
+      "1px solid color-mix(in srgb, var(--sat-text-primary) 12%, transparent)",
     borderRadius: "var(--sat-radius-pill, 999px)",
     padding: "1px 8px",
     color: "var(--sat-text-primary)",
@@ -251,7 +253,7 @@ const render = (
   state: EditorState,
 ): FrontmatterWidget | null => {
   if (!model?.blockSpan) return null;
-  const edit = state.facet(frontmatterEditFacet) ?? (() => { });
+  const edit = state.facet(frontmatterEditFacet) ?? (() => {});
   const fetch = state.facet(frontmatterFetchFacet) ?? {};
   return new FrontmatterWidget(model, edit, fetch);
 };
@@ -266,7 +268,8 @@ export const frontmatterBlockWidget: BlockWidgetSpec<FrontmatterModel> = {
   },
   render,
   span: spanFor,
-  decorateDim: (node, ctx, collector) => handleFrontmatterNode(node, ctx, collector),
+  decorateDim: (node, ctx, collector) =>
+    handleFrontmatterNode(node, ctx, collector),
   theme: FRONTMATTER_WIDGET_THEME,
 };
 
@@ -279,7 +282,9 @@ export function frontmatterBlockWidgetGroup(config: {
   parseFrontmatter?: ParseFrontmatterFn;
   editFrontmatter?: FrontmatterEditFn;
   onFetchTags?: (query: string) => Promise<string[]>;
-  onFetchLinks?: (query: string) => Promise<Array<{ name: string; path: string }>>;
+  onFetchLinks?: (
+    query: string,
+  ) => Promise<Array<{ name: string; path: string }>>;
 }): Extension[] {
   return [
     // Cast through the unknown-model kernel type: spec is type-safe at the

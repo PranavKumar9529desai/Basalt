@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
-import { EditorState, Extension, Range, StateEffect, StateField, Text } from "@codemirror/state";
+import {
+  EditorState,
+  Extension,
+  Range,
+  StateEffect,
+  StateField,
+  Text,
+} from "@codemirror/state";
 import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
@@ -10,12 +17,42 @@ import { previewExtensions } from "@workspace/editor";
 // Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
 // theme tokens so the preview tracks the editor's prose + code surface.
 const highlightStyle = HighlightStyle.define([
-  { tag: t.heading1, color: "var(--sat-editor-heading1)", fontWeight: "700", fontSize: "1.55em" },
-  { tag: t.heading2, color: "var(--sat-editor-heading2)", fontWeight: "700", fontSize: "1.32em" },
-  { tag: t.heading3, color: "var(--sat-editor-heading3)", fontWeight: "600", fontSize: "1.16em" },
-  { tag: t.heading4, color: "var(--sat-editor-heading4)", fontWeight: "600", fontSize: "1.06em" },
-  { tag: t.heading5, color: "var(--sat-editor-heading5)", fontWeight: "600", fontSize: "0.98em" },
-  { tag: t.heading6, color: "var(--sat-editor-heading6)", fontWeight: "600", fontSize: "0.93em" },
+  {
+    tag: t.heading1,
+    color: "var(--sat-editor-heading1)",
+    fontWeight: "700",
+    fontSize: "1.55em",
+  },
+  {
+    tag: t.heading2,
+    color: "var(--sat-editor-heading2)",
+    fontWeight: "700",
+    fontSize: "1.32em",
+  },
+  {
+    tag: t.heading3,
+    color: "var(--sat-editor-heading3)",
+    fontWeight: "600",
+    fontSize: "1.16em",
+  },
+  {
+    tag: t.heading4,
+    color: "var(--sat-editor-heading4)",
+    fontWeight: "600",
+    fontSize: "1.06em",
+  },
+  {
+    tag: t.heading5,
+    color: "var(--sat-editor-heading5)",
+    fontWeight: "600",
+    fontSize: "0.98em",
+  },
+  {
+    tag: t.heading6,
+    color: "var(--sat-editor-heading6)",
+    fontWeight: "600",
+    fontSize: "0.93em",
+  },
   { tag: t.keyword, color: "var(--sat-syntax-keyword)" },
   { tag: t.string, color: "var(--sat-syntax-string)" },
   { tag: t.comment, color: "var(--sat-syntax-comment)", fontStyle: "italic" },
@@ -48,7 +85,8 @@ export function buildDecorations(
   ranges.push(
     Decoration.line({
       attributes: {
-        style: "background: color-mix(in srgb, var(--sat-accent-primary) 12%, transparent);",
+        style:
+          "background: color-mix(in srgb, var(--sat-accent-primary) 12%, transparent);",
       },
     }).range(line.from),
   );
@@ -68,7 +106,6 @@ export function buildDecorations(
   }
   return Decoration.set(ranges);
 }
-
 
 const setMatchDeco = StateEffect.define<DecorationSet>();
 
@@ -196,7 +233,12 @@ interface PreviewPaneProps {
   highlights: Highlight[];
 }
 
-export function PreviewPane({ text, path, matchLine, highlights }: PreviewPaneProps) {
+export function PreviewPane({
+  text,
+  path,
+  matchLine,
+  highlights,
+}: PreviewPaneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   // Bound the document handed to CodeMirror to a window around the match line.
@@ -244,13 +286,21 @@ export function PreviewPane({ text, path, matchLine, highlights }: PreviewPanePr
     }
     const lineNo = Math.max(1, Math.min(winMatchLine, view.state.doc.lines));
     const pos = view.state.doc.line(lineNo).from;
-    view.dispatch({ effects: [setMatchDeco.of(buildDecorations(view.state.doc, winMatchLine, winHighlights))] });
+    view.dispatch({
+      effects: [
+        setMatchDeco.of(
+          buildDecorations(view.state.doc, winMatchLine, winHighlights),
+        ),
+      ],
+    });
 
     // Skip the recenter when the match is already visible — scrollIntoView on
     // a large doc forces O(doc) line-measure. When it must jump, defer it to
     // the next frame so the keydown paints instantly; rapid navigation
     // coalesces into a single recenter (the last target wins).
-    const visible = view.visibleRanges.some((r) => pos >= r.from && pos <= r.to);
+    const visible = view.visibleRanges.some(
+      (r) => pos >= r.from && pos <= r.to,
+    );
     if (!visible) {
       scrollTargetRef.current = pos;
       if (scrollScheduledRef.current) return;

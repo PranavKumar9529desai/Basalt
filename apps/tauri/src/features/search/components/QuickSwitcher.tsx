@@ -36,7 +36,9 @@ function ResultRow({
       tabIndex={-1}
       className={[
         "w-full justify-start gap-3 px-4 py-2 h-auto rounded-md",
-        isSelected ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]" : "",
+        isSelected
+          ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
+          : "",
       ].join(" ")}
       onClick={onClick}
     >
@@ -72,7 +74,9 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
 
   const parentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const rowVirtualizer = useVirtualizer({
     count: switcherResults.length,
@@ -176,11 +180,19 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         className="max-h-[320px] overflow-y-auto px-2"
       >
         {switcherError ? (
-          <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">{switcherError}</p>
-        ) : switcherResults.length === 0 && switcherQuery && !isSwitcherLoading ? (
-          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">No files found</p>
+          <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">
+            {switcherError}
+          </p>
+        ) : switcherResults.length === 0 &&
+          switcherQuery &&
+          !isSwitcherLoading ? (
+          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">
+            No files found
+          </p>
         ) : isSwitcherLoading && switcherResults.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">Searching…</p>
+          <p className="px-4 py-3 text-sm text-[var(--sat-text-muted)]">
+            Searching…
+          </p>
         ) : (
           <div
             style={{

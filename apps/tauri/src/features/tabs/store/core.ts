@@ -28,9 +28,8 @@ function removeTabFromPane(pane: TabsState["pane"], tabId: TabId): void {
     // jumping to the end of the strip when an active tab closes.
     pane.activeTabId =
       pane.tabIds.length > 0
-        ? ((pane.tabIds[removedIndex] ?? pane.tabIds[removedIndex - 1]) as
-            | TabId
-            | null)
+        ? ((pane.tabIds[removedIndex] ??
+            pane.tabIds[removedIndex - 1]) as TabId | null)
         : null;
   }
 }
@@ -86,7 +85,9 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     let targetId = incomingTabId;
     let existingTab = get().tabs[targetId];
     if (!existingTab) {
-      const byPath = Object.values(get().tabs).find((t) => t.path === note.path);
+      const byPath = Object.values(get().tabs).find(
+        (t) => t.path === note.path,
+      );
       if (byPath) {
         targetId = byPath.id;
         existingTab = byPath;
@@ -95,12 +96,18 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     if (existingTab) {
       if (typeof note.line === "number") {
         set((s) => ({
-          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], line: note.line } },
+          tabs: {
+            ...s.tabs,
+            [targetId]: { ...s.tabs[targetId], line: note.line },
+          },
         }));
       }
       if (note.focusOnOpen) {
         set((s) => ({
-          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], focusOnOpen: true } },
+          tabs: {
+            ...s.tabs,
+            [targetId]: { ...s.tabs[targetId], focusOnOpen: true },
+          },
         }));
       }
       if (note.renameOnOpen) {
@@ -169,7 +176,9 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     let targetId = incomingTabId;
     let existingTab = get().tabs[targetId];
     if (!existingTab) {
-      const byPath = Object.values(get().tabs).find((t) => t.path === note.path);
+      const byPath = Object.values(get().tabs).find(
+        (t) => t.path === note.path,
+      );
       if (byPath) {
         targetId = byPath.id;
         existingTab = byPath;
@@ -178,7 +187,10 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     if (existingTab) {
       if (note.focusOnOpen) {
         set((s) => ({
-          tabs: { ...s.tabs, [targetId]: { ...s.tabs[targetId], focusOnOpen: true } },
+          tabs: {
+            ...s.tabs,
+            [targetId]: { ...s.tabs[targetId], focusOnOpen: true },
+          },
         }));
       }
       if (note.renameOnOpen) {

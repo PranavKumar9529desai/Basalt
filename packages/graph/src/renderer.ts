@@ -12,7 +12,6 @@
 // CSS pixels. The clip-space transform divides by the CSS resolution, so DPR
 // only affects point size (device pixels).
 
-
 export interface GraphTransform {
   scale: number;
   ox: number;
@@ -142,7 +141,11 @@ void main() {
   frag = vec4(uArrowColor.rgb * uArrowColor.a, uArrowColor.a);
 }`;
 
-function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
+function compile(
+  gl: WebGL2RenderingContext,
+  type: number,
+  src: string,
+): WebGLShader {
   const sh = gl.createShader(type);
   if (!sh) {
     throw new Error(
@@ -171,7 +174,11 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   return sh;
 }
 
-function link(gl: WebGL2RenderingContext, vs: string, fs: string): WebGLProgram {
+function link(
+  gl: WebGL2RenderingContext,
+  vs: string,
+  fs: string,
+): WebGLProgram {
   const p = gl.createProgram()!;
   gl.attachShader(p, compile(gl, gl.VERTEX_SHADER, vs));
   gl.attachShader(p, compile(gl, gl.FRAGMENT_SHADER, fs));
@@ -277,7 +284,8 @@ export class GraphRenderer {
     // underlying driver only accepts GLSL ES 1.00 — which makes #version 300 es
     // fail to compile with a null info log. Surface the truth before linking.
     const isWebGL2 =
-      typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
+      typeof WebGL2RenderingContext !== "undefined" &&
+      gl instanceof WebGL2RenderingContext;
     console.debug("[graph] WebGL2 context probe", {
       isWebGL2,
       version: String(gl.getParameter(gl.VERSION)),
@@ -289,7 +297,11 @@ export class GraphRenderer {
     // Context-loss tracking so the hot path can bail without per-frame GL queries.
     this.lost = gl.isContextLost();
     canvas.addEventListener("webglcontextlost", this.onContextLost, false);
-    canvas.addEventListener("webglcontextrestored", this.onContextRestored, false);
+    canvas.addEventListener(
+      "webglcontextrestored",
+      this.onContextRestored,
+      false,
+    );
     // Premultiplied-alpha compositing: transparent clear + dimmed hover edges blend correctly.
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -490,7 +502,10 @@ export class GraphRenderer {
     this.edgeColor = c;
   }
 
-  setHoverColors(accent: [number, number, number], ring: [number, number, number]): void {
+  setHoverColors(
+    accent: [number, number, number],
+    ring: [number, number, number],
+  ): void {
     this.hoverAccent = accent;
     this.hoverRing = ring;
   }
@@ -552,7 +567,10 @@ export class GraphRenderer {
   dispose(): void {
     const gl = this.gl;
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
-    this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
+    this.canvas.removeEventListener(
+      "webglcontextrestored",
+      this.onContextRestored,
+    );
     gl.deleteBuffer(this.posBuf);
     gl.deleteBuffer(this.colorBuf);
     gl.deleteBuffer(this.flagBuf);

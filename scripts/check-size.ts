@@ -43,14 +43,21 @@ async function walk(dir: string): Promise<string[]> {
 
 async function main(): Promise<void> {
   const files = await walk(TARGET);
-  const violations: { file: string; lines: number; budget: number; kind: string }[] = [];
+  const violations: {
+    file: string;
+    lines: number;
+    budget: number;
+    kind: string;
+  }[] = [];
 
   for (const f of files) {
     const rel = relative(ROOT, f);
     const kind = classify(rel);
     if (kind === "skip") continue;
     const src = await readFile(f, "utf8");
-    const lines = src.endsWith("\n") ? src.split("\n").length - 1 : src.split("\n").length;
+    const lines = src.endsWith("\n")
+      ? src.split("\n").length - 1
+      : src.split("\n").length;
     const budget = BUDGETS[kind as keyof typeof BUDGETS];
     if (lines > budget) violations.push({ file: rel, lines, budget, kind });
   }
@@ -63,7 +70,9 @@ async function main(): Promise<void> {
     `⚠ ${violations.length} file(s) exceed size budget — review for cohesion, not a hard gate:\n`,
   );
   for (const v of [...violations].sort((a, b) => b.lines - a.lines)) {
-    console.warn(`  ${String(v.lines).padStart(4)} > ${v.budget} (${v.kind})  ${v.file}`);
+    console.warn(
+      `  ${String(v.lines).padStart(4)} > ${v.budget} (${v.kind})  ${v.file}`,
+    );
   }
   process.exit(0);
 }

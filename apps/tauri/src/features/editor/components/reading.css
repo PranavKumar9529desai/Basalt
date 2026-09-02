@@ -91,7 +91,8 @@
   margin: 1em 0;
   padding: 0.8em 1em;
   border-left: 3px solid var(--sat-accent-primary);
-  border-radius: 0 var(--sat-layout-radius-md, 8px) var(--sat-layout-radius-md, 8px) 0;
+  border-radius: 0 var(--sat-layout-radius-md, 8px)
+    var(--sat-layout-radius-md, 8px) 0;
   background: color-mix(in srgb, var(--sat-accent-primary) 8%, transparent);
 }
 
@@ -129,12 +130,22 @@
   margin: 1.6em 0 0.55em;
 }
 
-.markdown-reading-sizer h1 { font-size: 2em; }
-.markdown-reading-sizer h2 { font-size: 1.6em; }
-.markdown-reading-sizer h3 { font-size: 1.35em; }
-.markdown-reading-sizer h4 { font-size: 1.15em; }
+.markdown-reading-sizer h1 {
+  font-size: 2em;
+}
+.markdown-reading-sizer h2 {
+  font-size: 1.6em;
+}
+.markdown-reading-sizer h3 {
+  font-size: 1.35em;
+}
+.markdown-reading-sizer h4 {
+  font-size: 1.15em;
+}
 .markdown-reading-sizer h5,
-.markdown-reading-sizer h6 { font-size: 1em; }
+.markdown-reading-sizer h6 {
+  font-size: 1em;
+}
 
 .markdown-reading-sizer p,
 .markdown-reading-sizer ul,
@@ -155,7 +166,8 @@
 }
 
 .markdown-reading-sizer blockquote {
-  border-left: 3px solid var(--sat-editor-blockquote-border, var(--sat-layout-divider));
+  border-left: 3px solid
+    var(--sat-editor-blockquote-border, var(--sat-layout-divider));
   color: var(--sat-editor-blockquote-text, var(--sat-text-muted));
   padding-left: 1em;
 }
@@ -193,27 +205,72 @@
 
 /* Syntax-highlighted tokens inside code blocks — same classes the editor
    emits, bound to the same --sat-syntax-* theme tokens. */
-.markdown-reading-sizer .sat-syntax-keyword { color: var(--sat-syntax-keyword, #c678dd); }
-.markdown-reading-sizer .sat-syntax-string { color: var(--sat-syntax-string, #98c379); }
-.markdown-reading-sizer .sat-syntax-number { color: var(--sat-syntax-number, #d19a66); }
-.markdown-reading-sizer .sat-syntax-comment { color: var(--sat-syntax-comment, #5c6370); font-style: italic; }
-.markdown-reading-sizer .sat-syntax-function { color: var(--sat-syntax-function, #61afef); }
-.markdown-reading-sizer .sat-syntax-type { color: var(--sat-syntax-type, #e5c07b); }
-.markdown-reading-sizer .sat-syntax-variable { color: var(--sat-syntax-variable, #e06c75); }
-.markdown-reading-sizer .sat-syntax-atom { color: var(--sat-syntax-atom, #d19a66); }
-.markdown-reading-sizer .sat-syntax-operator { color: var(--sat-syntax-operator, #abb2bf); }
-.markdown-reading-sizer .sat-syntax-property { color: var(--sat-syntax-property, #e06c75); }
-.markdown-reading-sizer .sat-syntax-tag { color: var(--sat-syntax-tag, #e06c75); }
-.markdown-reading-sizer .sat-syntax-attribute { color: var(--sat-syntax-attribute, #d19a66); }
-.markdown-reading-sizer .sat-syntax-punctuation { color: var(--sat-syntax-punctuation, #abb2bf); }
-.markdown-reading-sizer .sat-syntax-regexp { color: var(--sat-syntax-regexp, #98c379); }
-.markdown-reading-sizer .sat-syntax-doc { color: var(--sat-syntax-doc, #5c6370); font-style: italic; }
-.markdown-reading-sizer .sat-syntax-macro { color: var(--sat-syntax-macro, #c678dd); }
-.markdown-reading-sizer .sat-syntax-meta { color: var(--sat-syntax-meta, #5c6370); }
-.markdown-reading-sizer .sat-syntax-link { color: var(--sat-syntax-link, #61afef); text-decoration: underline; }
-.markdown-reading-sizer .sat-syntax-changed { color: var(--sat-syntax-changed, #e5c07b); }
-.markdown-reading-sizer .sat-syntax-deleted { color: var(--sat-syntax-deleted, #e06c75); }
-.markdown-reading-sizer .sat-syntax-inserted { color: var(--sat-syntax-inserted, #98c379); }
+.markdown-reading-sizer .sat-syntax-keyword {
+  color: var(--sat-syntax-keyword, #c678dd);
+}
+.markdown-reading-sizer .sat-syntax-string {
+  color: var(--sat-syntax-string, #98c379);
+}
+.markdown-reading-sizer .sat-syntax-number {
+  color: var(--sat-syntax-number, #d19a66);
+}
+.markdown-reading-sizer .sat-syntax-comment {
+  color: var(--sat-syntax-comment, #5c6370);
+  font-style: italic;
+}
+.markdown-reading-sizer .sat-syntax-function {
+  color: var(--sat-syntax-function, #61afef);
+}
+.markdown-reading-sizer .sat-syntax-type {
+  color: var(--sat-syntax-type, #e5c07b);
+}
+.markdown-reading-sizer .sat-syntax-variable {
+  color: var(--sat-syntax-variable, #e06c75);
+}
+.markdown-reading-sizer .sat-syntax-atom {
+  color: var(--sat-syntax-atom, #d19a66);
+}
+.markdown-reading-sizer .sat-syntax-operator {
+  color: var(--sat-syntax-operator, #abb2bf);
+}
+.markdown-reading-sizer .sat-syntax-property {
+  color: var(--sat-syntax-property, #e06c75);
+}
+.markdown-reading-sizer .sat-syntax-tag {
+  color: var(--sat-syntax-tag, #e06c75);
+}
+.markdown-reading-sizer .sat-syntax-attribute {
+  color: var(--sat-syntax-attribute, #d19a66);
+}
+.markdown-reading-sizer .sat-syntax-punctuation {
+  color: var(--sat-syntax-punctuation, #abb2bf);
+}
+.markdown-reading-sizer .sat-syntax-regexp {
+  color: var(--sat-syntax-regexp, #98c379);
+}
+.markdown-reading-sizer .sat-syntax-doc {
+  color: var(--sat-syntax-doc, #5c6370);
+  font-style: italic;
+}
+.markdown-reading-sizer .sat-syntax-macro {
+  color: var(--sat-syntax-macro, #c678dd);
+}
+.markdown-reading-sizer .sat-syntax-meta {
+  color: var(--sat-syntax-meta, #5c6370);
+}
+.markdown-reading-sizer .sat-syntax-link {
+  color: var(--sat-syntax-link, #61afef);
+  text-decoration: underline;
+}
+.markdown-reading-sizer .sat-syntax-changed {
+  color: var(--sat-syntax-changed, #e5c07b);
+}
+.markdown-reading-sizer .sat-syntax-deleted {
+  color: var(--sat-syntax-deleted, #e06c75);
+}
+.markdown-reading-sizer .sat-syntax-inserted {
+  color: var(--sat-syntax-inserted, #98c379);
+}
 
 /* Rendered raw HTML blocks (block context) and visible inline HTML tags.
    Blocks get a subtle container (plus `.sat-html` typography shared with the

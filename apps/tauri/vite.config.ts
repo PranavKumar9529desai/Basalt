@@ -8,8 +8,8 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-plugins: [TanStackRouterVite(), react(), wasm()],
-    worker: { format: "es" },
+  plugins: [TanStackRouterVite(), react(), wasm()],
+  worker: { format: "es" },
 
   build: {
     // Desktop app: chunks load from local disk, no HTTP cache concerns.

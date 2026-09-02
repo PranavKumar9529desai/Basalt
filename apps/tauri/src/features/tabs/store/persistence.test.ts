@@ -14,19 +14,20 @@ vi.mock("@workspace/views", () => ({
 }));
 
 function createTestStore(): TestStore {
-  return create<TabsState>()((set, get, api) =>
-    ({
-      tabs: {} as Record<TabId, TabModel>,
-      pane: {
-        id: ROOT_PANE_ID,
-        tabIds: [],
-        activeTabId: null,
-        previewTabId: null,
-      } as TabPane,
-      persistVersion: 0,
-      ...createCoreSlice(set, get, api),
-      ...createPersistenceSlice(set, get, api),
-    }) as unknown as TabsState,
+  return create<TabsState>()(
+    (set, get, api) =>
+      ({
+        tabs: {} as Record<TabId, TabModel>,
+        pane: {
+          id: ROOT_PANE_ID,
+          tabIds: [],
+          activeTabId: null,
+          previewTabId: null,
+        } as TabPane,
+        persistVersion: 0,
+        ...createCoreSlice(set, get, api),
+        ...createPersistenceSlice(set, get, api),
+      }) as unknown as TabsState,
   );
 }
 
@@ -37,8 +38,12 @@ describe("tabs persistence", () => {
   });
 
   it("serializes open tabs + pane into a v1 snapshot", () => {
-    const a = store.getState().openPinned({ path: "a.md" }, { activate: false });
-    const b = store.getState().openPinned({ path: "b.md" }, { activate: false });
+    const a = store
+      .getState()
+      .openPinned({ path: "a.md" }, { activate: false });
+    const b = store
+      .getState()
+      .openPinned({ path: "b.md" }, { activate: false });
     store.getState().activateTab(a);
     const snap = store.getState().toWorkspaceSnapshot();
     expect(snap.version).toBe(1);
@@ -49,9 +54,7 @@ describe("tabs persistence", () => {
   });
 
   it("never serializes transient fields (line, renameOnOpen)", () => {
-    store
-      .getState()
-      .openPinned({ path: "a.md", line: 12, renameOnOpen: true });
+    store.getState().openPinned({ path: "a.md", line: 12, renameOnOpen: true });
     const snap = store.getState().toWorkspaceSnapshot();
     const serialized = snap.tabs[0];
     expect(serialized).not.toHaveProperty("line");
@@ -61,8 +64,12 @@ describe("tabs persistence", () => {
   });
 
   it("round-trips: snapshot -> reset -> hydrate restores state", () => {
-    const a = store.getState().openPinned({ path: "a.md" }, { activate: false });
-    const b = store.getState().openPinned({ path: "b.md" }, { activate: false });
+    const a = store
+      .getState()
+      .openPinned({ path: "a.md" }, { activate: false });
+    const b = store
+      .getState()
+      .openPinned({ path: "b.md" }, { activate: false });
     // open-order is [a, b]; make a active, then hydrate.
     store.getState().activateTab(a);
     store.getState().markTabDirty(a, true);

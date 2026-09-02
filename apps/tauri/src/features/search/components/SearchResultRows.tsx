@@ -75,7 +75,9 @@ export const MatchRow = memo(function MatchRow({
       tabIndex={-1}
       className={[
         "w-full flex-col items-start gap-0.5 px-4 py-2 h-auto rounded-none text-left",
-        selected ? "bg-[var(--sat-surface-3)]" : "hover:bg-[var(--sat-surface-1)]",
+        selected
+          ? "bg-[var(--sat-surface-3)]"
+          : "hover:bg-[var(--sat-surface-1)]",
       ].join(" ")}
       onClick={() => onOpen(file.path, match.lineNumber)}
     >

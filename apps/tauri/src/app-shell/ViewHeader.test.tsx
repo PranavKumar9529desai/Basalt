@@ -32,7 +32,9 @@ describe("ViewHeader", () => {
     expect(
       screen.getByRole("button", { name: "Reading view" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "View actions" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "View actions" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("DSA / Binary Search")).toBeInTheDocument();
     expect(screen.queryByText("Source mode")).not.toBeInTheDocument();
   });

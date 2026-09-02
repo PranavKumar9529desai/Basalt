@@ -12,24 +12,24 @@
 Complete across all layers (Rust → parser → tabs → leaf → shared orchestration):
 
 - **Rust backend** (`rename_note` in `apps/tauri/src-tauri/src/commands/files.rs`
-  + `crates/basalt-parser/src/link_rewrite.rs`): atomic rename — sanitize name,
-  enumerate link candidates from graph metadata, `fs::rename`, rewrite
-  `[[wikilinks]]` in other notes + self-links, update vault doc/index under the
-  write lock (`index_remove` + `index_upsert`). Returns `{ path, name,
-  updated_files }`; emits no events (frontend refreshes).
+  - `crates/basalt-parser/src/link_rewrite.rs`): atomic rename — sanitize name,
+    enumerate link candidates from graph metadata, `fs::rename`, rewrite
+    `[[wikilinks]]` in other notes + self-links, update vault doc/index under the
+    write lock (`index_remove` + `index_upsert`). Returns `{ path, name,
+updated_files }`; emits no events (frontend refreshes).
 - **Rust backend — `rename_path`** (folders + attachments): same choke-point
   contract. Notes are rejected ("use rename_note"); files keep their extension
   (`resolve_rename_target_name`), folders rewrite vault-relative path-form
   wikilinks (`PathRename` / `rewrite_wikilinks_path` in `link_rewrite.rs`),
   move every nested `.md` doc through the cache + index, and return `{ path,
-  name, moved, updated_files }` so the frontend can repoint open tabs inside
+name, moved, updated_files }` so the frontend can repoint open tabs inside
   the folder. Tested via the `temp_vault_with_folder` harness.
 - **Tabs** (`renameOnOpen`): transient flag on `OpenableTabInput`/`TabModel`
   (mirrors `line`), set by `createNoteInstant`; **persistence layer now
   serializes an explicit field list** — this fixes `line` (and would have
   leaked `renameOnOpen`) out of the snapshot while keeping `leafType`.
 - **Leaf** (`packages/editor/src/scroll-header.ts` + `features/editor/
-  components/InlineTitle.tsx`): title mounted in its own React root inside a
+components/InlineTitle.tsx`): title mounted in its own React root inside a
   slot prepended to `.cm-scroller` (`data-basalt-title` flips the scroller to
   flex-column); CM stays the sole scroll owner. Click → edit with select-all;
   Enter commits / Esc cancels / blur commits; backend errors render inline;
@@ -72,15 +72,15 @@ non-goal).
 Three issues surfaced after the rename/header work shipped:
 
 1. **"Save error: No such file or directory (os error 2)" on new-note (Ctrl+N)
-   + inline-title not focused.** Root cause confirmed: `WorkspaceTabs` memoized
-   `activeTab` on `[activeTabId]` only. A rename keeps the tab id stable and
-   repoints its path in place (via `updateTabPaths`, which bumps
-   `persistVersion`), so the memo kept serving the **stale tab (old path)** to
-   the leaf — the leaf's autosave then wrote to the now-deleted old path
-   (ENOENT). Fix: `WorkspaceTabs` now subscribes to `persistVersion` and keys
-   the memo on it, so a path repoint re-resolves the live tab object. This is
-   the same stale-snapshot root class as the pre-existing "move strands a tab"
-   debt below.
+   - inline-title not focused.** Root cause confirmed: `WorkspaceTabs` memoized
+     `activeTab` on `[activeTabId]` only. A rename keeps the tab id stable and
+     repoints its path in place (via `updateTabPaths`, which bumps
+     `persistVersion`), so the memo kept serving the **stale tab (old path)** to
+     the leaf — the leaf's autosave then wrote to the now-deleted old path
+     (ENOENT). Fix: `WorkspaceTabs` now subscribes to `persistVersion` and keys
+     the memo on it, so a path repoint re-resolves the live tab object. This is
+     the same stale-snapshot root class as the pre-existing "move strands a tab"
+     debt below.
 2. **Inline-title focus on mount.** `InlineTitle`'s edit-mode effect only
    called `input.select()`; a freshly-inserted input isn't focused yet, and
    `select()` on an unfocused element is a no-op. Fix: `focus()` then `select()`.
@@ -209,6 +209,7 @@ spans; `buildDecorations` sorts defensively (regression tests in
 `PreviewPane.test.ts`).
 
 **Perf fixes (PreviewPane, 2026-08-30):**
+
 - Module-level LRU of parsed `EditorState`s keyed by **file content**
   (`cachedPreviewState`, cap 24) — the MarkdownLeaf tab-cache pattern surviving
   modal mounts. Cross-file nav now swaps via `view.setState(cached)` instead of
@@ -224,13 +225,13 @@ spans; `buildDecorations` sorts defensively (regression tests in
 **Dev-build results (p95 paint ms; dev+devtools inflate 2–5×, re-measure in
 prod):**
 
-| phase | 4KB | 40KB | 100KB | verdict |
-|---|---|---|---|---|
-| open-cold | 292 (was 185) | 274 (was 552) | 328 (was **1011**) | ❌ warm-reopen improved; cold parse lives in `max` |
-| install | 34 (was 17) | 28 (was 17) | 18 (was 17) | ✅ one to two frames |
-| nav-same-file | 124 (was 82) | 103 (was 82) | 89 (was 69) | ⚠️ scroll-skip + prod pending |
-| nav-cross-file | 117 (was 98) | 176 (was 253) | 218 (was **395**) | ⚠️ parse tax gone (−45% @100KB) |
-| keystroke | 32 (was 40) | 30 (was 30) | 30 (was 24) | ⚠️ 1.5–2× |
+| phase          | 4KB           | 40KB          | 100KB              | verdict                                            |
+| -------------- | ------------- | ------------- | ------------------ | -------------------------------------------------- |
+| open-cold      | 292 (was 185) | 274 (was 552) | 328 (was **1011**) | ❌ warm-reopen improved; cold parse lives in `max` |
+| install        | 34 (was 17)   | 28 (was 17)   | 18 (was 17)        | ✅ one to two frames                               |
+| nav-same-file  | 124 (was 82)  | 103 (was 82)  | 89 (was 69)        | ⚠️ scroll-skip + prod pending                      |
+| nav-cross-file | 117 (was 98)  | 176 (was 253) | 218 (was **395**)  | ⚠️ parse tax gone (−45% @100KB)                    |
+| keystroke      | 32 (was 40)   | 30 (was 30)   | 30 (was 24)        | ⚠️ 1.5–2×                                          |
 
 Reading: `install` (results landed) fits the budget at every size. Cross-file +
 open-cold parse tax eliminated; the residual ~90–220ms nav paint is now
@@ -242,7 +243,7 @@ regression is run-to-run noise (see `max`), not a fix regression.
 
 **Perf pass 2 (2026-08-30) — kill the per-keystroke commit**: the ~35–40ms
 dev `commit` on every selection/query change was the SearchModal re-rendering
-the *entire* virtualized list (`Button` + `HighlightedText` per row). Rows
+the _entire_ virtualized list (`Button` + `HighlightedText` per row). Rows
 extracted to `features/search/components/SearchResultRows.tsx` and memoized
 (`FileRow`/`MatchRow`, `memo`) on **primitives** (`top`, `selected`) + stable
 item refs + a stable `openItem` callback (no inline closures) — so a selection
@@ -324,10 +325,10 @@ replaced with doc comments per CONVENTIONS §8.
 Built the note-link graph as a WebGL2 + Canvas2D hybrid (ADR-021). Sim runs in
 `GraphWorker.ts` (WASM force layout, off the UI thread). Perf pass completed:
 
-| Commit    | What                                                                                                                                                                                                                                                                                |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit    | What                                                                                                                                                                                                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `21b7877` | O(local) hover hit-test via `SpatialGrid` (replaces O(node-count) scan per `mousemove`); arrow rebuild throttled to new frame / zoom change, written into a reused `Float32Array`; render-on-dirty gate so a settled, idle graph does zero GPU/CPU work. `spatialGrid.test.ts` (vitest, 9 cases) added. |
-| `f45ede6` | `packages/graph/README.md` — documents renderer decisions (hybrid, buffer-orphaning vs `bufferSubData`, premultiplied-alpha, shared VAOs, coordinate convention, API).                                                                                                              |
+| `f45ede6` | `packages/graph/README.md` — documents renderer decisions (hybrid, buffer-orphaning vs `bufferSubData`, premultiplied-alpha, shared VAOs, coordinate convention, API).                                                                                                                                  |
 
 Verified: `tsc --noEmit` + `oxlint` + `bun run lint` clean; 9/9 unit tests pass.
 
@@ -342,7 +343,8 @@ scroll, and React stay smooth under render load, and rendering continues even
 if the main thread is busy.
 
 **Why we deferred it:**
-- Sim is *already* off-thread (GraphWorker). The expensive physics isn't on the
+
+- Sim is _already_ off-thread (GraphWorker). The expensive physics isn't on the
   UI thread.
 - The render itself is 3 draw calls (points/lines/arrows) and is dirty-gated,
   so an idle graph is free and a 25k-node draw is well under one frame budget.
@@ -419,16 +421,17 @@ Phase-complete in the worktree `/home/pranav/Projects/.worktrees/
 basalt-feat/dql-aggregation` (branch `feat/dql-aggregation`, based at
 `3e50958`). ADR-028 flipped to **Accepted** with amendments. Commits:
 
-| Commit | Phase |
-|---|---|
-| `0994d5f` | 0 — function-call expression grammar (`fn_name`/`call`/`paren_expr`) |
-| `c51038b` | 1 — `QueryField`/`DataCommand::GroupBy|Flatten`, shared `alias_clause`/`query_field`, `field_ref` allows keyword first segment |
-| `dcad219` | 2 — order-executed command walk, GROUP BY, aggregates (count/sum/avg/min/max/length) |
-| `0182df6` | 3 — ISO-8601 date detection (`TypedValue::Date`) + Date-vs-Date compare |
-| `b1b7e62` | 4 — scalar FLATTEN (synthetic frontmatter field) |
-| (uncommitted) | 5 — 25k benches + `dql_runner` examples + ADR/README/handoff |
+| Commit        | Phase                                                                                |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `0994d5f`     | 0 — function-call expression grammar (`fn_name`/`call`/`paren_expr`)                 |
+| `c51038b`     | 1 — `QueryField`/`DataCommand::GroupBy                                               | Flatten`, shared `alias_clause`/`query_field`, `field_ref` allows keyword first segment |
+| `dcad219`     | 2 — order-executed command walk, GROUP BY, aggregates (count/sum/avg/min/max/length) |
+| `0182df6`     | 3 — ISO-8601 date detection (`TypedValue::Date`) + Date-vs-Date compare              |
+| `b1b7e62`     | 4 — scalar FLATTEN (synthetic frontmatter field)                                     |
+| (uncommitted) | 5 — 25k benches + `dql_runner` examples + ADR/README/handoff                         |
 
 Key decisions (see ADR-028 Amendments):
+
 - Commands execute in **written order** (Dataview semantics), not a fixed
   pipeline — `LIMIT 5 SORT date ASC` and mid-chain GROUP BY are legal.
 - No `Expr::Aggregate` variant: aggregate routing by function name + group

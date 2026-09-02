@@ -580,7 +580,14 @@ export function useVaultController(
       if (destinationRelPath) openFolder(destinationRelPath);
     }
     contextMenu.closeMenu();
-  }, [clipboard, contextMenu, mutations, openFolder, refreshTree, onPathsMoved]);
+  }, [
+    clipboard,
+    contextMenu,
+    mutations,
+    openFolder,
+    refreshTree,
+    onPathsMoved,
+  ]);
 
   const onMenuDelete = useCallback(() => {
     const target = contextMenu.menuState.target;

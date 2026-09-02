@@ -36,7 +36,9 @@ function node(
   return { path, name, relPath: path, kind, depth, childCount: 0 };
 }
 
-function makeMutations(overrides: Partial<UseVaultMutationsReturn> = {}): UseVaultMutationsReturn {
+function makeMutations(
+  overrides: Partial<UseVaultMutationsReturn> = {},
+): UseVaultMutationsReturn {
   return {
     ghostNode: null,
     createNoteInline: vi.fn(),
@@ -68,8 +70,11 @@ function makeMutations(overrides: Partial<UseVaultMutationsReturn> = {}): UseVau
 
 function setup(opts: Partial<UseVaultControllerOptions> = {}) {
   const mutations = opts.mutations ?? makeMutations();
-  const editor =
-    opts.editor ?? { selected: null, loadNote: vi.fn(), closeNote: vi.fn() };
+  const editor = opts.editor ?? {
+    selected: null,
+    loadNote: vi.fn(),
+    closeNote: vi.fn(),
+  };
   const onFileOpen = vi.fn();
   const onPathsMoved = vi.fn();
   const openFolder = vi.fn();
@@ -90,7 +95,16 @@ function setup(opts: Partial<UseVaultControllerOptions> = {}) {
       ...opts,
     }),
   );
-  return { result, mutations, editor, onFileOpen, onPathsMoved, openFolder, toggleFolder, refreshTree };
+  return {
+    result,
+    mutations,
+    editor,
+    onFileOpen,
+    onPathsMoved,
+    openFolder,
+    toggleFolder,
+    refreshTree,
+  };
 }
 
 const A = node("a.md", "file", 0);
@@ -142,16 +156,28 @@ describe("useVaultController", () => {
     });
 
     it("falls back to editor.loadNote when no onFileOpen is provided", () => {
-      const { result, editor } = setup({ visibleNodes: [A], onFileOpen: undefined });
+      const { result, editor } = setup({
+        visibleNodes: [A],
+        onFileOpen: undefined,
+      });
       act(() => result.current.onTreeFileClick(A, mouse()));
-      expect(editor.loadNote).toHaveBeenCalledWith({ name: "a.md", path: "a.md" });
+      expect(editor.loadNote).toHaveBeenCalledWith({
+        name: "a.md",
+        path: "a.md",
+      });
     });
   });
 
   describe("context menu", () => {
     it("openForNode records the anchor, target, and multi-select flag", () => {
       const { result } = setup();
-      act(() => result.current.contextMenu.openForNode(B, mouse({ clientX: 9, clientY: 11 }), false));
+      act(() =>
+        result.current.contextMenu.openForNode(
+          B,
+          mouse({ clientX: 9, clientY: 11 }),
+          false,
+        ),
+      );
       const ms = result.current.contextMenu.menuState;
       expect(ms.anchor).toEqual({ x: 9, y: 11 });
       expect(ms.target?.kind).toBe("file");
@@ -169,13 +195,17 @@ describe("useVaultController", () => {
     it("onTreeContextMenu selects the node and opens its menu", () => {
       const { result } = setup({ visibleNodes: [B] });
       act(() => result.current.onTreeContextMenu(B, mouse()));
-      expect(result.current.contextMenu.menuState.target?.node?.path).toBe("b.md");
+      expect(result.current.contextMenu.menuState.target?.node?.path).toBe(
+        "b.md",
+      );
       expect(result.current.selection.selectedIds.has("b.md")).toBe(true);
     });
 
     it("reports isMultiSelect when the node is part of a multi-selection", () => {
       const { result } = setup({ visibleNodes: [A, B] });
-      act(() => result.current.selection.setSelection(new Set([A.path, B.path])));
+      act(() =>
+        result.current.selection.setSelection(new Set([A.path, B.path])),
+      );
       act(() => result.current.onTreeContextMenu(B, mouse()));
       expect(result.current.contextMenu.menuState.isMultiSelect).toBe(true);
     });
@@ -223,7 +253,9 @@ describe("useVaultController", () => {
   describe("onMenuPaste", () => {
     it("moves paths, reports to onPathsMoved, clears clipboard, and refreshes", async () => {
       const { result, onPathsMoved, refreshTree, mutations } = setup({
-        mutations: makeMutations({ movePaths: vi.fn().mockResolvedValue(true) }),
+        mutations: makeMutations({
+          movePaths: vi.fn().mockResolvedValue(true),
+        }),
       });
       act(() => result.current.contextMenu.openForNode(FOLDER, mouse(), false));
       act(() => result.current.onMenuCut());
@@ -237,7 +269,9 @@ describe("useVaultController", () => {
 
     it("does nothing when movePaths reports failure", async () => {
       const { result, onPathsMoved } = setup({
-        mutations: makeMutations({ movePaths: vi.fn().mockResolvedValue(false) }),
+        mutations: makeMutations({
+          movePaths: vi.fn().mockResolvedValue(false),
+        }),
       });
       act(() => result.current.contextMenu.openForNode(FOLDER, mouse(), false));
       act(() => result.current.onMenuCut());
@@ -258,7 +292,9 @@ describe("useVaultController", () => {
 
     it("requests deletion of the whole selection when multi-selected", () => {
       const { result, mutations } = setup({ treeNodes: [A, B] });
-      act(() => result.current.selection.setSelection(new Set([A.path, B.path])));
+      act(() =>
+        result.current.selection.setSelection(new Set([A.path, B.path])),
+      );
       act(() => result.current.contextMenu.openForNode(B, mouse(), false));
       act(() => result.current.onMenuDelete());
       expect(mutations.requestDeleteMany).toHaveBeenCalledWith([
@@ -271,7 +307,11 @@ describe("useVaultController", () => {
   describe("handleConfirmDelete", () => {
     it("refreshes and closes the editor note when the selected note was deleted", async () => {
       const { result, mutations, editor, refreshTree } = setup({
-        editor: { selected: { path: "del/a.md", name: "a" }, loadNote: vi.fn(), closeNote: vi.fn() },
+        editor: {
+          selected: { path: "del/a.md", name: "a" },
+          loadNote: vi.fn(),
+          closeNote: vi.fn(),
+        },
         mutations: makeMutations({
           confirmDelete: vi.fn().mockResolvedValue(true),
           pendingDeletePaths: ["del/a.md"],
@@ -285,8 +325,14 @@ describe("useVaultController", () => {
 
     it("skips refresh when deletion is cancelled", async () => {
       const { result, editor, refreshTree } = setup({
-        editor: { selected: { path: "del/a.md", name: "a" }, loadNote: vi.fn(), closeNote: vi.fn() },
-        mutations: makeMutations({ confirmDelete: vi.fn().mockResolvedValue(false) }),
+        editor: {
+          selected: { path: "del/a.md", name: "a" },
+          loadNote: vi.fn(),
+          closeNote: vi.fn(),
+        },
+        mutations: makeMutations({
+          confirmDelete: vi.fn().mockResolvedValue(false),
+        }),
       });
       await act(async () => result.current.handleConfirmDelete());
       expect(refreshTree).not.toHaveBeenCalled();
@@ -297,14 +343,20 @@ describe("useVaultController", () => {
   describe("handleDeleteFromCommands", () => {
     it("deletes the selection when one exists", () => {
       const { result, mutations } = setup({ treeNodes: [A, B] });
-      act(() => result.current.selection.setSelection(new Set([A.path, B.path])));
+      act(() =>
+        result.current.selection.setSelection(new Set([A.path, B.path])),
+      );
       act(() => result.current.handleDeleteFromCommands());
       expect(mutations.requestDeleteMany).toHaveBeenCalled();
     });
 
     it("falls back to the editor-selected note when nothing is selected", () => {
       const { result, mutations } = setup({
-        editor: { selected: { path: "del/a.md", name: "a" }, loadNote: vi.fn(), closeNote: vi.fn() },
+        editor: {
+          selected: { path: "del/a.md", name: "a" },
+          loadNote: vi.fn(),
+          closeNote: vi.fn(),
+        },
       });
       act(() => result.current.handleDeleteFromCommands());
       expect(mutations.requestDelete).toHaveBeenCalledWith("del/a.md", "a");
@@ -315,9 +367,15 @@ describe("useVaultController", () => {
     it("creates an untitled note under the selected note's parent, opens the folder, and loads it", async () => {
       const { result, mutations, openFolder, refreshTree, editor } = setup({
         treeNodes: [node("dir/a.md", "file", 1)],
-        editor: { selected: { path: "dir/a.md", name: "a" }, loadNote: vi.fn(), closeNote: vi.fn() },
+        editor: {
+          selected: { path: "dir/a.md", name: "a" },
+          loadNote: vi.fn(),
+          closeNote: vi.fn(),
+        },
         mutations: makeMutations({
-          createUntitledNote: vi.fn().mockResolvedValue({ path: "dir/new.md", name: "new" }),
+          createUntitledNote: vi
+            .fn()
+            .mockResolvedValue({ path: "dir/new.md", name: "new" }),
         }),
       });
       await act(async () => result.current.createNoteInstant());
@@ -336,17 +394,32 @@ describe("useVaultController", () => {
     it("seeds a folder ghost under the selected note's parent", () => {
       const { result, mutations, openFolder } = setup({
         treeNodes: [node("dir/a.md", "file", 1)],
-        editor: { selected: { path: "dir/a.md", name: "a" }, loadNote: vi.fn(), closeNote: vi.fn() },
+        editor: {
+          selected: { path: "dir/a.md", name: "a" },
+          loadNote: vi.fn(),
+          closeNote: vi.fn(),
+        },
       });
       act(() => result.current.startFolderInline());
-      expect(mutations.createFolderInline).toHaveBeenCalledWith({ parentRelPath: "dir", depth: 1 });
+      expect(mutations.createFolderInline).toHaveBeenCalledWith({
+        parentRelPath: "dir",
+        depth: 1,
+      });
       expect(openFolder).toHaveBeenCalledWith("dir");
     });
   });
 
   describe("handleCommitEdit", () => {
-    const fileNode = (parentRelPath: string): FileNode & { parentRelPath?: string } =>
-      ({ id: "x", name: "x", isFolder: false, depth: 0, parentRelPath }) as unknown as FileNode & {
+    const fileNode = (
+      parentRelPath: string,
+    ): FileNode & { parentRelPath?: string } =>
+      ({
+        id: "x",
+        name: "x",
+        isFolder: false,
+        depth: 0,
+        parentRelPath,
+      }) as unknown as FileNode & {
         parentRelPath?: string;
       };
 
@@ -371,7 +444,9 @@ describe("useVaultController", () => {
           createFolder: vi.fn().mockResolvedValue("/vault/dir/newfolder"),
         }),
       });
-      await act(async () => result.current.handleCommitEdit(fileNode("dir"), "newfolder/"));
+      await act(async () =>
+        result.current.handleCommitEdit(fileNode("dir"), "newfolder/"),
+      );
       expect(mutations.createFolder).toHaveBeenCalledWith("newfolder", "dir");
       expect(openFolder).toHaveBeenCalledWith("dir/newfolder");
     });
@@ -381,7 +456,10 @@ describe("useVaultController", () => {
       await act(async () =>
         result.current.handleCommitEdit(fileNode("dir"), "sub/renamed.md"),
       );
-      expect(mutations.createNote).toHaveBeenCalledWith("renamed.md", "dir/sub");
+      expect(mutations.createNote).toHaveBeenCalledWith(
+        "renamed.md",
+        "dir/sub",
+      );
     });
   });
 

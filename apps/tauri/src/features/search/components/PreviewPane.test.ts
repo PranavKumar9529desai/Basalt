@@ -1,7 +1,11 @@
 import { Text } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 
-import { buildDecorations, cachedPreviewState, windowPreview } from "./PreviewPane";
+import {
+  buildDecorations,
+  cachedPreviewState,
+  windowPreview,
+} from "./PreviewPane";
 
 function rangeSet(
   doc: Text,
@@ -9,9 +13,13 @@ function rangeSet(
   highlights: Array<{ start: number; end: number }>,
 ): Array<[number, number]> {
   const out: Array<[number, number]> = [];
-  buildDecorations(doc, matchLine, highlights).between(0, doc.length, (from, to) => {
-    out.push([from, to]);
-  });
+  buildDecorations(doc, matchLine, highlights).between(
+    0,
+    doc.length,
+    (from, to) => {
+      out.push([from, to]);
+    },
+  );
   // `between` makes no ordering guarantee; sort for stable assertions.
   return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 }
@@ -26,9 +34,17 @@ describe("PreviewPane.buildDecorations", () => {
   it("sorts unsorted highlights by start before building ranges", () => {
     // Unsorted input must not throw CM's RangeSet assertion.
     expect(() =>
-      rangeSet(doc, 1, [{ start: 7, end: 9 }, { start: 2, end: 5 }]),
+      rangeSet(doc, 1, [
+        { start: 7, end: 9 },
+        { start: 2, end: 5 },
+      ]),
     ).not.toThrow();
-    expect(rangeSet(doc, 1, [{ start: 7, end: 9 }, { start: 2, end: 5 }])).toEqual([
+    expect(
+      rangeSet(doc, 1, [
+        { start: 7, end: 9 },
+        { start: 2, end: 5 },
+      ]),
+    ).toEqual([
       [0, 0], // line decoration (start=0, empty)
       [2, 5],
       [7, 9],
@@ -43,7 +59,12 @@ describe("PreviewPane.buildDecorations", () => {
   });
 
   it("drops highlights that fall outside the matched line", () => {
-    expect(rangeSet(doc, 1, [{ start: 0, end: 3 }, { start: 50, end: 60 }])).toEqual([
+    expect(
+      rangeSet(doc, 1, [
+        { start: 0, end: 3 },
+        { start: 50, end: 60 },
+      ]),
+    ).toEqual([
       [0, 0],
       [0, 3],
     ]);
@@ -54,7 +75,11 @@ describe("PreviewPane.windowPreview", () => {
   it("keeps a small document intact", () => {
     const text = "line1\nline2\nline3\n";
     const hl = [{ start: 0, end: 4 }];
-    expect(windowPreview(text, 2, hl)).toEqual({ text, matchLine: 2, highlights: hl });
+    expect(windowPreview(text, 2, hl)).toEqual({
+      text,
+      matchLine: 2,
+      highlights: hl,
+    });
   });
 
   it("windows a match deep in a large file around it", () => {

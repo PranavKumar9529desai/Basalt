@@ -31,7 +31,8 @@ export class SpatialGrid {
       this.items = new Int32Array(0);
       return;
     }
-    if (this.screen.length < count * 2) this.screen = new Float32Array(count * 2);
+    if (this.screen.length < count * 2)
+      this.screen = new Float32Array(count * 2);
     const screen = this.screen;
 
     // Pass 1: project to screen space and find bounds.
@@ -92,7 +93,13 @@ export class SpatialGrid {
   }
 
   /** Nearest node whose own radius (or `radius` fallback) contains (qx, qy), or -1. */
-  query(qx: number, qy: number, radius: number, sizes?: Float32Array | null, scale = 1): number {
+  query(
+    qx: number,
+    qy: number,
+    radius: number,
+    sizes?: Float32Array | null,
+    scale = 1,
+  ): number {
     if (this.count === 0) return -1;
     const cellSize = this.cellSize;
     const cx = Math.floor((qx - this.minX) / cellSize);
@@ -119,7 +126,9 @@ export class SpatialGrid {
           const dx = screen[i * 2] - qx;
           const dy = screen[i * 2 + 1] - qy;
           const d = dx * dx + dy * dy;
-          const r = sizes ? Math.min(22, Math.max(2, sizes[i] * scale)) * 0.5 : radius;
+          const r = sizes
+            ? Math.min(22, Math.max(2, sizes[i] * scale)) * 0.5
+            : radius;
           if (d < r * r && d < bestD) {
             bestD = d;
             best = i;

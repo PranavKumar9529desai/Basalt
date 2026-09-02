@@ -6,12 +6,7 @@ import {
   type FlatTreeNode,
 } from "../features/vault";
 import { useWorkspace } from "../shared/useWorkspace";
-import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-} from "react";
+import { type ReactNode, createContext, useCallback, useContext } from "react";
 
 function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const tree = useVaultTree(initialTree);
@@ -31,8 +26,8 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   // value changes (Object.is), so picking one tab reference means unrelated
   // tab/pane mutations — markTabDirty / setTabTitle on other tabs, activateTab
   // between notes — don't re-render the whole app shell.
-  const activeNoteTab = useTabsStore(
-    (s) => (activeNotePath ? getTabByPath(s.pane, s.tabs, activeNotePath) : null),
+  const activeNoteTab = useTabsStore((s) =>
+    activeNotePath ? getTabByPath(s.pane, s.tabs, activeNotePath) : null,
   );
 
   const workspace = useWorkspace({
@@ -109,11 +104,7 @@ export function AppProvider({
   children: ReactNode;
 }) {
   const value = useWorkspaceState(vaultPath, initialTree);
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useAppContext(): AppContextValue {
