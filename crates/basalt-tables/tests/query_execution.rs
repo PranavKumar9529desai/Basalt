@@ -290,3 +290,51 @@ fn sort_by_iso_date_ascending() {
         execute_query(&vault, "TABLE file.name FROM #work SORT due ASC").unwrap();
     assert_eq!(rows_names(&result), vec!["b", "a"]);
 }
+
+#[test]
+fn flatten_scalar_injects_computed_field() {
+    let vault = vault_with_frontmatter();
+    let result =
+        execute_query(&vault, "TABLE score FROM #work FLATTEN priority AS \"score\"").unwrap();
+    assert_total(&result, 3);
+    assert_eq!(result.rows.len(), 3);
+    let scores: Vec<f64> = result
+        .rows
+        .iter()
+        .map(|r| match &r[0] {
+            TypedValue::Number { value } => *value,
+            other => panic!("expected number, got {:?}", other),
+        })
+        .collect();
+    assert!(scores.contains(&2.0));
+    assert!(scores.contains(&4.0));
+    assert!(scores.contains(&1.0));
+}
+
+#[test]
+fn flatten_field_usable_in_later_where() {
+    let vault = vault_with_frontmatter();
+    let result = execute_query(
+        &vault,
+        r#"TABLE file.name FROM #work FLATTEN priority AS "score" WHERE score > 2"#,
+    )
+    .unwrap();
+    assert_total(&result, 1);
+    assert_eq!(rows_names(&result), vec!["b"]); // priority 4
+}
+
+#[test]
+fn flatten_field_groupable() {
+    let vault = vault_with_frontmatter();
+    let result = execute_query(
+        &vault,
+        r#"TABLE score, count(rows) FROM #work FLATTEN priority AS "score" GROUP BY score"#,
+    )
+    .unwrap();
+    // three distinct priority values -> three groups of one.
+    assert_total(&result, 3);
+    assert!(result
+        .rows
+        .iter()
+        .all(|r| matches!(r[1], TypedValue::Number { value: 1.0 })));
+}

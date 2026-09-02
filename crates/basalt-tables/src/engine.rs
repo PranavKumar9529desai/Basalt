@@ -73,8 +73,18 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
             DataCommand::GroupBy { expr, .. } => {
                 rows = group_rows(rows, expr);
             }
-            DataCommand::Flatten { .. } => {
-                // Scalar FLATTEN lands in Phase 4; list-splitting is deferred.
+            DataCommand::Flatten { expr, alias } => {
+                // Scalar FLATTEN: evaluate the expression per page row and
+                // inject the result as a synthetic frontmatter entry under the
+                // given alias (or `expr_text` if unnamed). List-splitting is
+                // deferred pending TypedValue::List.
+                let flat_name = alias.clone().unwrap_or_else(|| expr_text(expr));
+                for r in &mut rows {
+                    if let WorkRow::Page(p) = r {
+                        let val = eval_to_typed(expr, &EvalCtx::Page(p));
+                        p.frontmatter.push((flat_name.clone(), val));
+                    }
+                }
             }
             DataCommand::Limit(n) => {
                 total = rows.len();
