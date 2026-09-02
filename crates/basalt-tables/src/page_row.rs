@@ -3,7 +3,7 @@ use basalt_graph::StringArena;
 use basalt_parser::query::SourceFilter;
 use basalt_types::{TypedValue, yaml_to_typed_pairs};
 
-/// A single row in a DQL query result, built from vault metadata.
+#[derive(Clone)]
 pub struct PageRow {
     pub path: String,
     pub name: String,

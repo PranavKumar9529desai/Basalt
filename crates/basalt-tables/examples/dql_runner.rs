@@ -7,27 +7,27 @@ fn populate_vault() -> Vault {
 
     vault.add_document(
         "notes/work/project-alpha.md",
-        "---\ntags: [work, projects]\n---\n# Project Alpha\n\nCompleted the initial prototype. See [[project-beta]] for follow-up.\n",
+        "---\ntags: [work, projects]\npriority: 3\nstatus: active\nlabels: [frontend, rust]\n---\n# Project Alpha\n\nCompleted the initial prototype. See [[project-beta]] for follow-up.\n",
     );
     vault.add_document(
         "notes/work/project-beta.md",
-        "---\ntags: [work, projects]\n---\n# Project Beta\n\nFollow-up to [[project-alpha]]. High priority migration work.\n",
+        "---\ntags: [work, projects]\npriority: 5\nstatus: active\nlabels: [backend, rust]\n---\n# Project Beta\n\nFollow-up to [[project-alpha]]. High priority migration work.\n",
     );
     vault.add_document(
         "notes/personal/journal.md",
-        "---\ntags: [personal, journal]\n---\n# Weekly Journal\n\nRelaxed week. Read about [[project-alpha]] progress.\n",
+        "---\ntags: [personal, journal]\npriority: 1\nstatus: done\n---\n# Weekly Journal\n\nRelaxed week. Read about [[project-alpha]] progress.\n",
     );
     vault.add_document(
         "notes/personal/reading.md",
-        "---\ntags: [personal, reading]\n---\n# Reading List\n\nBooks to finish before [[project-beta]] ships.\n",
+        "---\ntags: [personal, reading]\npriority: 2\nstatus: active\n---\n# Reading List\n\nBooks to finish before [[project-beta]] ships.\n",
     );
     vault.add_document(
         "archive/old-note.md",
-        "---\ntags: [archive]\n---\n# Old Note\n\nSuperseded by [[project-alpha]].\n",
+        "---\ntags: [archive]\npriority: 1\nstatus: done\n---\n# Old Note\n\nSuperseded by [[project-alpha]].\n",
     );
     vault.add_document(
         "notes/work/urgent-fix.md",
-        "---\ntags: [work, urgent]\n---\n# Urgent Fix\n\nCritical bug blocking [[project-beta]] release.\n",
+        "---\ntags: [work, urgent]\npriority: 5\nstatus: active\n---\n# Urgent Fix\n\nCritical bug blocking [[project-beta]] release.\n",
     );
 
     vault
@@ -64,6 +64,15 @@ fn print_result(label: &str, dql: &str, result: &QueryResult) {
                 TypedValue::Link { name, path } => format!("{} -> {}", name, path),
                 TypedValue::Null => "null".to_string(),
                 TypedValue::Date { value } => value.clone(),
+                TypedValue::List { items } => {
+                    let parts: Vec<String> = items.iter().map(|item| match item {
+                        TypedValue::Text { value } => value.clone(),
+                        TypedValue::Number { value } => format!("{}", value),
+                        TypedValue::Checkbox { value } => format!("{}", value),
+                        other => format!("{:?}", other),
+                    }).collect();
+                    parts.join(", ")
+                }
             })
             .collect();
         println!(
@@ -100,7 +109,15 @@ fn main() {
         ("FROM #work + SORT + LIMIT", "TABLE file.name FROM #work SORT file.name ASC LIMIT 2"),
         ("FROM #personal + SORT", "LIST FROM #personal SORT file.name DESC"),
         ("COMBINED: FROM + WHERE + SORT + LIMIT", "TABLE file.name FROM #work SORT file.name ASC LIMIT 3"),
-    ];
+        ("GROUP BY status (count per group)", "TABLE status, count(rows) FROM #work GROUP BY status"),
+        ("GROUP BY status SORT by key", "TABLE status, count(rows) FROM #work GROUP BY status SORT key ASC"),
+        ("FLATTEN priority as p, then GROUP BY", "TABLE p, count(rows) FROM #work FLATTEN priority AS \"p\" GROUP BY p"),
+        ("SUM + AVG per status", "TABLE status, sum(rows.priority) AS \"sum\", avg(rows.priority) AS \"avg\" FROM #work GROUP BY status"),
+        ("FLATTEN labels AS \"label\"", "TABLE file.name, label FROM #work FLATTEN labels AS \"label\""),
+        ("FLATTEN + GROUP BY count per label", "TABLE label, count(rows) FROM #work FLATTEN labels AS \"label\" GROUP BY label"),
+        ("WHERE contains(labels, \"rust\")", "TABLE file.name FROM #work WHERE contains(labels, \"rust\")"),
+        ("WHERE length(labels) > 1", "TABLE file.name FROM #work WHERE length(labels) > 1"),
+     ];
 
     println!("\nDQL Query Runner — {} queries\n", queries.len());
 
