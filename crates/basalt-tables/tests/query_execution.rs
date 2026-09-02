@@ -243,3 +243,50 @@ fn aggregate_without_group_by_is_null() {
     let result = execute_query(&vault, "TABLE count(rows) FROM #work").unwrap();
     assert_eq!(result.rows[0][0], TypedValue::Null);
 }
+
+#[test]
+fn group_by_iso_date() {
+    let mut vault = Vault::new();
+    vault.add_document(
+        "notes/a.md",
+        "---\ndue: 2024-01-15\n---\n# A\n\nTags: #work\n",
+    );
+    vault.add_document(
+        "notes/b.md",
+        "---\ndue: 2024-01-15\n---\n# B\n\nTags: #work\n",
+    );
+    vault.add_document(
+        "notes/c.md",
+        "---\ndue: 2024-03-01\n---\n# C\n\nTags: #work\n",
+    );
+    let result = execute_query(&vault, "TABLE due, count(rows) FROM #work GROUP BY due").unwrap();
+    assert_total(&result, 2);
+    let counts: Vec<f64> = result
+        .rows
+        .iter()
+        .map(|r| match &r[1] {
+            TypedValue::Number { value } => *value,
+            other => panic!("expected number, got {:?}", other),
+        })
+        .collect();
+    assert!(counts.contains(&2.0));
+    assert!(counts.contains(&1.0));
+    // Both columns resolve to date-typed values.
+    assert!(result.rows.iter().all(|r| matches!(r[0], TypedValue::Date { .. })));
+}
+
+#[test]
+fn sort_by_iso_date_ascending() {
+    let mut vault = Vault::new();
+    vault.add_document(
+        "notes/a.md",
+        "---\ndue: 2024-03-01\n---\n# A\n\nTags: #work\n",
+    );
+    vault.add_document(
+        "notes/b.md",
+        "---\ndue: 2024-01-15\n---\n# B\n\nTags: #work\n",
+    );
+    let result =
+        execute_query(&vault, "TABLE file.name FROM #work SORT due ASC").unwrap();
+    assert_eq!(rows_names(&result), vec!["b", "a"]);
+}

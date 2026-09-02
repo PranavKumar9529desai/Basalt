@@ -251,6 +251,8 @@ pub fn compare_typed(a: &TypedValue, b: &TypedValue) -> std::cmp::Ordering {
             a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
         }
         (TypedValue::Text { value: a }, TypedValue::Text { value: b }) => a.cmp(b),
+        // ISO-8601 dates compare lexicographically.
+        (TypedValue::Date { value: a }, TypedValue::Date { value: b }) => a.cmp(b),
         (TypedValue::Checkbox { value: a }, TypedValue::Checkbox { value: b }) => a.cmp(b),
         (TypedValue::Null, _) => std::cmp::Ordering::Less,
         (_, TypedValue::Null) => std::cmp::Ordering::Greater,
