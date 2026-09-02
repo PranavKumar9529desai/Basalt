@@ -230,6 +230,7 @@ fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
                         TypedValue::Checkbox { .. } => "checkbox",
                         TypedValue::Link { .. } => "link",
                         TypedValue::Date { .. } => "date",
+                        TypedValue::List { .. } => "list",
                         _ => "text",
                     })
                 })

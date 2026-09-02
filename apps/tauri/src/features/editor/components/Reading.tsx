@@ -683,9 +683,11 @@ function renderCell(cell: { type: string; [k: string]: unknown }): string {
     case "number": return String(cell.value ?? "");
     case "date": return `<span class="dql-date">${escHtml(String(cell.value ?? ""))}</span>`;
     case "checkbox": return cell.value ? '<span class="dql-check on">✓</span>' : '<span class="dql-check off">✗</span>';
-    case "link": return `<a class="internal-link dql-link" data-href="${escHtml(String(cell.path ?? ""))}" data-name="${escHtml(String(cell.name ?? ""))}">${escHtml(String(cell.name ?? ""))}</a>`;
+    case "list": {
+      const items = Array.isArray(cell.items) ? cell.items : [];
+      return items.map((item: { type: string; [k: string]: unknown }) => renderCell(item)).join(", ");
+    }
     case "null": return '<span class="dql-null">—</span>';
-    default: return escHtml(String(cell.value ?? ""));
   }
 }
 

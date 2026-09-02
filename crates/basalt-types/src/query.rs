@@ -9,6 +9,7 @@ pub enum TypedValue {
     Date { value: String },
     Checkbox { value: bool },
     Link { name: String, path: String },
+    List { items: Vec<TypedValue> },
     Null,
 }
 
@@ -69,21 +70,10 @@ pub fn yaml_to_typed(val: &serde_yaml_ng::Value) -> TypedValue {
             }
         }
         serde_yaml_ng::Value::Sequence(seq) => {
-            let parts: Vec<String> = seq
-                .iter()
-                .map(|v| match v {
-                    serde_yaml_ng::Value::String(s) => s.clone(),
-                    other => format!("{:?}", other),
-                })
-                .collect();
-            if parts.is_empty() {
-                TypedValue::Null
-            } else if parts.len() == 1 {
-                TypedValue::Text { value: parts[0].clone() }
-            } else {
-                TypedValue::Text { value: parts.join(", ") }
+            TypedValue::List {
+                items: seq.iter().map(yaml_to_typed).collect(),
             }
-        },
+        }
         _ => TypedValue::Text { value: format!("{:?}", val) },
     }
 }
@@ -131,5 +121,33 @@ mod tests {
         // Short/malformed shapes are not dates.
         let short = serde_yaml_ng::Value::String("2024-1-5".to_string());
         assert!(matches!(yaml_to_typed(&short), TypedValue::Text { .. }));
+    }
+
+    #[test]
+    fn sequence_becomes_list() {
+        let val = serde_yaml_ng::Value::Sequence(vec![
+            serde_yaml_ng::Value::String("alpha".to_string()),
+            serde_yaml_ng::Value::Number(42.into()),
+            serde_yaml_ng::Value::Bool(true),
+        ]);
+        assert_eq!(
+            yaml_to_typed(&val),
+            TypedValue::List {
+                items: vec![
+                    TypedValue::Text { value: "alpha".to_string() },
+                    TypedValue::Number { value: 42.0 },
+                    TypedValue::Checkbox { value: true },
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn empty_sequence_becomes_empty_list() {
+        let val = serde_yaml_ng::Value::Sequence(vec![]);
+        assert_eq!(
+            yaml_to_typed(&val),
+            TypedValue::List { items: vec![] }
+        );
     }
 }

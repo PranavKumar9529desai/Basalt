@@ -9,11 +9,11 @@ export type TypedValue =
   | { type: "date"; value: string }
   | { type: "checkbox"; value: boolean }
   | { type: "link"; name: string; path: string }
+  | { type: "list"; items: TypedValue[] }
   | { type: "null" }
-
 export interface QueryColumn {
   name: string
-  type: "text" | "number" | "date" | "checkbox" | "link"
+  type: "text" | "number" | "date" | "checkbox" | "link" | "list"
 }
 
 export interface QueryResult {

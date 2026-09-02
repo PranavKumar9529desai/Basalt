@@ -240,6 +240,7 @@ fn is_truthy(v: &TypedValue) -> bool {
     match v {
         TypedValue::Null => false,
         TypedValue::Checkbox { value } => *value,
+        TypedValue::List { items } => !items.is_empty(),
         _ => true,
     }
 }
