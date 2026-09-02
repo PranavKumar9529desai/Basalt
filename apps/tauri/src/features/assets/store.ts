@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { create } from "zustand";
 import type { AssetFilter, AssetInfo, AuditReport } from "./types";
 import { useAssetsIPC } from "./hooks/useAssetsIPC";
@@ -41,43 +41,66 @@ export const useAssetsStore = create<AssetsStore>()((set) => ({
 
 /**
  * Derive the filtered, searchable asset list from the store.
- * Returns a new array on every call — memoize in the consumer if needed.
+ *
+ * Subscribes only to primitives, then memoizes the derived list on them —
+ * zustand v5's `useStore` passes the selector result straight to
+ * `useSyncExternalStore`, so a selector returning a fresh array on every
+ * call (the old single-selector version of this hook) makes React see an
+ * unstable snapshot and loop ("Maximum update depth exceeded").
  */
 export function useFilteredAssets(): AssetInfo[] {
-  return useAssetsStore((s) => {
-    let list = s.assets;
+  const assets = useAssetsStore((s) => s.assets);
+  const filter = useAssetsStore((s) => s.filter);
+  const search = useAssetsStore((s) => s.search);
+  const showDuplicatesOnly = useAssetsStore((s) => s.showDuplicatesOnly);
+  const showOrphansOnly = useAssetsStore((s) => s.showOrphansOnly);
 
-    // Filter by type
-    if (s.filter !== "all") {
-      list = list.filter((a) => a.file_type === s.filter);
-    }
+  return useMemo(
+    () => filterAssets(assets, filter, search, showDuplicatesOnly, showOrphansOnly),
+    [assets, filter, search, showDuplicatesOnly, showOrphansOnly],
+  );
+}
 
-    // Orphans only
-    if (s.showOrphansOnly) {
-      list = list.filter((a) => a.embeds_by.length === 0 && a.linked_by.length === 0);
-    }
+/** Pure filter pipeline — testable, shared by the hook above. */
+export function filterAssets(
+  assets: AssetInfo[],
+  filter: AssetFilter,
+  search: string,
+  showDuplicatesOnly: boolean,
+  showOrphansOnly: boolean,
+): AssetInfo[] {
+  let list = assets;
 
-    // Duplicates only — group by content_hash, keep groups with >1 member
-    if (s.showDuplicatesOnly) {
-      const counts = new Map<string, number>();
-      for (const a of s.assets) {
-        if (a.content_hash) {
-          counts.set(a.content_hash, (counts.get(a.content_hash) ?? 0) + 1);
-        }
+  // Filter by type
+  if (filter !== "all") {
+    list = list.filter((a) => a.file_type === filter);
+  }
+
+  // Orphans only
+  if (showOrphansOnly) {
+    list = list.filter((a) => a.embeds_by.length === 0 && a.linked_by.length === 0);
+  }
+
+  // Duplicates only — group by content_hash, keep groups with >1 member
+  if (showDuplicatesOnly) {
+    const counts = new Map<string, number>();
+    for (const a of assets) {
+      if (a.content_hash) {
+        counts.set(a.content_hash, (counts.get(a.content_hash) ?? 0) + 1);
       }
-      list = list.filter(
-        (a) => a.content_hash && (counts.get(a.content_hash) ?? 0) > 1,
-      );
     }
+    list = list.filter(
+      (a) => a.content_hash && (counts.get(a.content_hash) ?? 0) > 1,
+    );
+  }
 
-    // Search by filename
-    if (s.search.trim()) {
-      const q = s.search.toLowerCase();
-      list = list.filter((a) => a.file_name.toLowerCase().includes(q));
-    }
+  // Search by filename
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    list = list.filter((a) => a.file_name.toLowerCase().includes(q));
+  }
 
-    return list;
-  });
+  return list;
 }
 
 /**

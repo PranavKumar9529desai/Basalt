@@ -598,7 +598,7 @@ function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLin
 
   useEffect(() => {
     let cancelled = false;
-    invoke<{ columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string; [k: string]: unknown }>>; total: number }>("run_query", { dql: queryText, path: "" })
+    invoke<{ columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string;[k: string]: unknown }>>; total: number }>("run_query", { dql: queryText, path: "" })
       .then((result) => {
         if (cancelled) return;
         setHtml(renderDqlResultHtml(result));
@@ -631,7 +631,7 @@ function DqlQueryBlock({ queryText, onOpenLink }: { queryText: string; onOpenLin
   return <div className="dql-result" ref={rootRef} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function renderDqlResultHtml(result: { columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string; [k: string]: unknown }>>; total: number }): string {
+function renderDqlResultHtml(result: { columns: Array<{ name: string; type: string }>; rows: Array<Array<{ type: string;[k: string]: unknown }>>; total: number }): string {
   const { columns, rows, total } = result;
   if (columns.length === 0 || rows.length === 0) return '<div class="dql-empty">No results</div>';
 
@@ -677,7 +677,7 @@ function escHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function renderCell(cell: { type: string; [k: string]: unknown }): string {
+function renderCell(cell: { type: string;[k: string]: unknown }): string {
   switch (cell.type) {
     case "text": return escHtml(String(cell.value ?? ""));
     case "number": return String(cell.value ?? "");
