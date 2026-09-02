@@ -344,3 +344,81 @@ fn flatten_field_groupable() {
         .iter()
         .all(|r| matches!(r[1], TypedValue::Number { value: 1.0 })));
 }
+
+fn vault_with_array_frontmatter() -> Vault {
+    let mut vault = Vault::new();
+    vault.add_document(
+        "notes/a.md",
+        "---\nlabels: [rust, nom]\n---\n# A\n\nTags: #work\n",
+    );
+    vault.add_document(
+        "notes/b.md",
+        "---\nlabels: [nom]\n---\n# B\n\nTags: #work\n",
+    );
+    vault
+}
+
+#[test]
+fn flatten_list_splits_into_rows() {
+    let vault = vault_with_array_frontmatter();
+    let result = execute_query(
+        &vault,
+        "TABLE label FROM #work FLATTEN labels AS \"label\"",
+    )
+    .unwrap();
+
+    // a: [rust, nom] -> 2 rows, b: [nom] -> 1 row = 3 total.
+    assert_total(&result, 3);
+    assert_eq!(result.rows.len(), 3);
+    let mut labels: Vec<&str> = result
+        .rows
+        .iter()
+        .map(|r| match &r[0] {
+            TypedValue::Text { value } => value.as_str(),
+            other => panic!("expected text, got {:?}", other),
+        })
+        .collect();
+    labels.sort();
+    assert_eq!(labels, vec!["nom", "nom", "rust"]);
+}
+
+#[test]
+fn flatten_empty_list_injects_as_is() {
+    let mut vault = Vault::new();
+    vault.add_document(
+        "notes/empty.md",
+        "---\nlabels: []\n---\n# Empty\n\nTags: #work\n",
+    );
+    let result = execute_query(
+        &vault,
+        "TABLE file.name, label FROM #work FLATTEN labels AS \"label\"",
+    )
+    .unwrap();
+    // Empty list -> no split -> 1 row with List in label column.
+    assert_eq!(result.rows.len(), 1);
+    assert!(matches!(&result.rows[0][1], TypedValue::List { items } if items.is_empty()));
+}
+
+#[test]
+fn flatten_list_then_group_by_count() {
+    let vault = vault_with_array_frontmatter();
+    let result = execute_query(
+        &vault,
+        "TABLE label, count(rows) FROM #work FLATTEN labels AS \"label\" GROUP BY label",
+    )
+    .unwrap();
+    // rust: 1 (from a), nom: 2 (from a + b).
+    assert_total(&result, 2);
+    let nom_row = result
+        .rows
+        .iter()
+        .find(|r| r[0] == TypedValue::Text { value: "nom".into() })
+        .unwrap();
+    let rust_row = result
+        .rows
+        .iter()
+        .find(|r| r[0] == TypedValue::Text { value: "rust".into() })
+        .unwrap();
+    assert_eq!(nom_row[1], TypedValue::Number { value: 2.0 });
+    assert_eq!(rust_row[1], TypedValue::Number { value: 1.0 });
+}

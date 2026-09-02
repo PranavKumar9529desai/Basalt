@@ -74,17 +74,36 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
                 rows = group_rows(rows, expr);
             }
             DataCommand::Flatten { expr, alias } => {
-                // Scalar FLATTEN: evaluate the expression per page row and
-                // inject the result as a synthetic frontmatter entry under the
-                // given alias (or `expr_text` if unnamed). List-splitting is
-                // deferred pending TypedValue::List.
+                // FLATTEN: evaluate the expression per page row. When the
+                // result is a List, split the row into N rows (one per
+                // element) with each element injected under the alias.
+                // Scalar results inject as-is (existing behaviour). The alias
+                // defaults to `expr_text` when absent.
                 let flat_name = alias.clone().unwrap_or_else(|| expr_text(expr));
-                for r in &mut rows {
-                    if let WorkRow::Page(p) = r {
-                        let val = eval_to_typed(expr, &EvalCtx::Page(p));
-                        p.frontmatter.push((flat_name.clone(), val));
+                let mut new_rows: Vec<WorkRow> = Vec::new();
+                for r in rows.drain(..) {
+                    match r {
+                        WorkRow::Page(p) => {
+                            let val = eval_to_typed(&expr, &EvalCtx::Page(&p));
+                            match val {
+                                TypedValue::List { items } if !items.is_empty() => {
+                                    for item in items {
+                                        let mut clone = p.clone();
+                                        clone.frontmatter.push((flat_name.clone(), item));
+                                        new_rows.push(WorkRow::Page(clone));
+                                    }
+                                }
+                                _ => {
+                                    let mut page = p;
+                                    page.frontmatter.push((flat_name.clone(), val));
+                                    new_rows.push(WorkRow::Page(page));
+                                }
+                            }
+                        }
+                        other => new_rows.push(other),
                     }
                 }
+                rows = new_rows;
             }
             DataCommand::Limit(n) => {
                 total = rows.len();
