@@ -3,7 +3,7 @@ use nom::{
     bytes::complete::{tag, tag_no_case, take_while1},
     character::complete::{char, digit1, multispace0, multispace1},
     combinator::{map, opt, value, verify},
-    multi::{separated_list0, separated_list1},
+    multi::{many0, separated_list0},
     number::complete::double,
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -28,10 +28,10 @@ pub enum SortDirection {
     Desc,
 }
 
-/// A column in a TABLE query: `field AS "alias"`.
+/// A column in a TABLE query: `expr AS "alias"`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct QueryField {
-    pub field: FieldRef,
+    pub expr: Expr,
     pub alias: Option<String>,
 }
 
@@ -43,8 +43,14 @@ pub enum DataCommand {
         field: FieldRef,
         direction: SortDirection,
     },
-    GroupBy(Expr),
-    Flatten(Expr),
+    GroupBy {
+        expr: Expr,
+        alias: Option<String>,
+    },
+    Flatten {
+        expr: Expr,
+        alias: Option<String>,
+    },
     Limit(u64),
 }
 
@@ -136,10 +142,30 @@ fn ident(input: &str) -> IResult<&str, String> {
 }
 
 fn field_ref(input: &str) -> IResult<&str, FieldRef> {
-    map(
-        separated_list1(char('.'), ident),
-        FieldRef,
-    )(input)
+    let (input, first) = field_first_segment(input)?;
+    let (input, rest) = many0(map(
+        preceded(char('.'), take_while1(is_ident_char)),
+        |s: &str| s.to_string(),
+    ))(input)?;
+    let mut parts = Vec::with_capacity(rest.len() + 1);
+    parts.push(first);
+    parts.extend(rest);
+    Ok((input, FieldRef(parts)))
+}
+
+/// The first segment of a field path. A non-keyword ident is always valid; a
+/// DQL keyword is valid only when it begins a dotted path (`task.complete`),
+/// so a standalone command keyword (`FROM` in `TABLE FROM #x`) is still
+/// rejected as a field and command detection is unaffected.
+fn field_first_segment(input: &str) -> IResult<&str, String> {
+    let (rest, name) = take_while1(is_ident_char)(input)?;
+    if is_keyword(name) && !rest.starts_with('.') {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Fail,
+        )));
+    }
+    Ok((rest, name.to_string()))
 }
 // Function-call names: alphanumeric + underscore, must start with a letter or
 // underscore. Unlike `ident`, keywords are allowed — `contains` is a DQL
@@ -193,13 +219,18 @@ fn quoted_string(input: &str) -> IResult<&str, String> {
     )(input)
 }
 
-fn query_field(input: &str) -> IResult<&str, QueryField> {
-    let (input, field) = field_ref(input)?;
-    let (input, alias) = opt(preceded(
+/// An optional `AS "alias"` clause, shared by TABLE fields, GROUP BY and FLATTEN.
+fn alias_clause(input: &str) -> IResult<&str, String> {
+    preceded(
         tuple((multispace1, tag_no_case("AS"), multispace1)),
         quoted_string,
-    ))(input)?;
-    Ok((input, QueryField { field, alias }))
+    )(input)
+}
+
+fn query_field(input: &str) -> IResult<&str, QueryField> {
+    let (input, expr) = simple_expr(input)?;
+    let (input, alias) = opt(alias_clause)(input)?;
+    Ok((input, QueryField { expr, alias }))
 }
 
 fn source_tag(input: &str) -> IResult<&str, SourceFilter> {
@@ -320,19 +351,26 @@ fn simple_expr(input: &str) -> IResult<&str, Expr> {
 
 fn where_expr(input: &str) -> IResult<&str, Expr> {
     let (input, left) = simple_expr(input)?;
-    let (input, _) = multispace0(input)?;
-    match opt(compare_op)(input)? {
-        (input, Some(op)) => {
-            let (input, _) = multispace0(input)?;
-            let (input, right) = simple_expr(input)?;
-            Ok((input, Expr::Comparison {
-                left: Box::new(left),
-                op,
-                right: Box::new(right),
-            }))
-        }
+    // Consume an optional comparison clause. We deliberately do NOT eat the
+    // trailing whitespace when there's no comparison, so the data-command
+    // separator (multispace1) can still match the next command
+    // (`WHERE x GROUP BY y`).
+    match opt(compare_clause)(input)? {
+        (input, Some((op, right))) => Ok((input, Expr::Comparison {
+            left: Box::new(left),
+            op,
+            right: Box::new(right),
+        })),
         (input, None) => Ok((input, left)),
     }
+}
+
+fn compare_clause(input: &str) -> IResult<&str, (CompareOp, Expr)> {
+    let (input, _) = multispace0(input)?;
+    let (input, op) = compare_op(input)?;
+    let (input, _) = multispace0(input)?;
+    let (input, right) = simple_expr(input)?;
+    Ok((input, (op, right)))
 }
 /// A parenthesized expression: `(expr)` — the shape needed for computed
 /// GROUP BY / FLATTEN keys, usable anywhere a simple expression is valid.
@@ -365,6 +403,20 @@ fn data_command(input: &str) -> IResult<&str, DataCommand> {
                     field,
                     direction: dir.unwrap_or(SortDirection::Asc),
                 },
+            ),
+        ),
+        preceded(
+            tuple((tag_no_case("GROUP"), multispace1, tag_no_case("BY"), multispace1)),
+            map(
+                pair(simple_expr, opt(alias_clause)),
+                |(expr, alias)| DataCommand::GroupBy { expr, alias },
+            ),
+        ),
+        preceded(
+            tuple((tag_no_case("FLATTEN"), multispace1)),
+            map(
+                pair(simple_expr, opt(alias_clause)),
+                |(expr, alias)| DataCommand::Flatten { expr, alias },
             ),
         ),
         preceded(
@@ -439,8 +491,8 @@ mod tests {
     fn parse_table_with_fields() {
         let plan = parse_query("TABLE file.name, rating").unwrap();
         assert_eq!(plan.fields.len(), 2);
-        assert_eq!(plan.fields[0].field.0, vec!["file", "name"]);
-        assert_eq!(plan.fields[1].field.0, vec!["rating"]);
+        assert_eq!(plan.fields[0].expr, Expr::Field(FieldRef(vec!["file".into(), "name".into()])));
+        assert_eq!(plan.fields[1].expr, Expr::Field(FieldRef(vec!["rating".into()])));
     }
 
     #[test]
@@ -670,6 +722,100 @@ mod tests {
             }
             other => panic!("Expected comparison, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn parse_table_with_expr_field() {
+        let plan = parse_query(r#"TABLE status, count(task.complete) AS "Done" FROM #work"#).unwrap();
+        assert_eq!(plan.fields.len(), 2);
+        assert_eq!(plan.fields[0].expr, Expr::Field(FieldRef(vec!["status".into()])));
+        assert_eq!(plan.fields[0].alias, None);
+        assert_eq!(
+            plan.fields[1].expr,
+            Expr::Func { name: "count".into(), args: vec![Expr::Field(FieldRef(vec!["task".into(), "complete".into()]))] }
+        );
+        assert_eq!(plan.fields[1].alias, Some("Done".to_string()));
+    }
+
+    #[test]
+    fn parse_group_by_field() {
+        let plan = parse_query("TABLE status, count(rows) FROM #work GROUP BY status").unwrap();
+        assert_eq!(plan.commands.len(), 1);
+        match &plan.commands[0] {
+            DataCommand::GroupBy { expr, alias } => {
+                assert_eq!(expr, &Expr::Field(FieldRef(vec!["status".into()])));
+                assert_eq!(alias, &None);
+            }
+            other => panic!("expected GroupBy, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_group_by_computed_alias() {
+        let plan = parse_query(r#"TABLE file.name, count(rows) FROM #work GROUP BY (length(tags)) AS "Size""#).unwrap();
+        match &plan.commands[0] {
+            DataCommand::GroupBy { expr, alias } => {
+                assert_eq!(
+                    expr,
+                    &Expr::Func { name: "length".into(), args: vec![Expr::Field(FieldRef(vec!["tags".into()]))] }
+                );
+                assert_eq!(alias, &Some("Size".to_string()));
+            }
+            other => panic!("expected GroupBy, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_flatten_alias() {
+        let plan = parse_query(r#"TABLE file.name, tag_count FROM #work FLATTEN length(tags) AS "tag_count""#).unwrap();
+        assert_eq!(plan.commands.len(), 1);
+        match &plan.commands[0] {
+            DataCommand::Flatten { expr, alias } => {
+                assert_eq!(
+                    expr,
+                    &Expr::Func { name: "length".into(), args: vec![Expr::Field(FieldRef(vec!["tags".into()]))] }
+                );
+                assert_eq!(alias, &Some("tag_count".to_string()));
+            }
+            other => panic!("expected Flatten, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_flatten_without_alias() {
+        let plan = parse_query("TABLE file.name FROM #work FLATTEN file.tags").unwrap();
+        match &plan.commands[0] {
+            DataCommand::Flatten { expr, alias } => {
+                assert_eq!(expr, &Expr::Field(FieldRef(vec!["file".into(), "tags".into()])));
+                assert_eq!(alias, &None);
+            }
+            other => panic!("expected Flatten, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parse_full_aggregation_query() {
+        let plan = parse_query(
+            r#"TABLE status, count(task.complete) AS "Done"
+FROM #work
+WHERE task.complete
+GROUP BY status
+SORT status DESC
+FLATTEN length(tags) AS "Tags"
+LIMIT 10"#,
+        ).unwrap();
+        assert_eq!(plan.fields.len(), 2);
+        assert_eq!(plan.commands.len(), 5);
+    }
+
+    #[test]
+    fn parse_groupby_preserves_command_order() {
+        let plan = parse_query(
+            "LIST FROM #work WHERE rating > 5 GROUP BY status SORT rating DESC LIMIT 3",
+        ).unwrap();
+        assert_eq!(plan.commands.len(), 4);
+        assert!(matches!(&plan.commands[1], DataCommand::GroupBy { .. }));
+        assert!(matches!(&plan.commands[2], DataCommand::Sort { .. }));
     }
 
 }

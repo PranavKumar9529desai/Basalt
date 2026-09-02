@@ -1,8 +1,8 @@
-use basalt_parser::query::{DataCommand, QueryPlan, QueryType, SortDirection};
+use basalt_parser::query::{CompareOp, DataCommand, Expr, Literal, QueryPlan, QueryType, SortDirection};
 use basalt_types::{QueryColumn, QueryResult, TypedValue};
 use basalt_vault::Vault;
 
-use crate::expr::{compare_typed, field_value, eval_expr};
+use crate::expr::{compare_typed, eval_to_typed, eval_expr, field_value};
 use crate::page_row::{build_page_rows, matches_source};
 
 /// Execute a DQL query against the vault's indexed metadata.
@@ -62,7 +62,7 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
                 .map(|p| {
                     plan.fields
                         .iter()
-                        .map(|f| field_value(&f.field, p))
+                        .map(|f| eval_to_typed(&f.expr, p))
                         .collect()
                 })
                 .collect();
@@ -126,12 +126,12 @@ fn build_columns(plan: &QueryPlan, pages: &[crate::page_row::PageRow]) -> Vec<Qu
     plan.fields
         .iter()
         .map(|f| {
-            let name = f.alias.clone().unwrap_or_else(|| f.field.0.join("."));
+            let name = f.alias.clone().unwrap_or_else(|| expr_text(&f.expr));
             // Infer type from first non-null value
             let type_ = pages
                 .iter()
                 .find_map(|p| {
-                    let v = field_value(&f.field, p);
+                    let v = eval_to_typed(&f.expr, p);
                     Some(match v {
                         TypedValue::Number { .. } => "number",
                         TypedValue::Checkbox { .. } => "checkbox",
@@ -145,4 +145,34 @@ fn build_columns(plan: &QueryPlan, pages: &[crate::page_row::PageRow]) -> Vec<Qu
             QueryColumn { name, type_ }
         })
         .collect()
+}
+
+/// Render an expression as its column name when no alias is given.
+fn expr_text(expr: &Expr) -> String {
+    match expr {
+        Expr::Field(f) => f.0.join("."),
+        Expr::Literal(Literal::Text(s)) => s.clone(),
+        Expr::Literal(Literal::Number(n)) => format!("{}", n),
+        Expr::Literal(Literal::Bool(b)) => b.to_string(),
+        Expr::Literal(Literal::Null) => "null".to_string(),
+        Expr::Func { name, args } => {
+            let args_s: Vec<String> = args.iter().map(expr_text).collect();
+            format!("{}({})", name, args_s.join(", "))
+        }
+        Expr::Not(inner) => format!("!{}", expr_text(inner)),
+        Expr::Comparison { left, op, right } => format!(
+            "{} {} {}",
+            expr_text(left),
+            match op {
+                CompareOp::Eq => "=",
+                CompareOp::Ne => "!=",
+                CompareOp::Lt => "<",
+                CompareOp::Gt => ">",
+                CompareOp::Le => "<=",
+                CompareOp::Ge => ">=",
+                CompareOp::Contains => "contains",
+            },
+            expr_text(right),
+        ),
+    }
 }
