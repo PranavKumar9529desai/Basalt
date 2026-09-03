@@ -1,4 +1,4 @@
-# Basalt Frontend Conventions
+# Basalt Conventions — Frontend & Rust Backend
 
 > Mandatory for ALL AI agents and human contributors.
 > These replace and supersede outdated ADRs where they conflict.
@@ -407,7 +407,7 @@ apps/tauri/src/
 │   │   ├── components/            # Host, EditorView, Reading, ContextMenu, InlineTitle, StatusLine
 │   │   ├── controller/            # EditorController (+ test)
 │   │   ├── hooks/                 # useEditor, useNoteIO, useEditorCommands, useLatestRef
-│   │   ├── logic/                 # saveManager, reconcile, pruneCache, stats, frontmatter
+│   │   ├── lib/                   # saveManager, reconcile, pruneCache, stats, frontmatter (+ tests)
 │   │   ├── store/                 # activeNote.ts + renameSignal.ts (index barrel)
 │   │   ├── commands.ts, types.ts, index.ts
 │   ├── tabs/
@@ -461,7 +461,7 @@ as phases land.
 type(scope): description
 
 type: refactor | feat | fix | chore | docs | style | perf
-scope: app-shell | editor | tabs | vault | search | settings | ui | packages
+scope: app-shell | editor | tabs | vault | search | settings | ui | packages | rust
 
 Examples:
 refactor(app-shell): merge layout/ and workspace/ into app-shell/
@@ -469,3 +469,83 @@ feat(editor): add slash-command menu
 fix(vault): handle file-tree click race condition
 chore(ui): delete duplicate scroll-area.tsx
 ```
+
+---
+
+## 11. Rust Backend Conventions
+
+The Tauri backend lives in `apps/tauri/src-tauri/` (`src/lib.rs`, `src/commands/`
+for IPC handlers, `src/core/` for shared infrastructure, `src/error.rs` for the
+command error type). Domain crates under `crates/` (`basalt-parser`,
+`basalt-graph`, `basalt-vault`, `basalt-tables`, `basalt-search`) hold the
+compute. These rules keep the boundary between the two explicit and consistent.
+
+### 11.1 Where thiserror goes
+
+- **Domain crates** own a `thiserror` enum per fallible concern — e.g.
+  `basalt_parser::ParseError`, `basalt_vault::path_utils::PathError`. These are
+  rich, matchable types with `#[error("...")]` `Display` impls (thiserror).
+- **The command layer** collapses every failure into ONE enum,
+  `AppError` (`src/error.rs`), with an `AppResult<T>` alias. Commands return
+  `AppResult<T>` — never bare `Result<T, String>`.
+- `AppError` implements `From` for its inputs (`String`, `&str`,
+  `io::Error`, and the domain enums it wraps) so `?` auto-converts at the
+  boundary. Add a `From<MyDomainError>` impl when you wrap a new crate error.
+
+### 11.2 Error-variant granularity
+
+Match the failure, not the message. Pick the most specific `AppError` variant:
+
+- `NoVault` — no vault configured/opened
+- `LockPoisoned(&'static str)` — an app-owned `RwLock`/`Mutex` poisoned; carry
+  the mutex name (e.g. `AppError::LockPoisoned("vault")`), never `.unwrap()`
+- `InvalidVaultPath(io::Error)` — vault root could not be canonicalized
+- `Validation(String)` — a path/name/value failed validation (also wraps
+  `basalt_vault::path_utils::PathError`)
+- `Query(String)` / `Search(String)` — DQL / search failed (also wrap
+  `basalt_parser::ParseError`)
+- `Io(String)` — a filesystem operation failed
+- `Other(String)` — any remaining operational failure (last resort)
+
+Do not reach for `Other` when a specific variant exists, and never thread a raw
+`"lock poisoned".to_string()` through `From<String>` — that erases the variant.
+
+### 11.3 Wire contract
+
+`AppError` serializes to its `Display` string (single `serialize_str` of
+`self.to_string()`). The frontend consumes errors with
+`catch (err) { String(err) }`, so this shape is the contract — do NOT change it
+to an object/struct on the wire. Typed matching is internal-only.
+
+### 11.4 Service-method naming over raw state access
+
+Commands read the vault through intent-revealing `Vault` methods (`crates/
+basalt-vault/src/vault.rs`), never by reaching into the raw internals
+(`vault.graph.metadata_cache`, `vault.arena.*`). The public query surface:
+
+- `note_paths()` — all cached document paths
+- `paths_under(prefix)` — a folder plus its descendants (delete/move/rename)
+- `note_count()`, `backlinks_for(path)`, `all_tags()`, `metadata(path)`
+
+Rules that follow from this:
+
+- 🚫 No `vault.graph.metadata_cache` iteration or `vault.arena.get_id`/`get_string`
+  dance inside `commands/` — that coupling is exactly the smell this rule kills.
+- ✅ `basalt-graph`-internal logic (the graph snapshot builder, tests that
+  assert graph state) MAY touch `metadata_cache`/`arena` directly; `commands/`
+  and ordinary `Vault` users must not.
+- If a query recurs in two or more commands, hoist it into a `Vault` method
+  with a name describing the INTENT (what it answers), not the mechanism.
+
+### 11.5 src-tauri module layout
+
+- `commands/*.rs` — one file per concern (notes, folders, assets, files, vault,
+  boot, query, search, settings, …). Each `#[tauri::command]` is a thin wrapper;
+  heavy logic lives in a `*_impl` sibling so it is unit-testable without a
+  `State`.
+- `core/` — shared application infrastructure (`app_state`, `cache`, `config`,
+  `watcher`, `workspace`). Re-exported at the crate root (`pub use core::*`) so
+  established `crate::cache` paths stay stable.
+- `error.rs` — `AppError` + `AppResult` only.
+- Testable helpers that don't need `State` take `&AppState` (or plain
+  arguments), letting tests drive them with a real temp vault.
