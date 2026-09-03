@@ -18,7 +18,7 @@ import { handleTableNode } from "../../src/preview/tables";
 import { makeContext, makeCollector } from "../_helpers";
 
 /** Find the first Table syntax node in the doc and return it as a SyntaxNodeRef. */
-function tableRef(state: ReturnType<typeof makeContext>["state"]) {
+function tableRef(state: ReturnType<typeof makeContext>["state"]): SyntaxNode | null {
   const tree = syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({

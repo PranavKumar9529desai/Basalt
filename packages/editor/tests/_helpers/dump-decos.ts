@@ -42,25 +42,26 @@ interface PreviewStateValue {
   complete: boolean;
 }
 
-/** Collect `[from, to, value]` triples from a DecorationSet into a report. */
-function collect(
-  set: DecorationSet,
-  kind: "line" | "mark" | "replace",
-  out: DecorationReport,
-) {
+/** Collect `[from, to, value]` triples from a DecorationSet into a report,
+ * classifying each decoration by its actual kind via the constructor name
+ * (LineDecoration / MarkDecoration / Widget+PointDecoration). */
+function collect(set: DecorationSet, out: DecorationReport) {
   set.between(0, 1e9, (from, to, deco: Decoration) => {
     const spec = deco.spec as { class?: string };
-    if (kind === "line") {
-      out.lineClasses.push({ pos: from, class: spec.class ?? "" });
-    } else if (kind === "replace") {
+    const kind = (deco as { constructor: { name: string } }).constructor.name;
+    const cls = spec.class ?? "";
+    if (kind === "LineDecoration") {
+      out.lineClasses.push({ pos: from, class: cls });
+    } else if (kind === "MarkDecoration") {
+      out.marks.push({ from, to, class: cls });
+    } else {
+      // WidgetDecoration / PointDecoration — the replaced block/inline widgets
       out.replaces.push({
         from,
         to,
         widget: (deco as { widget?: { constructor: { name: string } } }).widget
           ?.constructor?.name ?? "unknown",
       });
-    } else {
-      out.marks.push({ from, to, class: spec.class ?? "" });
     }
   });
 }
@@ -84,10 +85,8 @@ export function dumpDecorations(state: EditorState): DecorationReport {
     complete: preview.complete,
   };
 
-  collect(preview.decorations, "line", report);
-  collect(preview.decorations, "replace", report);
-  collect(preview.decorations, "mark", report);
-  collect(preview.atomicRanges, "replace", report);
+  collect(preview.decorations, report);
+  collect(preview.atomicRanges, report);
 
   return report;
 }

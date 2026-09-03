@@ -20,7 +20,7 @@ import {
 } from "../../src/preview/frontmatter";
 import { makeContext, makeCollector } from "../_helpers";
 
-function fmNode(state: ReturnType<typeof makeContext>["state"]) {
+function fmNode(state: ReturnType<typeof makeContext>["state"]): SyntaxNode | null {
   const tree = syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({
@@ -88,7 +88,7 @@ describe("handleFrontmatterNode", () => {
 
 describe("handleFrontmatterFallback", () => {
   it("classes a --- delimited block and marks interior keys", () => {
-    const { ctx, state } = makeContext("---\ntitle: x\n---\nbody");
+    const { ctx } = makeContext("---\ntitle: x\n---\nbody");
     const c = makeCollector();
     handleFrontmatterFallback(ctx, c);
     expect(c.lines).toContainEqual({ pos: 0, className: "cm-live-frontmatter" });

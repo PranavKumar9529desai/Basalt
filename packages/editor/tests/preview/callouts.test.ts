@@ -21,7 +21,9 @@ import type { SyntaxNode } from "@lezer/common";
 import { CalloutHeaderWidget, handleCalloutNode } from "../../src/preview/callouts";
 import { makeContext, makeCollector } from "../_helpers";
 
-function firstCalloutNode(state: ReturnType<typeof makeContext>["state"]) {
+function firstCalloutNode(
+  state: ReturnType<typeof makeContext>["state"],
+): SyntaxNode | null {
   const tree = syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({
@@ -38,12 +40,15 @@ function firstCalloutNode(state: ReturnType<typeof makeContext>["state"]) {
 function run(doc: string, headPos: number) {
   const { ctx, state } = makeContext(doc, { headPos });
   const node = firstCalloutNode(state);
+  expect(node).not.toBeNull();
   const c = makeCollector();
-  const handled = handleCalloutNode(
-    { from: node?.from ?? 0, to: node?.to ?? 0, type: { name: "Blockquote" } as never, node: node as never } as never,
-    ctx,
-    c,
-  );
+  const ref: never = {
+    from: node!.from,
+    to: node!.to,
+    type: { name: "Blockquote" },
+    node,
+  } as never;
+  const handled = handleCalloutNode(ref, ctx, c);
   return { handled, lines: c.lines, replaces: c.replaces };
 }
 
