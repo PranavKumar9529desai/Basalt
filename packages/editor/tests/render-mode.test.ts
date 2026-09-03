@@ -8,6 +8,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { EditorState, type Extension } from "@codemirror/state";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { Table } from "@lezer/markdown";
 import {
   livePreviewField,
   livePreviewPlugin,
@@ -15,22 +17,41 @@ import {
 import { renderModeReading } from "../src/preview/render-mode";
 import { blockWidgetSpecsFacet } from "../src/block-widgets/registry";
 import { tableBlockSpec } from "../src/block-widgets/table-widget";
-import { parseMarkdown } from "./_helpers/parse-markdown";
+import { dqlBlockSpec } from "../src/block-widgets/dql-widget";
+import { wikiLinkExtension } from "../src/syntax/wiki-links";
 
 function stateFor(
   doc: string,
   mode?: Extension,
 ): { state: EditorState; doc: string } {
   const extensions: Extension[] = [
+    markdown({
+      base: markdownLanguage,
+      extensions: [wikiLinkExtension, Table],
+    }),
     livePreviewPlugin,
     blockWidgetSpecsFacet.of(tableBlockSpec),
+    blockWidgetSpecsFacet.of(dqlBlockSpec),
   ];
   if (mode) extensions.push(mode);
-  const { state, doc: clean } = parseMarkdown(doc, {
+  const state = EditorState.create({
+    doc,
     extensions,
-    selection: 0,
   });
-  return { state, doc: clean };
+  return { state, doc };
+}
+
+/** Collect the constructor names of all block-widget replace decorations. */
+function widgetNames(state: EditorState): string[] {
+  const field = state.field(livePreviewField, false);
+  if (!field) return [];
+  const out: string[] = [];
+  field.decorations.between(0, state.doc.length, (_f, _t, value) => {
+    if ("widget" in value && value.widget) {
+      out.push((value.widget.constructor as { name: string }).name);
+    }
+  });
+  return out;
 }
 
 /** Collect inline mark decoration classes that cover the given range. */
@@ -58,15 +79,14 @@ describe("reading mode fully renders (renderMode facet)", () => {
     const table = "| A | B |\n|---|---|\n| 1 | 2 |";
     // Caret at index 0 sits inside the table's first line.
     const { state } = stateFor(table, renderModeReading);
-    const field = state.field(livePreviewField, false);
-    expect(field).toBeTruthy();
-    const widgetIds: string[] = [];
-    field!.decorations.between(0, state.doc.length, (_from, _to, value) => {
-      if ("widget" in value && value.widget) {
-        widgetIds.push((value.widget.constructor as { name: string }).name);
-      }
-    });
-    expect(widgetIds).toContain("TableBlockWidget");
+    expect(widgetNames(state)).toContain("TableBlockWidget");
+  });
+
+  it("renders a DQL result widget with the caret inside the block (reading mode)", () => {
+    const dql = "```dql\nTABLE FROM \"docs\"\n```";
+    // Caret at index 0 sits inside the dql fenced code block.
+    const { state } = stateFor(dql, renderModeReading);
+    expect(widgetNames(state)).toContain("DqlResultWidget");
   });
 });
 
@@ -81,14 +101,13 @@ describe("live preview keeps cursor-reveal (renderMode 'live')", () => {
   it("keeps the table raw with the caret inside it (live preview)", () => {
     const table = "| A | B |\n|---|---|\n| 1 | 2 |";
     const { state } = stateFor(table);
-    const field = state.field(livePreviewField, false);
-    const widgetIds: string[] = [];
-    field!.decorations.between(0, state.doc.length, (_from, _to, value) => {
-      if ("widget" in value && value.widget) {
-        widgetIds.push((value.widget.constructor as { name: string }).name);
-      }
-    });
     // Caret inside → raw source, no rich widget.
-    expect(widgetIds).not.toContain("TableBlockWidget");
+    expect(widgetNames(state)).not.toContain("TableBlockWidget");
+  });
+
+  it("keeps the DQL block raw with the caret inside it (live preview)", () => {
+    const dql = "```dql\nTABLE FROM \"docs\"\n```";
+    const { state } = stateFor(dql);
+    expect(widgetNames(state)).not.toContain("DqlResultWidget");
   });
 });
