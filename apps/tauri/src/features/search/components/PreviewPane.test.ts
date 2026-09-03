@@ -1,11 +1,19 @@
 import { Text } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
+import type { PreviewDeps } from "../types";
 
 import {
   buildDecorations,
   cachedPreviewState,
   windowPreview,
 } from "./PreviewPane";
+
+const deps: PreviewDeps = {
+  parseFrontmatter: () => null,
+  runQuery: async () => ({ columns: [], rows: [], total: 0 }),
+  resolveAsset: () => null,
+  onOpenLink: () => {},
+};
 
 function rangeSet(
   doc: Text,
@@ -115,34 +123,34 @@ describe("PreviewPane.windowPreview", () => {
 describe("PreviewPane.cachedPreviewState", () => {
   it("reuses the same parsed state for identical content", () => {
     const text = "# hello\n\nsome body\n";
-    const a = cachedPreviewState(text, "a.md");
-    const b = cachedPreviewState(text, "a.md");
+    const a = cachedPreviewState(text, "a.md", deps);
+    const b = cachedPreviewState(text, "a.md", deps);
     expect(a).toBe(b); // same EditorState object => no re-parse
   });
 
   it("does not reuse syntax state across different file paths", () => {
     const text = "same content";
-    const markdown = cachedPreviewState(text, "note.md");
-    const otherNote = cachedPreviewState(text, "other.md");
+    const markdown = cachedPreviewState(text, "note.md", deps);
+    const otherNote = cachedPreviewState(text, "other.md", deps);
     expect(markdown).not.toBe(otherNote);
   });
 
   it("parses a new state when content changes", () => {
-    const a = cachedPreviewState("content one", "x.md");
-    const b = cachedPreviewState("content two", "x.md");
+    const a = cachedPreviewState("content one", "x.md", deps);
+    const b = cachedPreviewState("content two", "x.md", deps);
     expect(a).not.toBe(b);
   });
 
   it("evicts the least-recently-used entry at the cap", () => {
-    const first = cachedPreviewState("first-content", "0.md");
+    const first = cachedPreviewState("first-content", "0.md", deps);
     for (let i = 1; i <= 26; i++) {
-      cachedPreviewState(`content-number-${i}`, `${i}.md`);
+      cachedPreviewState(`content-number-${i}`, `${i}.md`, deps);
     }
     // 26 inserts + `first` already cached => 27 entries, cap is 24 and `first`
     // was the least recently used => evicted and now re-parsed fresh.
-    const re = cachedPreviewState("first-content", "0.md");
+    const re = cachedPreviewState("first-content", "0.md", deps);
     expect(re).not.toBe(first);
     // But the most recently used one is still cached.
-    expect(cachedPreviewState("content-number-26", "26.md")).toBeDefined();
+    expect(cachedPreviewState("content-number-26", "26.md", deps)).toBeDefined();
   });
 });

@@ -4,6 +4,7 @@ import {
   type FileTreeContextTargetKind,
 } from "@workspace/ui/components/file-tree";
 import { lazy, Suspense } from "react";
+import type { PreviewDeps } from "../features/search";
 
 // Overlay modals are lazy (ADR-020 move 3): none are visible at first paint,
 // so their code (search UI, settings UI, dialog primitives) must not be in
@@ -47,6 +48,7 @@ interface OverlaysProps {
   };
   onConfirmDelete: () => void;
   onSearchOpen: (path: string, line?: number) => void;
+  previewDeps: PreviewDeps;
 }
 
 export function Overlays({
@@ -55,6 +57,7 @@ export function Overlays({
   controller,
   onConfirmDelete,
   onSearchOpen,
+  previewDeps,
 }: OverlaysProps) {
   return (
     <>
@@ -95,7 +98,7 @@ export function Overlays({
       />
 
       <Suspense fallback={null}>
-        <SearchModal onOpen={onSearchOpen} />
+        <SearchModal onOpen={onSearchOpen} previewDeps={previewDeps} />
         <QuickSwitcher onOpen={onSearchOpen} />
         <SettingsModal />
       </Suspense>

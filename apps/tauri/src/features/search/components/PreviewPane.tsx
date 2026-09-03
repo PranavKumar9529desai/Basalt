@@ -11,8 +11,8 @@ import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { tags as t } from "@lezer/highlight";
-import type { Highlight } from "../types";
-import { previewExtensions } from "@workspace/editor";
+import { readingExtensions } from "@workspace/editor";
+import type { Highlight, PreviewDeps } from "../types";
 
 // Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
 // theme tokens so the preview tracks the editor's prose + code surface.
@@ -63,9 +63,9 @@ const highlightStyle = HighlightStyle.define([
   { tag: t.monospace, fontFamily: "var(--sat-font-mono, monospace)" },
 ]);
 
-function languageForPath(path: string): Extension {
+function languageForPath(path: string, deps: PreviewDeps): Extension {
   if (path.endsWith(".md")) {
-    return previewExtensions();
+    return readingExtensions(deps);
   }
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const desc = languages.find(
@@ -168,11 +168,11 @@ export function windowPreview(
   return { text: text.slice(start, end), matchLine: newMatchLine, highlights };
 }
 
-function makeState(text: string, path: string): EditorState {
+function makeState(text: string, path: string, deps: PreviewDeps): EditorState {
   return EditorState.create({
     doc: text,
     extensions: [
-      languageForPath(path),
+      languageForPath(path, deps),
       syntaxHighlighting(highlightStyle),
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
@@ -210,7 +210,11 @@ function makeState(text: string, path: string): EditorState {
 const parseCacheLimit = 24;
 const parseCache = new Map<string, EditorState>();
 
-export function cachedPreviewState(text: string, path: string): EditorState {
+export function cachedPreviewState(
+  text: string,
+  path: string,
+  deps: PreviewDeps,
+): EditorState {
   const cacheKey = `${path}\0${text}`;
   const hit = parseCache.get(cacheKey);
   if (hit) {
@@ -218,7 +222,7 @@ export function cachedPreviewState(text: string, path: string): EditorState {
     parseCache.set(cacheKey, hit);
     return hit;
   }
-  const state = makeState(text, path);
+  const state = makeState(text, path, deps);
   if (parseCache.size >= parseCacheLimit) {
     parseCache.delete(parseCache.keys().next().value as string);
   }
@@ -231,6 +235,7 @@ interface PreviewPaneProps {
   path: string;
   matchLine: number;
   highlights: Highlight[];
+  deps: PreviewDeps;
 }
 
 export function PreviewPane({
@@ -238,6 +243,7 @@ export function PreviewPane({
   path,
   matchLine,
   highlights,
+  deps,
 }: PreviewPaneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -263,7 +269,7 @@ export function PreviewPane({
     if (!hostRef.current) return;
     const view = new EditorView({
       parent: hostRef.current,
-      state: cachedPreviewState(winText, path),
+      state: cachedPreviewState(winText, path, deps),
     });
     viewRef.current = view;
     return () => view.destroy();
@@ -281,7 +287,7 @@ export function PreviewPane({
     // the module-level LRU cache, so revisiting a file never re-parses;
     // navigating results within the same file skips this entirely.
     if (currentTextRef.current !== winText) {
-      view.setState(cachedPreviewState(winText, path));
+      view.setState(cachedPreviewState(winText, path, deps));
       currentTextRef.current = winText;
     }
     const lineNo = Math.max(1, Math.min(winMatchLine, view.state.doc.lines));
@@ -320,7 +326,7 @@ export function PreviewPane({
         });
       });
     }
-  }, [winText, path, winMatchLine, winHighlights]);
+  }, [winText, path, winMatchLine, winHighlights, deps]);
 
   return <div ref={hostRef} className="h-full w-full overflow-hidden" />;
 }

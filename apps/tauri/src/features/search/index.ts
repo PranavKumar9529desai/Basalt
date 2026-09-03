@@ -9,5 +9,6 @@ export type {
   FileResult,
   Highlight,
   LineMatch,
+  PreviewDeps,
   SearchContentResult,
 } from "./types";

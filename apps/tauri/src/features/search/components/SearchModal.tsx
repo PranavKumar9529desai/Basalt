@@ -7,7 +7,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSearchStore } from "../store";
 import { PreviewPane } from "./PreviewPane";
 import { FileRow, MatchRow } from "./SearchResultRows";
-import type { FileMatch, LineMatch } from "../types";
+import type { FileMatch, LineMatch, PreviewDeps } from "../types";
 
 /** Centered placeholder for an empty pane. */
 function EmptyPane({ icon, text }: { icon: React.ReactNode; text: string }) {
@@ -22,9 +22,11 @@ function EmptyPane({ icon, text }: { icon: React.ReactNode; text: string }) {
 interface SearchModalProps {
   /** Called with the matched file path and 1-based line when a result is opened. */
   onOpen: (path: string, line?: number) => void;
+  /** Reading-mode deps for the preview pane (ADR-029 full parity). */
+  previewDeps: PreviewDeps;
 }
 
-export function SearchModal({ onOpen }: SearchModalProps) {
+export function SearchModal({ onOpen, previewDeps }: SearchModalProps) {
   const {
     isSearchOpen,
     closeSearch,
@@ -284,6 +286,7 @@ export function SearchModal({ onOpen }: SearchModalProps) {
                 path={selectedFile.path}
                 matchLine={selected.lineNumber}
                 highlights={selected.highlights}
+                deps={previewDeps}
               />
             ) : isPreviewLoading ? (
               <EmptyPane

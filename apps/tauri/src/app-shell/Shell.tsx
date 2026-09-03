@@ -15,12 +15,14 @@
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useRef, useState, Suspense } from "react";
+import { useCallback, useMemo, useRef, useState, Suspense } from "react";
 
 import type { PaneRenderContext } from "../features/tabs";
 import { useTabsStore, Tabs, TabsBar } from "../features/tabs";
+import { parseFrontmatter } from "../features/editor";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
+import type { PreviewDeps } from "../features/search";
 import "../shared/tabCommands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
@@ -81,6 +83,28 @@ function WorkspaceShell({
 
   useShellCommands(ws);
   const leafServices = useLeafServices(ws);
+  const { openNote, findNote } = ws;
+
+  // Reading-mode deps for the search preview, composed where editor + vault
+  // services coexist. See features/search/types.ts (PreviewDeps) — ADR-029
+  // full reading-mode parity. `parseFrontmatter` is a stable module fn and the
+  // rest are stable callbacks, so the bag identity is stable across renders.
+  const previewDeps = useMemo<PreviewDeps>(
+    () => ({
+      parseFrontmatter,
+      runQuery: (dql: string) =>
+        invoke<import("@workspace/editor").QueryResult>("run_query", {
+          dql,
+          path: "",
+        }),
+      resolveAsset: leafServices.resolveAsset ?? (() => null),
+      onOpenLink: (name: string) => {
+        const target = findNote(name) ?? findNote(`${name}.md`);
+        if (target) openNote(target.path);
+      },
+    }),
+    [leafServices.resolveAsset, findNote, openNote],
+  );
 
   const renderPane = useCallback(
     (ctx: PaneRenderContext) => {
@@ -172,6 +196,7 @@ function WorkspaceShell({
         controller={ws.controller}
         onConfirmDelete={ws.handleConfirmDeleteWithTabs}
         onSearchOpen={ws.openNote}
+        previewDeps={previewDeps}
       />
     </div>
   );
