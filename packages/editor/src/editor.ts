@@ -7,6 +7,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { pasteImageExtension } from "./input/paste-image";
 import { embedPreviewPlugin, EMBED_PREVIEW_THEME } from "./input/embed-preview";
+import { embedMediaPlugin, EMBED_MEDIA_THEME } from "./input/embed-media";
 import {
   createSuggestionsPlugin,
   SUGGESTIONS_THEME,
@@ -188,14 +189,8 @@ export function previewExtensions(): Extension[] {
   ];
 }
 
-// ---------------------------------------------------------------------------
-// Reading mode — ADR-029
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve an embed target (`![[file]]`) to a loadable asset URL.
- * Injected by the feature layer so `packages/editor` stays pure.
- */
+/** Resolve an embed target (`![[file]]`) to a loadable asset URL.
+ * Injected by the feature layer so `packages/editor` stays pure. */
 export const resolveAssetFacet = Facet.define<
   ((target: string) => string | null) | undefined,
   ((target: string) => string | null) | undefined
@@ -246,6 +241,9 @@ export function readingExtensions(config: {
     openLinkFacet.of(config.onOpenLink),
     // Embed asset resolution facet.
     resolveAssetFacet.of(config.resolveAsset),
+    // Reading-mode embed: resolves ![[file]] to actual media.
+    EMBED_MEDIA_THEME,
+    embedMediaPlugin,
     // Link click handling in reading mode.
     readingLinkHandler(),
     EditorView.lineWrapping,
