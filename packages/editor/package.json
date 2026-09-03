@@ -11,7 +11,9 @@
   },
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -29,9 +31,11 @@
     "@types/dompurify": "^3.2.0",
     "@types/react": "catalog:default",
     "@types/react-dom": "catalog:default",
+    "jsdom": "^30.0.1",
     "react": "catalog:default",
     "react-dom": "catalog:default",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "react": "catalog:default",
