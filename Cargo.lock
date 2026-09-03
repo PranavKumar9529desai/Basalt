@@ -269,6 +269,7 @@ dependencies = [
  "ropey",
  "serde",
  "serde_yaml_ng",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -321,6 +322,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -4411,6 +4413,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

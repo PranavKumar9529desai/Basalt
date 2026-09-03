@@ -10,14 +10,15 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::error::{AppError, AppResult};
 
 use super::common::{canonical_md_path, index_upsert, register_self_writes};
 
 /// Read a markdown file from disk.
 #[tauri::command]
-pub fn open_file(path: String) -> Result<String, String> {
-    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
-    std::fs::read_to_string(abs).map_err(|e| e.to_string())
+pub fn open_file(path: String) -> AppResult<String> {
+    let abs = canonical_md_path(&path)?;
+    std::fs::read_to_string(abs).map_err(|e| AppError::Io(format!("failed to read file: {e}")))
 }
 
 /// Write content to a markdown file and re-index it in the vault.
@@ -34,8 +35,8 @@ pub fn open_file(path: String) -> Result<String, String> {
 ///     `vault://file-changed` therefore means "changed by something OTHER
 ///     than the app" — the contract graph view and plugins will rely on.
 #[tauri::command]
-pub fn save_file(path: String, content: String, state: State<AppState>) -> Result<(), String> {
-    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
+pub fn save_file(path: String, content: String, state: State<AppState>) -> AppResult<()> {
+    let abs = canonical_md_path(&path)?;
 
     // Register BEFORE the write so the watcher can never observe the file
     // in a written-but-unregistered state.
@@ -49,13 +50,13 @@ pub fn save_file(path: String, content: String, state: State<AppState>) -> Resul
         if let Ok(mut guard) = state.self_writes.lock() {
             guard.remove(&abs);
         }
-        return Err(e.to_string());
+        return Err(AppError::Io(format!("failed to write file: {e}")));
     }
 
     let mut vault = state
         .vault
         .write()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
 
     if let Some(path_str) = abs.to_str() {
         vault.add_document(path_str, &content);
@@ -74,11 +75,12 @@ pub fn save_file(path: String, content: String, state: State<AppState>) -> Resul
 /// Read multiple markdown files from disk in a single IPC call.
 /// Returns content + mtime for each file.
 #[tauri::command]
-pub fn open_files(paths: Vec<String>) -> Result<Vec<OpenFileResult>, String> {
+pub fn open_files(paths: Vec<String>) -> AppResult<Vec<OpenFileResult>> {
     let mut results = Vec::with_capacity(paths.len());
     for p in paths {
-        let abs = canonical_md_path(&p).map_err(|e| e.to_string())?;
-        let content = std::fs::read_to_string(&abs).map_err(|e| e.to_string())?;
+        let abs = canonical_md_path(&p)?;
+        let content = std::fs::read_to_string(&abs)
+            .map_err(|e| AppError::Io(format!("failed to read file: {e}")))?;
         let mtime = std::fs::metadata(&abs)
             .ok()
             .and_then(|m| m.modified().ok())
@@ -97,10 +99,10 @@ pub fn open_files(paths: Vec<String>) -> Result<Vec<OpenFileResult>, String> {
 /// Goes through the write choke point: self-write markers registered per
 /// file before its write, cache + index updated directly, nothing emitted.
 #[tauri::command]
-pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> Result<(), String> {
+pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> AppResult<()> {
     let mut abs_paths: Vec<PathBuf> = Vec::new();
     for file in &files {
-        let abs = canonical_md_path(&file.path).map_err(|e| e.to_string())?;
+        let abs = canonical_md_path(&file.path)?;
         // Register BEFORE the write so the watcher can never observe the file
         // in a written-but-unregistered state.
         register_self_writes(&state, &[abs.clone()]);
@@ -108,7 +110,7 @@ pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> Result<(
             if let Ok(mut guard) = state.self_writes.lock() {
                 guard.remove(&abs);
             }
-            return Err(e.to_string());
+            return Err(AppError::Io(format!("failed to write file: {e}")));
         }
         abs_paths.push(abs);
     }
@@ -117,7 +119,7 @@ pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> Result<(
     let mut vault = state
         .vault
         .write()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
     for (file, abs) in files.iter().zip(&abs_paths) {
         if let Some(path_str) = abs.to_str() {
             vault.add_document(path_str, &file.content);

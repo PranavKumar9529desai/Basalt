@@ -7,6 +7,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::error::{AppError, AppResult};
 
 use super::common::{
     canonical_md_path, canonical_vault_path, ensure_inside_vault, index_remove,
@@ -17,13 +18,13 @@ use basalt_vault::path_utils::resolve_creation_path;
 
 /// Return the paths of all notes that link to the given file.
 #[tauri::command]
-pub fn get_backlinks(path: String, state: State<AppState>) -> Result<Vec<String>, String> {
-    let abs = canonical_md_path(&path).map_err(|e| e.to_string())?;
+pub fn get_backlinks(path: String, state: State<AppState>) -> AppResult<Vec<String>> {
+    let abs = canonical_md_path(&path)?;
 
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
 
     let Some(doc_id) = vault.arena.get_id(abs.to_str().unwrap_or_default()) else {
         return Ok(Vec::new());
@@ -51,7 +52,7 @@ pub struct LinkSuggestion {
 pub fn autocomplete_links(
     prefix: String,
     state: State<AppState>,
-) -> Result<Vec<LinkSuggestion>, String> {
+) -> AppResult<Vec<LinkSuggestion>> {
     let vault = state
         .vault
         .read()
@@ -79,11 +80,11 @@ pub fn autocomplete_links(
 
 /// Return all tags in the vault that start with `prefix`.
 #[tauri::command]
-pub fn autocomplete_tags(prefix: String, state: State<AppState>) -> Result<Vec<String>, String> {
+pub fn autocomplete_tags(prefix: String, state: State<AppState>) -> AppResult<Vec<String>> {
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
 
     let mut out: Vec<String> = vault
         .graph
@@ -112,13 +113,13 @@ pub fn create_note(
     name: String,
     parent: Option<String>, // relative folder path inside vault, e.g. "Daily Journal"
     state: State<AppState>,
-) -> Result<CreateNoteResult, String> {
+) -> AppResult<CreateNoteResult> {
     let vault_path_str = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
 
     let vault_path = Path::new(&vault_path_str);
 
@@ -126,12 +127,12 @@ pub fn create_note(
         resolve_creation_path(vault_path, parent.as_deref(), &name, false)?;
 
     if file_path.exists() {
-        return Err(format!("'{name}' already exists"));
+        return Err(AppError::Validation(format!("'{name}' already exists")));
     }
 
     if !target_dir.exists() {
         std::fs::create_dir_all(&target_dir)
-            .map_err(|e| format!("failed to create directory: {e}"))?;
+            .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
     }
 
     let content = String::new();
@@ -144,12 +145,12 @@ pub fn create_note(
         if let Ok(mut guard) = state.self_writes.lock() {
             guard.remove(&file_path);
         }
-        return Err(format!("failed to write file: {e}"));
+        return Err(AppError::Io(format!("failed to write file: {e}")));
     }
 
     let abs_path = file_path
         .canonicalize()
-        .map_err(|e| format!("canonicalize failed: {e}"))?
+        .map_err(|e| AppError::Io(format!("canonicalize failed: {e}")))?
         .to_string_lossy()
         .to_string();
 
@@ -157,7 +158,7 @@ pub fn create_note(
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         vault.add_document(&abs_path, &content);
     }
     index_upsert(&state, &abs_path, &content);
@@ -174,17 +175,17 @@ pub fn create_note(
 pub fn create_untitled_note(
     parent: Option<String>,
     state: State<AppState>,
-) -> Result<CreateNoteResult, String> {
+) -> AppResult<CreateNoteResult> {
     let vault_path_str = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
 
     let vault_root = Path::new(&vault_path_str)
         .canonicalize()
-        .map_err(|e| format!("invalid vault path: {e}"))?;
+        .map_err(AppError::InvalidVaultPath)?;
 
     let parent_dir = match parent.as_deref() {
         Some(rel) if !rel.is_empty() => {
@@ -194,13 +195,15 @@ pub fn create_untitled_note(
             if candidate.exists() {
                 let canonical = candidate
                     .canonicalize()
-                    .map_err(|e| format!("invalid parent path: {e}"))?;
+                    .map_err(|e| AppError::Io(format!("invalid parent path: {e}")))?;
                 ensure_inside_vault(&canonical, &vault_root)?;
                 canonical
             } else {
                 // Dir doesn't exist yet (will be created). Reject ".." components.
                 if rel.split('/').any(|c| c == "..") {
-                    return Err("parent path must not contain '..'".to_string());
+                    return Err(AppError::Validation(
+                        "parent path must not contain '..'".to_string(),
+                    ));
                 }
                 candidate
             }
@@ -223,7 +226,7 @@ pub fn create_untitled_note(
         // Create parent directory if needed (e.g. the parent folder was just created).
         if !parent_dir.exists() {
             std::fs::create_dir_all(&parent_dir)
-                .map_err(|e| format!("failed to create directory: {e}"))?;
+                .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
         }
 
         let content = String::new();
@@ -233,12 +236,12 @@ pub fn create_untitled_note(
             if let Ok(mut guard) = state.self_writes.lock() {
                 guard.remove(&file_path);
             }
-            return Err(format!("failed to write file: {e}"));
+            return Err(AppError::Io(format!("failed to write file: {e}")));
         }
 
         let abs_path = file_path
             .canonicalize()
-            .map_err(|e| format!("canonicalize failed: {e}"))?
+            .map_err(|e| AppError::Io(format!("canonicalize failed: {e}")))?
             .to_string_lossy()
             .to_string();
 
@@ -246,7 +249,7 @@ pub fn create_untitled_note(
             let mut vault = state
                 .vault
                 .write()
-                .map_err(|_| "vault lock poisoned".to_string())?;
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
             vault.add_document(&abs_path, &content);
         }
         index_upsert(&state, &abs_path, &content);
@@ -257,7 +260,9 @@ pub fn create_untitled_note(
         });
     }
 
-    Err("too many untitled notes (Untitled through Untitled 99 all exist)".to_string())
+    Err(AppError::Other(
+        "too many untitled notes (Untitled through Untitled 99 all exist)".to_string(),
+    ))
 }
 
 /// dialog.
@@ -274,7 +279,7 @@ pub struct RenameNoteResult {
 /// Normalize and validate a user-supplied note name (a stem — no path).
 /// Strips a trailing `.md`/`.markdown`, trims, and rejects directory
 /// separators and empty/`.`/`..` names.
-fn sanitize_name(raw: &str) -> Result<String, String> {
+fn sanitize_name(raw: &str) -> AppResult<String> {
     let mut name = raw.trim().to_string();
     for ext in [".md", ".markdown"] {
         if name.len() > ext.len() && name.to_ascii_lowercase().ends_with(ext) {
@@ -304,7 +309,7 @@ pub fn rename_note(
     new_name: String,
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<RenameNoteResult, String> {
+) -> AppResult<RenameNoteResult> {
     let config = crate::config::load_config(&app);
     rename_note_impl(&path, &new_name, &state, Some(&config.settings))
 }
@@ -318,30 +323,37 @@ fn rename_note_impl(
     new_name: &str,
     state: &AppState,
     settings: Option<&std::collections::HashMap<String, serde_json::Value>>,
-) -> Result<RenameNoteResult, String> {
+) -> AppResult<RenameNoteResult> {
     let vault_root = canonical_vault_path(state)?;
 
-    let old_abs = canonical_md_path(path).map_err(|e| e.to_string())?;
+    let old_abs = canonical_md_path(path)?;
     ensure_inside_vault(&old_abs, &vault_root)?;
     if !old_abs.exists() {
-        return Err(format!("file does not exist: {}", old_abs.display()));
+        return Err(AppError::Validation(format!(
+            "file does not exist: {}",
+            old_abs.display()
+        )));
     }
 
     let new_stem = sanitize_name(new_name)?;
     let old_stem = old_abs
         .file_stem()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| "invalid old file name".to_string())?;
+        .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
     if new_stem.eq_ignore_ascii_case(old_stem) {
-        return Err("the note already has that name".to_string());
+        return Err(AppError::Validation(
+            "the note already has that name".to_string(),
+        ));
     }
 
     let parent = old_abs
         .parent()
-        .ok_or_else(|| "invalid parent directory".to_string())?;
+        .ok_or_else(|| AppError::Validation("invalid parent directory".to_string()))?;
     let new_abs = parent.join(format!("{new_stem}.md"));
     if new_abs.exists() {
-        return Err(format!("a note named '{new_stem}' already exists"));
+        return Err(AppError::Validation(format!(
+            "a note named '{new_stem}' already exists"
+        )));
     }
 
     let rename = NoteRename::new(old_stem, &new_stem);
@@ -356,7 +368,7 @@ fn rename_note_impl(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         for id in vault.graph.metadata_cache.keys() {
             let Some(path_str) = vault.arena.get_string(*id).cloned() else {
                 continue;
@@ -379,7 +391,7 @@ fn rename_note_impl(
     register_self_writes(&state, &self_write_paths);
 
     // 3. Actually move the file.
-    std::fs::rename(&old_abs, &new_abs).map_err(|e| format!("failed to rename: {e}"))?;
+    std::fs::rename(&old_abs, &new_abs).map_err(|e| AppError::Io(format!("failed to rename: {e}")))?;
 
     // 4. Read + rewrite each candidate's content (no vault lock held).
     //    `rewritten` maps final on-disk path -> content to re-index.
@@ -396,7 +408,7 @@ fn rename_note_impl(
         };
         let next = rewrite_wikilinks(&content, &rename);
         if next != content {
-            std::fs::write(&disk, &next).map_err(|e| format!("failed to update '{c}': {e}"))?;
+            std::fs::write(&disk, &next).map_err(|e| AppError::Io(format!("failed to update '{c}': {e}")))?;
         }
         let key = if *c == old_path_str {
             new_path_str.clone()
@@ -423,7 +435,7 @@ fn rename_note_impl(
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         vault.remove_document(&old_path_str);
         for (p, content) in &rewritten {
             vault.add_document(p, content);
@@ -456,7 +468,7 @@ fn rename_attachments_for_note(
     _new_note_abs: &std::path::Path,
     old_stem: &str,
     new_stem: &str,
-) -> Result<(), String> {
+) -> AppResult<()> {
     use basalt_vault::asset_index::AssetInfo;
 
     let get = |key: &str| {
@@ -483,9 +495,9 @@ fn rename_attachments_for_note(
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or("no vault open")?;
+        .ok_or(AppError::Other("no vault open".to_string()))?;
     let vault_root = std::path::PathBuf::from(&vault_path);
     let old_note_str = old_note_abs.to_string_lossy().to_string();
     let old_dir = vault_root.join(attachments_dir).join(old_stem);
@@ -496,7 +508,7 @@ fn rename_attachments_for_note(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         vault
             .asset_index
             .all()
@@ -518,7 +530,7 @@ fn rename_attachments_for_note(
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         for asset in &assets_to_move {
             let asset_path = std::path::Path::new(&asset.abs_path);
@@ -556,7 +568,7 @@ fn rename_attachments_for_note(
             let vault = state
                 .vault
                 .read()
-                .map_err(|_| "vault lock poisoned".to_string())?;
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
             vault
                 .arena
                 .all_strings()
@@ -593,7 +605,7 @@ fn rename_attachments_for_note(
                 }
                 register_self_writes(&state, &[std::path::PathBuf::from(note_path)]);
                 std::fs::write(note_path, &next)
-                    .map_err(|e| format!("failed to update embeds in '{note_path}': {e}"))?;
+                    .map_err(|e| AppError::Io(format!("failed to update embeds in '{note_path}': {e}")))?;
             }
         }
     }
@@ -782,7 +794,7 @@ mod tests {
   fn rename_rejects_collision() {
       let (root, state) = temp_vault();
       let b_str = root.join("b.md").to_string_lossy().to_string();
-      let err = rename_note_impl(&b_str, "c", &state, None).unwrap_err();
+      let err = rename_note_impl(&b_str, "c", &state, None).unwrap_err().to_string();
       assert!(err.contains("already exists"));
   }
 
@@ -790,7 +802,7 @@ mod tests {
   fn rename_rejects_same_name() {
       let (root, state) = temp_vault();
       let b_str = root.join("b.md").to_string_lossy().to_string();
-      let err = rename_note_impl(&b_str, "B", &state, None).unwrap_err();
+      let err = rename_note_impl(&b_str, "B", &state, None).unwrap_err().to_string();
       assert!(err.contains("already has that name"));
   }
 

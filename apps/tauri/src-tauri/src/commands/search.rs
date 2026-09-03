@@ -2,21 +2,22 @@ use basalt_types::{FileResult, SearchContentResult};
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::error::AppError;
 
 #[tauri::command]
 pub fn search_content(
     state: State<'_, AppState>,
     query: String,
     limit: Option<usize>,
-) -> Result<SearchContentResult, String> {
+) -> Result<SearchContentResult, AppError> {
     // Write lock: the query flushes pending index updates first.
     let mut search = state
         .search
         .write()
-        .map_err(|_| "search lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("search"))?;
     let search = search
         .as_mut()
-        .ok_or_else(|| "search index not ready".to_string())?;
+        .ok_or_else(|| AppError::Search("search index not ready".to_string()))?;
     Ok(search.search_content(&query, limit.unwrap_or(20)))
 }
 
@@ -26,13 +27,13 @@ pub fn search_files(
     state: State<'_, AppState>,
     query: String,
     limit: Option<usize>,
-) -> Result<Vec<FileResult>, String> {
+) -> Result<Vec<FileResult>, AppError> {
     let mut search = state
         .search
         .write()
-        .map_err(|_| "search lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("search"))?;
     let search = search
         .as_mut()
-        .ok_or_else(|| "search index not ready".to_string())?;
+        .ok_or_else(|| AppError::Search("search index not ready".to_string()))?;
     Ok(search.search_files(&query, limit.unwrap_or(10)))
 }

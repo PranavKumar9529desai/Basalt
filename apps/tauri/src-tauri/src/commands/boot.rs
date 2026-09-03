@@ -10,6 +10,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::app_state::AppState;
 use crate::cache::{load_or_index_vault, update_last_vault};
 use crate::config::load_config;
+use crate::error::{AppError, AppResult};
 use crate::watcher::{start_search_flusher, start_watcher};
 use crate::workspace::load_workspace;
 
@@ -69,7 +70,7 @@ pub struct BootResult {
 }
 
 #[tauri::command]
-pub fn boot(state: State<'_, AppState>, app: AppHandle) -> Result<BootResult, String> {
+pub fn boot(state: State<'_, AppState>, app: AppHandle) -> AppResult<BootResult> {
     // Serve the speculative preboot result when available. If the preboot
     // thread is still computing, this lock BLOCKS until it finishes — never
     // double work. Poison recovery falls through to inline compute.
@@ -88,7 +89,7 @@ pub fn boot(state: State<'_, AppState>, app: AppHandle) -> Result<BootResult, St
 
 /// The full boot pipeline. Shared by the `boot` command and the speculative
 /// preboot thread (ADR-020).
-fn perform_boot(state: &AppState, app: &AppHandle) -> Result<BootResult, String> {
+fn perform_boot(state: &AppState, app: &AppHandle) -> AppResult<BootResult> {
     let boot_start = Instant::now();
     let mut timings = HashMap::new();
     // How long after process spawn the webview's first invoke arrived —
@@ -108,7 +109,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> Result<BootResult, String>
             *state
                 .vault_path
                 .write()
-                .map_err(|_| "vault path lock poisoned".to_string())? = None;
+                .map_err(|_| AppError::LockPoisoned("vault path"))? = None;
             return Ok(BootResult {
                 vault_path: None,
                 note_count: 0,
@@ -124,7 +125,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> Result<BootResult, String>
     *state
         .vault_path
         .write()
-        .map_err(|_| "vault path lock poisoned".to_string())? = Some(vault_path.clone());
+        .map_err(|_| AppError::LockPoisoned("vault path"))? = Some(vault_path.clone());
 
     // Ensure the vault directory still exists.
     if !Path::new(&vault_path).is_dir() {
@@ -158,7 +159,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> Result<BootResult, String>
     // 1b): it only needs `state.vault`, loaded above — no data dependency with
     // the rest of boot. Non-fatal either way.
     let search_timings: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
-    let (tree, workspace) = std::thread::scope(|s| -> Result<_, String> {
+    let (tree, workspace) = std::thread::scope(|s| -> AppResult<(_, _)> {
         s.spawn(|| {
             use crate::cache::search_index_dir;
             use basalt_search::SearchState;
@@ -191,7 +192,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> Result<BootResult, String>
             let vault = state
                 .vault
                 .read()
-                .map_err(|_| "vault lock poisoned".to_string())?;
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
             build_flat_tree(&vault, Path::new(&vault_path))
         };
         phase(&mut timings, "rust:build_flat_tree", t);
@@ -230,13 +231,13 @@ pub fn set_vault(
     path: String,
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<BootResult, String> {
+) -> AppResult<BootResult> {
     let root = Path::new(&path)
         .canonicalize()
-        .map_err(|e| format!("invalid vault path: {e}"))?;
+        .map_err(|e| AppError::InvalidVaultPath(e))?;
 
     if !root.is_dir() {
-        return Err("path is not a directory".into());
+        return Err(AppError::Validation("path is not a directory".to_string()));
     }
 
     // Any speculative preboot result is now stale — the user switched vaults.
@@ -249,7 +250,7 @@ pub fn set_vault(
     *state
         .vault_path
         .write()
-        .map_err(|_| "vault path lock poisoned".to_string())? = Some(vault_path.clone());
+        .map_err(|_| AppError::LockPoisoned("vault path"))? = Some(vault_path.clone());
 
     let note_count = crate::cache::index_and_persist(&vault_path, &state, &app)?;
 
@@ -294,7 +295,7 @@ pub fn set_vault(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         build_flat_tree(&vault, &root)
     };
 

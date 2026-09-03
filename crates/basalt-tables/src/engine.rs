@@ -1,4 +1,5 @@
 use basalt_parser::query::{CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection};
+use basalt_parser::ParseError;
 use basalt_types::{QueryColumn, QueryResult, TypedValue};
 use basalt_vault::Vault;
 
@@ -30,7 +31,7 @@ impl WorkRow {
 }
 
 /// Execute a DQL query against the vault's indexed metadata.
-pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
+pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, ParseError> {
     let plan = basalt_parser::parse_query(dql)?;
 
     let arena = &vault.arena;

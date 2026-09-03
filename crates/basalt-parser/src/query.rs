@@ -17,6 +17,17 @@ pub enum QueryType {
     Task,
 }
 
+/// Error produced while parsing a DQL query string.
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub enum ParseError {
+    /// Trailing text that could not be parsed after a valid query.
+    #[error("Unexpected trailing text: {0}")]
+    Trailing(String),
+    /// The query could not be parsed.
+    #[error("Parse error: {0}")]
+    Syntax(String),
+}
+
 /// A field reference like `file.name` or `rating`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldRef(pub Vec<String>);
@@ -457,12 +468,12 @@ fn query_plan(input: &str) -> IResult<&str, QueryPlan> {
 }
 
 /// Parse a DQL query string into a QueryPlan.
-pub fn parse_query(input: &str) -> Result<QueryPlan, String> {
+pub fn parse_query(input: &str) -> Result<QueryPlan, ParseError> {
     let input = input.trim();
     match query_plan(input) {
         Ok(("", plan)) => Ok(plan),
-        Ok((rest, _)) => Err(format!("Unexpected trailing text: {}", rest)),
-        Err(e) => Err(format!("Parse error: {}", e)),
+        Ok((rest, _)) => Err(ParseError::Trailing(rest.to_string())),
+        Err(e) => Err(ParseError::Syntax(e.to_string())),
     }
 }
 

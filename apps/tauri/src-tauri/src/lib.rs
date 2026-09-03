@@ -7,6 +7,7 @@ mod app_state;
 mod cache;
 mod commands;
 mod config;
+mod error;
 mod watcher;
 mod workspace;
 
