@@ -44,6 +44,7 @@ import {
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
 import { resolveAssetFacet } from "./types";
+import { renderModeReading } from "./preview/render-mode";
 const basaltMarkdownExtensions = [
   wikiLinkExtension,
   highlightExtension,
@@ -186,6 +187,8 @@ export function previewExtensions(): Extension[] {
     // Table block widget renders in read-only previews too.
     blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
     TABLE_BLOCK_THEME,
+    // Read-only preview panes always fully render (no cursor-based reveal).
+    renderModeReading,
     EditorView.lineWrapping,
   ];
 }
@@ -269,6 +272,7 @@ export function readingModeExtras(config: {
     EMBED_MEDIA_THEME,
     embedMediaPlugin,
     readingLinkHandler(),
+    renderModeReading,
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
   ];

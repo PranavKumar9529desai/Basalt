@@ -2,6 +2,7 @@ import { Facet, type EditorState } from "@codemirror/state";
 import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
+import { renderModeFacet } from "../preview/render-mode";
 
 // ---------------------------------------------------------------------------
 // Query result types — mirrors crates/basalt-types/src/query.rs exactly.
@@ -397,7 +398,12 @@ const parse = (
   if (!queryText) return null;
 
   const headPos = state.selection.main.head;
-  const inCursor = headPos >= node.from && headPos <= node.to;
+  // In reading mode the caret must not collapse the query to raw code; only
+  // reveal raw source when actively editing (live preview).
+  const inCursor =
+    state.facet(renderModeFacet) === "live" &&
+    headPos >= node.from &&
+    headPos <= node.to;
 
   return { queryText, from: node.from, to: endLine.to, inCursor };
 };

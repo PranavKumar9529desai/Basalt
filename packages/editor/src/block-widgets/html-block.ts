@@ -4,6 +4,7 @@ import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { sanitizeHtml } from "../preview/html-sanitize";
 import { HTML_TYPOGRAPHY_CSS } from "../preview/html-typography";
+import { renderModeFacet } from "../preview/render-mode";
 
 let typographyInjected = false;
 // The shared .sat-html + .cm-content typography stylesheet covers both block
@@ -83,11 +84,15 @@ const parse = (
   const html = sanitizeHtml(raw);
   const head = state.selection.main.head;
   // Obsidian-style per-block activation: the block shows raw source when the
-  // caret's line falls anywhere within its first..last line.
+  // caret's line falls anywhere within its first..last line — but only when
+  // actively editing. Reading mode always renders the sanitized HTML.
   const headLine = state.doc.lineAt(head).number;
   const blockFromLine = state.doc.lineAt(node.from).number;
   const blockToLine = state.doc.lineAt(node.to).number;
-  const active = headLine >= blockFromLine && headLine <= blockToLine;
+  const active =
+    state.facet(renderModeFacet) === "live" &&
+    headLine >= blockFromLine &&
+    headLine <= blockToLine;
   return { html, raw, active, from: node.from, to: node.to };
 };
 

@@ -167,7 +167,7 @@ class EmbedMediaPlugin implements PluginValue {
           fallback.textContent = `⚠ ${target}`;
           deco.push(
             Decoration.replace({
-              widget: new class extends WidgetType {
+              widget: new (class extends WidgetType {
                 toDOM() {
                   return fallback;
                 }
@@ -177,7 +177,7 @@ class EmbedMediaPlugin implements PluginValue {
                 ignoreEvent() {
                   return true;
                 }
-              }(),
+              })(),
               inclusive: true,
             }).range(from - 1, to),
           );

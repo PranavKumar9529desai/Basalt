@@ -26,7 +26,7 @@ import {
   EditorController,
   type EditorControllerOptions,
 } from "../controller/EditorController";
-import { decideReconcileAction } from "../logic/reconcile";
+import { decideReconcileAction } from "../lib/reconcile";
 import { useActiveNoteStore } from "../store/activeNote";
 import { useRenameSignalStore } from "../store/renameSignal";
 

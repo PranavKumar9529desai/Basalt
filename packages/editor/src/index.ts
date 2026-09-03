@@ -84,6 +84,8 @@ export { tokenizeCode } from "./syntax/code-highlighting";
 export { HTML_SANITIZE_CONFIG, sanitizeHtml } from "./preview/html-sanitize";
 export { HTML_TYPOGRAPHY_CSS } from "./preview/html-typography";
 export { handleTagsInLine } from "./preview/inline-marks";
+export type { RenderMode } from "./preview/render-mode";
+export { renderModeFacet, renderModeReading } from "./preview/render-mode";
 export type { WatchdogEvent, WatchdogStats } from "./watchdog";
 export {
   startWatchdog,

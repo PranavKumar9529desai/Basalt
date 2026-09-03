@@ -8,10 +8,10 @@
 
 Basalt has two independent markdown rendering pipelines:
 
-| Mode | Engine | DOM | Code |
-|---|---|---|---|
-| Edit | CM6 `livePreviewField` + block-widget system | CM viewport (virtualized) | ~2000 lines in `packages/editor/` |
-| Reading | `Reading.tsx` — Lezer parse → React JSX | Full React tree (unwindowed) | 1035 lines + 400 lines CSS |
+| Mode    | Engine                                       | DOM                          | Code                              |
+| ------- | -------------------------------------------- | ---------------------------- | --------------------------------- |
+| Edit    | CM6 `livePreviewField` + block-widget system | CM viewport (virtualized)    | ~2000 lines in `packages/editor/` |
+| Reading | `Reading.tsx` — Lezer parse → React JSX      | Full React tree (unwindowed) | 1035 lines + 400 lines CSS        |
 
 Every markdown feature (tables, embeds, DQL, callouts, frontmatter, code
 highlighting) needs **two implementations**. Bug fixes must be applied twice.
@@ -74,10 +74,10 @@ EditorController
   ├── modeCompartment: Compartment
   ├── editExts: Extension[]    (current extensions)
   └── readingExts: Extension[] (readingExtensions())
-  
+
 setMode("reading"):
   view.dispatch({ effects: modeCompartment.reconfigure(readingExts) })
-  
+
 setMode("edit"):
   view.dispatch({ effects: modeCompartment.reconfigure(editExts) })
 ```
@@ -103,12 +103,7 @@ is never mounted. One CM6 view, two extension configurations.
 - Host CSS hide/show toggle (`invisible pointer-events-none`)
 
 ### Risks
-
-1. **Reading typography** — Reading mode has a different heading scale and prose
-   width than edit mode. Migrated to a `READING_THEME` CM6 extension applied
-   via the mode compartment.
-
-2. **Task checkbox toggling** — In reading mode, should clicking a checkbox
+1. **Task checkbox toggling** — In reading mode, should clicking a checkbox
    toggle it? Obsidian allows this. The implementation dispatches a transaction
    that overrides `readOnly` for the specific click, toggles the `[x]`/`[ ]`,
    then returns to read-only.

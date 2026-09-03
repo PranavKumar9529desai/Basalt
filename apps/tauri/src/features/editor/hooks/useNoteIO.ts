@@ -4,7 +4,7 @@ import type { QueryResult } from "@workspace/editor";
 import { useActiveNoteStore } from "../store";
 import type { LinkSuggestion, SaveStatus } from "../types";
 
-import { parseFrontmatter } from "../logic/frontmatter";
+import { parseFrontmatter } from "../lib/frontmatter";
 
 /**
  * useNoteIO — thin invoke wrappers for note file I/O (Phase 2 editor split).

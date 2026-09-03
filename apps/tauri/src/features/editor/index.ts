@@ -8,4 +8,4 @@ export {
   surgicalEdit,
   editFrontmatter,
   initFrontmatterWasm,
-} from "./logic/frontmatter";
+} from "./lib/frontmatter";

@@ -2,6 +2,7 @@ import type { EditorState } from "@codemirror/state";
 import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
+import { renderModeFacet } from "../preview/render-mode";
 
 // ---------------------------------------------------------------------------
 // Table block widget — renders markdown tables as rich <table> HTML.
@@ -195,7 +196,12 @@ const parse = (
   const headLine = state.doc.lineAt(head).number;
   const blockFromLine = state.doc.lineAt(node.from).number;
   const blockToLine = state.doc.lineAt(node.to).number;
-  const active = headLine >= blockFromLine && headLine <= blockToLine;
+  // In reading mode the caret must not collapse the table to raw source; only
+  // reveal raw syntax when actively editing (live preview).
+  const active =
+    state.facet(renderModeFacet) === "live" &&
+    headLine >= blockFromLine &&
+    headLine <= blockToLine;
 
   return {
     raw,

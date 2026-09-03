@@ -254,13 +254,11 @@ describe("useVaultMutations", () => {
   describe("pickAndSetVault", () => {
     it("sets the chosen vault, re-indexes, and invalidates the router", async () => {
       const { result, invalidate } = setup();
-      vi.mocked(invoke)
-        .mockResolvedValueOnce("/vault")
-        .mockResolvedValueOnce({
-          vault_path: "/vault",
-          note_count: 0,
-          status: "full_index",
-        });
+      vi.mocked(invoke).mockResolvedValueOnce("/vault").mockResolvedValueOnce({
+        vault_path: "/vault",
+        note_count: 0,
+        status: "full_index",
+      });
       await act(async () => result.current.pickAndSetVault());
       expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(1, "open_vault_dialog");
       expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(2, "set_vault", {

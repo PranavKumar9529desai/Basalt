@@ -2,6 +2,7 @@ import type { EditorState } from "@codemirror/state";
 import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
+import { renderModeFacet } from "./render-mode";
 
 export class CodeHeaderWidget extends WidgetType {
   constructor(
@@ -195,7 +196,12 @@ export function handleCodeBlockNode(
   // Record this range so other handlers can skip nodes inside code blocks
   ctx.codeBlockRanges.push({ from: node.from, to: node.to });
 
-  const hasCursor = ctx.headPos >= node.from && ctx.headPos <= node.to;
+  // Reading mode always renders the header/footer chrome — the caret must not
+  // collapse the block to raw source (see render-mode.ts).
+  const hasCursor =
+    ctx.state.facet(renderModeFacet) === "live" &&
+    ctx.headPos >= node.from &&
+    ctx.headPos <= node.to;
 
   // Add line classes for code block background
   addCodeLineClasses(startRenderLine, endRenderLine, doc, collector);

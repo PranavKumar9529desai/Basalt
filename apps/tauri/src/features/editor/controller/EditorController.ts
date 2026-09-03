@@ -12,11 +12,11 @@ import {
 import { useKeybindingService } from "@workspace/keybindings";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
-import { pruneClosedTabCaches } from "../logic/pruneCache";
-import { editFrontmatter, initFrontmatterWasm } from "../logic/frontmatter";
+import { pruneClosedTabCaches } from "../lib/pruneCache";
+import { editFrontmatter, initFrontmatterWasm } from "../lib/frontmatter";
 import { useActiveNoteStore } from "../store/activeNote";
-import { AUTOSAVE_DEBOUNCE_MS } from "../logic/saveManager";
-import { computeStats } from "../logic/stats";
+import { AUTOSAVE_DEBOUNCE_MS } from "../lib/saveManager";
+import { computeStats } from "../lib/stats";
 
 /** Debounce for word/char stats — computed from the CM doc, never per keystroke. */
 const STATS_DEBOUNCE_MS = 500;
@@ -146,7 +146,10 @@ export class EditorController {
       this.modeCompartment.of(editExtensions),
       updateListener,
     ];
-    this.initialState = EditorState.create({ doc: "", extensions: this.extensions });
+    this.initialState = EditorState.create({
+      doc: "",
+      extensions: this.extensions,
+    });
   }
 
   handleOpenLink = (linkName: string) => {

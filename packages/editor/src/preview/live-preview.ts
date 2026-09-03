@@ -46,6 +46,7 @@ import {
   WidgetType,
 } from "@codemirror/view";
 import { editorBenchmarkState } from "../benchmark";
+import { renderModeFacet } from "./render-mode";
 
 class HorizontalRuleWidget extends WidgetType {
   eq() {
@@ -178,13 +179,17 @@ function buildPreviewState(
   const { collector, finish, finishAtomic } = makeCollector();
   const headPos = state.selection.main.head;
   const doc = state.doc;
+  // Reading mode never reveals raw syntax, regardless of caret/focus — force
+  // activeLine to null so mark-hiding, heading-7, and other reveal logic always
+  // render the rich presentation (see render-mode.ts).
+  const fullyRendered = state.facet(renderModeFacet) === "reading";
   const ctx: DecorationContext = {
     // A stale focus flag must not hide syntax at the current caret position.
     // During typing, the empty selection is the authoritative active-line
     // signal; hiding a heading marker before the next input breaks DOM-to-doc
     // mapping and can insert the next character before `#`.
     activeLine:
-      hasFocus || state.selection.main.empty
+      !fullyRendered && (hasFocus || state.selection.main.empty)
         ? (() => {
             const l = doc.lineAt(headPos);
             return { from: l.from, to: l.to, number: l.number };
@@ -243,15 +248,13 @@ function buildPreviewState(
       // List item depth classes + bullet/number widgets
       handleListNode(node, ctx, collector);
 
-      // Table row/delimiter line classes
-      if (handleTableNode(node, ctx, collector)) {
-        return false;
-      }
-
       // Block widgets + frontmatter presentation (ADR-022 rule 14): every
       // registered block widget replaces/dims/none-s its matched blocks from
       // this single walk. Widget models are collected per-view for external
-      // reads (properties panel).
+      // reads (properties panel). Dispatched BEFORE the table handler so a
+      // registered table block widget can replace the whole table; otherwise
+      // handleTableNode's short-circuit below would swallow Table nodes and the
+      // rich table widget would never render.
       const handled = handleBlockWidgetsNode(
         node,
         ctx,
@@ -261,6 +264,12 @@ function buildPreviewState(
       );
       if (handled.found) frontmatterFound = true;
       if (handled.widgeted) frontmatterWidgeted = true;
+
+      // Table row/delimiter line classes; skip children regardless (the block
+      // widget path above has already had a chance to replace the whole table).
+      if (handleTableNode(node, ctx, collector)) {
+        return false;
+      }
 
       // If a block widget matched this node but produced no replacement (cursor
       // inside the block), still skip children to prevent mark-hiding from
