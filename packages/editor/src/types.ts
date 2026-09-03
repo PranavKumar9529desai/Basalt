@@ -1,4 +1,4 @@
-import type { Extension } from "@codemirror/state";
+import { Facet, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { RunQueryFn } from "./block-widgets/dql-widget";
 export type { RunQueryFn } from "./block-widgets/dql-widget";
@@ -113,3 +113,10 @@ export interface EditorConfig {
    */
   resolveAsset?: (target: string) => string | null;
 }
+
+/** Resolve an embed target (`![[file]]`) to a loadable asset URL.
+ * Injected by the feature layer so `packages/editor` stays pure. */
+export const resolveAssetFacet = Facet.define<
+  ((target: string) => string | null) | undefined,
+  ((target: string) => string | null) | undefined
+>({ combine: (values) => values[0] });

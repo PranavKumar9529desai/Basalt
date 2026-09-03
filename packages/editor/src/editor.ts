@@ -2,7 +2,7 @@ import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
 import { languages } from "@codemirror/language-data";
-import { EditorState, Facet, type Extension } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { pasteImageExtension } from "./input/paste-image";
@@ -43,6 +43,7 @@ import {
   type BlockWidgetSpec,
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
+import { resolveAssetFacet } from "./types";
 const basaltMarkdownExtensions = [
   wikiLinkExtension,
   highlightExtension,
@@ -188,13 +189,6 @@ export function previewExtensions(): Extension[] {
     EditorView.lineWrapping,
   ];
 }
-
-/** Resolve an embed target (`![[file]]`) to a loadable asset URL.
- * Injected by the feature layer so `packages/editor` stays pure. */
-export const resolveAssetFacet = Facet.define<
-  ((target: string) => string | null) | undefined,
-  ((target: string) => string | null) | undefined
->({ combine: (values) => values[0] });
 
 /**
  * Full extension stack for reading mode (ADR-029). Uses the same grammar and

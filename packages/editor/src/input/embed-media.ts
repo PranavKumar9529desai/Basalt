@@ -8,7 +8,7 @@ import {
   type ViewUpdate,
   type PluginValue,
 } from "@codemirror/view";
-import { resolveAssetFacet } from "../editor";
+import { resolveAssetFacet } from "../types";
 
 const EMBED_MEDIA_CLASS = "cm-embed-media";
 

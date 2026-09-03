@@ -25,7 +25,6 @@ export {
   previewExtensions,
   readingExtensions,
   readingModeExtras,
-  resolveAssetFacet,
 } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
@@ -44,6 +43,7 @@ export type {
   ParseFrontmatterFn,
   RunQueryFn,
 } from "./types";
+export { resolveAssetFacet } from "./types";
 
 export {
   dqlBlockSpec,
