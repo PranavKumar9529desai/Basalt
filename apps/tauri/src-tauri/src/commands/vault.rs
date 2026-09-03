@@ -26,7 +26,7 @@ pub fn reindex_vault(
         .ok_or(AppError::NoVault)?;
 
     let vault = index_directory(Path::new(&vault_path));
-    let note_count = vault.graph.metadata_cache.len();
+    let note_count = vault.note_count();
 
     let cache = VaultCache::build(&vault_path, vault);
     let cache_file = cache_path(&app, &vault_path);

@@ -43,11 +43,10 @@ pub fn get_asset_audit(state: State<AppState>) -> AppResult<basalt_vault::AssetA
 fn count_broken_embeds(vault: &basalt_vault::Vault) -> usize {
     // Index of note stems (lowercased, no extension) for O(1) note-target lookup.
     let note_stems: std::collections::HashSet<String> = vault
-        .arena
-        .all_strings()
-        .filter(|p| p.ends_with(".md"))
+        .note_paths()
+        .into_iter()
         .map(|p| {
-            Path::new(p)
+            Path::new(&p)
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
@@ -56,11 +55,8 @@ fn count_broken_embeds(vault: &basalt_vault::Vault) -> usize {
         .collect();
 
     let mut broken = 0usize;
-    for path in vault.arena.all_strings().filter(|p| p.ends_with(".md")) {
-        let Some(node_id) = vault.arena.get_id(path) else {
-            continue;
-        };
-        let Some(meta) = vault.graph.metadata_cache.get(&node_id) else {
+    for path in vault.note_paths() {
+        let Some(meta) = vault.metadata(&path) else {
             continue;
         };
         for target in &meta.embeds {
@@ -544,12 +540,7 @@ fn reorganize_assets_impl(
                 .vault
                 .read()
                 .map_err(|_| AppError::LockPoisoned("vault"))?;
-            vault
-                .arena
-                .all_strings()
-                .filter(|p| p.ends_with(".md"))
-                .cloned()
-                .collect()
+            vault.note_paths()
         };
 
         for (old_abs, new_abs) in &moved_pairs {

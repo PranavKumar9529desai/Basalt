@@ -94,14 +94,7 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> AppResu
             self_write_paths.push(abs.clone());
             if abs.is_dir() {
                 let abs_str = abs.to_string_lossy().to_string();
-                let prefix = format!("{abs_str}/");
-                for p in vault
-                    .graph
-                    .metadata_cache
-                    .keys()
-                    .filter_map(|id| vault.arena.get_string(*id).cloned())
-                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
-                {
+                for p in vault.paths_under(&abs_str) {
                     self_write_paths.push(PathBuf::from(&p));
                     if p.ends_with(".md") {
                         deleted_md_paths.push(p);
@@ -135,14 +128,7 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> AppResu
         for abs in &targets {
             if abs.is_dir() {
                 let abs_str = abs.to_string_lossy().to_string();
-                let prefix = format!("{abs_str}/");
-                let to_remove: Vec<String> = vault
-                    .graph
-                    .metadata_cache
-                    .keys()
-                    .filter_map(|id| vault.arena.get_string(*id).cloned())
-                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
-                    .collect();
+                let to_remove: Vec<String> = vault.paths_under(&abs_str);
                 for path in to_remove {
                     vault.remove_document(&path);
                 }
@@ -248,17 +234,10 @@ pub fn move_paths(
                 .vault
                 .read()
                 .map_err(|_| AppError::LockPoisoned("vault"))?;
-            for old_path in vault
-                .graph
-                .metadata_cache
-                .keys()
-                .filter_map(|id| vault.arena.get_string(*id).cloned())
-                .filter(|p| p.starts_with(&prefix))
-            {
+            for old_path in vault.paths_under(&source.to_string_lossy()) {
                 let suffix = old_path.trim_start_matches(&prefix).to_string();
                 self_write_paths.push(PathBuf::from(&old_path));
-                self_write_paths
-                    .push(destination_item.join(&suffix));
+                self_write_paths.push(destination_item.join(&suffix));
             }
         }
     }
@@ -293,11 +272,8 @@ pub fn move_paths(
                 .read()
                 .map_err(|_| AppError::LockPoisoned("vault"))?;
             let pairs: Vec<(String, String)> = vault
-                .graph
-                .metadata_cache
-                .keys()
-                .filter_map(|id| vault.arena.get_string(*id).cloned())
-                .filter(|p| p.starts_with(&prefix))
+                .paths_under(source_str)
+                .into_iter()
                 .map(|old_path| {
                     let suffix = old_path.trim_start_matches(&prefix).to_string();
                     let new_path = format!("{destination_str}/{suffix}");
@@ -467,14 +443,9 @@ fn rename_path_impl(
             .vault
             .read()
             .map_err(|_| AppError::LockPoisoned("vault"))?;
-        for id in vault.graph.metadata_cache.keys() {
-            let Some(p) = vault.arena.get_string(*id).cloned() else {
-                continue;
-            };
-            if p.starts_with(&prefix) {
-                let suffix = p.trim_start_matches(&prefix).to_string();
-                descendants.push((p, format!("{new_str}/{suffix}")));
-            }
+        for p in vault.paths_under(&old_str) {
+            let suffix = p.trim_start_matches(&prefix).to_string();
+            descendants.push((p, format!("{new_str}/{suffix}")));
         }
     }
 
@@ -509,17 +480,14 @@ fn rename_path_impl(
             .vault
             .read()
             .map_err(|_| AppError::LockPoisoned("vault"))?;
-        for id in vault.graph.metadata_cache.keys() {
-            let Some(p) = vault.arena.get_string(*id).cloned() else {
-                continue;
-            };
+        for p in vault.note_paths() {
             if !p.ends_with(".md") {
                 continue;
             }
-            let has_link = vault.graph.metadata_cache[id]
-                .links
-                .iter()
-                .any(|t| path_rename.matches(t));
+            let has_link = vault
+                .metadata(&p)
+                .map(|meta| meta.links.iter().any(|t| path_rename.matches(t)))
+                .unwrap_or(false);
             if has_link {
                 candidates.push(p);
             }

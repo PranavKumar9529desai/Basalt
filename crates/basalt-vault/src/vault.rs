@@ -2,6 +2,7 @@ use crate::asset_index::AssetIndex;
 use basalt_graph::StringArena;
 use basalt_parser::extract_metadata;
 use basalt_graph::NoteGraph;
+use basalt_types::FileMetadata;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -31,6 +32,66 @@ impl Vault {
     pub fn remove_document(&mut self, path: &str) {
         self.asset_index.remove_note_references(path);
         self.graph.remove_document(path, &mut self.arena);
+    }
+
+    /// All cached document paths — the real files parsed into the graph.
+    /// Tag nodes and dangling wikilink targets are interned in the arena but
+    /// never land here, so this is the authoritative "which notes exist" list.
+    pub fn note_paths(&self) -> Vec<String> {
+        self.graph
+            .metadata_cache
+            .keys()
+            .filter_map(|id| self.arena.get_string(*id).cloned())
+            .collect()
+    }
+
+    /// Document paths equal to `prefix` or nested beneath it. Used for folder
+    /// delete / move / rename bookkeeping where every cached descendant must
+    /// be enumerated alongside the folder itself.
+    pub fn paths_under(&self, prefix: &str) -> Vec<String> {
+        let boundary = format!("{prefix}/");
+        self.note_paths()
+            .into_iter()
+            .filter(|p| p == prefix || p.starts_with(&boundary))
+            .collect()
+    }
+
+    /// Number of cached documents.
+    pub fn note_count(&self) -> usize {
+        self.graph.metadata_cache.len()
+    }
+
+    /// Absolute paths of the notes that link to `path`.
+    pub fn backlinks_for(&self, path: &str) -> Vec<String> {
+        let Some(doc_id) = self.arena.get_id(path) else {
+            return Vec::new();
+        };
+        let Some(backlinks) = self.graph.get_back_links(doc_id) else {
+            return Vec::new();
+        };
+        backlinks
+            .iter()
+            .filter_map(|id| self.arena.get_string(*id).cloned())
+            .collect()
+    }
+
+    /// All distinct frontmatter/in-body tags across the vault, sorted.
+    pub fn all_tags(&self) -> Vec<String> {
+        let mut tags: Vec<String> = self
+            .graph
+            .metadata_cache
+            .values()
+            .flat_map(|meta| meta.tags.iter().cloned())
+            .collect();
+        tags.sort();
+        tags.dedup();
+        tags
+    }
+
+    /// Metadata for the document at `path`, if it is cached.
+    pub fn metadata(&self, path: &str) -> Option<&FileMetadata> {
+        let id = self.arena.get_id(path)?;
+        self.graph.metadata_cache.get(&id)
     }
 }
 

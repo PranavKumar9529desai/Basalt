@@ -26,19 +26,7 @@ pub fn get_backlinks(path: String, state: State<AppState>) -> AppResult<Vec<Stri
         .read()
         .map_err(|_| AppError::LockPoisoned("vault"))?;
 
-    let Some(doc_id) = vault.arena.get_id(abs.to_str().unwrap_or_default()) else {
-        return Ok(Vec::new());
-    };
-    let Some(backlinks) = vault.graph.get_back_links(doc_id) else {
-        return Ok(Vec::new());
-    };
-
-    let results = backlinks
-        .iter()
-        .filter_map(|id| vault.arena.get_string(*id).cloned())
-        .collect();
-
-    Ok(results)
+    Ok(vault.backlinks_for(abs.to_str().unwrap_or_default()))
 }
 
 #[derive(Serialize)]
@@ -56,14 +44,14 @@ pub fn autocomplete_links(
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
 
     let out = vault
-        .arena
-        .all_strings()
+        .note_paths()
+        .into_iter()
         .filter(|p| p.ends_with(".md"))
         .filter_map(|path_str| {
-            let name = Path::new(path_str).file_name()?.to_str()?;
+            let name = Path::new(&path_str).file_name()?.to_str()?;
             if name.to_lowercase().starts_with(&prefix.to_lowercase()) {
                 Some(LinkSuggestion {
                     name: name.to_string(),
@@ -86,14 +74,11 @@ pub fn autocomplete_tags(prefix: String, state: State<AppState>) -> AppResult<Ve
         .read()
         .map_err(|_| AppError::LockPoisoned("vault"))?;
 
+    let prefix_lower = prefix.to_lowercase();
     let mut out: Vec<String> = vault
-        .graph
-        .metadata_cache
-        .values()
-        .flat_map(|meta| meta.tags.iter().cloned())
-        .filter(|tag| tag.to_lowercase().starts_with(&prefix.to_lowercase()))
-        .collect::<std::collections::HashSet<_>>()
+        .all_tags()
         .into_iter()
+        .filter(|tag| tag.to_lowercase().starts_with(&prefix_lower))
         .collect();
 
     out.sort();
@@ -369,15 +354,15 @@ fn rename_note_impl(
             .vault
             .read()
             .map_err(|_| AppError::LockPoisoned("vault"))?;
-        for id in vault.graph.metadata_cache.keys() {
-            let Some(path_str) = vault.arena.get_string(*id).cloned() else {
-                continue;
-            };
+        for path_str in vault.note_paths() {
             if !path_str.ends_with(".md") {
                 continue;
             }
-            let meta = &vault.graph.metadata_cache[id];
-            if path_str == old_path_str || meta.links.iter().any(|t| rename.matches(t)) {
+            let links_match = vault
+                .metadata(&path_str)
+                .map(|meta| meta.links.iter().any(|t| rename.matches(t)))
+                .unwrap_or(false);
+            if path_str == old_path_str || links_match {
                 candidates.push(path_str);
             }
         }
@@ -570,10 +555,9 @@ fn rename_attachments_for_note(
                 .read()
                 .map_err(|_| AppError::LockPoisoned("vault"))?;
             vault
-                .arena
-                .all_strings()
+                .note_paths()
+                .into_iter()
                 .filter(|p| p.ends_with(".md"))
-                .cloned()
                 .collect()
         };
 
