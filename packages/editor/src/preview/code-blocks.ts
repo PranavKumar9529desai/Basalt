@@ -78,8 +78,12 @@ export class CodeFooterWidget extends WidgetType {
     return true;
   }
   toDOM() {
+    // The end strip's fixed height comes from `.cm-live-code-end`, not this
+    // widget — this node only hides the closing fence text when the chrome is
+    // shown, so it contributes no height of its own.
     const div = document.createElement("div");
     div.className = "cm-code-footer";
+    div.setAttribute("aria-hidden", "true");
     return div;
   }
   ignoreEvent() {
@@ -88,29 +92,51 @@ export class CodeFooterWidget extends WidgetType {
 }
 
 export const CODE_BLOCKS_THEME = EditorView.baseTheme({
-  ".cm-line.cm-live-code": {
-    backgroundColor: "var(--sat-editor-code-bg, #0a0f1a)",
+  // Obsidian-style invariant-height box: the whole block background is painted
+  // with per-line begin/mid/end classes that are present in BOTH caret states,
+  // and the begin/end lines are pinned to a fixed strip height. The header and
+  // footer chrome is absolutely positioned so it never consumes line height.
+  // Together this makes the block's total height identical whether the caret is
+  // inside (raw source) or outside (chrome) — no layout jump on reveal.
+  ".cm-line.cm-live-code, .cm-line.cm-live-code-begin, .cm-line.cm-live-code-end":
+    {
+      backgroundColor: "var(--sat-editor-code-bg, #0a0f1a)",
+    },
+  // End (bottom) strip: rounded bottom corners. No fixed height — this line is
+  // a normal line in both caret states (raw closing fence when editing, empty
+  // footer widget when the chrome is shown), so its height is already invariant.
+  // Declared BEFORE begin so a single-line block (which carries both begin and
+  // end) resolves its height from the begin rule below.
+  ".cm-line.cm-live-code-end": {
+    borderBottomLeftRadius: "6px",
+    borderBottomRightRadius: "6px",
+  },
+  // Begin (top) strip: fixed height so the code block's top edge is invariant
+  // whether the caret is inside (raw fence sits in the reserved strip) or
+  // outside (header bar overlays it). This is what prevents the height jump.
+  ".cm-line.cm-live-code-begin": {
+    position: "relative",
+    height: "var(--sat-editor-code-strip, 2.25em)",
+    borderTopLeftRadius: "6px",
+    borderTopRightRadius: "6px",
   },
   ".cm-code-header": {
+    position: "absolute",
+    top: "0",
+    left: "0",
+    right: "0",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    margin: "0",
-    padding: "8px 12px 0 12px",
+    padding: "2px 12px 0 12px",
     backgroundColor: "var(--sat-editor-code-bg, #0a0f1a)",
     borderTopLeftRadius: "6px",
     borderTopRightRadius: "6px",
     userSelect: "none",
-  },
-  ".cm-code-lang-tag": {
-    fontSize: "0.75rem",
-    letterSpacing: "0.05em",
-    color: "var(--sat-editor-code-muted, #64748b)",
-    fontWeight: "600",
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    pointerEvents: "none",
   },
   ".cm-code-copy-btn": {
+    pointerEvents: "auto",
     background: "transparent",
     border: "none",
     color: "var(--sat-editor-code-muted, #64748b)",
@@ -127,16 +153,24 @@ export const CODE_BLOCKS_THEME = EditorView.baseTheme({
     backgroundColor: "var(--sat-editor-code-hover-bg, #1e293b)",
     color: "var(--sat-editor-code-hover-text, #cbd5e1)",
   },
-  ".cm-code-footer": {
-    display: "block",
-    backgroundColor: "var(--sat-editor-code-bg, #0a0f1a)",
-    height: "8px",
-    borderBottomLeftRadius: "6px",
-    borderBottomRightRadius: "6px",
+  ".cm-code-lang-tag": {
+    fontSize: "0.75rem",
+    letterSpacing: "0.05em",
+    color: "var(--sat-editor-code-muted, #64748b)",
+    fontWeight: "600",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
 
-/** Add the shared code-block background line class across a line range. */
+/**
+ * Paint the code-block background across a line range using Obsidian-style
+ * begin/mid/end line classes. Every line carries the base `cm-live-code` (so
+ * syntax highlighting keeps matching); the first/last rendered lines additionally
+ * carry `cm-live-code-begin` / `cm-live-code-end` (fixed strip + rounded corners).
+ * These classes are present in BOTH caret states, so the block's height is
+ * invariant to reveal.
+ */
 function addCodeLineClasses(
   startLineNumber: number,
   endLineNumber: number,
@@ -148,8 +182,21 @@ function addCodeLineClasses(
     lineNumber <= endLineNumber;
     lineNumber += 1
   ) {
+    const isFirst = lineNumber === startLineNumber;
+    const isLast = lineNumber === endLineNumber;
+    // Every line keeps the base `cm-live-code` class so syntax-highlighting
+    // selectors (`.cm-line.cm-live-code …`) and the shared background keep
+    // matching. The first/last lines additionally carry the begin/end modifier
+    // whose more-specific, later-declared rules apply the fixed strip + corners.
+    const className = isFirst && isLast
+      ? "cm-live-code cm-live-code-begin cm-live-code-end"
+      : isFirst
+        ? "cm-live-code cm-live-code-begin"
+        : isLast
+          ? "cm-live-code cm-live-code-end"
+          : "cm-live-code";
     const line = doc.line(lineNumber);
-    collector.addLineClass(line.from, "cm-live-code");
+    collector.addLineClass(line.from, className);
   }
 }
 
