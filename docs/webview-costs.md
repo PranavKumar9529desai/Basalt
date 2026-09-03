@@ -173,8 +173,7 @@ source mode, split preview, math, mermaid, HTML tables in edit mode,
 HTML renderer leaf (`CURRENT_WORK.md`), binary IPC, pane splits
 (ADR-018 phase 3).
 
-`pulldown-cmark` / `basalt-wasm.render_markdown` exist. They are **not**
-on the paint path. Display parse is Lezer.
+`pulldown-cmark` exists. It is **not** on the paint path. Display parse is Lezer.
 
 ---
 

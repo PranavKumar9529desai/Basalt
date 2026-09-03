@@ -6,8 +6,8 @@ force-directed physics simulation (`ForceGraph` / `LayoutGraph`) that remaps
 the sparse graph to flat `f32` position arrays for zero-copy rendering.
 
 Depends on `basalt-types`. Pure native logic (no wasm on its own) — it is
-compiled to wasm when consumed through the `basalt-wasm` / `graph-wasm`
-bridges. Backs the ≥25k-node perf gate (ADR-021).
+compiled to wasm when consumed through the `graph-wasm` bridge. Backs the
+≥25k-node perf gate (ADR-021).
 
 ## Modules
 

@@ -29,14 +29,16 @@ Restructure into six crates with hyphenated package names:
 | `basalt-graph`  | `StringArena`, `NoteGraph`, fuzzy search algorithm                                       |
 | `basalt-vault`  | Vault indexing, incremental reindex, file watching, cache, tree building, path utilities |
 | `basalt-search` | Full-text search (Tantivy BM25) and fuzzy file matching (Nucleo)                         |
-| `basalt-wasm`   | `wasm-bindgen` surface exposing parser/graph to JavaScript                               |
+| `graph-wasm`    | `wasm-bindgen` force-layout graph sim for the GraphWorker (ADR-021)                       |
+| `frontmatter-wasm` | keystroke-path frontmatter parser (ADR-022)                                            |
 
-Dependency order:
+Dependency order (WASM bridges live in standalone workspaces, not the main one):
 
 ```
 basalt-types → basalt-parser → basalt-graph → basalt-vault → basalt-search
-                                    ↑
-                               basalt-wasm
+    │              │                │
+    └──────────────┴──► frontmatter-wasm
+                     └────────────► graph-wasm
 ```
 
 ## Rationale

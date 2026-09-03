@@ -30,7 +30,6 @@ crates/                ← Rust compute
 ├── basalt-graph/      ← Note graph, backlinks, force-directed layout
 ├── basalt-search/    ← Tantivy full-text + Nucleo fuzzy search
 ├── basalt-tables/     ← DQL query execution, event tables (ADR-027)
-├── basalt-wasm/       ← wasm_bindgen bridge (render/meta/frontmatter/fuzzy)
 ├── frontmatter-wasm/  ← C-ABI keystroke-path frontmatter parser (ADR-022)
 └── graph-wasm/        ← C-ABI graph force-layout sim for GraphWorker (ADR-021)
 ```

@@ -3,13 +3,18 @@
 // return a locally-defined struct. The generated wrapper is correct under the current
 // edition; this only silences the future-compat lint. Revisit when migrating to edition 2024.
 #![allow(dependency_on_unit_never_type_fallback)]
-mod app_state;
-mod cache;
 mod commands;
-mod config;
+mod core;
 mod error;
-mod watcher;
-mod workspace;
+
+// Re-export the backend modules at the crate root so the long-established
+// `crate::cache` / `crate::config` / `crate::watcher` / `crate::workspace` /
+// `crate::app_state` paths keep working unchanged.
+pub use core::app_state;
+pub use core::cache;
+pub use core::config;
+pub use core::watcher;
+pub use core::workspace;
 
 pub use app_state::AppState;
 

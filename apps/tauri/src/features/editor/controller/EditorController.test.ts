@@ -11,7 +11,7 @@ import {
 // showTab awaits the frontmatter WASM loader, which can't resolve in vitest's
 // SSR build (the `?init` import is a Vite-only URL). Stub it to resolve
 // immediately so showTab's read-then-swap flow is what actually runs.
-vi.mock("../logic/frontmatter-wasm", () => ({
+vi.mock("../lib/frontmatter-wasm", () => ({
   initFrontmatterWasm: vi.fn().mockResolvedValue(undefined),
 }));
 
