@@ -2,7 +2,7 @@ import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
 import { languages } from "@codemirror/language-data";
-import type { Extension } from "@codemirror/state";
+import { Facet, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { pasteImageExtension } from "./input/paste-image";
@@ -186,4 +186,114 @@ export function previewExtensions(): Extension[] {
     TABLE_BLOCK_THEME,
     EditorView.lineWrapping,
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Reading mode — ADR-029
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve an embed target (`![[file]]`) to a loadable asset URL.
+ * Injected by the feature layer so `packages/editor` stays pure.
+ */
+export const resolveAssetFacet = Facet.define<
+  ((target: string) => string | null) | undefined,
+  ((target: string) => string | null) | undefined
+>({ combine: (values) => values[0] });
+
+/**
+ * Full extension stack for reading mode (ADR-029). Uses the same grammar and
+ * live-preview decoration engine as edit mode, but configured read-only:
+ *
+ * - All block widgets render rich content (no cursor to reveal raw source).
+ * - DQL query blocks execute and render live results.
+ * - `![[embed]]` resolves to actual media via `resolveAssetFacet`.
+ * - Wikilinks and links are clickable via `readingLinkHandler`.
+ * - `EditorState.readOnly` + `EditorView.editable` disable editing.
+ *
+ * The caller provides dependency facets (runQuery, resolveAsset, etc.) via the
+ * config object. The returned extensions are used with a CM6 Compartment in
+ * `EditorController.setMode()` to switch between edit and reading modes
+ * without recreating the view.
+ */
+export function readingExtensions(config: {
+  runQuery?: EditorConfig["runQuery"];
+  onOpenLink?: EditorConfig["onOpenLink"];
+  resolveAsset?: EditorConfig["resolveAsset"];
+  parseFrontmatter?: EditorConfig["parseFrontmatter"];
+}): Extension[] {
+  return [
+    // Same markdown grammar + live-preview as edit mode.
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: languages,
+      extensions: basaltMarkdownExtensions,
+    }),
+    codeSyntaxHighlightingExtension(),
+    ...LIVE_PREVIEW_THEME,
+    ...livePreviewPlugin,
+    // Block widgets — all render rich in read-only (no cursor to activate/deactivate).
+    ...frontmatterBlockWidgetGroup({
+      parseFrontmatter: config.parseFrontmatter,
+    }),
+    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
+    HTML_BLOCK_THEME,
+    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
+    TABLE_BLOCK_THEME,
+    blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
+    DQL_WIDGET_THEME,
+    runQueryFacet.of(config.runQuery),
+    openLinkFacet.of(config.onOpenLink),
+    // Embed asset resolution facet.
+    resolveAssetFacet.of(config.resolveAsset),
+    // Link click handling in reading mode.
+    readingLinkHandler(),
+    EditorView.lineWrapping,
+  ];
+}
+
+/**
+ * ViewPlugin that intercepts clicks on wikilinks and markdown links in
+ * reading mode, navigating via `openLinkFacet`. Uses event delegation on
+ * `.cm-content` — one listener for all link types.
+ */
+function readingLinkHandler(): Extension {
+  return EditorView.domEventHandlers({
+    click(event, view) {
+      const target = event.target as HTMLElement | null;
+      if (!target) return false;
+
+      // Wikilink: .cm-live-wikilink spans
+      const wikiSpan = target.closest?.(".cm-live-wikilink");
+      if (wikiSpan) {
+        const text = wikiSpan.textContent?.trim();
+        if (text) {
+          const onOpenLink = view.state.facet(openLinkFacet);
+          onOpenLink?.(text);
+          return true;
+        }
+      }
+
+      // Markdown link: <a> elements with href
+      const anchor = target.closest?.("a");
+      if (anchor) {
+        const href = anchor.getAttribute("href");
+        if (href?.startsWith("#")) return false; // internal anchor, don't intercept
+        if (href?.startsWith("http")) {
+          window.open(href, "_blank", "noreferrer");
+          return true;
+        }
+        // Wikilink rendered as <a> by block widgets (DQL results etc.)
+        const name =
+          anchor.getAttribute("data-name") ?? anchor.textContent ?? "";
+        if (name) {
+          const onOpenLink = view.state.facet(openLinkFacet);
+          onOpenLink?.(name.trim());
+          return true;
+        }
+      }
+
+      return false;
+    },
+  });
 }

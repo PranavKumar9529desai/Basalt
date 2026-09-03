@@ -23,6 +23,8 @@ export {
   createEditorExtensionGroups,
   createEditorExtensions,
   previewExtensions,
+  readingExtensions,
+  resolveAssetFacet,
 } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";

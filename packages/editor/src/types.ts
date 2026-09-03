@@ -106,4 +106,10 @@ export interface EditorConfig {
    * `run_query` Tauri IPC command (basalt-tables engine).
    */
   runQuery?: RunQueryFn;
+  /**
+   * Resolve an embed target (`![[file]]`) to a loadable asset URL (e.g. via
+   * Tauri's `convertFileSrc`). Return `null` when the target is not a
+   * resolvable file. Injected so `packages/editor` stays pure.
+   */
+  resolveAsset?: (target: string) => string | null;
 }
