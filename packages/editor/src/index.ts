@@ -24,6 +24,7 @@ export {
   createEditorExtensions,
   previewExtensions,
   readingExtensions,
+  readingModeExtras,
   resolveAssetFacet,
 } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";

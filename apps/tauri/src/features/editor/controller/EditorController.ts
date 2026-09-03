@@ -1,12 +1,13 @@
-import { EditorState, type Extension } from "@codemirror/state";
+import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
   type ContextMenuState,
   type FrontmatterModel,
   type QueryResult,
   contextMenuExtension,
-  createEditorExtensions,
+  createEditorExtensionGroups,
   editorBenchmarkState,
+  readingModeExtras,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
@@ -88,7 +89,8 @@ export class EditorController {
   private dirtyRef = new Set<string>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private statsTimer: ReturnType<typeof setTimeout> | null = null;
-
+  private modeCompartment = new Compartment();
+  private currentMode: "edit" | "reading" = "edit";
   private extensions: Extension[];
 
   constructor(options: EditorControllerOptions) {
@@ -115,22 +117,36 @@ export class EditorController {
       this.scheduleSave();
       this.scheduleStats();
     });
-    const extensions: Extension[] = [
-      ...createEditorExtensions({
-        onFetchLinks: options.io.onFetchLinks,
-        onFetchTags: options.io.onFetchTags,
-        onOpenLink: this.handleOpenLink,
-        onPasteImage: options.io.onPasteImage,
-        parseFrontmatter: options.io.parseFrontmatter,
-        editFrontmatter,
-        runQuery: options.io.runQuery,
-      }),
+    const groups = createEditorExtensionGroups({
+      onFetchLinks: options.io.onFetchLinks,
+      onFetchTags: options.io.onFetchTags,
+      onOpenLink: this.handleOpenLink,
+      onPasteImage: options.io.onPasteImage,
+      parseFrontmatter: options.io.parseFrontmatter,
+      editFrontmatter,
+      runQuery: options.io.runQuery,
+    });
+    // Shared extensions live outside the compartment — present in both modes.
+    // The compartment holds mode-specific extensions (edit or reading).
+    const sharedExtensions: Extension[] = [
+      ...groups.base,
+      ...groups.syntax,
+      ...groups.livePreview,
+    ];
+    const editExtensions: Extension[] = [
+      ...groups.input,
+      ...groups.suggestions,
+      ...groups.links,
+      ...groups.blockWidgets,
       contextMenuExtension(options.setContextMenuState),
-      updateListener,
     ];
 
-    this.extensions = extensions;
-    this.initialState = EditorState.create({ doc: "", extensions });
+    this.extensions = [
+      ...sharedExtensions,
+      this.modeCompartment.of(editExtensions),
+      updateListener,
+    ];
+    this.initialState = EditorState.create({ doc: "", extensions: this.extensions });
   }
 
   handleOpenLink = (linkName: string) => {
@@ -153,6 +169,47 @@ export class EditorController {
   /** The live EditorView, if the host has reported it yet. */
   getView(): EditorView | null {
     return this.view;
+  }
+
+  /** Switch between edit and reading mode by reconfiguring the mode compartment.
+   * Scroll position and undo history survive the switch (CM6 reuses the state). */
+  setMode(mode: "edit" | "reading") {
+    if (mode === this.currentMode) return;
+    this.currentMode = mode;
+    const view = this.view;
+    if (!view) return;
+
+    if (mode === "reading") {
+      view.dispatch({
+        effects: this.modeCompartment.reconfigure(
+          readingModeExtras({
+            runQuery: this.io.runQuery,
+            onOpenLink: this.handleOpenLink,
+            resolveAsset: this.services.resolveAsset,
+            parseFrontmatter: this.io.parseFrontmatter,
+          }),
+        ),
+      });
+    } else {
+      // Revert to edit mode — rebuild edit extensions from the groups.
+      const groups = createEditorExtensionGroups({
+        onFetchLinks: this.io.onFetchLinks,
+        onFetchTags: this.io.onFetchTags,
+        onOpenLink: this.handleOpenLink,
+        onPasteImage: this.io.onPasteImage,
+        parseFrontmatter: this.io.parseFrontmatter,
+        editFrontmatter,
+        runQuery: this.io.runQuery,
+      });
+      view.dispatch({
+        effects: this.modeCompartment.reconfigure([
+          ...groups.input,
+          ...groups.suggestions,
+          ...groups.links,
+          ...groups.blockWidgets,
+        ]),
+      });
+    }
   }
 
   /** Return focus to the note body after the title submits. */

@@ -2,7 +2,7 @@ import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
 import { languages } from "@codemirror/language-data";
-import { Facet, type Extension } from "@codemirror/state";
+import { EditorState, Facet, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { pasteImageExtension } from "./input/paste-image";
@@ -247,6 +247,36 @@ export function readingExtensions(config: {
     // Link click handling in reading mode.
     readingLinkHandler(),
     EditorView.lineWrapping,
+  ];
+}
+
+/** Reading-specific extensions only — block widgets (reading config), embed media,
+ * link handler, readOnly/editable. Used inside the mode compartment; the shared
+ * grammar + live-preview live outside the compartment. */
+export function readingModeExtras(config: {
+  runQuery?: EditorConfig["runQuery"];
+  onOpenLink?: EditorConfig["onOpenLink"];
+  resolveAsset?: EditorConfig["resolveAsset"];
+  parseFrontmatter?: EditorConfig["parseFrontmatter"];
+}): Extension[] {
+  return [
+    ...frontmatterBlockWidgetGroup({
+      parseFrontmatter: config.parseFrontmatter,
+    }),
+    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
+    HTML_BLOCK_THEME,
+    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
+    TABLE_BLOCK_THEME,
+    blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
+    DQL_WIDGET_THEME,
+    runQueryFacet.of(config.runQuery),
+    openLinkFacet.of(config.onOpenLink),
+    resolveAssetFacet.of(config.resolveAsset),
+    EMBED_MEDIA_THEME,
+    embedMediaPlugin,
+    readingLinkHandler(),
+    EditorState.readOnly.of(true),
+    EditorView.editable.of(false),
   ];
 }
 
