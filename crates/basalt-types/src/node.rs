@@ -30,7 +30,7 @@ pub enum MarkdownNode {
     // Add more as needed
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct Document {
     pub frontmatter: Option<serde_yaml_ng::Value>,
     pub ast: Vec<MarkdownNode>,
@@ -40,11 +40,6 @@ pub struct Document {
 
 impl Document {
     pub fn new() -> Self {
-        Self {
-            frontmatter: None,
-            ast: Vec::new(),
-            tags: Vec::new(),
-            links: Vec::new(),
-        }
+        Self::default()
     }
 }

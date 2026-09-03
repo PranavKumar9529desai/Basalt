@@ -6,7 +6,7 @@ pub struct Span {
     pub end: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct FileMetadata {
     pub frontmatter: Option<serde_yaml_ng::Value>,
     pub tags: Vec<String>,
@@ -28,17 +28,6 @@ pub struct FileMetadata {
 
 impl FileMetadata {
     pub fn new() -> Self {
-        Self {
-            frontmatter: None,
-            tags: Vec::new(),
-            links: Vec::new(),
-            embeds: Vec::new(),
-            aliases: Vec::new(),
-            tag_locations: Vec::new(),
-            link_locations: Vec::new(),
-            embed_locations: Vec::new(),
-            headings: Vec::new(),
-            block_ids: Vec::new(),
-        }
+        Self::default()
     }
 }

@@ -461,7 +461,7 @@ mod tests {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("assets/image.png"));
 
-        idx.register_embeds("/vault/note.md", &vec!["image.png".to_string()]);
+        idx.register_embeds("/vault/note.md", &["image.png".to_string()]);
 
         let a = idx.get("/vault/assets/image.png").unwrap();
         assert_eq!(a.embeds_by, vec!["/vault/note.md"]);
@@ -472,7 +472,7 @@ mod tests {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("docs/diagram.pdf"));
 
-        idx.register_links("/vault/note.md", &vec!["docs/diagram.pdf".to_string()]);
+        idx.register_links("/vault/note.md", &["docs/diagram.pdf".to_string()]);
 
         let a = idx.get("/vault/docs/diagram.pdf").unwrap();
         assert_eq!(a.linked_by, vec!["/vault/note.md"]);
@@ -483,7 +483,7 @@ mod tests {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("a.png"));
 
-        idx.register_embeds("/vault/note.md", &vec!["a.png".to_string(), "a.png".to_string()]);
+        idx.register_embeds("/vault/note.md", &["a.png".to_string(), "a.png".to_string()]);
 
         let a = idx.get("/vault/a.png").unwrap();
         assert_eq!(a.embeds_by.len(), 1);
@@ -493,7 +493,7 @@ mod tests {
     fn test_clear_references() {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("a.png"));
-        idx.register_embeds("/vault/note.md", &vec!["a.png".to_string()]);
+        idx.register_embeds("/vault/note.md", &["a.png".to_string()]);
 
         idx.clear_references();
         let a = idx.get("/vault/a.png").unwrap();
@@ -506,8 +506,8 @@ mod tests {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("a.png"));
         idx.upsert(sample_asset("b.png"));
-        idx.register_embeds("/vault/note1.md", &vec!["a.png".to_string()]);
-        idx.register_embeds("/vault/note2.md", &vec!["a.png".to_string(), "b.png".to_string()]);
+        idx.register_embeds("/vault/note1.md", &["a.png".to_string()]);
+        idx.register_embeds("/vault/note2.md", &["a.png".to_string(), "b.png".to_string()]);
         // line removed — the vec! on line 469 already covers this
 
         idx.remove_note_references("/vault/note1.md");
@@ -522,7 +522,7 @@ mod tests {
     fn test_rename_note_references() {
         let mut idx = AssetIndex::new();
         idx.upsert(sample_asset("a.png"));
-        idx.register_embeds("/vault/old.md", &vec!["a.png".to_string()]);
+        idx.register_embeds("/vault/old.md", &["a.png".to_string()]);
 
         idx.rename_note_references("/vault/old.md", "/vault/new.md");
 

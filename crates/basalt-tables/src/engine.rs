@@ -85,7 +85,7 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, ParseError
                 for r in rows.drain(..) {
                     match r {
                         WorkRow::Page(p) => {
-                            let val = eval_to_typed(&expr, &EvalCtx::Page(&p));
+                            let val = eval_to_typed(expr, &EvalCtx::Page(&p));
                             match val {
                                 TypedValue::List { items } if !items.is_empty() => {
                                     for item in items {
@@ -243,17 +243,18 @@ fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
             // Infer type from first non-null value
             let type_ = rows
                 .iter()
-                .find_map(|r| {
+                .map(|r| {
                     let v = eval_to_typed(&f.expr, &r.ctx());
-                    Some(match v {
+                    match v {
                         TypedValue::Number { .. } => "number",
                         TypedValue::Checkbox { .. } => "checkbox",
                         TypedValue::Link { .. } => "link",
                         TypedValue::Date { .. } => "date",
                         TypedValue::List { .. } => "list",
                         _ => "text",
-                    })
+                    }
                 })
+                .next()
                 .unwrap_or("text")
                 .to_string();
             QueryColumn { name, type_ }

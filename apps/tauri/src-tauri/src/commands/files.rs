@@ -105,7 +105,7 @@ pub fn save_files(files: Vec<SaveFileInput>, state: State<AppState>) -> AppResul
         let abs = canonical_md_path(&file.path)?;
         // Register BEFORE the write so the watcher can never observe the file
         // in a written-but-unregistered state.
-        register_self_writes(&state, &[abs.clone()]);
+        register_self_writes(&state, std::slice::from_ref(&abs));
         if let Err(e) = std::fs::write(&abs, &file.content) {
             if let Ok(mut guard) = state.self_writes.lock() {
                 guard.remove(&abs);
@@ -147,5 +147,6 @@ pub struct OpenFileResult {
 pub struct SaveFileInput {
     pub path: String,
     pub content: String,
+    #[expect(dead_code, reason = "wire-contract field deserialized from frontend, not yet consumed")]
     pub expected_mtime_ms: Option<u64>,
 }

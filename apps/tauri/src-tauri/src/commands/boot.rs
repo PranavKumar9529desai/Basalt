@@ -100,7 +100,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> AppResult<BootResult> {
     );
 
     let t = Instant::now();
-    let config = load_config(&app);
+    let config = load_config(app);
     phase(&mut timings, "rust:load_config", t);
 
     let vault_path = match config.last_vault {
@@ -234,7 +234,7 @@ pub fn set_vault(
 ) -> AppResult<BootResult> {
     let root = Path::new(&path)
         .canonicalize()
-        .map_err(|e| AppError::InvalidVaultPath(e))?;
+        .map_err(AppError::InvalidVaultPath)?;
 
     if !root.is_dir() {
         return Err(AppError::Validation("path is not a directory".to_string()));

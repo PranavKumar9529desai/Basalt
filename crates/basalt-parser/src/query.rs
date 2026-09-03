@@ -176,7 +176,7 @@ fn fn_name(input: &str) -> IResult<&str, String> {
     map(
         verify(
             take_while1(|c: char| c.is_alphanumeric() || c == '_'),
-            |s: &str| s.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_'),
+            |s: &str| s.chars().next().is_some_and(|c| c.is_alphabetic() || c == '_'),
         ),
         |s: &str| s.to_string(),
     )(input)

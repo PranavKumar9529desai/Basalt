@@ -118,7 +118,6 @@ pub struct GraphSnapshot {
 /// `get_graph` command is a thin wrapper over this. Tag-tree semantics live in
 /// `docs/tag-graph-connections.md` (notes link to exact tags; nested tags
 /// parent->child).
-
 /// Union-find root lookup with path compression.
 fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     while parent[x as usize] != x {
@@ -276,7 +275,7 @@ pub(crate) fn build_graph_snapshot(
     for (u, v) in pairs {
         edges.push(u);
         edges.push(v);
-        let links = pair_counts[&(((u as u64) << 32 | (v as u64)))];
+        let links = pair_counts[&((u as u64) << 32 | (v as u64))];
         let w = links + shared_tags(u as usize, v as usize);
         edge_weights.push(w as f32);
     }
@@ -386,7 +385,9 @@ mod tests {
 
         let edge_pairs: Vec<(u32, u32)> = snap
             .edges
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| (c[0], c[1]))
             .collect();
 
@@ -444,7 +445,9 @@ mod tests {
         let b_idx = note_idx("b.md").expect("b.md node present");
         let pair_w = snap
             .edges
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| (c[0], c[1]))
             .zip(&snap.edge_weights)
             .find(|((u, v), _)| {

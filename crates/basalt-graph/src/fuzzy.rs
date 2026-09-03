@@ -31,16 +31,13 @@ pub fn fuzzy_match(query: &str, text: &str) -> Option<i32> {
     let mut current_pos = 0;
 
     for q_char in query.chars() {
-        if let Some(pos) = text[current_pos..].find(q_char) {
-            score += 10;
-            // Bonus for consecutive characters
-            if pos == 0 {
-                score += 5;
-            }
-            current_pos += pos + q_char.len_utf8();
-        } else {
-            return None; // All query characters must appear in order
+        let pos = text[current_pos..].find(q_char)?;
+        score += 10;
+        // Bonus for consecutive characters
+        if pos == 0 {
+            score += 5;
         }
+        current_pos += pos + q_char.len_utf8();
     }
 
     Some(score)
@@ -52,6 +49,6 @@ pub fn search_commands(query: &str, candidates: Vec<(String, String)>) -> Vec<Se
         .filter_map(|(id, name)| fuzzy_match(query, &name).map(|score| SearchResult { id, score }))
         .collect();
 
-    results.sort_by(|a, b| b.score.cmp(&a.score));
+    results.sort_by_key(|a| std::cmp::Reverse(a.score));
     results
 }

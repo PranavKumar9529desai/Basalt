@@ -684,7 +684,7 @@ pub fn save_attachment(
                 .and_then(|s| s.to_str())
                 .unwrap_or("note");
             // Counter will be applied in collision loop.
-            format!("{note_stem}")
+            note_stem.to_string()
         }
         "{date}-{original_name}" => {
             let (y, m, d) = current_date();
@@ -757,7 +757,7 @@ pub fn save_attachment(
         // full `rel_path` (with extension) — it resolves via exact match, and
         // the pasted note writes `![[rel_path]]` verbatim.
         if let Some(note) = &note_path {
-            vault.asset_index.register_embeds(note, &[rel_path.clone()]);
+            vault.asset_index.register_embeds(note, std::slice::from_ref(&rel_path));
         }
     }
 
@@ -851,7 +851,7 @@ fn file_mtime_date(path: &std::path::Path) -> (i32, u32, u32) {
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() / 86400 as u64);
+        .map(|d| d.as_secs() / 86400_u64);
     match mtime {
         Some(days) => date_from_days(days as i64),
         None => current_date(),
@@ -891,9 +891,9 @@ mod tests {
   #[test]
   fn current_date_returns_plausible_values() {
       let (y, m, d) = super::current_date();
-      assert!(y >= 2024 && y <= 2030, "year should be around now: {y}");
-      assert!(m >= 1 && m <= 12, "month should be 1..=12: {m}");
-      assert!(d >= 1 && d <= 31, "day should be 1..=31: {d}");
+      assert!((2024..=2030).contains(&y), "year should be around now: {y}");
+      assert!((1..=12).contains(&m), "month should be 1..=12: {m}");
+      assert!((1..=31).contains(&d), "day should be 1..=31: {d}");
   }
 
   #[test]
@@ -908,7 +908,7 @@ mod tests {
       let attach_dir = root.join("_attachments");
       std::fs::create_dir_all(&attach_dir).unwrap();
       let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, &[0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic
+      std::fs::write(&png_path, [0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic
       let abs = png_path.to_string_lossy().to_string();
       let rel = "_attachments/logo.png".to_string();
       let old_target = "_attachments/logo".to_string();
@@ -969,7 +969,7 @@ mod tests {
       let attach_dir = root.join("_attachments");
       std::fs::create_dir_all(&attach_dir).unwrap();
       let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, &[0x89u8]).unwrap();
+      std::fs::write(&png_path, [0x89u8]).unwrap();
       let abs = png_path.to_string_lossy().to_string();
 
       state.vault.write().unwrap().asset_index.upsert(AssetInfo {
@@ -1029,7 +1029,7 @@ mod tests {
 
       let add_asset = |name: &str, hash: &str, embeds_by: Vec<String>| {
           let abs = root.join(name).to_string_lossy().to_string();
-          std::fs::write(root.join(name), &[0x89u8]).unwrap();
+          std::fs::write(root.join(name), [0x89u8]).unwrap();
           state.vault.write().unwrap().asset_index.upsert(AssetInfo {
               rel_path: name.into(),
               abs_path: abs,
@@ -1083,7 +1083,7 @@ mod tests {
       std::fs::create_dir_all(&attach_dir).unwrap();
       for name in ["logo.png", "logo2.png"] {
           let abs = attach_dir.join(name).to_string_lossy().to_string();
-          std::fs::write(attach_dir.join(name), &[0x89u8]).unwrap();
+          std::fs::write(attach_dir.join(name), [0x89u8]).unwrap();
           state.vault.write().unwrap().asset_index.upsert(AssetInfo {
               rel_path: format!("_attachments/{name}"),
               abs_path: abs,

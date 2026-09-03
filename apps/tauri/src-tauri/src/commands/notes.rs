@@ -124,7 +124,7 @@ pub fn create_note(
 
     // Choke point: marker BEFORE the write. `file_path` is built from the
     // canonical vault root, so it matches the path the watcher reports.
-    register_self_writes(&state, &[file_path.clone()]);
+    register_self_writes(&state, std::slice::from_ref(&file_path));
 
     if let Err(e) = std::fs::write(&file_path, &content) {
         if let Ok(mut guard) = state.self_writes.lock() {
@@ -216,7 +216,7 @@ pub fn create_untitled_note(
 
         let content = String::new();
 
-        register_self_writes(&state, &[file_path.clone()]);
+        register_self_writes(&state, std::slice::from_ref(&file_path));
         if let Err(e) = std::fs::write(&file_path, &content) {
             if let Ok(mut guard) = state.self_writes.lock() {
                 guard.remove(&file_path);
@@ -273,7 +273,7 @@ fn sanitize_name(raw: &str) -> AppResult<String> {
             break;
         }
     }
-    validate_name(&name.trim_end())
+    validate_name(name.trim_end())
 }
 
 /// Rename a note in place (same folder) and keep the vault consistent with
@@ -373,7 +373,7 @@ fn rename_note_impl(
     for c in &candidates {
         self_write_paths.push(PathBuf::from(c));
     }
-    register_self_writes(&state, &self_write_paths);
+    register_self_writes(state, &self_write_paths);
 
     // 3. Actually move the file.
     std::fs::rename(&old_abs, &new_abs).map_err(|e| AppError::Io(format!("failed to rename: {e}")))?;
@@ -428,9 +428,9 @@ fn rename_note_impl(
     }
 
     // 7. Search index: remove the old path, upsert every rewritten doc.
-    index_remove(&state, &old_path_str);
+    index_remove(state, &old_path_str);
     for (p, content) in &rewritten {
-        index_upsert(&state, p, content);
+        index_upsert(state, p, content);
     }
 
     Ok(RenameNoteResult {
@@ -526,7 +526,7 @@ fn rename_attachments_for_note(
             if let Some(parent) = new_abs.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
-            register_self_writes(&state, &[std::path::PathBuf::from(&asset.abs_path)]);
+            register_self_writes(state, &[std::path::PathBuf::from(&asset.abs_path)]);
             if std::fs::rename(&asset.abs_path, &new_abs).is_err() {
                 continue;
             }
@@ -587,7 +587,7 @@ fn rename_attachments_for_note(
                 if next == content {
                     continue;
                 }
-                register_self_writes(&state, &[std::path::PathBuf::from(note_path)]);
+                register_self_writes(state, &[std::path::PathBuf::from(note_path)]);
                 std::fs::write(note_path, &next)
                     .map_err(|e| AppError::Io(format!("failed to update embeds in '{note_path}': {e}")))?;
             }
@@ -816,13 +816,12 @@ mod tests {
       let (root, state) = temp_vault();
       let b_str = root.join("b.md").to_string_lossy().to_string();
       let old_abs = root.join("b.md");
-      let new_abs = root.join("renamedB.md");
 
       // Create _attachments/b/logo.png (simulating by_note org).
       let attach_dir = root.join("_attachments").join("b");
       std::fs::create_dir_all(&attach_dir).unwrap();
       let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, &[0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic bytes
+      std::fs::write(&png_path, [0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic bytes
       let attach_abs = png_path.to_string_lossy().to_string();
       let attach_rel = "_attachments/b/logo.png".to_string();
       let embed_target = "_attachments/b/logo".to_string();

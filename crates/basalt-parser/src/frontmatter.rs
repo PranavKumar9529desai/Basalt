@@ -64,8 +64,8 @@ pub fn parse_frontmatter(input: &str) -> FrontmatterModel {
                         }
                         let ll = &input[k..ce];
                         let trimmed = ll.trim_start();
-                        if trimmed.starts_with("- ") {
-                            list_items.push(coerce_scalar(&trimmed[2..]).0);
+                        if let Some(stripped) = trimmed.strip_prefix("- ") {
+                            list_items.push(coerce_scalar(stripped).0);
                             val_byte_end = ce;
                             consumed_until = le + 1;
                             k = le + 1;
@@ -251,7 +251,7 @@ pub(crate) fn first_wikilink_target(s: &str) -> Option<String> {
     let close = rest.find("]]")?;
     let inner = &rest[..close];
     let target = inner
-        .split(|c| c == '|' || c == '#')
+        .split(['|', '#'])
         .next()
         .unwrap_or("")
         .trim();
@@ -272,7 +272,7 @@ pub(crate) fn collect_wikilinks(s: &str, out: &mut Vec<String>) {
             if let Some(close) = s[start..].find("]]") {
                 let inner = &s[start..start + close];
                 let target = inner
-                    .split(|c| c == '|' || c == '#')
+                    .split(['|', '#'])
                     .next()
                     .unwrap_or("")
                     .trim();

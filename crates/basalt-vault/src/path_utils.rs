@@ -44,7 +44,7 @@ pub fn resolve_creation_path(
     // Limit overall split depth to prevent malicious nesting streams
     // Split by either / or \ to handle cross-platform inputs
     let components: Vec<&str> = clean_name
-        .split(|c| c == '/' || c == '\\')
+        .split(['/', '\\'])
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -77,8 +77,8 @@ pub fn resolve_creation_path(
     let mut final_dir = target_dir.clone();
 
     // Add all intermediate folders
-    for i in 0..components.len() - 1 {
-        final_dir.push(components[i]);
+    for component in components.iter().take(components.len() - 1) {
+        final_dir.push(component);
     }
 
     let mut final_name = components.last().unwrap().to_string();

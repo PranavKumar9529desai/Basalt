@@ -16,6 +16,7 @@ use super::schema::build_schema;
 /// `body` is indexed but not stored — snippets are built by re-scanning the raw
 /// content string supplied to `update_document`.
 pub struct TantivyIndex {
+    #[expect(dead_code, reason = "owns the tantivy Index — dropping invalidates reader/writer")]
     index: Index,
     writer: IndexWriter,
     reader: tantivy::IndexReader,

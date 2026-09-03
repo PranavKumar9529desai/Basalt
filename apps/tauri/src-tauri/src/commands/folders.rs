@@ -36,7 +36,7 @@ pub fn create_folder(
     if folder_path.exists() {
         let clean_name = name.trim();
         let components: Vec<&str> = clean_name
-            .split(|c| c == '/' || c == '\\')
+            .split(['/', '\\'])
             .filter(|s| !s.is_empty())
             .collect();
         let last = components.last().unwrap_or(&clean_name);
@@ -45,7 +45,7 @@ pub fn create_folder(
 
     // Choke point: suppress the watcher's mkdir event; the frontend refreshes
     // its own tree after this call returns.
-    register_self_writes(&state, &[folder_path.clone()]);
+    register_self_writes(&state, std::slice::from_ref(&folder_path));
     std::fs::create_dir_all(&folder_path).map_err(|e| AppError::Io(format!("failed to create folder: {e}")))?;
 
     Ok(folder_path.to_string_lossy().to_string())
@@ -262,7 +262,7 @@ pub fn move_paths(
     let mut file_ops: Vec<(String, String, Option<String>)> = Vec::new();
     for (source_str, destination_str) in &updates {
         if source_str.ends_with(".md") {
-            let content = std::fs::read_to_string(&destination_str).ok();
+            let content = std::fs::read_to_string(destination_str).ok();
             file_ops.push((source_str.clone(), destination_str.clone(), content));
         } else {
             // Read vault under a shared read lock to find folder descendants.
@@ -456,7 +456,7 @@ fn rename_path_impl(
         self_write_paths.push(PathBuf::from(old_d));
         self_write_paths.push(PathBuf::from(new_d));
     }
-    register_self_writes(&state, &self_write_paths);
+    register_self_writes(state, &self_write_paths);
 
     // 2. Move the item.
     std::fs::rename(&old_abs, &new_abs)
@@ -541,8 +541,8 @@ fn rename_path_impl(
 
     // 5. Search index follows every moved document.
     for (old_d, new_d, content) in &contents {
-        index_remove(&state, old_d);
-        index_upsert(&state, new_d, content);
+        index_remove(state, old_d);
+        index_upsert(state, new_d, content);
     }
 
     Ok(RenamePathResult {
@@ -678,7 +678,7 @@ mod tests {
           .filter_map(|id| vault.arena.get_string(*id).cloned())
           .collect();
       assert!(!cached.iter().any(|p| p.contains("/Project/")), "old paths dropped");
-      let a_id = vault.arena.get_id(&root.join("Docs/a.md").to_string_lossy().to_string()).unwrap();
+      let a_id = vault.arena.get_id(root.join("Docs/a.md").to_string_lossy().as_ref()).unwrap();
       assert!(
           vault.graph.metadata_cache.get(&a_id).unwrap().links.contains(&"Docs/a.md".to_string()),
           "cached links follow the folder"
@@ -702,7 +702,7 @@ mod tests {
       assert!(res.moved.is_empty(), "attachments move no documents");
 
       // Explicit extension input is respected (any case).
-      let res2 = rename_path_impl(&root.join("logo.png").to_string_lossy().to_string(), "final.PNG", &state).unwrap();
+      let res2 = rename_path_impl(root.join("logo.png").to_string_lossy().as_ref(), "final.PNG", &state).unwrap();
       assert_eq!(res2.name, "final.PNG");
       assert!(root.join("final.PNG").exists());
   }
