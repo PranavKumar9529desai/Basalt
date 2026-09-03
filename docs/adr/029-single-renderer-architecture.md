@@ -1,7 +1,8 @@
 # ADR-029: Single-Renderer Architecture — Unify Edit and Reading Modes
 
-**Status:** Proposed
+**Status:** Accepted (implemented)
 **Date:** 2026-09-03
+**Last updated:** 2026-09-04 (impl → Accepted + search preview parity)
 **Extends:** ADR-018 (registry-driven workbench), ADR-019 (editor decoration pipeline), ADR-022 (frontmatter engine)
 
 ## Context
@@ -108,10 +109,10 @@ is never mounted. One CM6 view, two extension configurations.
    that overrides `readOnly` for the specific click, toggles the `[x]`/`[ ]`,
    then returns to read-only.
 
-3. **Frontmatter editing** — The interactive frontmatter widget (property
-   editing, tag picker) is disabled in reading mode. The dim-mode presentation
-   (tinted YAML) is used instead. If a user wants to edit properties, they
-   switch to edit mode.
+3. **Frontmatter editing** — In reading mode the interactive frontmatter widget
+   (property editing, tag picker) renders the full Properties panel but is
+   read-only (`EditorState.readOnly` + `EditorView.editable(false)`), same as
+   the editor. Any property edits happen in edit mode.
 
 ## Phased implementation
 
@@ -156,3 +157,25 @@ Remove files. Add `READING_THEME` CM6 extension for reading-mode typography
 - Scroll position preserved on toggle
 - Large notes (500+ lines) render without jank in reading mode
 - No broken imports from deleted files
+
+### Phase 8: Search preview parity (implemented)
+
+The search-result preview (`apps/tauri/src/features/search/components/PreviewPane.tsx`)
+switched from `previewExtensions()` (dim-mode frontmatter, no DQL/embed/link
+extras) to `readingExtensions()` so it renders with **full reading-mode
+parity**: the interactive frontmatter Properties panel, executing DQL blocks,
+resolved embeds, and clickable wikilinks.
+
+The reading-mode deps (`parseFrontmatter`, `runQuery`, `resolveAsset`,
+`onOpenLink`) are injected by the shell (`app-shell/Shell.tsx`) via a
+`PreviewDeps` bag defined in `features/search/types.ts` — keeping
+`features/search/` downward-only (it never imports another feature). The
+`PreviewPane` keeps its read-only flags, match-line decorations, line windowing,
+and LRU parse cache.
+
+## Completion
+
+All phases 1–8 are implemented. `Reading.tsx` and `reading.css` are deleted;
+a single CM6 view renders both edit and reading modes (mode switch via the
+`modeCompartment` in `EditorController`), and read-only surfaces (search
+preview) reuse the same `readingExtensions()` stack.

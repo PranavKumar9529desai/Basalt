@@ -43,7 +43,7 @@ Rules for keeping this lean:
 
 The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150ms search on 5k notes. Every change is measured against that feel. When in doubt, prefer the approach that keeps the app fast.
 
-## Current State (as of 2026-08-31)
+## Current State (as of 2026-09-04)
 
 | Area                                                                | Status                                                                                                                                |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -59,7 +59,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | Layout as serializable tree / pane splits (ADR-018 Phase 3)         | ⏳ Not started                                                                                                                        |
 | Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                    |
 | **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                           |
-| Markdown reading mode (ADR-024)                                     | ✅ Complete                                                                                                                           |
+| **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                            |
 | Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
 | **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                           |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                        |

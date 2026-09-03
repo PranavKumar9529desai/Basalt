@@ -7,6 +7,87 @@
 
 ---
 
+## Rust Quality-Hardening — ACTIVE
+
+**Branch:** `fix/code-block-height` (user-confirmed working branch for ALL Rust work)
+**Commit sequence:** Phases A, 1, 2, 3 already committed; Phase 4 (clippy) in flight, uncommitted.
+
+> NOTE (2026-09-04): The ADR-029 **frontend** workstream (reading-mode search
+> preview parity) from a prior session is now **committed separately** as
+> `919f3fb` (`feat(search): render preview with full reading-mode parity`),
+> ahead of this Rust work on the same branch. It is NOT part of the Rust
+> commits — keep it separate. It touches `Shell.tsx`, `Overlays.tsx`,
+> `SearchModal.tsx`, `PreviewPane.tsx/.test.ts`, `search/types.ts`,
+> `search/index.ts` (the `PreviewDeps` bag lives in `features/search/types.ts`,
+> not `shared/previewDeps.ts`).
+
+### Completed (committed on `fix/code-block-height`)
+
+- **Phase A** `e447a0b` — typed errors: `thiserror` domain enums
+  (`basalt_parser::ParseError`, `basalt_vault::path_utils::PathError`) +
+  single `AppError` enum/`AppResult` alias in
+  `apps/tauri/src-tauri/src/error.rs`; all 10 command modules converted from
+  `Result<_, String>` to `AppResult`. Wire contract = string only (frontend does
+  `String(err)`), DO NOT change.
+- **Phase 1** `a775f38` — flow: intent-revealing `Vault` service methods
+  (`note_paths`, `paths_under`, `note_count`, `backlinks_for`, `all_tags`,
+  `metadata`) in `crates/basalt-vault/src/vault.rs`; commands no longer reach
+  into `metadata_cache`/`arena` internals.
+- **Phase 2** `86d9417` — structure: moved `src-tauri/src/{app_state,cache,
+  config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
+  deleted dead `crates/basalt-wasm` (superseded by `graph-wasm` +
+  `frontmatter-wasm`); fixed stale `basalt-wasm` refs in ADR-009/020/021/022 +
+  `docs/webview-costs.md`; fixed `EditorController.test.ts` mock path
+  `../logic/` → `../lib/`.
+- **Phase 3** `ecdcd7f` — docs: added CONVENTIONS.md §11 "Rust Backend
+  Conventions" (thiserror-where, error-variant granularity, wire contract,
+  service-method naming, src-tauri module layout); added `rust` to commit scope;
+  fixed stale `editor/logic/` → `lib/` path in CONVENTIONS §9; retitled doc to
+  "Basalt Conventions — Frontend & Rust Backend".
+
+### Phase 4 — clippy enforcement (IN PROGRESS, uncommitted)
+
+Goal: `cargo clippy --workspace --all-targets -- -D warnings` passes clean, then
+wire clippy + tests into a lint script and CI (repo currently has NO
+`.github/workflows/`).
+
+Status of clippy fixes (all file edits staged/working-tree, NOT yet committed):
+
+- `basalt-types` DONE: `Default` derives + `new()` delegates to `Self::default()`
+  for `FileMetadata`/`Document` (`new()` MUST stay — 21 call sites); `QueryResult`
+  now `#[derive(Default)]` (removed manual impl).
+- Profiles warning DONE: moved `[profile.release]` from
+  `apps/tauri/src-tauri/Cargo.toml` (was ignored on a workspace member) to root
+  `Cargo.toml` as workspace-level profile.
+- `basalt-parser` DONE: `split(['|', '#'])` (3×), `strip_prefix("- ")` for
+  frontmatter list items, `is_some_and` for fn_name verify.
+- `basalt-graph` DONE: `?` in fuzzy loop, `sort_by_key(Reverse)` for search
+  results, `is_some_and` (2×) in liveness, `contains(&1)/contains(&0)` in
+  graph_layout test.
+- `basalt-vault` REMAINING (in progress): `indexer.rs:53-56` (unnecessary if-let
+  + map_or over `Result` iterator — use `filter_map`/`is_some_and`),
+  `indexer.rs:87` (`map_or(false, …)` → `is_some_and`), `path_utils.rs:47`
+  (char comparison → `split(['…'])`-style), `path_utils.rs:80` (loop var `i` only
+  indexes `components` → iterate directly over `components`), `asset_index.rs:
+  464,475,486,496,509,510,525` (7× "useless use of `vec!`" in tests).
+
+How to resume clippy fix loop: `cargo clippy --workspace --all-targets -- -D warnings`
+until EXIT 0, then `cargo test --workspace`, then commit Phase 4
+(`chore(rust): add clippy -D warnings enforcement, fix lints`).
+
+### Phase 5 — test parity (PLANNED, not started)
+
+- wasm-bindgen tests for `frontmatter-wasm` + `graph-wasm` (note both use
+  `#[wasm_bindgen_test]` internally and are built standalone via scripts hex).
+- Inline unit tests for `basalt-tables` engine/expr internals.
+
+### Pending (separate workstream, coordinate with user)
+
+- `test/editor-testing` render-mode fix + table fix (untracked `render-mode.ts`
+  + committed test) — NOT part of Rust commits; confirm branch first.
+
+---
+
 ## Frontend Restructure — ACTIVE
 
 **Branch:** `feat/frontend-restructure`
