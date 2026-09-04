@@ -6,17 +6,18 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::error::{AppError, AppResult};
 
 use super::common::{register_self_writes, strip_asset_ext};
 
 
 /// Return all non-markdown assets tracked in the vault.
 #[tauri::command]
-pub fn get_assets(state: State<AppState>) -> Result<Vec<basalt_vault::AssetInfo>, String> {
+pub fn get_assets(state: State<AppState>) -> AppResult<Vec<basalt_vault::AssetInfo>> {
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
     Ok(vault.asset_index.all())
 }
 
@@ -26,11 +27,11 @@ pub fn get_assets(state: State<AppState>) -> Result<Vec<basalt_vault::AssetInfo>
 /// only sees assets) because resolving an embed target requires the note
 /// graph + arena as well as the asset index.
 #[tauri::command]
-pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAuditReport, String> {
+pub fn get_asset_audit(state: State<AppState>) -> AppResult<basalt_vault::AssetAuditReport> {
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
     let mut report = vault.asset_index.audit();
     report.broken_embed_count = count_broken_embeds(&vault);
     Ok(report)
@@ -42,11 +43,10 @@ pub fn get_asset_audit(state: State<AppState>) -> Result<basalt_vault::AssetAudi
 fn count_broken_embeds(vault: &basalt_vault::Vault) -> usize {
     // Index of note stems (lowercased, no extension) for O(1) note-target lookup.
     let note_stems: std::collections::HashSet<String> = vault
-        .arena
-        .all_strings()
-        .filter(|p| p.ends_with(".md"))
+        .note_paths()
+        .into_iter()
         .map(|p| {
-            Path::new(p)
+            Path::new(&p)
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("")
@@ -55,11 +55,8 @@ fn count_broken_embeds(vault: &basalt_vault::Vault) -> usize {
         .collect();
 
     let mut broken = 0usize;
-    for path in vault.arena.all_strings().filter(|p| p.ends_with(".md")) {
-        let Some(node_id) = vault.arena.get_id(path) else {
-            continue;
-        };
-        let Some(meta) = vault.graph.metadata_cache.get(&node_id) else {
+    for path in vault.note_paths() {
+        let Some(meta) = vault.metadata(&path) else {
             continue;
         };
         for target in &meta.embeds {
@@ -101,18 +98,18 @@ pub struct CleanupResult {
 ///
 /// Front-end must refresh the asset list after calling this.
 #[tauri::command]
-pub fn cleanup_assets(state: State<AppState>) -> Result<CleanupResult, String> {
+pub fn cleanup_assets(state: State<AppState>) -> AppResult<CleanupResult> {
     cleanup_assets_impl(state.inner())
 }
 
 /// Testable core of `cleanup_assets` (no `tauri::State`).
-fn cleanup_assets_impl(state: &AppState) -> Result<CleanupResult, String> {
+fn cleanup_assets_impl(state: &AppState) -> AppResult<CleanupResult> {
     let _vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or("no vault open")?;
+        .ok_or(AppError::NoVault)?;
 
     let mut orphans_deleted: u32 = 0;
     let mut duplicates_deleted: u32 = 0;
@@ -122,7 +119,7 @@ fn cleanup_assets_impl(state: &AppState) -> Result<CleanupResult, String> {
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         let all_assets = vault.asset_index.all();
 
@@ -183,7 +180,7 @@ fn cleanup_assets_impl(state: &AppState) -> Result<CleanupResult, String> {
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         for (abs_path, is_orphan) in &to_delete {
             if std::fs::remove_file(abs_path).is_ok() {
@@ -285,7 +282,7 @@ pub struct ReorganizeResult {
 pub fn reorganize_assets(
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<ReorganizeResult, String> {
+) -> AppResult<ReorganizeResult> {
     use crate::config::load_config;
     let config = load_config(&app);
     reorganize_assets_impl(state.inner(), &config.settings)
@@ -297,7 +294,7 @@ pub fn reorganize_assets(
 fn reorganize_assets_impl(
     state: &AppState,
     settings: &std::collections::HashMap<String, serde_json::Value>,
-) -> Result<ReorganizeResult, String> {
+) -> AppResult<ReorganizeResult> {
     use basalt_vault::asset_index::AssetInfo;
 
     let get = |key: &str| settings.get(key).and_then(|v| v.as_str());
@@ -305,9 +302,9 @@ fn reorganize_assets_impl(
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or("no vault open")?;
+        .ok_or(AppError::NoVault)?;
 
     let attachments_dir = get("attachmentFolder").unwrap_or("_attachments");
     let organization = get("attachmentOrganization").unwrap_or("flat");
@@ -432,7 +429,7 @@ fn reorganize_assets_impl(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         vault.asset_index.all()
     };
 
@@ -496,7 +493,7 @@ fn reorganize_assets_impl(
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         for mv in &planned {
             // Ensure target directory exists.
@@ -542,13 +539,8 @@ fn reorganize_assets_impl(
             let vault = state
                 .vault
                 .read()
-                .map_err(|_| "vault lock poisoned".to_string())?;
-            vault
-                .arena
-                .all_strings()
-                .filter(|p| p.ends_with(".md"))
-                .cloned()
-                .collect()
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
+            vault.note_paths()
         };
 
         for (old_abs, new_abs) in &moved_pairs {
@@ -618,16 +610,16 @@ pub fn save_attachment(
     note_path: Option<String>,
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<SaveAttachmentResult, String> {
+) -> AppResult<SaveAttachmentResult> {
     use crate::config::load_config;
     use basalt_vault::asset_index::{AssetInfo, compute_md5, infer_file_type, infer_mime_type};
 
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or("no vault open")?;
+        .ok_or(AppError::NoVault)?;
 
     let config = load_config(&app);
     let attachments_dir = config
@@ -681,7 +673,7 @@ pub fn save_attachment(
         _ => base_dir, // "flat" or unknown
     };
 
-    std::fs::create_dir_all(&sub_dir).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&sub_dir).map_err(|e| AppError::Io(format!("failed to create dir: {e}")))?;
 
     // Apply naming template.
     let base_name = match naming {
@@ -692,7 +684,7 @@ pub fn save_attachment(
                 .and_then(|s| s.to_str())
                 .unwrap_or("note");
             // Counter will be applied in collision loop.
-            format!("{note_stem}")
+            note_stem.to_string()
         }
         "{date}-{original_name}" => {
             let (y, m, d) = current_date();
@@ -736,7 +728,7 @@ pub fn save_attachment(
         if let Ok(mut guard) = state.self_writes.lock() {
             guard.remove(&final_path);
         }
-        e.to_string()
+        AppError::Io(format!("failed to write attachment: {e}"))
     })?;
 
     // Rel path is relative to vault root.
@@ -765,7 +757,7 @@ pub fn save_attachment(
         // full `rel_path` (with extension) — it resolves via exact match, and
         // the pasted note writes `![[rel_path]]` verbatim.
         if let Some(note) = &note_path {
-            vault.asset_index.register_embeds(note, &[rel_path.clone()]);
+            vault.asset_index.register_embeds(note, std::slice::from_ref(&rel_path));
         }
     }
 
@@ -859,7 +851,7 @@ fn file_mtime_date(path: &std::path::Path) -> (i32, u32, u32) {
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() / 86400 as u64);
+        .map(|d| d.as_secs() / 86400_u64);
     match mtime {
         Some(days) => date_from_days(days as i64),
         None => current_date(),
@@ -899,9 +891,9 @@ mod tests {
   #[test]
   fn current_date_returns_plausible_values() {
       let (y, m, d) = super::current_date();
-      assert!(y >= 2024 && y <= 2030, "year should be around now: {y}");
-      assert!(m >= 1 && m <= 12, "month should be 1..=12: {m}");
-      assert!(d >= 1 && d <= 31, "day should be 1..=31: {d}");
+      assert!((2024..=2030).contains(&y), "year should be around now: {y}");
+      assert!((1..=12).contains(&m), "month should be 1..=12: {m}");
+      assert!((1..=31).contains(&d), "day should be 1..=31: {d}");
   }
 
   #[test]
@@ -916,7 +908,7 @@ mod tests {
       let attach_dir = root.join("_attachments");
       std::fs::create_dir_all(&attach_dir).unwrap();
       let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, &[0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic
+      std::fs::write(&png_path, [0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic
       let abs = png_path.to_string_lossy().to_string();
       let rel = "_attachments/logo.png".to_string();
       let old_target = "_attachments/logo".to_string();
@@ -977,7 +969,7 @@ mod tests {
       let attach_dir = root.join("_attachments");
       std::fs::create_dir_all(&attach_dir).unwrap();
       let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, &[0x89u8]).unwrap();
+      std::fs::write(&png_path, [0x89u8]).unwrap();
       let abs = png_path.to_string_lossy().to_string();
 
       state.vault.write().unwrap().asset_index.upsert(AssetInfo {
@@ -1037,7 +1029,7 @@ mod tests {
 
       let add_asset = |name: &str, hash: &str, embeds_by: Vec<String>| {
           let abs = root.join(name).to_string_lossy().to_string();
-          std::fs::write(root.join(name), &[0x89u8]).unwrap();
+          std::fs::write(root.join(name), [0x89u8]).unwrap();
           state.vault.write().unwrap().asset_index.upsert(AssetInfo {
               rel_path: name.into(),
               abs_path: abs,
@@ -1091,7 +1083,7 @@ mod tests {
       std::fs::create_dir_all(&attach_dir).unwrap();
       for name in ["logo.png", "logo2.png"] {
           let abs = attach_dir.join(name).to_string_lossy().to_string();
-          std::fs::write(attach_dir.join(name), &[0x89u8]).unwrap();
+          std::fs::write(attach_dir.join(name), [0x89u8]).unwrap();
           state.vault.write().unwrap().asset_index.upsert(AssetInfo {
               rel_path: format!("_attachments/{name}"),
               abs_path: abs,

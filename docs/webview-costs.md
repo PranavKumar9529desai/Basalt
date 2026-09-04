@@ -138,7 +138,7 @@ preview is a third CM instance (`PreviewPane.tsx`) and pays a parse of
 whatever it is showing.
 
 `parse_frontmatter` IPC is **not** on this path. Editor YAML uses
-`crates/frontmatter-wasm` inside the WebView (ADR-022). Do not confuse
+`crates/basalt-wasm/frontmatter-wasm` inside the WebView (ADR-022). Do not confuse
 the two.
 
 ### What would actually remove this tax
@@ -173,8 +173,7 @@ source mode, split preview, math, mermaid, HTML tables in edit mode,
 HTML renderer leaf (`CURRENT_WORK.md`), binary IPC, pane splits
 (ADR-018 phase 3).
 
-`pulldown-cmark` / `basalt-wasm.render_markdown` exist. They are **not**
-on the paint path. Display parse is Lezer.
+`pulldown-cmark` exists. It is **not** on the paint path. Display parse is Lezer.
 
 ---
 

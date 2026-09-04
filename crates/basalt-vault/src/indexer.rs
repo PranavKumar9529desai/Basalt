@@ -50,20 +50,18 @@ pub fn index_directory(path: &Path) -> Vault {
 
     let walker = WalkBuilder::new(path).build();
 
-    for result in walker {
-        if let Ok(entry) = result {
-            if entry.file_type().map_or(false, |ft| ft.is_file()) {
-                let entry_path = entry.path();
-                if let Some(path_str) = entry_path.to_str() {
-                    if entry_path.extension().and_then(|ext| ext.to_str()) == Some("md") {
-                        // Markdown: parse into graph
-                        if let Ok(text) = std::fs::read_to_string(entry_path) {
-                            vault.add_document(path_str, &text);
-                        }
-                    } else if let Some(info) = build_asset_info(entry_path, path) {
-                        // Non-markdown: register in asset index
-                        vault.asset_index.upsert(info);
+    for entry in walker.flatten() {
+        if entry.file_type().is_some_and(|ft| ft.is_file()) {
+            let entry_path = entry.path();
+            if let Some(path_str) = entry_path.to_str() {
+                if entry_path.extension().and_then(|ext| ext.to_str()) == Some("md") {
+                    // Markdown: parse into graph
+                    if let Ok(text) = std::fs::read_to_string(entry_path) {
+                        vault.add_document(path_str, &text);
                     }
+                } else if let Some(info) = build_asset_info(entry_path, path) {
+                    // Non-markdown: register in asset index
+                    vault.asset_index.upsert(info);
                 }
             }
         }
@@ -84,7 +82,7 @@ pub fn incremental_reindex(
 
     let walker = WalkBuilder::new(vault_path).build();
     for entry in walker.flatten() {
-        if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+        if !entry.file_type().is_some_and(|ft| ft.is_file()) {
             continue;
         }
         let path = entry.path();

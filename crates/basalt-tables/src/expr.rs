@@ -125,9 +125,9 @@ pub fn field_value(field: &FieldRef, ctx: &EvalCtx) -> TypedValue {
             // After GROUP BY only `key` and the original GROUP BY field resolve
             // to a plain value; `rows` / `rows.field` are list-shaped and only
             // meaningful inside aggregate calls.
-            if field.0.len() == 1 && field.0[0] == "key" {
-                (*key).clone()
-            } else if group_by_path.as_deref() == Some(field.0.as_slice()) {
+            if (field.0.len() == 1 && field.0[0] == "key")
+                || group_by_path.as_deref() == Some(field.0.as_slice())
+            {
                 (*key).clone()
             } else {
                 TypedValue::Null

@@ -30,7 +30,7 @@ pub fn extract_file_matches(
     // Split on '\n', stripping a single trailing '\r' so CRLF files behave.
     let lines: Vec<&str> = body
         .split('\n')
-        .map(|l| if l.ends_with('\r') { &l[..l.len() - 1] } else { l })
+        .map(|l| if let Some(stripped) = l.strip_suffix('\r') { stripped } else { l })
         .collect();
 
     let mut out = Vec::new();

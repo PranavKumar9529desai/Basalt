@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-basalt-graph = { path = "../basalt-graph" }
+basalt-graph = { path = "../../basalt-graph" }
 
 # Standalone workspace so `cargo build --target wasm32-unknown-unknown` here does
 # not pull the whole repo workspace (which cannot build for wasm).

@@ -48,7 +48,7 @@ fn count_md_files(path: &Path) -> usize {
     WalkBuilder::new(path)
         .build()
         .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().map_or(false, |ft| ft.is_file()))
+        .filter(|e| e.file_type().is_some_and(|ft| ft.is_file()))
         .filter(|e| e.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
         .count()
 }

@@ -1,4 +1,4 @@
-# Basalt Frontend Conventions
+# Basalt Conventions — Frontend & Rust Backend
 
 > Mandatory for ALL AI agents and human contributors.
 > These replace and supersede outdated ADRs where they conflict.
@@ -407,7 +407,7 @@ apps/tauri/src/
 │   │   ├── components/            # Host, EditorView, Reading, ContextMenu, InlineTitle, StatusLine
 │   │   ├── controller/            # EditorController (+ test)
 │   │   ├── hooks/                 # useEditor, useNoteIO, useEditorCommands, useLatestRef
-│   │   ├── logic/                 # saveManager, reconcile, pruneCache, stats, frontmatter
+│   │   ├── lib/                   # saveManager, reconcile, pruneCache, stats, frontmatter (+ tests)
 │   │   ├── store/                 # activeNote.ts + renameSignal.ts (index barrel)
 │   │   ├── commands.ts, types.ts, index.ts
 │   ├── tabs/
@@ -461,7 +461,7 @@ as phases land.
 type(scope): description
 
 type: refactor | feat | fix | chore | docs | style | perf
-scope: app-shell | editor | tabs | vault | search | settings | ui | packages
+scope: app-shell | editor | tabs | vault | search | settings | ui | packages | rust
 
 Examples:
 refactor(app-shell): merge layout/ and workspace/ into app-shell/
@@ -469,3 +469,189 @@ feat(editor): add slash-command menu
 fix(vault): handle file-tree click race condition
 chore(ui): delete duplicate scroll-area.tsx
 ```
+
+---
+
+## 11. Rust Backend Conventions
+
+The Tauri backend lives in `apps/tauri/src-tauri/` (`src/lib.rs`, `src/commands/`
+for IPC handlers, `src/core/` for shared infrastructure, `src/error.rs` for the
+command error type). Domain crates under `crates/` (`basalt-parser`,
+`basalt-graph`, `basalt-vault`, `basalt-tables`, `basalt-search`) hold the
+compute. These rules keep the boundary between the two explicit and consistent.
+
+### 11.1 Where thiserror goes
+
+- **Domain crates** own a `thiserror` enum per fallible concern — e.g.
+  `basalt_parser::ParseError`, `basalt_vault::path_utils::PathError`. These are
+  rich, matchable types with `#[error("...")]` `Display` impls (thiserror).
+- **The command layer** collapses every failure into ONE enum,
+  `AppError` (`src/error.rs`), with an `AppResult<T>` alias. Commands return
+  `AppResult<T>` — never bare `Result<T, String>`.
+- `AppError` implements `From` for its inputs (`String`, `&str`,
+  `io::Error`, and the domain enums it wraps) so `?` auto-converts at the
+  boundary. Add a `From<MyDomainError>` impl when you wrap a new crate error.
+
+### 11.2 Error-variant granularity
+
+Match the failure, not the message. Pick the most specific `AppError` variant:
+
+- `NoVault` — no vault configured/opened
+- `LockPoisoned(&'static str)` — an app-owned `RwLock`/`Mutex` poisoned; carry
+  the mutex name (e.g. `AppError::LockPoisoned("vault")`), never `.unwrap()`
+- `InvalidVaultPath(io::Error)` — vault root could not be canonicalized
+- `Validation(String)` — a path/name/value failed validation (also wraps
+  `basalt_vault::path_utils::PathError`)
+- `Query(String)` / `Search(String)` — DQL / search failed (also wrap
+  `basalt_parser::ParseError`)
+- `Io(String)` — a filesystem operation failed
+- `Other(String)` — any remaining operational failure (last resort)
+
+Do not reach for `Other` when a specific variant exists, and never thread a raw
+`"lock poisoned".to_string()` through `From<String>` — that erases the variant.
+
+### 11.3 Wire contract
+
+`AppError` serializes to its `Display` string (single `serialize_str` of
+`self.to_string()`). The frontend consumes errors with
+`catch (err) { String(err) }`, so this shape is the contract — do NOT change it
+to an object/struct on the wire. Typed matching is internal-only.
+
+### 11.4 Service-method naming over raw state access
+
+Commands read the vault through intent-revealing `Vault` methods (`crates/
+basalt-vault/src/vault.rs`), never by reaching into the raw internals
+(`vault.graph.metadata_cache`, `vault.arena.*`). The public query surface:
+
+- `note_paths()` — all cached document paths
+- `paths_under(prefix)` — a folder plus its descendants (delete/move/rename)
+- `note_count()`, `backlinks_for(path)`, `all_tags()`, `metadata(path)`
+
+Rules that follow from this:
+
+- 🚫 No `vault.graph.metadata_cache` iteration or `vault.arena.get_id`/`get_string`
+  dance inside `commands/` — that coupling is exactly the smell this rule kills.
+- ✅ `basalt-graph`-internal logic (the graph snapshot builder, tests that
+  assert graph state) MAY touch `metadata_cache`/`arena` directly; `commands/`
+  and ordinary `Vault` users must not.
+- If a query recurs in two or more commands, hoist it into a `Vault` method
+  with a name describing the INTENT (what it answers), not the mechanism.
+
+### 11.5 src-tauri module layout
+
+- `commands/*.rs` — one file per concern (notes, folders, assets, files, vault,
+  boot, query, search, settings, …). Each `#[tauri::command]` is a thin wrapper;
+  heavy logic lives in a `*_impl` sibling so it is unit-testable without a
+  `State`.
+- `core/` — shared application infrastructure (`app_state`, `cache`, `config`,
+  `watcher`, `workspace`). Re-exported at the crate root (`pub use core::*`) so
+  established `crate::cache` paths stay stable.
+- `error.rs` — `AppError` + `AppResult` only.
+- Testable helpers that don't need `State` take `&AppState` (or plain
+  arguments), letting tests drive them with a real temp vault.
+
+---
+
+## 12. Rust Code Quality & Structure (crates/)
+
+These rules apply to all domain crates under `crates/` (`basalt-*`). They exist
+to keep files readable, errors honest, and hot paths fast. Full rationale in
+[ADR-030](docs/adr/030-rust-crates-quality-refactor.md).
+
+### 12.1 File & function budgets
+
+God modules are the #1 maintainability failure we hit. Enforce hard budgets:
+
+| Unit       | Soft limit | Smell threshold (must split) |
+| ---------- | ---------- | ---------------------------- |
+| File       | ≤ 450 loc  | 500+ loc                     |
+| Function   | ≤ 40 loc   | 90+ loc, deep nesting, 2+ abstraction levels |
+| `impl` block | one concern | mixed unrelated behavior |
+| Match arm  | a few lines | mini-program inside each arm |
+
+Split a file when: nesting deepens, control flow is hard to scan, a function
+both decides policy and performs mechanics, or variable lifetimes get long.
+
+- Prefer the **modern `foo.rs` + `foo/`** module layout over `mod.rs` (avoids
+  many `mod.rs` files).
+- `lib.rs` is **small and intentional** — `pub mod` + `pub use` re-exports only;
+  internals stay private or `pub(crate)`.
+- **`pub(crate)` over bare `pub`** for internal helpers — shrink the public
+  surface, let the compiler enforce it.
+
+### 12.2 Error handling
+
+Already covered in §11 (thiserror per crate, `anyhow` at the app boundary).
+Additions for library code:
+
+- **Never** return `Result<T, String>`.
+- **No silent degradation** in library code: ban `.unwrap_or_default()` /
+  `.ok()` / `let _ = result` that swallows a real failure in library crates.
+  Return a typed error or `tracing::warn!` at minimum.
+- **Panics are a bug or a provable invariant.** `expect("reason")`, never bare
+  `unwrap()`, and never on user-controllable state (e.g. a group that a future
+  code path could create empty).
+- Add `#[must_use]` on public fallible/`Result`/`Option` returns and key value
+  types.
+
+### 12.3 Newtypes & the type system
+
+- Make important domain scalars **newtypes**, not aliases: `NodeId` is
+  `pub struct NodeId(u32)`, never `pub type NodeId = u32`. A bare alias means
+  any `u32` is accepted where the domain type is expected.
+- Encode invariants in types: a validated `new()`/`try_new()` constructor so
+  empty/invalid states are unrepresentable (e.g. `FieldRef` → guaranteed
+  non-empty).
+- Replace `String` closed-sets with serialized **enums** (e.g.
+  `QueryColumn.type_` is `Text|Number|Date|Checkbox|Link|List`, not `String`).
+- Keep public enums that grow `#[non_exhaustive]` so downstream `match`es are
+  forced to handle new variants.
+- **Borrow-by-default APIs**: take `&str`/`&[T]`, return `&str`/`Cow<'_, str>`
+  where ownership isn't required; reserve `String` for long-lived storage.
+
+### 12.4 Macros — judicious, not clever
+
+- **Function/generic first**, then `macro_rules!`, then (rarely) proc macros.
+- Prefer `macro_rules!` over custom proc macros — no `syn`/`quote`/build cost.
+- Keep expansions small, Rust-shaped, and free of nonlocal control flow and
+  repeated-expansion side effects.
+- Use macros only for syntax a function can't produce (an enum↔string mapping
+  that must stay in sync with the data type is a good candidate).
+
+### 12.5 Performance
+
+The expensive line rarely looks expensive — it's a `format!`, `to_string()`,
+or `.clone()` **inside a loop**. Measure before optimizing (Criterion at both
+5k **and 25k** fixtures; `cargo flamegraph` to confirm the target is hot).
+
+- **Reuse / pre-size collections**: `with_capacity`, `.clear()` reuse, scratch
+  buffers as struct fields instead of fresh `Vec`s per call/frame.
+- **Zero-copy / borrow** in hot paths: return `&str`/`Cow`, use
+  `eq_ignore_ascii_case` instead of `to_lowercase()`, avoid double
+  `to_string()`.
+- **Algorithmic before micro**: prefer O(N) / O(log n) over quadratic
+  (HashMap-indexed grouping, `partition_point` over linear `.position()`).
+- **Keep telemetry off the hot path**; don't build strings on the success path.
+
+### 12.6 DRY — no duplicate knowledge
+
+One source of truth per concept; when the same logic lives in two places it
+diverges:
+
+- **One typed-value model** — `TypedValue` is the single cell-value type; never
+  define a parallel value enum.
+- **One converter** per domain (YAML → typed lives once, in `basalt-types`).
+- **One date classifier**, **one frontmatter-fence detector**, **one
+  `stem_from_path`**, **one wikilink scanner** — shared helpers, never copy-paste.
+- If two functions become character-identical except a field or arg, extract a
+  helper parameterized by that difference.
+
+### 12.7 Lint / tooling hygiene
+
+- `cargo fmt --all` on every commit.
+- Keep `clippy.toml` at the workspace root with committed thresholds
+  (`cognitive-complexity-threshold`, `too-many-arguments-threshold`,
+  `type-complexity-threshold`).
+- CI runs clippy with `-D warnings`. Enable `clippy::perf` (unnecessary
+  allocs/clones) and the `cognitive-complexity` lint deliberately; do **not**
+  blanket-enable all of `pedantic`.

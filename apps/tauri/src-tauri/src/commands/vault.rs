@@ -6,6 +6,7 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::cache::cache_path;
+use crate::error::{AppError, AppResult};
 
 #[derive(Serialize)]
 pub struct VaultSummary {
@@ -16,16 +17,16 @@ pub struct VaultSummary {
 pub fn reindex_vault(
     state: State<AppState>,
     app: tauri::AppHandle,
-) -> Result<VaultSummary, String> {
+) -> AppResult<VaultSummary> {
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
 
     let vault = index_directory(Path::new(&vault_path));
-    let note_count = vault.graph.metadata_cache.len();
+    let note_count = vault.note_count();
 
     let cache = VaultCache::build(&vault_path, vault);
     let cache_file = cache_path(&app, &vault_path);
@@ -33,7 +34,7 @@ pub fn reindex_vault(
     *state
         .vault
         .write()
-        .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
+        .map_err(|_| AppError::LockPoisoned("vault"))? = cache.vault;
 
     Ok(VaultSummary { note_count })
 }
@@ -44,18 +45,18 @@ pub fn reindex_vault(
 #[tauri::command]
 pub fn get_vault_tree(
     state: State<AppState>,
-) -> Result<Vec<basalt_vault::FlatTreeNode>, String> {
+) -> AppResult<Vec<basalt_vault::FlatTreeNode>> {
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
 
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
 
     Ok(build_flat_tree(&vault, Path::new(&vault_path)))
 }
@@ -117,7 +118,6 @@ pub struct GraphSnapshot {
 /// `get_graph` command is a thin wrapper over this. Tag-tree semantics live in
 /// `docs/tag-graph-connections.md` (notes link to exact tags; nested tags
 /// parent->child).
-
 /// Union-find root lookup with path compression.
 fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     while parent[x as usize] != x {
@@ -129,7 +129,7 @@ fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
 pub(crate) fn build_graph_snapshot(
     vault: &Vault,
     vault_path: &Path,
-) -> Result<GraphSnapshot, String> {
+) -> AppResult<GraphSnapshot> {
     // Every file still on disk is a node. `.md` notes carry tags from the
     // metadata cache; everything else is an "attachment".
     let mut paths: Vec<String> = vault
@@ -152,7 +152,7 @@ pub(crate) fn build_graph_snapshot(
         let id = vault
             .arena
             .get_id(p)
-            .ok_or_else(|| format!("note {p} not interned"))?;
+            .ok_or_else(|| AppError::Other(format!("note {p} not interned")))?;
         let rel = Path::new(p)
             .strip_prefix(root)
             .ok()
@@ -275,7 +275,7 @@ pub(crate) fn build_graph_snapshot(
     for (u, v) in pairs {
         edges.push(u);
         edges.push(v);
-        let links = pair_counts[&(((u as u64) << 32 | (v as u64)))];
+        let links = pair_counts[&((u as u64) << 32 | (v as u64))];
         let w = links + shared_tags(u as usize, v as usize);
         edge_weights.push(w as f32);
     }
@@ -311,17 +311,17 @@ pub(crate) fn build_graph_snapshot(
 }
 
 #[tauri::command]
-pub fn get_graph(state: State<AppState>) -> Result<GraphSnapshot, String> {
+pub fn get_graph(state: State<AppState>) -> AppResult<GraphSnapshot> {
     let vault_path = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
     let vault = state
         .vault
         .read()
-        .map_err(|_| "vault lock poisoned".to_string())?;
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
     build_graph_snapshot(&vault, Path::new(&vault_path))
 }
 
@@ -385,7 +385,9 @@ mod tests {
 
         let edge_pairs: Vec<(u32, u32)> = snap
             .edges
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| (c[0], c[1]))
             .collect();
 
@@ -443,7 +445,9 @@ mod tests {
         let b_idx = note_idx("b.md").expect("b.md node present");
         let pair_w = snap
             .edges
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| (c[0], c[1]))
             .zip(&snap.edge_weights)
             .find(|((u, v), _)| {

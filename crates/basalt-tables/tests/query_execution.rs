@@ -423,6 +423,7 @@ fn flatten_list_then_group_by_count() {
     assert_eq!(rust_row[1], TypedValue::Number { value: 1.0 });
 }
 
+#[test]
 fn length_of_list_returns_count() {
     let mut vault = Vault::new();
     vault.add_document("notes/multi.md", "---\nlabels: [rust, nom, tokio]\n---\nMulti\n\nTags: #work\n");
@@ -435,8 +436,8 @@ fn length_of_list_returns_count() {
     .unwrap();
     // multi has 3 labels, single has 1.
     assert_total(&result, 2);
-    let multi_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Link { name, .. } if name == "multi")).unwrap();
-    let single_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Link { name, .. } if name == "single")).unwrap();
+    let multi_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Text { value } if value == "multi")).unwrap();
+    let single_row = result.rows.iter().find(|r| matches!(&r[0], TypedValue::Text { value } if value == "single")).unwrap();
     assert_eq!(multi_row[1], TypedValue::Number { value: 3.0 });
     assert_eq!(single_row[1], TypedValue::Number { value: 1.0 });
 }

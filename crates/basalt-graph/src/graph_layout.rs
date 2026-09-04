@@ -674,11 +674,11 @@ mod tests {
         // note.md + #area + #area/sub = 3 nodes
         assert_eq!(lg.node_count, 3);
         assert!(
-            lg.node_types.iter().any(|&t| t == 1),
+            lg.node_types.contains(&1),
             "expected a tag node"
         );
         assert!(
-            lg.node_types.iter().any(|&t| t == 0),
+            lg.node_types.contains(&0),
             "expected a note node"
         );
     }

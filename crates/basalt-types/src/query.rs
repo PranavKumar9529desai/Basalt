@@ -22,22 +22,13 @@ pub struct QueryColumn {
 }
 
 /// Full query result returned to the frontend.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct QueryResult {
     pub columns: Vec<QueryColumn>,
     pub rows: Vec<Vec<TypedValue>>,
     pub total: usize,
 }
 
-impl Default for QueryResult {
-    fn default() -> Self {
-        Self {
-            columns: vec![],
-            rows: vec![],
-            total: 0,
-        }
-    }
-}
 /// Detect an ISO-8601 date string: `YYYY-MM-DD`, or a datetime starting with
 /// that shape (`YYYY-MM-DDTHH:...`). Format-check only (positions 4 and 7 are
 /// dashes, the rest digits); calendar validity is not validated, matching the

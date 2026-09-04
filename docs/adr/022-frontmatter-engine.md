@@ -27,8 +27,8 @@ it. Basalt must treat it as a first-class citizen, not decoration.
   parses the frontmatter block with `serde_yaml_ng` into
   `FileMetadata.frontmatter: Option<serde_yaml_ng::Value>`
   (`crates/basalt-types/src/metadata.rs:11`), alongside UTF-16 spans for
-  tags/links/headings/block-ids. `crates/basalt-wasm/src/lib.rs:20` already
-  exposes `extract_metadata` to JS, and `benches/parse_metadata.rs` benchmarks
+  tags/links/headings/block-ids. `crates/basalt-wasm/frontmatter-wasm` exposes the
+  synchronous C-ABI `fm_parse` to JS, and `benches/parse_metadata.rs` benchmarks
   it (at 1k docs).
 
 ### The concrete gap (a real defect today)
@@ -211,9 +211,8 @@ safe, and extensible to future property types:
 
 9. **Synchronous model via WASM; IPC stays off the keystroke path.** The editor
    parses frontmatter **in the webview** through the standalone
-   `crates/frontmatter-wasm` (C-ABI `fm_parse`, the same `?init` load path as
-   `crates/graph-wasm`; `basalt-wasm` lives in the main workspace, which cannot
-   target wasm32), wrapped and injected as `EditorConfig.parseFrontmatter`
+   `crates/basalt-wasm/frontmatter-wasm` (C-ABI `fm_parse`, the same `?init` load path as
+   `crates/basalt-wasm/graph-wasm`), wrapped and injected as `EditorConfig.parseFrontmatter`
    (rule 2). A frontmatter-region transaction reparses and re-renders the
    widget in the same frame — no async gap, no "widget lags the keystroke."
    The Tauri `parse_frontmatter` **command** remains for the vault
@@ -281,9 +280,7 @@ Rust (single source of truth)
   basalt-parser::parse_frontmatter  ──►  FrontmatterModel {typed values, UTF-16 spans, diags}
   basalt-parser::extract_metadata    (fixed: FM links/tags/aliases)  ──► vault index
   basalt-types::{FrontmatterValue, PropertyType, TypeRegistry}
-  crates/frontmatter-wasm            (C-ABI fm_alloc/fm_parse/fm_ptr/fm_len; WASM `?init`)
-  (basalt-wasm::parse_frontmatter    (main-workspace crate — NOT wasm-targetable; the
-                                     standalone frontmatter-wasm supersedes it)
+  crates/basalt-wasm/frontmatter-wasm            (C-ABI fm_alloc/fm_parse/fm_ptr/fm_len; WASM `?init`)
 
 Webview (per keystroke, synchronous via frontmatter-wasm)
   packages/editor (pure)
@@ -330,7 +327,7 @@ Webview (per keystroke, synchronous via frontmatter-wasm)
 
 - `basalt-parser` gains `parse_frontmatter` and the `extract_metadata`
   FM-link/tag fix; `basalt-types` gains `FrontmatterValue` / `PropertyType` /
-  type registry; `crates/frontmatter-wasm` exposes the C-ABI keystroke parser.
+  type registry; `crates/basalt-wasm/frontmatter-wasm` exposes the C-ABI keystroke parser.
 - `packages/editor` gains the **block-widget kernel** (`block-widgets/registry.ts`),
   the frontmatter spec + dep facets (`block-widgets/frontmatter.ts`), the fused
   `handleBlockWidgetsNode` dispatch + per-view `widgetModels` in the live-preview

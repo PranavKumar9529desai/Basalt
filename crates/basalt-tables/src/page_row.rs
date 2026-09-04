@@ -32,7 +32,7 @@ pub fn build_page_rows(arena: &StringArena, graph: &NoteGraph) -> Vec<PageRow> {
         let frontmatter_vals: Vec<(String, TypedValue)> = meta
             .frontmatter
             .as_ref()
-            .map(|fm| yaml_to_typed_pairs(fm))
+            .map(yaml_to_typed_pairs)
             .unwrap_or_default();
 
         pages.push(PageRow {

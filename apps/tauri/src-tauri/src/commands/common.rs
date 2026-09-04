@@ -13,6 +13,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::app_state::AppState;
+use crate::error::{AppError, AppResult};
 
 pub(super) fn register_self_writes(state: &AppState, paths: &[PathBuf]) {
     if let Ok(mut guard) = state.self_writes.lock() {
@@ -62,23 +63,25 @@ fn extract_inline_tags(content: &str) -> String {
         .join(" ")
 }
 
-pub(super) fn canonical_vault_path(state: &AppState) -> Result<PathBuf, String> {
+pub(super) fn canonical_vault_path(state: &AppState) -> AppResult<PathBuf> {
     let vault_path_str = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
     Path::new(&vault_path_str)
         .canonicalize()
-        .map_err(|e| format!("invalid vault path: {e}"))
+        .map_err(AppError::InvalidVaultPath)
 }
 
-pub(super) fn ensure_inside_vault(path: &Path, vault_root: &Path) -> Result<(), String> {
+pub(super) fn ensure_inside_vault(path: &Path, vault_root: &Path) -> AppResult<()> {
     if path.starts_with(vault_root) {
         Ok(())
     } else {
-        Err("path is outside the current vault".to_string())
+        Err(AppError::Validation(
+            "path is outside the current vault".to_string(),
+        ))
     }
 }
 
@@ -116,16 +119,18 @@ pub(super) fn strip_asset_ext(p: &std::path::Path) -> std::borrow::Cow<'_, str> 
 
 /// Validate a user-supplied name (stem or path segment): trimmed, non-empty,
 /// not `.`/`..`, and free of path separators.
-pub(super) fn validate_name(raw: &str) -> Result<String, String> {
+pub(super) fn validate_name(raw: &str) -> AppResult<String> {
     let name = raw.trim().to_string();
     if name.is_empty() {
-        return Err("name cannot be empty".to_string());
+        return Err(AppError::Validation("name cannot be empty".to_string()));
     }
     if name == "." || name == ".." {
-        return Err("invalid name".to_string());
+        return Err(AppError::Validation("invalid name".to_string()));
     }
     if name.contains('/') || name.contains('\\') || name.contains('\0') {
-        return Err("name must not contain '/' or '\\' characters".to_string());
+        return Err(AppError::Validation(
+            "name must not contain '/' or '\\' characters".to_string(),
+        ));
     }
     Ok(name)
 }

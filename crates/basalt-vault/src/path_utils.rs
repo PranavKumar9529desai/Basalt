@@ -1,5 +1,28 @@
 use std::path::{Path, PathBuf};
 
+/// Errors produced while resolving a file/folder creation path.
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub enum PathError {
+    /// The submitted name was empty or whitespace-only.
+    #[error("name cannot be empty")]
+    EmptyName,
+    /// The submitted name consisted only of path separators.
+    #[error("name cannot be just slashes")]
+    SlashesOnly,
+    /// The nested path exceeded the maximum safe depth of 10.
+    #[error("path exceeds maximum nested depth of 10 levels")]
+    TooDeep,
+    /// A component contained an invalid filesystem character.
+    #[error("path contains invalid characters")]
+    InvalidChars,
+    /// A folder or file name exceeded the 255-byte maximum.
+    #[error("a folder or file name exceeds the 255 byte maximum limit")]
+    NameTooLong,
+    /// The resulting path exceeded the safe total length cap.
+    #[error("resulting path exceeds safe total length limits")]
+    PathTooLong,
+}
+
 /// Resolves a file or folder creation path based on the user's input.
 ///
 /// Handles VS Code style slash syntax (`folder/subfolder/file.md`), ensuring that:
@@ -12,25 +35,25 @@ pub fn resolve_creation_path(
     parent: Option<&str>,
     name: &str,
     is_folder: bool,
-) -> Result<(PathBuf, PathBuf, String), String> {
+) -> Result<(PathBuf, PathBuf, String), PathError> {
     let clean_name = name.trim();
     if clean_name.is_empty() {
-        return Err("name cannot be empty".into());
+        return Err(PathError::EmptyName);
     }
 
     // Limit overall split depth to prevent malicious nesting streams
     // Split by either / or \ to handle cross-platform inputs
     let components: Vec<&str> = clean_name
-        .split(|c| c == '/' || c == '\\')
+        .split(['/', '\\'])
         .filter(|s| !s.is_empty())
         .collect();
 
     if components.is_empty() {
-        return Err("name cannot be just slashes".into());
+        return Err(PathError::SlashesOnly);
     }
 
     if components.len() > 10 {
-        return Err("path exceeds maximum nested depth of 10 levels".into());
+        return Err(PathError::TooDeep);
     }
 
     // Reject invalid filesystem characters across all components
@@ -39,10 +62,10 @@ pub fn resolve_creation_path(
             .chars()
             .any(|c| matches!(c, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
         {
-            return Err("path contains invalid characters".into());
+            return Err(PathError::InvalidChars);
         }
         if comp.len() > 255 {
-            return Err("a folder or file name exceeds the 255 byte maximum limit".into());
+            return Err(PathError::NameTooLong);
         }
     }
 
@@ -54,8 +77,8 @@ pub fn resolve_creation_path(
     let mut final_dir = target_dir.clone();
 
     // Add all intermediate folders
-    for i in 0..components.len() - 1 {
-        final_dir.push(components[i]);
+    for component in components.iter().take(components.len() - 1) {
+        final_dir.push(component);
     }
 
     let mut final_name = components.last().unwrap().to_string();
@@ -68,7 +91,7 @@ pub fn resolve_creation_path(
 
     // Sanity check total resulting path length (using ~1000 char safe cap)
     if final_path.to_string_lossy().len() > 1000 {
-        return Err("resulting path exceeds safe total length limits".into());
+        return Err(PathError::PathTooLong);
     }
 
     Ok((final_dir, final_path, final_name))

@@ -32,7 +32,7 @@ impl NucleoScorer {
         let items = paths
             .iter()
             .map(|p| {
-                let title = stem_from_path(&p);
+                let title = stem_from_path(p);
                 (p.clone(), title)
             })
             .collect();
@@ -75,7 +75,7 @@ impl NucleoScorer {
             }
         }
 
-        scored.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+        scored.sort_unstable_by_key(|a| std::cmp::Reverse(a.0));
         scored.truncate(limit);
 
         scored

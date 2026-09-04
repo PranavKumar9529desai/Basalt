@@ -56,7 +56,7 @@ frontend into typed arrays. Matters at ≥10k notes; do with graph view.
 Interactive-rate work that must live in the webview compiles FROM our own
 crates: `basalt-graph` → WASM running force-directed physics inside a Web
 Worker, streaming positions via typed arrays to a canvas/WebGL renderer.
-Zero React involvement per frame. `basalt-wasm` exists for exactly this.
+Zero React involvement per frame. `graph-wasm` exists for exactly this.
 
 ### 5. Rust-windowed virtualization protocol (proposed)
 

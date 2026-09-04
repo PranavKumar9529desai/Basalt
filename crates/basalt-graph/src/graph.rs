@@ -139,7 +139,7 @@ impl NoteGraph {
             .filter(|t| {
                 self.back_links
                     .get(t)
-                    .map_or(false, |srcs| srcs.iter().any(|s| !self.tag_nodes.contains(s)))
+                    .is_some_and(|srcs| srcs.iter().any(|s| !self.tag_nodes.contains(s)))
             })
             .collect();
 
@@ -154,7 +154,7 @@ impl NoteGraph {
             let anchored_by_child = self
                 .forward_links
                 .get(&t)
-                .map_or(false, |kids| kids.iter().any(|c| live.contains(c)));
+                .is_some_and(|kids| kids.iter().any(|c| live.contains(c)));
                 if anchored_by_child {
                     live.insert(t);
                     changed = true;

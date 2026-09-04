@@ -7,6 +7,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::error::{AppError, AppResult};
 
 use super::common::{
     canonical_vault_path, ensure_inside_vault, index_remove, index_upsert,
@@ -20,13 +21,13 @@ pub fn create_folder(
     name: String,
     parent: Option<String>, // relative folder path inside vault
     state: State<AppState>,
-) -> Result<String, String> {
+) -> AppResult<String> {
     let vault_path_str = state
         .vault_path
         .read()
-        .map_err(|_| "vault path lock poisoned".to_string())?
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
-        .ok_or_else(|| "no vault configured".to_string())?;
+        .ok_or(AppError::NoVault)?;
 
     let vault_path = Path::new(&vault_path_str);
 
@@ -35,29 +36,29 @@ pub fn create_folder(
     if folder_path.exists() {
         let clean_name = name.trim();
         let components: Vec<&str> = clean_name
-            .split(|c| c == '/' || c == '\\')
+            .split(['/', '\\'])
             .filter(|s| !s.is_empty())
             .collect();
         let last = components.last().unwrap_or(&clean_name);
-        return Err(format!("'{last}' already exists"));
+        return Err(AppError::Validation(format!("'{last}' already exists")));
     }
 
     // Choke point: suppress the watcher's mkdir event; the frontend refreshes
     // its own tree after this call returns.
-    register_self_writes(&state, &[folder_path.clone()]);
-    std::fs::create_dir_all(&folder_path).map_err(|e| format!("failed to create folder: {e}"))?;
+    register_self_writes(&state, std::slice::from_ref(&folder_path));
+    std::fs::create_dir_all(&folder_path).map_err(|e| AppError::Io(format!("failed to create folder: {e}")))?;
 
     Ok(folder_path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
-pub fn delete_file(path: String, state: State<AppState>) -> Result<(), String> {
+pub fn delete_file(path: String, state: State<AppState>) -> AppResult<()> {
     apply_delete_paths(vec![path], state)
 }
 
-fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<(), String> {
+fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> AppResult<()> {
     if raw_paths.is_empty() {
-        return Err("no paths provided".to_string());
+        return Err(AppError::Validation("no paths provided".to_string()));
     }
 
     let vault_root = canonical_vault_path(&state)?;
@@ -66,10 +67,13 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<
     for raw in raw_paths {
         let abs = Path::new(&raw)
             .canonicalize()
-            .map_err(|e| format!("invalid path '{raw}': {e}"))?;
+            .map_err(|e| AppError::Io(format!("invalid path '{raw}': {e}")))?;
         ensure_inside_vault(&abs, &vault_root)?;
         if !abs.exists() {
-            return Err(format!("path does not exist: {}", abs.display()));
+            return Err(AppError::Validation(format!(
+                "path does not exist: {}",
+                abs.display()
+            )));
         }
         canonical.push(abs);
     }
@@ -85,19 +89,12 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
         for abs in &targets {
             self_write_paths.push(abs.clone());
             if abs.is_dir() {
                 let abs_str = abs.to_string_lossy().to_string();
-                let prefix = format!("{abs_str}/");
-                for p in vault
-                    .graph
-                    .metadata_cache
-                    .keys()
-                    .filter_map(|id| vault.arena.get_string(*id).cloned())
-                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
-                {
+                for p in vault.paths_under(&abs_str) {
                     self_write_paths.push(PathBuf::from(&p));
                     if p.ends_with(".md") {
                         deleted_md_paths.push(p);
@@ -116,9 +113,9 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<
     delete_order.sort_by_key(|p| std::cmp::Reverse(p.components().count()));
     for abs in &delete_order {
         if abs.is_dir() {
-            std::fs::remove_dir_all(abs).map_err(|e| format!("failed to delete directory: {e}"))?;
+            std::fs::remove_dir_all(abs).map_err(|e| AppError::Io(format!("failed to delete directory: {e}")))?;
         } else {
-            std::fs::remove_file(abs).map_err(|e| format!("failed to delete file: {e}"))?;
+            std::fs::remove_file(abs).map_err(|e| AppError::Io(format!("failed to delete file: {e}")))?;
         }
     }
 
@@ -126,19 +123,12 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         for abs in &targets {
             if abs.is_dir() {
                 let abs_str = abs.to_string_lossy().to_string();
-                let prefix = format!("{abs_str}/");
-                let to_remove: Vec<String> = vault
-                    .graph
-                    .metadata_cache
-                    .keys()
-                    .filter_map(|id| vault.arena.get_string(*id).cloned())
-                    .filter(|p| p == &abs_str || p.starts_with(&prefix))
-                    .collect();
+                let to_remove: Vec<String> = vault.paths_under(&abs_str);
                 for path in to_remove {
                     vault.remove_document(&path);
                 }
@@ -157,7 +147,7 @@ fn apply_delete_paths(raw_paths: Vec<String>, state: State<AppState>) -> Result<
 }
 
 #[tauri::command]
-pub fn delete_paths(paths: Vec<String>, state: State<AppState>) -> Result<(), String> {
+pub fn delete_paths(paths: Vec<String>, state: State<AppState>) -> AppResult<()> {
     apply_delete_paths(paths, state)
 }
 
@@ -166,9 +156,9 @@ pub fn move_paths(
     source_paths: Vec<String>,
     destination_rel_path: Option<String>,
     state: State<AppState>,
-) -> Result<(), String> {
+) -> AppResult<()> {
     if source_paths.is_empty() {
-        return Err("no source paths provided".to_string());
+        return Err(AppError::Validation("no source paths provided".to_string()));
     }
 
     let vault_root = canonical_vault_path(&state)?;
@@ -179,43 +169,53 @@ pub fn move_paths(
     };
 
     if !destination_path.exists() {
-        return Err("destination folder does not exist".to_string());
+        return Err(AppError::Validation(
+            "destination folder does not exist".to_string(),
+        ));
     }
 
     if !destination_path.is_dir() {
-        return Err("destination must be a folder".to_string());
+        return Err(AppError::Validation(
+            "destination must be a folder".to_string(),
+        ));
     }
 
     let destination_path = destination_path
         .canonicalize()
-        .map_err(|e| format!("invalid destination: {e}"))?;
+        .map_err(|e| AppError::Io(format!("invalid destination: {e}")))?;
     ensure_inside_vault(&destination_path, &vault_root)?;
 
     let mut source_pairs: Vec<(PathBuf, PathBuf)> = Vec::new();
     for raw_source in &source_paths {
         let source = Path::new(raw_source)
             .canonicalize()
-            .map_err(|e| format!("invalid source path '{raw_source}': {e}"))?;
+            .map_err(|e| AppError::Io(format!("invalid source path '{raw_source}': {e}")))?;
         ensure_inside_vault(&source, &vault_root)?;
 
         if source == destination_path {
-            return Err("cannot move an item into itself".to_string());
+            return Err(AppError::Validation(
+                "cannot move an item into itself".to_string(),
+            ));
         }
 
         if source.is_dir() && destination_path.starts_with(&source) {
-            return Err("cannot move a folder into itself or its descendant".to_string());
+            return Err(AppError::Validation(
+                "cannot move a folder into itself or its descendant".to_string(),
+            ));
         }
 
         let Some(file_name) = source.file_name() else {
-            return Err(format!("failed to resolve file name for '{raw_source}'"));
+            return Err(AppError::Validation(format!(
+                "failed to resolve file name for '{raw_source}'"
+            )));
         };
 
         let destination_item = destination_path.join(file_name);
         if destination_item.exists() {
-            return Err(format!(
+            return Err(AppError::Validation(format!(
                 "destination already contains '{}'",
                 file_name.to_string_lossy()
-            ));
+            )));
         }
 
         source_pairs.push((source, destination_item));
@@ -233,18 +233,11 @@ pub fn move_paths(
             let vault = state
                 .vault
                 .read()
-                .map_err(|_| "vault lock poisoned".to_string())?;
-            for old_path in vault
-                .graph
-                .metadata_cache
-                .keys()
-                .filter_map(|id| vault.arena.get_string(*id).cloned())
-                .filter(|p| p.starts_with(&prefix))
-            {
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
+            for old_path in vault.paths_under(&source.to_string_lossy()) {
                 let suffix = old_path.trim_start_matches(&prefix).to_string();
                 self_write_paths.push(PathBuf::from(&old_path));
-                self_write_paths
-                    .push(destination_item.join(&suffix));
+                self_write_paths.push(destination_item.join(&suffix));
             }
         }
     }
@@ -252,7 +245,7 @@ pub fn move_paths(
 
     for (source, destination_item) in &source_pairs {
         std::fs::rename(source, destination_item)
-            .map_err(|e| format!("failed to move '{}': {e}", source.display()))?;
+            .map_err(|e| AppError::Io(format!("failed to move '{}': {e}", source.display())))?;
     }
 
     // Pre-read all file content outside the vault write lock.
@@ -269,7 +262,7 @@ pub fn move_paths(
     let mut file_ops: Vec<(String, String, Option<String>)> = Vec::new();
     for (source_str, destination_str) in &updates {
         if source_str.ends_with(".md") {
-            let content = std::fs::read_to_string(&destination_str).ok();
+            let content = std::fs::read_to_string(destination_str).ok();
             file_ops.push((source_str.clone(), destination_str.clone(), content));
         } else {
             // Read vault under a shared read lock to find folder descendants.
@@ -277,13 +270,10 @@ pub fn move_paths(
             let vault = state
                 .vault
                 .read()
-                .map_err(|_| "vault lock poisoned".to_string())?;
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
             let pairs: Vec<(String, String)> = vault
-                .graph
-                .metadata_cache
-                .keys()
-                .filter_map(|id| vault.arena.get_string(*id).cloned())
-                .filter(|p| p.starts_with(&prefix))
+                .paths_under(source_str)
+                .into_iter()
                 .map(|old_path| {
                     let suffix = old_path.trim_start_matches(&prefix).to_string();
                     let new_path = format!("{destination_str}/{suffix}");
@@ -305,7 +295,7 @@ pub fn move_paths(
         let mut vault = state
             .vault
             .write()
-            .map_err(|_| "vault lock poisoned".to_string())?;
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
 
         for (source_str, destination_str, content) in &file_ops {
             vault.remove_document(source_str);
@@ -343,11 +333,11 @@ pub struct RenamePathResult {
     pub updated_files: Vec<String>,
 }
 
-fn sanitize_path_name(raw: &str) -> Result<String, String> {
+fn sanitize_path_name(raw: &str) -> AppResult<String> {
     validate_name(raw)
 }
 
-fn resolve_rename_target_name(old_name: &str, raw: &str, is_folder: bool) -> Result<String, String> {
+fn resolve_rename_target_name(old_name: &str, raw: &str, is_folder: bool) -> AppResult<String> {
     let base = sanitize_path_name(raw)?;
     if is_folder {
         return Ok(base);
@@ -387,7 +377,7 @@ pub fn rename_path(
     path: String,
     new_name: String,
     state: State<AppState>,
-) -> Result<RenamePathResult, String> {
+) -> AppResult<RenamePathResult> {
     rename_path_impl(&path, &new_name, &state)
 }
 
@@ -397,40 +387,49 @@ fn rename_path_impl(
     path: &str,
     new_name: &str,
     state: &AppState,
-) -> Result<RenamePathResult, String> {
+) -> AppResult<RenamePathResult> {
     let vault_root = canonical_vault_path(state)?;
 
     let old_abs = Path::new(path)
         .canonicalize()
-        .map_err(|e| format!("invalid path '{path}': {e}"))?;
+        .map_err(|e| AppError::Io(format!("invalid path '{path}': {e}")))?;
     ensure_inside_vault(&old_abs, &vault_root)?;
     if !old_abs.exists() {
-        return Err(format!("path does not exist: {}", old_abs.display()));
+        return Err(AppError::Validation(format!(
+            "path does not exist: {}",
+            old_abs.display()
+        )));
     }
 
     let is_folder = old_abs.is_dir();
     let old_name = old_abs
         .file_name()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| "invalid path name".to_string())?;
+        .ok_or_else(|| AppError::Validation("invalid path name".to_string()))?;
 
     // Notes are renamed via rename_note (wikilink rewrite by stem). Guard the
     // generic entry so an accidental call never silently skips link rewriting.
     if !is_folder && old_name.to_ascii_lowercase().ends_with(".md") {
-        return Err("notes must be renamed with rename_note".to_string());
+        return Err(AppError::Validation(
+            "notes must be renamed with rename_note".to_string(),
+        ));
     }
 
     let target = resolve_rename_target_name(old_name, new_name, is_folder)?;
     let parent = old_abs
         .parent()
-        .ok_or_else(|| "invalid parent directory".to_string())?;
+        .ok_or_else(|| AppError::Validation("invalid parent directory".to_string()))?;
     let new_abs = parent.join(&target);
 
     if new_abs == old_abs {
-        return Err("the item already has that name".to_string());
+        return Err(AppError::Validation(
+            "the item already has that name".to_string(),
+        ));
     }
     if new_abs.exists() {
-        return Err(format!("an item named '{target}' already exists"));
+        return Err(AppError::Validation(format!(
+            "an item named '{target}' already exists"
+        )));
     }
 
     let old_str = old_abs.to_string_lossy().to_string();
@@ -443,15 +442,10 @@ fn rename_path_impl(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-        for id in vault.graph.metadata_cache.keys() {
-            let Some(p) = vault.arena.get_string(*id).cloned() else {
-                continue;
-            };
-            if p.starts_with(&prefix) {
-                let suffix = p.trim_start_matches(&prefix).to_string();
-                descendants.push((p, format!("{new_str}/{suffix}")));
-            }
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
+        for p in vault.paths_under(&old_str) {
+            let suffix = p.trim_start_matches(&prefix).to_string();
+            descendants.push((p, format!("{new_str}/{suffix}")));
         }
     }
 
@@ -462,11 +456,11 @@ fn rename_path_impl(
         self_write_paths.push(PathBuf::from(old_d));
         self_write_paths.push(PathBuf::from(new_d));
     }
-    register_self_writes(&state, &self_write_paths);
+    register_self_writes(state, &self_write_paths);
 
     // 2. Move the item.
     std::fs::rename(&old_abs, &new_abs)
-        .map_err(|e| format!("failed to rename '{}': {e}", old_abs.display()))?;
+        .map_err(|e| AppError::Io(format!("failed to rename '{}': {e}", old_abs.display())))?;
 
     if !is_folder {
         return Ok(RenamePathResult {
@@ -485,18 +479,15 @@ fn rename_path_impl(
         let vault = state
             .vault
             .read()
-            .map_err(|_| "vault lock poisoned".to_string())?;
-        for id in vault.graph.metadata_cache.keys() {
-            let Some(p) = vault.arena.get_string(*id).cloned() else {
-                continue;
-            };
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
+        for p in vault.note_paths() {
             if !p.ends_with(".md") {
                 continue;
             }
-            let has_link = vault.graph.metadata_cache[id]
-                .links
-                .iter()
-                .any(|t| path_rename.matches(t));
+            let has_link = vault
+                .metadata(&p)
+                .map(|meta| meta.links.iter().any(|t| path_rename.matches(t)))
+                .unwrap_or(false);
             if has_link {
                 candidates.push(p);
             }
@@ -517,7 +508,7 @@ fn rename_path_impl(
         };
         let next = rewrite_wikilinks_path(&content, &path_rename);
         if next != content {
-            std::fs::write(&disk, &next).map_err(|e| format!("failed to update '{disk}': {e}"))?;
+            std::fs::write(&disk, &next).map_err(|e| AppError::Io(format!("failed to update '{disk}': {e}")))?;
             updated_files.push(disk.clone());
             rewritten.push((disk, next));
         }
@@ -550,8 +541,8 @@ fn rename_path_impl(
 
     // 5. Search index follows every moved document.
     for (old_d, new_d, content) in &contents {
-        index_remove(&state, old_d);
-        index_upsert(&state, new_d, content);
+        index_remove(state, old_d);
+        index_upsert(state, new_d, content);
     }
 
     Ok(RenamePathResult {
@@ -687,7 +678,7 @@ mod tests {
           .filter_map(|id| vault.arena.get_string(*id).cloned())
           .collect();
       assert!(!cached.iter().any(|p| p.contains("/Project/")), "old paths dropped");
-      let a_id = vault.arena.get_id(&root.join("Docs/a.md").to_string_lossy().to_string()).unwrap();
+      let a_id = vault.arena.get_id(root.join("Docs/a.md").to_string_lossy().as_ref()).unwrap();
       assert!(
           vault.graph.metadata_cache.get(&a_id).unwrap().links.contains(&"Docs/a.md".to_string()),
           "cached links follow the folder"
@@ -711,7 +702,7 @@ mod tests {
       assert!(res.moved.is_empty(), "attachments move no documents");
 
       // Explicit extension input is respected (any case).
-      let res2 = rename_path_impl(&root.join("logo.png").to_string_lossy().to_string(), "final.PNG", &state).unwrap();
+      let res2 = rename_path_impl(root.join("logo.png").to_string_lossy().as_ref(), "final.PNG", &state).unwrap();
       assert_eq!(res2.name, "final.PNG");
       assert!(root.join("final.PNG").exists());
   }
@@ -723,12 +714,12 @@ mod tests {
       // Rename onto a folder that already exists is a collision.
       std::fs::create_dir_all(root.join("taken")).unwrap();
       let err = rename_path_impl(&folder_str, "taken", &state).unwrap_err();
-      assert!(err.contains("already exists"), "got: {err}");
+      assert!(err.to_string().contains("already exists"), "got: {err}");
 
       // Renaming to the same (trimmed) name is a no-op rejection.
       let res = rename_path_impl(&folder_str, "Project", &state);
       assert!(
-          res.is_err() && res.unwrap_err().contains("already has that name"),
+          res.is_err() && res.unwrap_err().to_string().contains("already has that name"),
           "same-name rename rejected"
       );
   }

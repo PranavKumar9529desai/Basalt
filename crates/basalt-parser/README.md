@@ -7,7 +7,7 @@ wikilink/path rewriting for note and folder renames (ADR-023).
 
 Uses `pulldown-cmark` for CommonMark parsing and `ropey` for byte↔UTF-16
 offset conversion. Depends on `basalt-types`. Pure native Rust (no wasm);
-consumed by `basalt-vault`, `basalt-wasm`, and `frontmatter-wasm`.
+consumed by `basalt-vault` and `frontmatter-wasm`.
 
 ## Modules
 

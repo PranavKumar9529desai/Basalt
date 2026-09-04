@@ -1,4 +1,5 @@
 use basalt_parser::query::{CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection};
+use basalt_parser::ParseError;
 use basalt_types::{QueryColumn, QueryResult, TypedValue};
 use basalt_vault::Vault;
 
@@ -30,7 +31,7 @@ impl WorkRow {
 }
 
 /// Execute a DQL query against the vault's indexed metadata.
-pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
+pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, ParseError> {
     let plan = basalt_parser::parse_query(dql)?;
 
     let arena = &vault.arena;
@@ -84,7 +85,7 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String> {
                 for r in rows.drain(..) {
                     match r {
                         WorkRow::Page(p) => {
-                            let val = eval_to_typed(&expr, &EvalCtx::Page(&p));
+                            let val = eval_to_typed(expr, &EvalCtx::Page(&p));
                             match val {
                                 TypedValue::List { items } if !items.is_empty() => {
                                     for item in items {
@@ -242,17 +243,18 @@ fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
             // Infer type from first non-null value
             let type_ = rows
                 .iter()
-                .find_map(|r| {
+                .map(|r| {
                     let v = eval_to_typed(&f.expr, &r.ctx());
-                    Some(match v {
+                    match v {
                         TypedValue::Number { .. } => "number",
                         TypedValue::Checkbox { .. } => "checkbox",
                         TypedValue::Link { .. } => "link",
                         TypedValue::Date { .. } => "date",
                         TypedValue::List { .. } => "list",
                         _ => "text",
-                    })
+                    }
                 })
+                .next()
                 .unwrap_or("text")
                 .to_string();
             QueryColumn { name, type_ }
