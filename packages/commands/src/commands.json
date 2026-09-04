@@ -106,5 +106,11 @@
     "name": "Toggle Reading View",
     "category": "Editor",
     "icon": "IconBook"
+  },
+  {
+    "id": "export:note",
+    "name": "Export as PDF",
+    "category": "File",
+    "icon": "IconPrinter"
   }
 ]

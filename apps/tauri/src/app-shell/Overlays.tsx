@@ -19,6 +19,9 @@ const SearchModal = lazy(() =>
 const SettingsModal = lazy(() =>
   import("../features/settings").then((m) => ({ default: m.SettingsModal })),
 );
+const ExportDialog = lazy(() =>
+  import("../features/export").then((m) => ({ default: m.ExportDialog })),
+);
 
 interface OverlaysProps {
   contextMenu: {
@@ -101,6 +104,7 @@ export function Overlays({
         <SearchModal onOpen={onSearchOpen} previewDeps={previewDeps} />
         <QuickSwitcher onOpen={onSearchOpen} />
         <SettingsModal />
+        <ExportDialog previewDeps={previewDeps} />
       </Suspense>
     </>
   );

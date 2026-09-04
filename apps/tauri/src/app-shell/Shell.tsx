@@ -24,6 +24,7 @@ import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
 import type { PreviewDeps } from "../features/search";
 import "../shared/tabCommands";
+import "../features/export/commands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
 import { ViewHeader } from "./ViewHeader";
