@@ -62,6 +62,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                            |
 | Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
 | **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                           |
+| **Rust quality-hardening (ADR-030)**                                | ✅ Complete (all phases 0–5: typed errors, module splits, `NodeId`/`QueryColumnType`, search `SearchError`, perf: HashMap `group_rows`, `eq_ignore_ascii_case`, hoisted `AhoCorasick`; Phase 2 value-type unification — `FrontmatterValue` collapsed into the internally-tagged `TypedValue`) |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                        |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                       |
 

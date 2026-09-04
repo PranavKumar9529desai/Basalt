@@ -212,7 +212,60 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   jobs; repo previously had NO CI). Enabled the previously-dead
   `length_of_list_returns_count` in `basalt-tables/tests/query_execution.rs`
   (`#[test]` added; its matcher expected `Link` but the `file.name` group key is
-  `Text` — fixed). `cargo test --workspace` green (207 tests).
+   `Text` — fixed). `cargo test --workspace` green (207 tests).
+
+### ADR-030 phases completed this session (uncommitted atop `main`)
+
+Closed out most of the ADR-030 plan from Phase 0 where it was left:
+
+- **Phase 0 remainder:** `DqlError` now `#[derive(thiserror::Error)]` in
+  `basalt-tables` (`#[from] ParseError`); `FrontmatterValue::property_type()`
+  now returns `Option<PropertyType>` — `None` no longer lies as `Text`.
+- **Phase 3:** `basalt-search` dropped `anyhow` for a typed `SearchError`
+  (`thiserror`, `Io`/`Tantivy` from-variants); silent `let _ = flush_pending()`
+  and index failures now log. `NodeId` is a real newtype (`pub struct NodeId(u32)`,
+  `Copy`/`Eq`/`Hash`/`Ord`, `#[serde(transparent)]` so `VaultCache` v1 wire and
+  graph-wasm are unchanged). `QueryColumn.type_` is now a closed
+  `QueryColumnType` enum (snake_case serde — `"text"|"number"|"date"|"checkbox"|"link"|"list"`).
+- **Phase 4:** `group_rows` is a HashMap-indexed O(N) grouper (also fixes the
+  old cross-type `compare_typed == Equal` conflation — `Number(3)` and
+  `Text("3")` no longer share a group); `resolve_asset` uses
+  `eq_ignore_ascii_case` (no per-asset `to_lowercase` allocs); `infer_mime_type`
+  returns `&'static str`; `arena::get_or_insert` single `to_string()`; `reorder_tree`
+  reuses scratch buffers (`order`/`queue`/`reordered`); snippets build one
+  `TermMatcher` (AhoCorasick) per query and use `partition_point` (O(log n)) for
+  byte→char mapping.
+- **Phase 5:** `clippy.toml` added at workspace root (cognitive
+  complexity/too-many-args/type-complexity thresholds); `basalt-search` added to
+  workspace members so CI (`cargo clippy/test --workspace`) covers it.
+- **Verify:** `cargo test --workspace` green (206 tests incl. 16 search,
+  25 tables), `cargo clippy --workspace --all-targets -- -D warnings` clean,
+  `cargo fmt --all --check` clean, graph-wasm + frontmatter-wasm compile.
+
+### Phase 2 — value-type unification (DONE this session)
+
+`TypedValue` + `FrontmatterValue` collapsed into one internally-tagged
+`TypedValue` in `basalt-types` (ADR-030 Phase 2). `FrontmatterValue` is now a
+type alias. One shared YAML converter `yaml_to_typed` (date + datetime +
+wikilink classification) lives in `query.rs`; the parser's `yaml_to_value`/
+`infer_string`/`is_iso_*`/`first_wikilink_target` were deleted in favour of it.
+`DateTime` variant added (serde `datetime`) for frontmatter date-times;
+`GroupKey::from_typed` folds it onto `Date`. `None` → `Null` (`{"type":"null"}`).
+
+Wire contract verified by a serde round-trip test asserting the exact
+internally-tagged JSON (`{"type":"text",…}`, `{"type":"link","name","path"}`,
+…), matching `features/editor/types/query.ts`. Frontmatter `Link("target")` now
+maps to `Link { name, path }` (path = name).
+
+Frontmatter-wasm + graph-wasm rebuilt; `packages/editor` mirrors rewritten to
+the internally-tagged shape: `types.ts` (`FrontmatterValue` union),
+`frontmatter-utils.ts` (`isNullValue`/`valueType`/`frontmatterValuesEqual` +
+test), `frontmatter-widget.ts` (`displayValue`/`inferValue`/`coerce`),
+`frontmatter-icons.ts`, and `features/editor/lib/frontmatter.ts`
+(`serializeFrontmatterValue`).
+
+**Note:** the branch has since been merged to `main` (`35d985d`); this phase's
+work is uncommitted atop `main`.
 
 ### Phase 5 — test parity (PLANNED, not started)
 
