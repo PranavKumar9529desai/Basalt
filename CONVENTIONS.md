@@ -549,3 +549,109 @@ Rules that follow from this:
 - `error.rs` — `AppError` + `AppResult` only.
 - Testable helpers that don't need `State` take `&AppState` (or plain
   arguments), letting tests drive them with a real temp vault.
+
+---
+
+## 12. Rust Code Quality & Structure (crates/)
+
+These rules apply to all domain crates under `crates/` (`basalt-*`). They exist
+to keep files readable, errors honest, and hot paths fast. Full rationale in
+[ADR-030](docs/adr/030-rust-crates-quality-refactor.md).
+
+### 12.1 File & function budgets
+
+God modules are the #1 maintainability failure we hit. Enforce hard budgets:
+
+| Unit       | Soft limit | Smell threshold (must split) |
+| ---------- | ---------- | ---------------------------- |
+| File       | ≤ 450 loc  | 500+ loc                     |
+| Function   | ≤ 40 loc   | 90+ loc, deep nesting, 2+ abstraction levels |
+| `impl` block | one concern | mixed unrelated behavior |
+| Match arm  | a few lines | mini-program inside each arm |
+
+Split a file when: nesting deepens, control flow is hard to scan, a function
+both decides policy and performs mechanics, or variable lifetimes get long.
+
+- Prefer the **modern `foo.rs` + `foo/`** module layout over `mod.rs` (avoids
+  many `mod.rs` files).
+- `lib.rs` is **small and intentional** — `pub mod` + `pub use` re-exports only;
+  internals stay private or `pub(crate)`.
+- **`pub(crate)` over bare `pub`** for internal helpers — shrink the public
+  surface, let the compiler enforce it.
+
+### 12.2 Error handling
+
+Already covered in §11 (thiserror per crate, `anyhow` at the app boundary).
+Additions for library code:
+
+- **Never** return `Result<T, String>`.
+- **No silent degradation** in library code: ban `.unwrap_or_default()` /
+  `.ok()` / `let _ = result` that swallows a real failure in library crates.
+  Return a typed error or `tracing::warn!` at minimum.
+- **Panics are a bug or a provable invariant.** `expect("reason")`, never bare
+  `unwrap()`, and never on user-controllable state (e.g. a group that a future
+  code path could create empty).
+- Add `#[must_use]` on public fallible/`Result`/`Option` returns and key value
+  types.
+
+### 12.3 Newtypes & the type system
+
+- Make important domain scalars **newtypes**, not aliases: `NodeId` is
+  `pub struct NodeId(u32)`, never `pub type NodeId = u32`. A bare alias means
+  any `u32` is accepted where the domain type is expected.
+- Encode invariants in types: a validated `new()`/`try_new()` constructor so
+  empty/invalid states are unrepresentable (e.g. `FieldRef` → guaranteed
+  non-empty).
+- Replace `String` closed-sets with serialized **enums** (e.g.
+  `QueryColumn.type_` is `Text|Number|Date|Checkbox|Link|List`, not `String`).
+- Keep public enums that grow `#[non_exhaustive]` so downstream `match`es are
+  forced to handle new variants.
+- **Borrow-by-default APIs**: take `&str`/`&[T]`, return `&str`/`Cow<'_, str>`
+  where ownership isn't required; reserve `String` for long-lived storage.
+
+### 12.4 Macros — judicious, not clever
+
+- **Function/generic first**, then `macro_rules!`, then (rarely) proc macros.
+- Prefer `macro_rules!` over custom proc macros — no `syn`/`quote`/build cost.
+- Keep expansions small, Rust-shaped, and free of nonlocal control flow and
+  repeated-expansion side effects.
+- Use macros only for syntax a function can't produce (an enum↔string mapping
+  that must stay in sync with the data type is a good candidate).
+
+### 12.5 Performance
+
+The expensive line rarely looks expensive — it's a `format!`, `to_string()`,
+or `.clone()` **inside a loop**. Measure before optimizing (Criterion at both
+5k **and 25k** fixtures; `cargo flamegraph` to confirm the target is hot).
+
+- **Reuse / pre-size collections**: `with_capacity`, `.clear()` reuse, scratch
+  buffers as struct fields instead of fresh `Vec`s per call/frame.
+- **Zero-copy / borrow** in hot paths: return `&str`/`Cow`, use
+  `eq_ignore_ascii_case` instead of `to_lowercase()`, avoid double
+  `to_string()`.
+- **Algorithmic before micro**: prefer O(N) / O(log n) over quadratic
+  (HashMap-indexed grouping, `partition_point` over linear `.position()`).
+- **Keep telemetry off the hot path**; don't build strings on the success path.
+
+### 12.6 DRY — no duplicate knowledge
+
+One source of truth per concept; when the same logic lives in two places it
+diverges:
+
+- **One typed-value model** — `TypedValue` is the single cell-value type; never
+  define a parallel value enum.
+- **One converter** per domain (YAML → typed lives once, in `basalt-types`).
+- **One date classifier**, **one frontmatter-fence detector**, **one
+  `stem_from_path`**, **one wikilink scanner** — shared helpers, never copy-paste.
+- If two functions become character-identical except a field or arg, extract a
+  helper parameterized by that difference.
+
+### 12.7 Lint / tooling hygiene
+
+- `cargo fmt --all` on every commit.
+- Keep `clippy.toml` at the workspace root with committed thresholds
+  (`cognitive-complexity-threshold`, `too-many-arguments-threshold`,
+  `type-complexity-threshold`).
+- CI runs clippy with `-D warnings`. Enable `clippy::perf` (unnecessary
+  allocs/clones) and the `cognitive-complexity` lint deliberately; do **not**
+  blanket-enable all of `pedantic`.

@@ -46,7 +46,7 @@ community, and the weaknesses our competitive research surfaced:
 - `crates/basalt-graph` owns the graph model: `arena` (`NodeId`,
   `StringArena`), `fuzzy` (node query), and Criterion benches
   (`graph_query`, `arena_growth`, `graph_insert`).
-- `crates/graph-wasm` already exists as the WASM bridge.
+- `crates/basalt-wasm/graph-wasm` already exists as the WASM bridge.
 - ADR-020 pre-authorized the graph stack: **move 3** (binary IPC for
   node/edge dumps), **move 4** (WASM force graph in a Web Worker, WebGL render,
   zero React per frame), **move 5** (windowed virtualization), **move 6**
@@ -75,7 +75,7 @@ Canvas2D.
 ```
 crates/basalt-graph     model + force graph (Rust, native + WASM)
         │  wasm-bindgen
-crates/graph-wasm      JS/WASM bridge: build graph, graph_step() -> Float32Array
+crates/basalt-wasm/graph-wasm      JS/WASM bridge: build graph, graph_step() -> Float32Array
         │  loaded in
 packages/graph          GRAPH WORKER (wasm graph tick) + WEBGL2/WebGPU RENDERER
         │  postMessage (transferable typed arrays)
@@ -90,7 +90,7 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
    optional collision. Edge list is built from parser/vault link extraction
    (reuses the backlink pipeline that already feeds `get_backlinks`). Reuse the
    existing arena + `fuzzy` query paths.
-2. **Bridge tier — `crates/graph-wasm` (extend).** Expose graph construction
+2. **Bridge tier — `crates/basalt-wasm/graph-wasm` (extend).** Expose graph construction
    and `graph_step()` returning `Float32Array` position buffers (SharedArrayBuffer
    where COOP/COEP allow zero-copy). Already scaffolded.
 3. **Engine tier — new `packages/graph` (primitive).** A Web Worker hosting the

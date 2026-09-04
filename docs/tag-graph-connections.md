@@ -84,7 +84,7 @@ disconnected along the tag axis even though the editor supports `#tags`.
   nodes (`is_tag: true`, path with `TAG_PREFIX` stripped) and their edges
   (note→exact-tag + parent→child) in addition to wikilinks; `GraphNodeMeta`
   gains `is_tag`.
-- `crates/graph-wasm/src/lib.rs` — `LayoutGraph::new` now receives
+- `crates/basalt-wasm/graph-wasm/src/lib.rs` — `LayoutGraph::new` now receives
   `node_types` (currently `vec![0u8; n]` from the get_graph path; the renderer
   styles via `GraphSnapshot.nodes[].is_tag`).
 

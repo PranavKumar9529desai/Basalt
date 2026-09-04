@@ -17,7 +17,7 @@
     "clear-cache": "bash scripts/clear-cache.sh",
     "build:wasm": "bash scripts/build-graph-wasm.sh && bash scripts/build-frontmatter-wasm.sh",
     "build:wasm:frontmatter": "bash scripts/build-frontmatter-wasm.sh",
-    "verify:wasm": "node crates/graph-wasm/verify.mjs"
+    "verify:wasm": "node crates/basalt-wasm/graph-wasm/verify.mjs"
   },
   "devDependencies": {
     "bun-types": "latest",

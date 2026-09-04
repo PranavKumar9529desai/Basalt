@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 
 const wasmPath = new URL(
-  "./target/wasm32-unknown-unknown/release/graph_sim_wasm.wasm",
+  "./target/wasm32-unknown-unknown/release/graph_wasm.wasm",
   import.meta.url,
 );
 const bytes = readFileSync(wasmPath);

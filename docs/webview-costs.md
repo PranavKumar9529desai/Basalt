@@ -138,7 +138,7 @@ preview is a third CM instance (`PreviewPane.tsx`) and pays a parse of
 whatever it is showing.
 
 `parse_frontmatter` IPC is **not** on this path. Editor YAML uses
-`crates/frontmatter-wasm` inside the WebView (ADR-022). Do not confuse
+`crates/basalt-wasm/frontmatter-wasm` inside the WebView (ADR-022). Do not confuse
 the two.
 
 ### What would actually remove this tax

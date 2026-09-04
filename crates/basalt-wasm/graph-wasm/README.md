@@ -32,17 +32,17 @@ rendering — no per-frame serialization.
 ## Build & verify
 
 The built artifact becomes `apps/tauri/src/features/graph/components/graph_sim.wasm`.
-The crate's real output name is `graph_sim_wasm.wasm`; `scripts/build-graph-wasm.sh`
+The crate's real output name is `graph_wasm.wasm`; `scripts/build-graph-wasm.sh`
 renames it to `graph_sim.wasm` to match the `?init` import in `GraphWorker.ts`.
 
 ```bash
 bun run build:wasm    # regenerate graph_sim.wasm
-bun run verify:wasm   # drive the C-ABI surface via crates/graph-wasm/verify.mjs
+bun run verify:wasm   # drive the C-ABI surface via crates/basalt-wasm/graph-wasm/verify.mjs
 ```
 
 `verify.mjs` exercises both the `graph_seed` and `graph_build` paths.
 
 ## Documentation
 
-- ADR-021: [Graph View Architecture](../../docs/adr/021-graph-view-architecture.md)
-- [Graph view notes](../../docs/graph-view/) (proposal, research)
+- ADR-021: [Graph View Architecture](../../../docs/adr/021-graph-view-architecture.md)
+- [Graph view notes](../../../docs/graph-view/) (proposal, research)

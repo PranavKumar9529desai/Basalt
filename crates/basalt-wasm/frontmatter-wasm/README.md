@@ -34,5 +34,5 @@ widget without a round-trip to the main process. See
 
 ## Documentation
 
-- ADR-022: [Frontmatter Engine — Structured, Typed, First-Class Properties](../../docs/adr/022-frontmatter-engine.md)
-- ADR-019: [Editor Decoration Pipeline — Single-Pass Architecture](../../docs/adr/019-editor-decoration-pipeline.md)
+- ADR-022: [Frontmatter Engine — Structured, Typed, First-Class Properties](../../../docs/adr/022-frontmatter-engine.md)
+- ADR-019: [Editor Decoration Pipeline — Single-Pass Architecture](../../../docs/adr/019-editor-decoration-pipeline.md)
