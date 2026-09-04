@@ -38,22 +38,37 @@ pub extern "C" fn fm_alloc(capacity: u32) -> u32 {
     })
 }
 
-/// Parse the document text currently held in the input buffer. Returns the
-/// byte length of the serialized JSON model (0 = no model / serialization
-/// failure); the JSON itself is at `fm_ptr()`.
+/// Parse the document text held in the input buffer. `input_offset` is the
+/// linear-memory byte offset returned by `fm_alloc`. Returns the byte length
+/// of the serialized JSON model (0 = no model / serialization failure); the
+/// JSON itself is at `fm_ptr()`.
 #[no_mangle]
-pub extern "C" fn fm_parse(input_ptr: *const u8, input_len: usize) -> u32 {
-    let input = unsafe { std::slice::from_raw_parts(input_ptr, input_len) };
-    let text = String::from_utf8_lossy(input).into_owned();
-    let model = basalt_parser::frontmatter::parse_frontmatter(&text);
-    match serde_json::to_vec(&model) {
-        Ok(bytes) => {
-            let len = bytes.len() as u32;
-            RESULT.with(|r| *r.borrow_mut() = Some(bytes));
-            len
+pub extern "C" fn fm_parse(input_offset: u32, input_len: u32) -> u32 {
+    INPUT.with(|i| {
+        let input_buf = i.borrow();
+        let input = input_buf.as_ref().expect("INPUT not allocated; call fm_alloc first");
+
+        // SAFETY: `input_offset` must equal `input.as_ptr() as u32` (the linear-memory
+        // byte address of the buffer we own). We verify this and derive the slice from
+        // our Vec — no raw pointer from the caller is ever dereferenced.
+        assert_eq!(
+            input_offset,
+            input.as_ptr() as u32,
+            "input_offset does not match INPUT base"
+        );
+
+        let len = (input_len as usize).min(input.len());
+        let text = String::from_utf8_lossy(&input[..len]).into_owned();
+        let model = basalt_parser::frontmatter::parse_frontmatter(&text);
+        match serde_json::to_vec(&model) {
+            Ok(bytes) => {
+                let len = bytes.len() as u32;
+                RESULT.with(|r| *r.borrow_mut() = Some(bytes));
+                len
+            }
+            Err(_) => 0,
         }
-        Err(_) => 0,
-    }
+    })
 }
 
 /// Offset of the serialized JSON result in wasm linear memory.

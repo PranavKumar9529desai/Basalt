@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./manifest": "./themes/manifest.ts",
-    "./tokens.css": "./src/generated/tokens.css"
+    "./manifest": "./themes/manifest.ts"
   },
   "scripts": {
     "build:tokens": "bun run build.ts"

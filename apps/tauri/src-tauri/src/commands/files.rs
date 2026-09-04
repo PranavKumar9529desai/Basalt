@@ -147,6 +147,9 @@ pub struct OpenFileResult {
 pub struct SaveFileInput {
     pub path: String,
     pub content: String,
-    #[expect(dead_code, reason = "wire-contract field deserialized from frontend, not yet consumed")]
+    #[expect(
+        dead_code,
+        reason = "wire-contract field deserialized from frontend, not yet consumed"
+    )]
     pub expected_mtime_ms: Option<u64>,
 }

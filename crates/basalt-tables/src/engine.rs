@@ -1,10 +1,44 @@
-use basalt_parser::query::{CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection};
-use basalt_parser::ParseError;
+use basalt_parser::query::{
+    CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection,
+};
 use basalt_types::{QueryColumn, QueryResult, TypedValue};
 use basalt_vault::Vault;
 
 use crate::expr::{compare_typed, eval_expr, eval_to_typed, EvalCtx};
 use crate::page_row::{build_page_rows, matches_source, PageRow};
+
+/// Runtime errors during DQL query execution.
+#[derive(Debug)]
+pub enum DqlError {
+    /// Query text failed to parse.
+    Parse(basalt_parser::ParseError),
+    /// Runtime error during execution.
+    Runtime(String),
+}
+
+impl std::fmt::Display for DqlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DqlError::Parse(e) => write!(f, "parse error: {e}"),
+            DqlError::Runtime(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+impl std::error::Error for DqlError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            DqlError::Parse(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl From<basalt_parser::ParseError> for DqlError {
+    fn from(e: basalt_parser::ParseError) -> Self {
+        DqlError::Parse(e)
+    }
+}
 
 /// A row during query execution: a single page, or a group of pages produced
 /// by GROUP BY (a key plus its members).
@@ -21,7 +55,11 @@ impl WorkRow {
     fn ctx(&self) -> EvalCtx<'_> {
         match self {
             WorkRow::Page(page) => EvalCtx::Page(page),
-            WorkRow::Group { key, members, group_by_path } => EvalCtx::Group {
+            WorkRow::Group {
+                key,
+                members,
+                group_by_path,
+            } => EvalCtx::Group {
                 key,
                 members,
                 group_by_path: group_by_path.as_deref(),
@@ -31,7 +69,7 @@ impl WorkRow {
 }
 
 /// Execute a DQL query against the vault's indexed metadata.
-pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, ParseError> {
+pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> {
     let plan = basalt_parser::parse_query(dql)?;
 
     let arena = &vault.arena;
@@ -119,73 +157,104 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, ParseError
 
     // Build columns + rows
     match plan.query_type {
-        QueryType::Table => {
-            let columns = build_columns(&plan, &rows);
-            let data: Vec<Vec<TypedValue>> = rows
-                .iter()
-                .map(|r| {
-                    plan.fields
-                        .iter()
-                        .map(|f| eval_to_typed(&f.expr, &r.ctx()))
-                        .collect()
-                })
-                .collect();
-            Ok(QueryResult { columns, rows: data, total })
-        }
-        QueryType::List => {
-            let columns = vec![QueryColumn {
-                name: "File".to_string(),
-                type_: "link".to_string(),
-            }];
-            let data: Vec<Vec<TypedValue>> = rows
-                .iter()
-                .map(|r| {
-                    let p = first_page(r);
-                    vec![TypedValue::Link {
-                        name: p.name.clone(),
-                        path: p.path.clone(),
-                    }]
-                })
-                .collect();
-            Ok(QueryResult { columns, rows: data, total })
-        }
-        QueryType::Task => {
-            // TASK query: show file link + task text (simplified MVP)
-            let columns = vec![
-                QueryColumn {
-                    name: "File".to_string(),
-                    type_: "link".to_string(),
-                },
-                QueryColumn {
-                    name: "Task".to_string(),
-                    type_: "text".to_string(),
-                },
-            ];
-            let data: Vec<Vec<TypedValue>> = rows
-                .iter()
-                .map(|r| {
-                    let p = first_page(r);
-                    vec![
-                        TypedValue::Link {
-                            name: p.name.clone(),
-                            path: p.path.clone(),
-                        },
-                        TypedValue::Text {
-                            value: "(tasks)".to_string(),
-                        },
-                    ]
-                })
-                .collect();
-            Ok(QueryResult { columns, rows: data, total })
-        }
+        QueryType::Table => execute_table_query(&plan, &rows, total),
+        QueryType::List => execute_list_query(&rows, total),
+        QueryType::Task => execute_task_query(&rows, total),
     }
 }
 
+/// Table query: render user-specified fields as columns.
+fn execute_table_query(
+    plan: &QueryPlan,
+    rows: &[WorkRow],
+    total: usize,
+) -> Result<QueryResult, DqlError> {
+    let columns = build_columns(plan, rows);
+    let data: Vec<Vec<TypedValue>> = rows
+        .iter()
+        .map(|r| {
+            plan.fields
+                .iter()
+                .map(|f| eval_to_typed(&f.expr, &r.ctx()))
+                .collect()
+        })
+        .collect();
+    Ok(QueryResult {
+        columns,
+        rows: data,
+        total,
+    })
+}
+
+/// List query: single "File" column with a link to each page.
+fn execute_list_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, DqlError> {
+    let columns = vec![QueryColumn {
+        name: "File".to_string(),
+        type_: "link".to_string(),
+    }];
+    let data: Vec<Vec<TypedValue>> = rows
+        .iter()
+        .map(|r| {
+            let p =
+                first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
+            Ok::<_, DqlError>(link_row(&p.name, &p.path))
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(QueryResult {
+        columns,
+        rows: data,
+        total,
+    })
+}
+
+/// Task query: file link + task text column.
+fn execute_task_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, DqlError> {
+    let columns = vec![
+        QueryColumn {
+            name: "File".to_string(),
+            type_: "link".to_string(),
+        },
+        QueryColumn {
+            name: "Task".to_string(),
+            type_: "text".to_string(),
+        },
+    ];
+    let data: Vec<Vec<TypedValue>> = rows
+        .iter()
+        .map(|r| {
+            let p =
+                first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
+            Ok::<_, DqlError>(vec![
+                TypedValue::Link {
+                    name: p.name.clone(),
+                    path: p.path.clone(),
+                },
+                TypedValue::Text {
+                    value: "(tasks)".to_string(),
+                },
+            ])
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(QueryResult {
+        columns,
+        rows: data,
+        total,
+    })
+}
+
+/// Construct a link-typed value for the given name and path.
+fn link_row(name: &str, path: &str) -> Vec<TypedValue> {
+    vec![TypedValue::Link {
+        name: name.to_string(),
+        path: path.to_string(),
+    }]
+}
+
 /// The representative page of a row (first member for a group).
-fn first_page(row: &WorkRow) -> &PageRow {
+fn first_page(row: &WorkRow) -> Option<&PageRow> {
     match row {
-        WorkRow::Page(page) => page,
-        WorkRow::Group { members, .. } => members.first().expect("group has at least one member"),
+        WorkRow::Page(page) => Some(page),
+        WorkRow::Group { members, .. } => members.first(),
     }
 }
 

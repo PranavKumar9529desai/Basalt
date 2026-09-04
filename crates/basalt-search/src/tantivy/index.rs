@@ -1,12 +1,12 @@
 use std::path::Path;
 
+use super::snippets::extract_file_matches;
 use anyhow::{Context, Result};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query};
 use tantivy::schema::Value;
 use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument, Term};
-use super::snippets::extract_file_matches;
 
 use basalt_types::FileMatch;
 
@@ -16,7 +16,10 @@ use super::schema::build_schema;
 /// `body` is indexed but not stored — snippets are built by re-scanning the raw
 /// content string supplied to `update_document`.
 pub struct TantivyIndex {
-    #[expect(dead_code, reason = "owns the tantivy Index — dropping invalidates reader/writer")]
+    #[expect(
+        dead_code,
+        reason = "owns the tantivy Index — dropping invalidates reader/writer"
+    )]
     index: Index,
     writer: IndexWriter,
     reader: tantivy::IndexReader,
@@ -183,7 +186,8 @@ impl TantivyIndex {
         // Single pass: collect the top `limit` docs for display AND the exact
         // match count. Counting happens during the same traversal, so `Count`
         // adds ~nothing over a plain TopDocs search.
-        let (top_docs, total_docs) = searcher.search(&query, &(TopDocs::with_limit(limit), Count))?;
+        let (top_docs, total_docs) =
+            searcher.search(&query, &(TopDocs::with_limit(limit), Count))?;
         let total_docs = total_docs as u64;
 
         let terms: Vec<&str> = words.iter().map(|w| w.as_str()).collect();

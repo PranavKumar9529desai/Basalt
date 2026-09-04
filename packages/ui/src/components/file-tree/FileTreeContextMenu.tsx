@@ -15,6 +15,15 @@ import {
   ContextMenuSeparator,
 } from "@workspace/ui/components/ui/context-menu";
 import { useMemo } from "react";
+import type { ReactNode } from "react";
+
+function ContextMenuItemIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex min-w-4 items-center justify-center">
+      {children}
+    </span>
+  );
+}
 
 export type FileTreeContextTargetKind = "file" | "folder" | "root";
 
@@ -65,9 +74,7 @@ export function FileTreeContextMenu({
           {isMultiSelect ? (
             <>
               <ContextMenuItem disabled={isRoot} onClick={onCut}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconCut size={14} />
-                </span>
+                <ContextMenuItemIcon><IconCut size={14} /></ContextMenuItemIcon>
                 Cut
               </ContextMenuItem>
               <ContextMenuItem
@@ -75,39 +82,29 @@ export function FileTreeContextMenu({
                 onClick={onDelete}
                 variant="destructive"
               >
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconTrash size={14} />
-                </span>
+                <ContextMenuItemIcon><IconTrash size={14} /></ContextMenuItemIcon>
                 Delete
               </ContextMenuItem>
             </>
           ) : (
             <>
               <ContextMenuItem disabled={!canCreate} onClick={onNewNote}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconFilePlus size={14} />
-                </span>
+                <ContextMenuItemIcon><IconFilePlus size={14} /></ContextMenuItemIcon>
                 New Note
               </ContextMenuItem>
               <ContextMenuItem disabled={!canCreate} onClick={onNewFolder}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconFolderPlus size={14} />
-                </span>
+                <ContextMenuItemIcon><IconFolderPlus size={14} /></ContextMenuItemIcon>
                 New Folder
               </ContextMenuItem>
 
               <ContextMenuSeparator />
 
               <ContextMenuItem disabled={isRoot} onClick={onCut}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconCut size={14} />
-                </span>
+                <ContextMenuItemIcon><IconCut size={14} /></ContextMenuItemIcon>
                 Cut
               </ContextMenuItem>
               <ContextMenuItem disabled={isNote || !canPaste} onClick={onPaste}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconCopy size={14} />
-                </span>
+                <ContextMenuItemIcon><IconCopy size={14} /></ContextMenuItemIcon>
                 Paste
               </ContextMenuItem>
               <ContextMenuItem
@@ -115,42 +112,30 @@ export function FileTreeContextMenu({
                 onClick={onDelete}
                 variant="destructive"
               >
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconTrash size={14} />
-                </span>
+                <ContextMenuItemIcon><IconTrash size={14} /></ContextMenuItemIcon>
                 Delete
               </ContextMenuItem>
 
               <ContextMenuSeparator />
 
               <ContextMenuItem disabled>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconArrowRight size={14} />
-                </span>
+                <ContextMenuItemIcon><IconArrowRight size={14} /></ContextMenuItemIcon>
                 Open to the Side
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconWindow size={14} />
-                </span>
+                <ContextMenuItemIcon><IconWindow size={14} /></ContextMenuItemIcon>
                 Open in New Window
               </ContextMenuItem>
               <ContextMenuItem disabled={isRoot} onClick={onRename}>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconPencil size={14} />
-                </span>
+                <ContextMenuItemIcon><IconPencil size={14} /></ContextMenuItemIcon>
                 Rename
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconCopy size={14} />
-                </span>
+                <ContextMenuItemIcon><IconCopy size={14} /></ContextMenuItemIcon>
                 Copy Path
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <span className="inline-flex min-w-4 items-center justify-center">
-                  <IconWindow size={14} />
-                </span>
+                <ContextMenuItemIcon><IconWindow size={14} /></ContextMenuItemIcon>
                 Reveal in Explorer
               </ContextMenuItem>
             </>

@@ -1,10 +1,16 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_search::tantivy::index::TantivyIndex;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 fn generate_doc(index: usize, total: usize) -> (String, String, String, String) {
@@ -27,8 +33,7 @@ fn bench_index_docs(c: &mut Criterion) {
 
     for size in [1000usize, 5000] {
         let dir = tempfile::tempdir().expect("temp dir");
-        let mut index =
-            TantivyIndex::open_or_create(dir.path()).expect("open_or_create");
+        let mut index = TantivyIndex::open_or_create(dir.path()).expect("open_or_create");
         let docs: Vec<_> = (0..size).map(|i| generate_doc(i, size)).collect();
 
         group.throughput(Throughput::Elements(size as u64));

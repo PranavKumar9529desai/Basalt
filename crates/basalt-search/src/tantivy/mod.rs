@@ -1,5 +1,5 @@
-mod schema;
 pub mod index;
+mod schema;
 pub mod snippets;
 
 pub use index::TantivyIndex;

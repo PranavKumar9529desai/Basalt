@@ -7,4 +7,4 @@ pub mod graph;
 pub use arena::{NodeId, StringArena};
 pub use fuzzy::{fuzzy_match, search_commands};
 pub use graph::NoteGraph;
-pub use graph_layout::{ForceGraph, LayoutGraph, GraphParams};
+pub use graph_layout::{ForceGraph, GraphParams, LayoutGraph};

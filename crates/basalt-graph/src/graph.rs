@@ -151,10 +151,10 @@ impl NoteGraph {
                 if live.contains(&t) {
                     continue;
                 }
-            let anchored_by_child = self
-                .forward_links
-                .get(&t)
-                .is_some_and(|kids| kids.iter().any(|c| live.contains(c)));
+                let anchored_by_child = self
+                    .forward_links
+                    .get(&t)
+                    .is_some_and(|kids| kids.iter().any(|c| live.contains(c)));
                 if anchored_by_child {
                     live.insert(t);
                     changed = true;

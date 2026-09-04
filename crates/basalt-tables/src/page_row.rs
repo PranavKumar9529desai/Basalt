@@ -1,7 +1,7 @@
 use basalt_graph::NoteGraph;
 use basalt_graph::StringArena;
 use basalt_parser::query::SourceFilter;
-use basalt_types::{TypedValue, yaml_to_typed_pairs};
+use basalt_types::{yaml_to_typed_pairs, TypedValue};
 
 #[derive(Clone)]
 pub struct PageRow {
@@ -58,12 +58,8 @@ pub fn matches_source(page: &PageRow, source: &SourceFilter) -> bool {
             page.folder == *folder || page.folder.starts_with(&format!("{}/", folder))
         }
         SourceFilter::Link(target) => page.links.iter().any(|l| l == target),
-        SourceFilter::And(a, b) => {
-            matches_source(page, a) && matches_source(page, b)
-        }
-        SourceFilter::Or(a, b) => {
-            matches_source(page, a) || matches_source(page, b)
-        }
+        SourceFilter::And(a, b) => matches_source(page, a) && matches_source(page, b),
+        SourceFilter::Or(a, b) => matches_source(page, a) || matches_source(page, b),
         SourceFilter::Not(a) => !matches_source(page, a),
     }
 }

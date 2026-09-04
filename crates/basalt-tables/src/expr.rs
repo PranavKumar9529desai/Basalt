@@ -53,9 +53,9 @@ pub fn eval_expr(expr: &Expr, ctx: &EvalCtx) -> bool {
                     (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
                         hay.contains(needle.as_str())
                     }
-                    (TypedValue::List { items }, needle) => {
-                        items.iter().any(|item| compare_typed(item, needle) == Ordering::Equal)
-                    }
+                    (TypedValue::List { items }, needle) => items
+                        .iter()
+                        .any(|item| compare_typed(item, needle) == Ordering::Equal),
                     _ => false,
                 }
             } else if name == "length" && args.len() == 1 {
@@ -81,8 +81,12 @@ pub fn eval_to_typed(expr: &Expr, ctx: &EvalCtx) -> TypedValue {
         Expr::Literal(Literal::Number(n)) => TypedValue::Number { value: *n },
         Expr::Literal(Literal::Bool(b)) => TypedValue::Checkbox { value: *b },
         Expr::Literal(Literal::Null) => TypedValue::Null,
-        Expr::Comparison { .. } => TypedValue::Checkbox { value: eval_expr(expr, ctx) },
-        Expr::Not(_) => TypedValue::Checkbox { value: eval_expr(expr, ctx) },
+        Expr::Comparison { .. } => TypedValue::Checkbox {
+            value: eval_expr(expr, ctx),
+        },
+        Expr::Not(_) => TypedValue::Checkbox {
+            value: eval_expr(expr, ctx),
+        },
         Expr::Func { name, args } => {
             if matches!(ctx, EvalCtx::Group { .. }) && is_aggregate(name) {
                 return eval_aggregate(name, args, ctx);
@@ -95,17 +99,21 @@ pub fn eval_to_typed(expr: &Expr, ctx: &EvalCtx) -> TypedValue {
                         (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
                             hay.contains(needle.as_str())
                         }
-                        (TypedValue::List { items }, needle) => {
-                            items.iter().any(|item| compare_typed(item, needle) == Ordering::Equal)
-                        }
+                        (TypedValue::List { items }, needle) => items
+                            .iter()
+                            .any(|item| compare_typed(item, needle) == Ordering::Equal),
                         _ => false,
                     },
                 };
             }
             if name == "length" && args.len() == 1 {
                 return match eval_to_typed(&args[0], ctx) {
-                    TypedValue::List { items } => TypedValue::Number { value: items.len() as f64 },
-                    TypedValue::Text { value } => TypedValue::Number { value: value.chars().count() as f64 },
+                    TypedValue::List { items } => TypedValue::Number {
+                        value: items.len() as f64,
+                    },
+                    TypedValue::Text { value } => TypedValue::Number {
+                        value: value.chars().count() as f64,
+                    },
                     TypedValue::Number { value } => TypedValue::Number { value },
                     _ => TypedValue::Null,
                 };
@@ -121,7 +129,9 @@ pub fn eval_to_typed(expr: &Expr, ctx: &EvalCtx) -> TypedValue {
 pub fn field_value(field: &FieldRef, ctx: &EvalCtx) -> TypedValue {
     match ctx {
         EvalCtx::Page(page) => page_field_value(field, page),
-        EvalCtx::Group { key, group_by_path, .. } => {
+        EvalCtx::Group {
+            key, group_by_path, ..
+        } => {
             // After GROUP BY only `key` and the original GROUP BY field resolve
             // to a plain value; `rows` / `rows.field` are list-shaped and only
             // meaningful inside aggregate calls.
@@ -140,11 +150,21 @@ pub fn field_value(field: &FieldRef, ctx: &EvalCtx) -> TypedValue {
 fn page_field_value(field: &FieldRef, page: &PageRow) -> TypedValue {
     let key = field.0.join(".");
     match key.as_str() {
-        "file.name" | "name" => TypedValue::Text { value: page.name.clone() },
-        "file.path" | "path" => TypedValue::Text { value: page.path.clone() },
-        "file.folder" | "folder" => TypedValue::Text { value: page.folder.clone() },
-        "file.tags" | "tags" => TypedValue::Text { value: page.tags.join(", ") },
-        "file.links" | "links" => TypedValue::Text { value: page.links.join(", ") },
+        "file.name" | "name" => TypedValue::Text {
+            value: page.name.clone(),
+        },
+        "file.path" | "path" => TypedValue::Text {
+            value: page.path.clone(),
+        },
+        "file.folder" | "folder" => TypedValue::Text {
+            value: page.folder.clone(),
+        },
+        "file.tags" | "tags" => TypedValue::Text {
+            value: page.tags.join(", "),
+        },
+        "file.links" | "links" => TypedValue::Text {
+            value: page.links.join(", "),
+        },
         _ => page
             .frontmatter
             .iter()
@@ -167,16 +187,18 @@ fn eval_aggregate(name: &str, args: &[Expr], ctx: &EvalCtx) -> TypedValue {
     let arg = &args[0];
     // count(rows) / length(rows): the group size.
     if matches!(name, "count" | "length") && is_rows_ref(arg) {
-        return TypedValue::Number { value: members.len() as f64 };
+        return TypedValue::Number {
+            value: members.len() as f64,
+        };
     }
     // The argument's value per member (`rows.X` resolves to `X` per member).
-    let values: Vec<TypedValue> = members
-        .iter()
-        .map(|m| eval_member_arg(arg, m))
-        .collect();
+    let values: Vec<TypedValue> = members.iter().map(|m| eval_member_arg(arg, m)).collect();
     match name {
         "count" | "length" => TypedValue::Number {
-            value: values.iter().filter(|v| !matches!(v, TypedValue::Null)).count() as f64,
+            value: values
+                .iter()
+                .filter(|v| !matches!(v, TypedValue::Null))
+                .count() as f64,
         },
         "sum" => TypedValue::Number {
             value: values.iter().filter_map(numeric).sum(),

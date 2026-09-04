@@ -1,0 +1,1 @@
+{"data":{"file":"packages/ui/src/components/file-tree/FileTreeContextMenu.tsx","added":"ContextMenuItemIcon helper component + ReactNode type import","replaced":12,"remaining raw spans":1,"status":"complete"}}

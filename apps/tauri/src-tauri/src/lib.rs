@@ -23,8 +23,7 @@ use tauri::Manager;
 /// Wall-clock anchor for TTI measurement (ADR-017): set before any Tauri
 /// setup so `boot` can report how long after process spawn the webview's
 /// first invoke arrives. Read via [`process_uptime_ms`].
-pub static PROCESS_START: std::sync::OnceLock<std::time::Instant> =
-    std::sync::OnceLock::new();
+pub static PROCESS_START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
 /// Milliseconds since the process started, or `None` if the anchor was not
 /// initialized (should never happen — `run()` sets it first).
@@ -34,10 +33,10 @@ pub fn process_uptime_ms() -> Option<u64> {
 
 use commands::{
     autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
-    create_untitled_note, parse_frontmatter, delete_file, delete_paths, get_asset_audit,
-    get_assets, get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace, move_paths,
-    open_file, open_files, open_vault_dialog, reindex_vault, reorganize_assets, rename_note,
-    rename_path, run_query, save_attachment, save_file, save_files, search_content,
+    create_untitled_note, delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks,
+    get_graph, get_settings, get_vault_tree, get_workspace, move_paths, open_file, open_files,
+    open_vault_dialog, parse_frontmatter, reindex_vault, rename_note, rename_path,
+    reorganize_assets, run_query, save_attachment, save_file, save_files, search_content,
     search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 

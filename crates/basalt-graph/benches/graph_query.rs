@@ -1,8 +1,8 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_graph::{NodeId, NoteGraph, StringArena};
 use basalt_types::FileMetadata;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 fn make_metadata(index: usize, total: usize) -> FileMetadata {
     let mut meta = FileMetadata::new();
@@ -37,41 +37,29 @@ fn bench_graph_query(c: &mut Criterion) {
         let (graph, _arena, ids) = populate(size);
 
         group.throughput(Throughput::Elements(size as u64));
-        group.bench_with_input(
-            BenchmarkId::new("backlinks", size),
-            &ids,
-            |b, ids| {
-                b.iter(|| {
-                    for id in ids {
-                        black_box(graph.get_back_links(*id));
-                    }
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("backlinks", size), &ids, |b, ids| {
+            b.iter(|| {
+                for id in ids {
+                    black_box(graph.get_back_links(*id));
+                }
+            })
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("forward_links", size),
-            &ids,
-            |b, ids| {
-                b.iter(|| {
-                    for id in ids {
-                        black_box(graph.get_forward_links(*id));
-                    }
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("forward_links", size), &ids, |b, ids| {
+            b.iter(|| {
+                for id in ids {
+                    black_box(graph.get_forward_links(*id));
+                }
+            })
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("metadata", size),
-            &ids,
-            |b, ids| {
-                b.iter(|| {
-                    for id in ids {
-                        black_box(graph.get_metadata(*id));
-                    }
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("metadata", size), &ids, |b, ids| {
+            b.iter(|| {
+                for id in ids {
+                    black_box(graph.get_metadata(*id));
+                }
+            })
+        });
     }
 
     group.finish();

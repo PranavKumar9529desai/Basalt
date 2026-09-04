@@ -10,8 +10,8 @@ use crate::app_state::AppState;
 use crate::error::{AppError, AppResult};
 
 use super::common::{
-    canonical_md_path, canonical_vault_path, ensure_inside_vault, index_remove,
-    index_upsert, register_self_writes, strip_asset_ext, validate_name,
+    canonical_md_path, canonical_vault_path, ensure_inside_vault, index_remove, index_upsert,
+    register_self_writes, strip_asset_ext, validate_name,
 };
 use basalt_parser::{rewrite_wikilinks, NoteRename};
 use basalt_vault::path_utils::resolve_creation_path;
@@ -376,7 +376,8 @@ fn rename_note_impl(
     register_self_writes(state, &self_write_paths);
 
     // 3. Actually move the file.
-    std::fs::rename(&old_abs, &new_abs).map_err(|e| AppError::Io(format!("failed to rename: {e}")))?;
+    std::fs::rename(&old_abs, &new_abs)
+        .map_err(|e| AppError::Io(format!("failed to rename: {e}")))?;
 
     // 4. Read + rewrite each candidate's content (no vault lock held).
     //    `rewritten` maps final on-disk path -> content to re-index.
@@ -393,7 +394,8 @@ fn rename_note_impl(
         };
         let next = rewrite_wikilinks(&content, &rename);
         if next != content {
-            std::fs::write(&disk, &next).map_err(|e| AppError::Io(format!("failed to update '{c}': {e}")))?;
+            std::fs::write(&disk, &next)
+                .map_err(|e| AppError::Io(format!("failed to update '{c}': {e}")))?;
         }
         let key = if *c == old_path_str {
             new_path_str.clone()
@@ -456,11 +458,7 @@ fn rename_attachments_for_note(
 ) -> AppResult<()> {
     use basalt_vault::asset_index::AssetInfo;
 
-    let get = |key: &str| {
-        settings
-            .and_then(|s| s.get(key))
-            .and_then(|v| v.as_str())
-    };
+    let get = |key: &str| settings.and_then(|s| s.get(key)).and_then(|v| v.as_str());
 
     let rename_enabled = settings
         .and_then(|s| s.get("renameAttachmentsWithNote"))
@@ -588,8 +586,9 @@ fn rename_attachments_for_note(
                     continue;
                 }
                 register_self_writes(state, &[std::path::PathBuf::from(note_path)]);
-                std::fs::write(note_path, &next)
-                    .map_err(|e| AppError::Io(format!("failed to update embeds in '{note_path}': {e}")))?;
+                std::fs::write(note_path, &next).map_err(|e| {
+                    AppError::Io(format!("failed to update embeds in '{note_path}': {e}"))
+                })?;
             }
         }
     }
@@ -597,279 +596,301 @@ fn rename_attachments_for_note(
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use basalt_vault::path_utils::resolve_creation_path;
-  #[test]
-  fn test_valid_note_creation_path() {
-      let vault = std::path::PathBuf::from("/vault");
-      let (dir, file, name) = resolve_creation_path(&vault, None, "test", false).unwrap();
-      assert_eq!(dir, std::path::PathBuf::from("/vault"));
-      assert_eq!(file, std::path::PathBuf::from("/vault/test.md"));
-      assert_eq!(name, "test.md");
-  }
-  #[test]
-  fn test_valid_nested_note() {
-      let vault = std::path::PathBuf::from("/vault");
-      let (dir, file, name) = resolve_creation_path(&vault, None, "a/b/c", false).unwrap();
-      assert_eq!(dir, std::path::PathBuf::from("/vault/a/b"));
-      assert_eq!(file, std::path::PathBuf::from("/vault/a/b/c.md"));
-      assert_eq!(name, "c.md");
-  }
-  #[test]
-  fn test_rejects_empty_name() {
-      let vault = std::path::PathBuf::from("/vault");
-      assert!(resolve_creation_path(&vault, None, "   ", false).is_err());
-      assert!(resolve_creation_path(&vault, None, "///", false).is_err());
-  }
+    #[test]
+    fn test_valid_note_creation_path() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "test", false).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/test.md"));
+        assert_eq!(name, "test.md");
+    }
+    #[test]
+    fn test_valid_nested_note() {
+        let vault = std::path::PathBuf::from("/vault");
+        let (dir, file, name) = resolve_creation_path(&vault, None, "a/b/c", false).unwrap();
+        assert_eq!(dir, std::path::PathBuf::from("/vault/a/b"));
+        assert_eq!(file, std::path::PathBuf::from("/vault/a/b/c.md"));
+        assert_eq!(name, "c.md");
+    }
+    #[test]
+    fn test_rejects_empty_name() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "   ", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "///", false).is_err());
+    }
 
-  #[test]
-  fn test_rejects_invalid_chars() {
-      let vault = std::path::PathBuf::from("/vault");
-      assert!(resolve_creation_path(&vault, None, "foo*bar", false).is_err());
-      assert!(resolve_creation_path(&vault, None, "foo/bar?baz", false).is_err());
-  }
+    #[test]
+    fn test_rejects_invalid_chars() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "foo*bar", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "foo/bar?baz", false).is_err());
+    }
 
-  #[test]
-  fn test_rejects_too_deep() {
-      let vault = std::path::PathBuf::from("/vault");
-      assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10/11", false).is_err());
-      assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10", false).is_ok());
-  }
+    #[test]
+    fn test_rejects_too_deep() {
+        let vault = std::path::PathBuf::from("/vault");
+        assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10/11", false).is_err());
+        assert!(resolve_creation_path(&vault, None, "1/2/3/4/5/6/7/8/9/10", false).is_ok());
+    }
 
-  #[test]
-  fn test_rejects_long_components() {
-      let vault = std::path::PathBuf::from("/vault");
-      let long_name = "a".repeat(256);
-      assert!(resolve_creation_path(&vault, None, &long_name, false).is_err());
+    #[test]
+    fn test_rejects_long_components() {
+        let vault = std::path::PathBuf::from("/vault");
+        let long_name = "a".repeat(256);
+        assert!(resolve_creation_path(&vault, None, &long_name, false).is_err());
 
-      let valid_deep = "a".repeat(255);
-      assert!(resolve_creation_path(&vault, None, &valid_deep, false).is_ok());
-  }
-  #[test]
-  fn test_untitled_name_sequence() {
-      // Verify the name generation logic in isolation.
-      // "Untitled" is index 0, "Untitled 1" is index 1, etc.
-      let name_for = |i: u32| -> String {
-          if i == 0 {
-              "Untitled".to_string()
-          } else {
-              format!("Untitled {i}")
-          }
-      };
+        let valid_deep = "a".repeat(255);
+        assert!(resolve_creation_path(&vault, None, &valid_deep, false).is_ok());
+    }
+    #[test]
+    fn test_untitled_name_sequence() {
+        // Verify the name generation logic in isolation.
+        // "Untitled" is index 0, "Untitled 1" is index 1, etc.
+        let name_for = |i: u32| -> String {
+            if i == 0 {
+                "Untitled".to_string()
+            } else {
+                format!("Untitled {i}")
+            }
+        };
 
-      assert_eq!(name_for(0), "Untitled");
-      assert_eq!(name_for(1), "Untitled 1");
-      assert_eq!(name_for(99), "Untitled 99");
-  }
+        assert_eq!(name_for(0), "Untitled");
+        assert_eq!(name_for(1), "Untitled 1");
+        assert_eq!(name_for(99), "Untitled 99");
+    }
 
     fn temp_vault() -> (std::path::PathBuf, crate::app_state::AppState) {
-      use std::time::{SystemTime, UNIX_EPOCH};
-      let n = SystemTime::now()
-          .duration_since(UNIX_EPOCH)
-          .unwrap()
-          .as_nanos();
-      let root = std::env::temp_dir().join(format!("basalt-rename-test-{n}"));
-      std::fs::create_dir_all(&root).unwrap();
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let n = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("basalt-rename-test-{n}"));
+        std::fs::create_dir_all(&root).unwrap();
 
-      let a = root.join("a.md");
-      let b = root.join("b.md");
-      let c = root.join("c.md");
-      std::fs::write(&a, "See [[b]] and [[b#Heading]].\n").unwrap();
-      std::fs::write(&b, "I am B.\n").unwrap();
-      std::fs::write(&c, "Unrelated.\n").unwrap();
+        let a = root.join("a.md");
+        let b = root.join("b.md");
+        let c = root.join("c.md");
+        std::fs::write(&a, "See [[b]] and [[b#Heading]].\n").unwrap();
+        std::fs::write(&b, "I am B.\n").unwrap();
+        std::fs::write(&c, "Unrelated.\n").unwrap();
 
-      let state = AppState::default();
-      for p in [&a, &b, &c] {
-          let str = p.to_string_lossy().to_string();
-          let content = std::fs::read_to_string(p).unwrap();
-          state.vault.write().unwrap().add_document(&str, &content);
-      }
-      *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
-      (root, state)
+        let state = AppState::default();
+        for p in [&a, &b, &c] {
+            let str = p.to_string_lossy().to_string();
+            let content = std::fs::read_to_string(p).unwrap();
+            state.vault.write().unwrap().add_document(&str, &content);
+        }
+        *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
+        (root, state)
     }
 
     fn temp_vault_with_self_refs() -> (std::path::PathBuf, crate::app_state::AppState) {
-      use std::time::{SystemTime, UNIX_EPOCH};
-      let n = SystemTime::now()
-          .duration_since(UNIX_EPOCH)
-          .unwrap()
-          .as_nanos();
-      let root = std::env::temp_dir().join(format!("basalt-rename-test-self-{n}"));
-      std::fs::create_dir_all(&root).unwrap();
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let n = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("basalt-rename-test-self-{n}"));
+        std::fs::create_dir_all(&root).unwrap();
 
-      let state = AppState::default();
-      for (file, content) in [
-          ("a.md", "See [[b]].\n"),
-          ("b.md", "Self: [[b]] and [[b|alias]].\n"),
-          ("c.md", "Unrelated.\n"),
-      ] {
-          let p = root.join(file);
-          std::fs::write(&p, content).unwrap();
-          let str = p.to_string_lossy().to_string();
-          state.vault.write().unwrap().add_document(&str, content);
-      }
-      *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
-      (root, state)
+        let state = AppState::default();
+        for (file, content) in [
+            ("a.md", "See [[b]].\n"),
+            ("b.md", "Self: [[b]] and [[b|alias]].\n"),
+            ("c.md", "Unrelated.\n"),
+        ] {
+            let p = root.join(file);
+            std::fs::write(&p, content).unwrap();
+            let str = p.to_string_lossy().to_string();
+            state.vault.write().unwrap().add_document(&str, content);
+        }
+        *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
+        (root, state)
     }
-  #[test]
-  fn rename_rewrites_links_in_other_notes_and_graph() {
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
+    #[test]
+    fn rename_rewrites_links_in_other_notes_and_graph() {
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
 
-      let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
+        let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
 
-      assert_eq!(res.name, "renamedB");
-      assert!(res.path.ends_with("renamedB.md"));
-      assert!(root.join("renamedB.md").exists(), "file renamed on disk");
-      assert!(!root.join("b.md").exists(), "old file removed");
+        assert_eq!(res.name, "renamedB");
+        assert!(res.path.ends_with("renamedB.md"));
+        assert!(root.join("renamedB.md").exists(), "file renamed on disk");
+        assert!(!root.join("b.md").exists(), "old file removed");
 
-      let a_str = root.join("a.md").to_string_lossy().to_string();
-      let a_content = std::fs::read_to_string(&a_str).unwrap();
-      assert!(a_content.contains("[[renamedB]]"), "bare link rewritten");
-      assert!(
-          a_content.contains("[[renamedB#Heading]]"),
-          "anchored link rewritten"
-      );
-      assert!(!a_content.contains("[[b"), "no stale old-target links remain");
-      assert!(
-          res.updated_files.contains(&a_str),
-          "a.md reported as updated"
-      );
+        let a_str = root.join("a.md").to_string_lossy().to_string();
+        let a_content = std::fs::read_to_string(&a_str).unwrap();
+        assert!(a_content.contains("[[renamedB]]"), "bare link rewritten");
+        assert!(
+            a_content.contains("[[renamedB#Heading]]"),
+            "anchored link rewritten"
+        );
+        assert!(
+            !a_content.contains("[[b"),
+            "no stale old-target links remain"
+        );
+        assert!(
+            res.updated_files.contains(&a_str),
+            "a.md reported as updated"
+        );
 
-      // Graph: old node gone, new node present with rewritten links.
-      let vault = state.vault.read().unwrap();
-      let has_old = vault
-          .graph
-          .metadata_cache
-          .keys()
-          .filter_map(|id| vault.arena.get_string(*id))
-          .any(|p| p == &b_str);
-      let has_new = vault
-          .graph
-          .metadata_cache
-          .keys()
-          .filter_map(|id| vault.arena.get_string(*id))
-          .any(|p| p == &res.path);
-      assert!(!has_old, "old path dropped from cache");
-      assert!(has_new, "new path indexed in cache");
-      let a_id = vault.arena.get_id(&a_str).unwrap();
-      let a_meta = vault.graph.metadata_cache.get(&a_id).unwrap();
-      assert!(
-          a_meta.links.contains(&"renamedB".to_string()),
-          "a.md's cached links point at the new stem"
-      );
-  }
+        // Graph: old node gone, new node present with rewritten links.
+        let vault = state.vault.read().unwrap();
+        let has_old = vault
+            .graph
+            .metadata_cache
+            .keys()
+            .filter_map(|id| vault.arena.get_string(*id))
+            .any(|p| p == &b_str);
+        let has_new = vault
+            .graph
+            .metadata_cache
+            .keys()
+            .filter_map(|id| vault.arena.get_string(*id))
+            .any(|p| p == &res.path);
+        assert!(!has_old, "old path dropped from cache");
+        assert!(has_new, "new path indexed in cache");
+        let a_id = vault.arena.get_id(&a_str).unwrap();
+        let a_meta = vault.graph.metadata_cache.get(&a_id).unwrap();
+        assert!(
+            a_meta.links.contains(&"renamedB".to_string()),
+            "a.md's cached links point at the new stem"
+        );
+    }
 
-  #[test]
-  fn rename_rewrites_self_links_inside_the_note() {
-      let (root, state) = temp_vault_with_self_refs();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
-      let content = std::fs::read_to_string(root.join("renamedB.md")).unwrap();
-      assert!(content.contains("[[renamedB]]"));
-      assert!(content.contains("[[renamedB|alias]]"));
-      assert!(res.path.ends_with("renamedB.md"));
-  }
+    #[test]
+    fn rename_rewrites_self_links_inside_the_note() {
+        let (root, state) = temp_vault_with_self_refs();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let res = rename_note_impl(&b_str, "renamedB", &state, None).unwrap();
+        let content = std::fs::read_to_string(root.join("renamedB.md")).unwrap();
+        assert!(content.contains("[[renamedB]]"));
+        assert!(content.contains("[[renamedB|alias]]"));
+        assert!(res.path.ends_with("renamedB.md"));
+    }
 
-  #[test]
-  fn rename_rejects_collision() {
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      let err = rename_note_impl(&b_str, "c", &state, None).unwrap_err().to_string();
-      assert!(err.contains("already exists"));
-  }
+    #[test]
+    fn rename_rejects_collision() {
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let err = rename_note_impl(&b_str, "c", &state, None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("already exists"));
+    }
 
-  #[test]
-  fn rename_rejects_same_name() {
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      let err = rename_note_impl(&b_str, "B", &state, None).unwrap_err().to_string();
-      assert!(err.contains("already has that name"));
-  }
+    #[test]
+    fn rename_rejects_same_name() {
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let err = rename_note_impl(&b_str, "B", &state, None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("already has that name"));
+    }
 
-  #[test]
-  fn rename_strips_trailing_md_extension() {
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      let res = rename_note_impl(&b_str, "final.md", &state, None).unwrap();
-      assert_eq!(res.name, "final");
-      assert!(root.join("final.md").exists());
-  }
+    #[test]
+    fn rename_strips_trailing_md_extension() {
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let res = rename_note_impl(&b_str, "final.md", &state, None).unwrap();
+        assert_eq!(res.name, "final");
+        assert!(root.join("final.md").exists());
+    }
 
-  #[test]
-  fn rename_rejects_invalid_names() {
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      assert!(rename_note_impl(&b_str, "   ", &state, None).is_err());
-      assert!(rename_note_impl(&b_str, "a/b", &state, None).is_err());
-      assert!(rename_note_impl(&b_str, "..", &state, None).is_err());
-  }
+    #[test]
+    fn rename_rejects_invalid_names() {
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        assert!(rename_note_impl(&b_str, "   ", &state, None).is_err());
+        assert!(rename_note_impl(&b_str, "a/b", &state, None).is_err());
+        assert!(rename_note_impl(&b_str, "..", &state, None).is_err());
+    }
 
-  #[test]
-  fn rename_with_note_moves_attachments_and_rewrites_embeds() {
-      use basalt_vault::asset_index::AssetInfo;
-      use std::collections::HashMap;
+    #[test]
+    fn rename_with_note_moves_attachments_and_rewrites_embeds() {
+        use basalt_vault::asset_index::AssetInfo;
+        use std::collections::HashMap;
 
-      let (root, state) = temp_vault();
-      let b_str = root.join("b.md").to_string_lossy().to_string();
-      let old_abs = root.join("b.md");
+        let (root, state) = temp_vault();
+        let b_str = root.join("b.md").to_string_lossy().to_string();
+        let old_abs = root.join("b.md");
 
-      // Create _attachments/b/logo.png (simulating by_note org).
-      let attach_dir = root.join("_attachments").join("b");
-      std::fs::create_dir_all(&attach_dir).unwrap();
-      let png_path = attach_dir.join("logo.png");
-      std::fs::write(&png_path, [0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic bytes
-      let attach_abs = png_path.to_string_lossy().to_string();
-      let attach_rel = "_attachments/b/logo.png".to_string();
-      let embed_target = "_attachments/b/logo".to_string();
+        // Create _attachments/b/logo.png (simulating by_note org).
+        let attach_dir = root.join("_attachments").join("b");
+        std::fs::create_dir_all(&attach_dir).unwrap();
+        let png_path = attach_dir.join("logo.png");
+        std::fs::write(&png_path, [0x89u8, 0x50, 0x4E, 0x47]).unwrap(); // PNG magic bytes
+        let attach_abs = png_path.to_string_lossy().to_string();
+        let attach_rel = "_attachments/b/logo.png".to_string();
+        let embed_target = "_attachments/b/logo".to_string();
 
-      // Register the asset in the index with embeds_by referencing note B.
-      state.vault.write().unwrap().asset_index.upsert(AssetInfo {
-          rel_path: attach_rel.clone(),
-          abs_path: attach_abs.clone(),
-          file_name: "logo.png".into(),
-          file_type: basalt_vault::asset_index::FileType::Image,
-          mime_type: "image/png".into(),
-          size_bytes: 4,
-          content_hash: "test123".into(),
-          width: None,
-          height: None,
-          embeds_by: vec![old_abs.to_string_lossy().to_string()],
-          linked_by: vec![],
-      });
+        // Register the asset in the index with embeds_by referencing note B.
+        state.vault.write().unwrap().asset_index.upsert(AssetInfo {
+            rel_path: attach_rel.clone(),
+            abs_path: attach_abs.clone(),
+            file_name: "logo.png".into(),
+            file_type: basalt_vault::asset_index::FileType::Image,
+            mime_type: "image/png".into(),
+            size_bytes: 4,
+            content_hash: "test123".into(),
+            width: None,
+            height: None,
+            embeds_by: vec![old_abs.to_string_lossy().to_string()],
+            linked_by: vec![],
+        });
 
-      // Note C references the asset via ![[embed_target]].
-      let c_str = root.join("c.md").to_string_lossy().to_string();
-      let c_content = format!("Logo: ![[{embed_target}]]\n");
-      std::fs::write(&c_str, &c_content).unwrap();
-      state.vault.write().unwrap().add_document(&c_str, &c_content);
+        // Note C references the asset via ![[embed_target]].
+        let c_str = root.join("c.md").to_string_lossy().to_string();
+        let c_content = format!("Logo: ![[{embed_target}]]\n");
+        std::fs::write(&c_str, &c_content).unwrap();
+        state
+            .vault
+            .write()
+            .unwrap()
+            .add_document(&c_str, &c_content);
 
-      // Simulate by_note settings.
-      let mut settings: HashMap<String, serde_json::Value> = HashMap::new();
-      settings.insert("attachmentOrganization".into(), serde_json::Value::String("by_note".into()));
-      settings.insert("renameAttachmentsWithNote".into(), serde_json::Value::Bool(true));
-      settings.insert("attachmentFolder".into(), serde_json::Value::String("_attachments".into()));
+        // Simulate by_note settings.
+        let mut settings: HashMap<String, serde_json::Value> = HashMap::new();
+        settings.insert(
+            "attachmentOrganization".into(),
+            serde_json::Value::String("by_note".into()),
+        );
+        settings.insert(
+            "renameAttachmentsWithNote".into(),
+            serde_json::Value::Bool(true),
+        );
+        settings.insert(
+            "attachmentFolder".into(),
+            serde_json::Value::String("_attachments".into()),
+        );
 
-      let res = rename_note_impl(&b_str, "renamedB", &state, Some(&settings)).unwrap();
+        let res = rename_note_impl(&b_str, "renamedB", &state, Some(&settings)).unwrap();
 
-      assert_eq!(res.name, "renamedB");
-      assert!(root.join("renamedB.md").exists(), "note renamed");
-      assert!(!root.join("b.md").exists(), "old note gone");
+        assert_eq!(res.name, "renamedB");
+        assert!(root.join("renamedB.md").exists(), "note renamed");
+        assert!(!root.join("b.md").exists(), "old note gone");
 
-      // Asset moved from _attachments/b/ → _attachments/renamedB/.
-      let new_attach = root.join("_attachments").join("renamedB").join("logo.png");
-      assert!(new_attach.exists(), "asset moved to new note dir");
-      assert!(!png_path.exists(), "old asset path gone");
+        // Asset moved from _attachments/b/ → _attachments/renamedB/.
+        let new_attach = root.join("_attachments").join("renamedB").join("logo.png");
+        assert!(new_attach.exists(), "asset moved to new note dir");
+        assert!(!png_path.exists(), "old asset path gone");
 
-      // Embed in note C rewritten to new path.
-      let c_after = std::fs::read_to_string(&c_str).unwrap();
-      assert!(
-          c_after.contains("_attachments/renamedB/logo"),
-          "embed rewritten: {c_after}"
-      );
-      assert!(!c_after.contains("_attachments/b/logo"), "old embed removed: {c_after}");
-  }
+        // Embed in note C rewritten to new path.
+        let c_after = std::fs::read_to_string(&c_str).unwrap();
+        assert!(
+            c_after.contains("_attachments/renamedB/logo"),
+            "embed rewritten: {c_after}"
+        );
+        assert!(
+            !c_after.contains("_attachments/b/logo"),
+            "old embed removed: {c_after}"
+        );
+    }
 }

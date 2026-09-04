@@ -1,6 +1,4 @@
-use tantivy::schema::{
-    IndexRecordOption, Schema, TextFieldIndexing, TextOptions, STRING, STORED,
-};
+use tantivy::schema::{IndexRecordOption, Schema, TextFieldIndexing, TextOptions, STORED, STRING};
 
 pub fn build_schema() -> (
     Schema,
@@ -19,7 +17,6 @@ pub fn build_schema() -> (
         )
         .set_stored();
 
-
     // STRING = indexed as a single raw token (no stemming) + stored; enables exact-match deletion
     let path_field = builder.add_text_field("path", STRING | STORED);
     let title_field = builder.add_text_field("title", stored_text.clone());
@@ -28,5 +25,11 @@ pub fn build_schema() -> (
     let body_field = builder.add_text_field("body", stored_text.clone());
     let tags_field = builder.add_text_field("tags", stored_text);
 
-    (builder.build(), path_field, title_field, body_field, tags_field)
+    (
+        builder.build(),
+        path_field,
+        title_field,
+        body_field,
+        tags_field,
+    )
 }

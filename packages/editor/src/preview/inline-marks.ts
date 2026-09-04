@@ -3,6 +3,8 @@ import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
 import { isInCodeBlock } from "./types";
 
+/** Fresh regex instance per call — the `g` flag carries state between calls. */
+const TAG_RE = () => /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
     fontFamily: "var(--sat-font-mono)",
@@ -118,9 +120,8 @@ export function handleTagsInLine(
   codeBlockRanges: { from: number; to: number }[],
   collector: DecorationCollector,
 ): void {
-  performance.mark("basalt:handleTagsInLine:start");
-  const TAG_RE = /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
-  let match: RegExpExecArray | null = TAG_RE.exec(lineText);
+  const tagRe = TAG_RE();
+  let match: RegExpExecArray | null = tagRe.exec(lineText);
   let iterations = 0;
 
   while (match !== null) {
@@ -136,7 +137,7 @@ export function handleTagsInLine(
     const prevMatch = match;
     // Advance regex BEFORE any continue — prevents infinite loop when a
     // match is inside a code block or not preceded by whitespace.
-    match = TAG_RE.exec(lineText);
+    match = tagRe.exec(lineText);
 
     // Use binary-search-based isInCodeBlock (assumes ranges are sorted)
     if (isInCodeBlock(from, codeBlockRanges)) continue;
@@ -147,11 +148,4 @@ export function handleTagsInLine(
 
     collector.addMark(from, to, "cm-live-tag");
   }
-
-  performance.mark("basalt:handleTagsInLine:end");
-  performance.measure(
-    "basalt:handleTagsInLine",
-    "basalt:handleTagsInLine:start",
-    "basalt:handleTagsInLine:end",
-  );
 }

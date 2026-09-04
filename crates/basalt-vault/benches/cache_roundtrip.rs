@@ -1,10 +1,16 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_vault::{Vault, VaultCache};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 fn generate_note_content(index: usize, total: usize) -> String {

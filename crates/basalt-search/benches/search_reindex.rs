@@ -1,11 +1,17 @@
 use std::hint::black_box;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_search::tantivy::index::TantivyIndex;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 fn generate_doc(index: usize, total: usize) -> (String, String, String, String) {
@@ -39,12 +45,9 @@ fn bench_search_reindex(c: &mut Criterion) {
                     let run_id = RUN.fetch_add(1, Ordering::Relaxed);
                     let dir = base_dir.path().join(format!("run_{run_id}"));
                     std::fs::create_dir_all(&dir).unwrap();
-                    let mut index =
-                        TantivyIndex::open_or_create(&dir).expect("open_or_create");
+                    let mut index = TantivyIndex::open_or_create(&dir).expect("open_or_create");
                     for (path, title, body, tags) in &docs {
-                        index
-                            .update_document(path, title, body, tags)
-                            .unwrap();
+                        index.update_document(path, title, body, tags).unwrap();
                     }
                     index.commit().unwrap();
                     (dir, index)

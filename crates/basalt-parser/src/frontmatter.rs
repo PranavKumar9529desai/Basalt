@@ -188,13 +188,17 @@ fn parse_key_line(line: &str) -> Option<(String, &str, usize)> {
     if !first.is_alphanumeric() && first != '_' && first != '-' {
         return None;
     }
-    if !key.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+    if !key
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
         return None;
     }
 
     let after = colon + 1;
     let mut vstart = after;
-    if vstart < line.len() && (line.as_bytes()[vstart] == b' ' || line.as_bytes()[vstart] == b'\t') {
+    if vstart < line.len() && (line.as_bytes()[vstart] == b' ' || line.as_bytes()[vstart] == b'\t')
+    {
         vstart += 1;
     }
     let value_text = &line[vstart..];
@@ -225,7 +229,9 @@ fn yaml_to_value(v: &Value) -> FrontmatterValue {
         Value::String(s) => infer_string(s),
         Value::Sequence(seq) => FrontmatterValue::List(seq.iter().map(yaml_to_value).collect()),
         Value::Tagged(_) => FrontmatterValue::Text(serde_yaml_ng::to_string(v).unwrap_or_default()),
-        Value::Mapping(_) => FrontmatterValue::Text(serde_yaml_ng::to_string(v).unwrap_or_default()),
+        Value::Mapping(_) => {
+            FrontmatterValue::Text(serde_yaml_ng::to_string(v).unwrap_or_default())
+        }
     }
 }
 
@@ -250,11 +256,7 @@ pub(crate) fn first_wikilink_target(s: &str) -> Option<String> {
     let rest = &s[open + 2..];
     let close = rest.find("]]")?;
     let inner = &rest[..close];
-    let target = inner
-        .split(['|', '#'])
-        .next()
-        .unwrap_or("")
-        .trim();
+    let target = inner.split(['|', '#']).next().unwrap_or("").trim();
     if target.is_empty() {
         None
     } else {
@@ -271,11 +273,7 @@ pub(crate) fn collect_wikilinks(s: &str, out: &mut Vec<String>) {
             let start = i + 2;
             if let Some(close) = s[start..].find("]]") {
                 let inner = &s[start..start + close];
-                let target = inner
-                    .split(['|', '#'])
-                    .next()
-                    .unwrap_or("")
-                    .trim();
+                let target = inner.split(['|', '#']).next().unwrap_or("").trim();
                 if !target.is_empty() {
                     out.push(target.to_string());
                 }
@@ -366,14 +364,15 @@ mod tests {
 
     #[test]
     fn parses_scalar_types() {
-        let m = model(
-            "---\ntitle: Hello\nrating: 5\npublished: true\ndate: 2024-01-01\n---\nbody",
-        );
+        let m = model("---\ntitle: Hello\nrating: 5\npublished: true\ndate: 2024-01-01\n---\nbody");
         assert_eq!(m.entries.len(), 4);
         assert_eq!(m.entries[0].value, FrontmatterValue::Text("Hello".into()));
         assert_eq!(m.entries[1].value, FrontmatterValue::Number(5.0));
         assert_eq!(m.entries[2].value, FrontmatterValue::Checkbox(true));
-        assert_eq!(m.entries[3].value, FrontmatterValue::Date("2024-01-01".into()));
+        assert_eq!(
+            m.entries[3].value,
+            FrontmatterValue::Date("2024-01-01".into())
+        );
         assert!(m.diagnostics.is_empty());
     }
 
@@ -393,7 +392,10 @@ mod tests {
     #[test]
     fn link_value_is_typed_and_unquoted() {
         let m = model("---\nrelated: \"[[Other Note]]\"\n---\nbody");
-        assert_eq!(m.entries[0].value, FrontmatterValue::Link("Other Note".into()));
+        assert_eq!(
+            m.entries[0].value,
+            FrontmatterValue::Link("Other Note".into())
+        );
     }
 
     #[test]

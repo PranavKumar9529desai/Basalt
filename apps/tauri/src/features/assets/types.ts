@@ -20,7 +20,6 @@ export interface AssetInfo {
 export interface AuditReport {
   orphan_count: number;
   duplicate_count: number;
-  broken_embed_count: number;
   assets: AssetInfo[];
 }
 

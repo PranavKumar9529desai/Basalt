@@ -56,11 +56,7 @@ pub fn start_watcher(
             }
 
             // Update search index on .md file changes.
-            if changed_path
-                .extension()
-                .and_then(|e| e.to_str())
-                == Some("md")
-            {
+            if changed_path.extension().and_then(|e| e.to_str()) == Some("md") {
                 if let Ok(mut guard) = search_arc.write() {
                     if let Some(ref mut search) = *guard {
                         let path_str = changed_path.to_string_lossy().to_string();
@@ -86,7 +82,11 @@ pub fn start_watcher(
                 }
             }
 
-            let kind = if changed_path.exists() { "modified" } else { "deleted" };
+            let kind = if changed_path.exists() {
+                "modified"
+            } else {
+                "deleted"
+            };
             let _ = app_handle.emit(
                 "vault://file-changed",
                 FileChangeEvent {

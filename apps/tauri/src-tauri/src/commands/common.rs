@@ -108,9 +108,7 @@ pub(super) fn strip_asset_ext(p: &std::path::Path) -> std::borrow::Cow<'_, str> 
             if parent.as_os_str().is_empty() {
                 std::borrow::Cow::Owned(stem.to_string_lossy().to_string())
             } else {
-                std::borrow::Cow::Owned(
-                    format!("{}/{}", parent.display(), stem.to_string_lossy()),
-                )
+                std::borrow::Cow::Owned(format!("{}/{}", parent.display(), stem.to_string_lossy()))
             }
         }
         None => p.to_string_lossy(),
@@ -134,4 +132,3 @@ pub(super) fn validate_name(raw: &str) -> AppResult<String> {
     }
     Ok(name)
 }
-

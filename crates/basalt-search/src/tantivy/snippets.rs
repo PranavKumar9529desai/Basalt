@@ -30,7 +30,13 @@ pub fn extract_file_matches(
     // Split on '\n', stripping a single trailing '\r' so CRLF files behave.
     let lines: Vec<&str> = body
         .split('\n')
-        .map(|l| if let Some(stripped) = l.strip_suffix('\r') { stripped } else { l })
+        .map(|l| {
+            if let Some(stripped) = l.strip_suffix('\r') {
+                stripped
+            } else {
+                l
+            }
+        })
         .collect();
 
     let mut out = Vec::new();
@@ -43,10 +49,12 @@ pub fn extract_file_matches(
         // boundaries, so find the exact char index of that byte.
         let char_byte: Vec<usize> = line.char_indices().map(|(b, _)| b).collect();
         let byte_to_char = |b: usize| -> usize {
-            char_byte.iter().position(|&cb| cb == b).unwrap_or(char_byte.len())
+            char_byte
+                .iter()
+                .position(|&cb| cb == b)
+                .unwrap_or(char_byte.len())
         };
-        let hits: Vec<(usize, usize)> =
-            ac.find_iter(line).map(|m| (m.start(), m.end())).collect();
+        let hits: Vec<(usize, usize)> = ac.find_iter(line).map(|m| (m.start(), m.end())).collect();
         if hits.is_empty() {
             continue;
         }

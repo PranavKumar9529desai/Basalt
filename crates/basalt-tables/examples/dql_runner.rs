@@ -65,12 +65,15 @@ fn print_result(label: &str, dql: &str, result: &QueryResult) {
                 TypedValue::Null => "null".to_string(),
                 TypedValue::Date { value } => value.clone(),
                 TypedValue::List { items } => {
-                    let parts: Vec<String> = items.iter().map(|item| match item {
-                        TypedValue::Text { value } => value.clone(),
-                        TypedValue::Number { value } => format!("{}", value),
-                        TypedValue::Checkbox { value } => format!("{}", value),
-                        other => format!("{:?}", other),
-                    }).collect();
+                    let parts: Vec<String> = items
+                        .iter()
+                        .map(|item| match item {
+                            TypedValue::Text { value } => value.clone(),
+                            TypedValue::Number { value } => format!("{}", value),
+                            TypedValue::Checkbox { value } => format!("{}", value),
+                            other => format!("{:?}", other),
+                        })
+                        .collect();
                     parts.join(", ")
                 }
             })

@@ -2,55 +2,70 @@ use crate::utf16::TextDocument;
 
 use basalt_types::{FileMetadata, Span};
 
-/// A highly optimized, zero-AST parser that only extracts metadata (frontmatter, tags, links)
-/// Used by `basalt_fs` to quickly index thousands of files without memory bloat.
-pub fn extract_metadata(input: &str) -> FileMetadata {
-    let mut meta = FileMetadata::new();
-    let text_doc = TextDocument::new(input);
-    let bytes = input.as_bytes();
-    let mut i = 0;
+/// Extract and parse YAML frontmatter between `---` fences.
+///
+/// Returns the number of bytes to skip from `input` to reach the body
+/// (past any trailing newline), or 0 if no frontmatter is present.
+fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
+    if !input.starts_with("---\n") && !input.starts_with("---\r\n") {
+        return 0;
+    }
+    let end_idx = match input[4..].find("\n---") {
+        Some(e) => e,
+        None => return 0,
+    };
+    let actual_end = end_idx + 4;
+    let frontmatter_str = &input[4..actual_end];
 
-    // 1. Extract Frontmatter
-    if input.starts_with("---\n") || input.starts_with("---\r\n") {
-        if let Some(end_idx) = input[4..].find("\n---") {
-            let actual_end = end_idx + 4;
-            let frontmatter_str = &input[4..actual_end];
-            if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
-                meta.frontmatter = Some(yaml);
-                // Make frontmatter properties first-class: extract wikilinks /
-                // tags / aliases declared inside the block so they reach the
-                // graph, backlinks and search index (ADR-022 rule 1).
-                if let Some(fm) = &meta.frontmatter {
-                    let mut fm_links: Vec<String> = Vec::new();
-                    let mut fm_tags: Vec<String> = Vec::new();
-                    let mut fm_aliases: Vec<String> = Vec::new();
-                    crate::frontmatter::walk_fm(fm, &mut fm_links, &mut fm_tags, &mut fm_aliases);
-                    for l in fm_links {
-                        if !meta.links.contains(&l) {
-                            meta.links.push(l);
-                        }
-                    }
-                    for t in fm_tags {
-                        if !meta.tags.contains(&t) {
-                            meta.tags.push(t);
-                        }
-                    }
-                    for a in fm_aliases {
-                        meta.aliases.push(a);
-                    }
-                }
+    let yaml = match serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
+        Ok(v) => v,
+        Err(_) => return 0,
+    };
+    meta.frontmatter = Some(yaml);
+
+    // Make frontmatter properties first-class: extract wikilinks /
+    // tags / aliases declared inside the block so they reach the
+    // graph, backlinks and search index (ADR-022 rule 1).
+    if let Some(fm) = &meta.frontmatter {
+        let mut fm_links: Vec<String> = Vec::new();
+        let mut fm_tags: Vec<String> = Vec::new();
+        let mut fm_aliases: Vec<String> = Vec::new();
+        crate::frontmatter::walk_fm(fm, &mut fm_links, &mut fm_tags, &mut fm_aliases);
+        for l in fm_links {
+            if !meta.links.contains(&l) {
+                meta.links.push(l);
             }
-            let after_frontmatter = actual_end + 4;
-            if input.len() > after_frontmatter {
-                i = after_frontmatter;
-                if i < bytes.len() && bytes[i] == b'\n' {
-                    i += 1;
-                }
+        }
+        for t in fm_tags {
+            if !meta.tags.contains(&t) {
+                meta.tags.push(t);
             }
+        }
+        for a in fm_aliases {
+            meta.aliases.push(a);
         }
     }
 
-    // 2. Fast scan for Links, Embeds, Tags, Headings, and Block IDs
+    let after_frontmatter = actual_end + 4;
+    if input.len() > after_frontmatter {
+        let mut skip = after_frontmatter;
+        let bytes = input.as_bytes();
+        if skip < bytes.len() && bytes[skip] == b'\n' {
+            skip += 1;
+        }
+        skip
+    } else {
+        0
+    }
+}
+
+/// Scan the markdown body for links, embeds, tags, headings, and block IDs,
+/// populating `meta` in place.
+fn scan_body_tokens(input: &str, start: usize, meta: &mut FileMetadata) {
+    let text_doc = TextDocument::new(input);
+    let bytes = input.as_bytes();
+    let mut i = start;
+
     while i < bytes.len() {
         match bytes[i] {
             // Wikilink [[...]] or Embed ![[...]]
@@ -79,9 +94,7 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
                         let u16_start = text_doc
                             .byte_offset_to_utf16(start_byte)
                             .unwrap_or(start_byte);
-                        let u16_end = text_doc
-                            .byte_offset_to_utf16(end_byte)
-                            .unwrap_or(end_byte);
+                        let u16_end = text_doc.byte_offset_to_utf16(end_byte).unwrap_or(end_byte);
                         let span = Span {
                             start: u16_start,
                             end: u16_end,
@@ -218,7 +231,14 @@ pub fn extract_metadata(input: &str) -> FileMetadata {
             }
         }
     }
+}
 
+/// A highly optimized, zero-AST parser that only extracts metadata (frontmatter, tags, links)
+/// Used by `basalt_fs` to quickly index thousands of files without memory bloat.
+pub fn extract_metadata(input: &str) -> FileMetadata {
+    let mut meta = FileMetadata::new();
+    let body_start = parse_frontmatter(input, &mut meta);
+    scan_body_tokens(input, body_start, &mut meta);
     meta
 }
 
@@ -253,7 +273,10 @@ mod tests {
         let meta = extract_metadata(input);
 
         assert_eq!(meta.links, vec!["Link"]);
-        assert_eq!(meta.embeds, vec!["image.png", "docs/diagram.pdf", "audio.mp3"]);
+        assert_eq!(
+            meta.embeds,
+            vec!["image.png", "docs/diagram.pdf", "audio.mp3"]
+        );
 
         assert_eq!(meta.link_locations.len(), 1);
         assert_eq!(meta.embed_locations.len(), 3);

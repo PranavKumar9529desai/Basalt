@@ -1,7 +1,7 @@
 use crate::asset_index::AssetIndex;
+use basalt_graph::NoteGraph;
 use basalt_graph::StringArena;
 use basalt_parser::extract_metadata;
-use basalt_graph::NoteGraph;
 use basalt_types::FileMetadata;
 use serde::{Deserialize, Serialize};
 

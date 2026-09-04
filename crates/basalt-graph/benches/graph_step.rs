@@ -6,9 +6,9 @@
 
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_graph::{ForceGraph, LayoutGraph, NoteGraph, StringArena};
 use basalt_types::FileMetadata;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 /// Build a synthetic `NoteGraph` with `n` notes, each linking to
 /// `links_per_node` random others, so the dense layout has ~n·links edges.
@@ -76,16 +76,12 @@ fn bench_graph_step(c: &mut Criterion) {
             graph.step();
         }
         group.throughput(Throughput::Elements(size as u64));
-        group.bench_with_input(
-            BenchmarkId::new("step", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    graph.step();
-                    black_box(graph.positions());
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("step", size), &size, |b, _| {
+            b.iter(|| {
+                graph.step();
+                black_box(graph.positions());
+            })
+        });
     }
 
     // Tagged variant: ensures the tag tree (parent->child + note->leaf edges)
@@ -100,16 +96,12 @@ fn bench_graph_step(c: &mut Criterion) {
         }
         let node_count = layout.node_count;
         group.throughput(Throughput::Elements(node_count as u64));
-        group.bench_with_input(
-            BenchmarkId::new("step_tagged", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    graph.step();
-                    black_box(graph.positions());
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("step_tagged", size), &size, |b, _| {
+            b.iter(|| {
+                graph.step();
+                black_box(graph.positions());
+            })
+        });
     }
 
     group.finish();

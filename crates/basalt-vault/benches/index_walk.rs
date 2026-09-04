@@ -1,12 +1,18 @@
 use std::hint::black_box;
 use std::path::{Path, PathBuf};
 
+use basalt_vault::indexer::index_directory;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ignore::WalkBuilder;
-use basalt_vault::indexer::index_directory;
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 fn generate_note_content(index: usize, total: usize) -> String {

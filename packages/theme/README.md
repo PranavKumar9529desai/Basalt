@@ -6,16 +6,12 @@ from JSON token definitions.
 ## Responsibility
 
 - Define design tokens in JSON schema (`tokens/`)
-- Generate CSS output (`src/generated/tokens.css`)
+- Generate CSS output (`globals.css` in the UI package)
 - Provide theme JSON files (`themes/`) that override token values
-- Export TypeScript types for token names
 
 ## Usage
 
 ```tsx
-// Import the generated CSS in your app root:
-import "@workspace/theme/tokens.css";
-
 // Use tokens in components:
 <div className="bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]" />;
 
@@ -55,10 +51,7 @@ themes/           # Theme override files
 ├── solarized-dark.json / solarized-light.json
 ├── catppuccin-latte.json / catppuccin-mocha.json
 src/
-├── generated/
-│   └── tokens.css  # Auto-generated CSS output
-├── types.ts        # TypeScript token name enum
-└── index.ts        # Public API
+└── index.ts        # Re-exports from themes/manifest
 build.ts            # Token build script
 ```
 

@@ -10,7 +10,7 @@ import init from "./graph_sim.wasm?init";
 
 type GraphExports = {
   graph_alloc_edges(capacity: number): number;
-  graph_build(node_count: number, edges_ptr: number, edge_count: number): void;
+  graph_build(node_count: number, edges_offset: number, edge_count: number): void;
   graph_seed(n: number, degree: number, seed: number): void;
   graph_step(): void;
   graph_node_count(): number;

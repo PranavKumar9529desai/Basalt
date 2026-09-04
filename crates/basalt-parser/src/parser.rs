@@ -123,7 +123,9 @@ mod tests {
                             | MarkdownNode::Blockquote(ref mut children) => {
                                 children.push(MarkdownNode::Text(current_text));
                             }
-                            MarkdownNode::CodeBlock(_, ref mut code) => code.push_str(&current_text),
+                            MarkdownNode::CodeBlock(_, ref mut code) => {
+                                code.push_str(&current_text)
+                            }
                             _ => {}
                         }
                     } else {

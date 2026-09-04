@@ -203,9 +203,9 @@ fn flatten_children(node: &DirEntry, depth: u32, out: &mut Vec<FlatTreeNode>) {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use super::*;
     use crate::Vault;
+    use std::fs;
     use tempfile::TempDir;
 
     /// Create files at the given relative paths inside a TempDir, returning the
@@ -278,8 +278,7 @@ mod tests {
 
     #[test]
     fn alphabetical_within_group() {
-        let (dir, vault) =
-            make_vault(&["zebra.md", "alpha.md", "mango/x.md", "apple/y.md"]);
+        let (dir, vault) = make_vault(&["zebra.md", "alpha.md", "mango/x.md", "apple/y.md"]);
         let tree = build_flat_tree(&vault, dir.path());
 
         // Folders first: apple, mango (alpha order)

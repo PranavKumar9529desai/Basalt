@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use basalt_tables::execute_query;
 use basalt_vault::Vault;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn populate_vault(size: usize) -> Vault {
     let mut vault = Vault::new();
@@ -72,9 +72,7 @@ fn bench_aggregation(c: &mut Criterion) {
             },
         );
         group.bench_with_input(BenchmarkId::new("where_numeric", size), &vault, |b, v| {
-            b.iter(|| {
-                execute_query(v, "TABLE file.name FROM #work WHERE priority > 2").unwrap()
-            });
+            b.iter(|| execute_query(v, "TABLE file.name FROM #work WHERE priority > 2").unwrap());
         });
         group.bench_with_input(
             BenchmarkId::new("flatten_list_group_by", size),

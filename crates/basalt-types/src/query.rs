@@ -60,12 +60,12 @@ pub fn yaml_to_typed(val: &serde_yaml_ng::Value) -> TypedValue {
                 TypedValue::Text { value: s.clone() }
             }
         }
-        serde_yaml_ng::Value::Sequence(seq) => {
-            TypedValue::List {
-                items: seq.iter().map(yaml_to_typed).collect(),
-            }
-        }
-        _ => TypedValue::Text { value: format!("{:?}", val) },
+        serde_yaml_ng::Value::Sequence(seq) => TypedValue::List {
+            items: seq.iter().map(yaml_to_typed).collect(),
+        },
+        _ => TypedValue::Text {
+            value: format!("{:?}", val),
+        },
     }
 }
 
@@ -93,12 +93,16 @@ mod tests {
         let date = serde_yaml_ng::Value::String("2024-01-15".to_string());
         assert_eq!(
             yaml_to_typed(&date),
-            TypedValue::Date { value: "2024-01-15".to_string() }
+            TypedValue::Date {
+                value: "2024-01-15".to_string()
+            }
         );
         let datetime = serde_yaml_ng::Value::String("2024-01-15T10:30:00".to_string());
         assert_eq!(
             yaml_to_typed(&datetime),
-            TypedValue::Date { value: "2024-01-15T10:30:00".to_string() }
+            TypedValue::Date {
+                value: "2024-01-15T10:30:00".to_string()
+            }
         );
     }
 
@@ -107,7 +111,9 @@ mod tests {
         let plain = serde_yaml_ng::Value::String("Tuesday".to_string());
         assert_eq!(
             yaml_to_typed(&plain),
-            TypedValue::Text { value: "Tuesday".to_string() }
+            TypedValue::Text {
+                value: "Tuesday".to_string()
+            }
         );
         // Short/malformed shapes are not dates.
         let short = serde_yaml_ng::Value::String("2024-1-5".to_string());
@@ -125,7 +131,9 @@ mod tests {
             yaml_to_typed(&val),
             TypedValue::List {
                 items: vec![
-                    TypedValue::Text { value: "alpha".to_string() },
+                    TypedValue::Text {
+                        value: "alpha".to_string()
+                    },
                     TypedValue::Number { value: 42.0 },
                     TypedValue::Checkbox { value: true },
                 ]
@@ -136,9 +144,6 @@ mod tests {
     #[test]
     fn empty_sequence_becomes_empty_list() {
         let val = serde_yaml_ng::Value::Sequence(vec![]);
-        assert_eq!(
-            yaml_to_typed(&val),
-            TypedValue::List { items: vec![] }
-        );
+        assert_eq!(yaml_to_typed(&val), TypedValue::List { items: vec![] });
     }
 }

@@ -3,7 +3,7 @@ import type { FrontmatterModel } from "@workspace/editor";
 
 type FmExports = {
   fm_alloc(capacity: number): number;
-  fm_parse(input_ptr: number, input_len: number): number;
+  fm_parse(input_offset: number, input_len: number): number;
   fm_ptr(): number;
   fm_len(): number;
   memory: WebAssembly.Memory;

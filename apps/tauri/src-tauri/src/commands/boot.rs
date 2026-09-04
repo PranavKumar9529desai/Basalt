@@ -118,7 +118,7 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> AppResult<BootResult> {
                 settings: config.settings,
                 workspace: Default::default(),
                 timings,
-            })
+            });
         }
     };
 

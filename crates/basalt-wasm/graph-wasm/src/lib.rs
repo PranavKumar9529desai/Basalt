@@ -34,23 +34,17 @@ thread_local! {
 
 /// Allocate a `u32` buffer for `capacity` edges (2 * capacity slots) and return
 /// its linear-memory offset. The worker copies the flat edge array here, then
-/// calls `graph_build` with this pointer.
+/// calls `graph_build` with this offset.
 #[no_mangle]
 pub extern "C" fn graph_alloc_edges(capacity: u32) -> u32 {
     EDGE_BUF.with(|b| {
-        let mut buf = Vec::with_capacity(capacity as usize * 2);
-        buf.resize(capacity as usize * 2, 0);
+        let buf = vec![0u32; capacity as usize * 2];
         let ptr = buf.as_ptr() as u32;
         *b.borrow_mut() = Some(buf);
         ptr
     })
 }
 
-/// Number of `u32` slots currently held in the edge buffer (for bounds checks
-/// on the JS-supplied pointer in `graph_build`).
-fn edge_buf_len() -> usize {
-    EDGE_BUF.with(|b| b.borrow().as_ref().map(|v| v.len()).unwrap_or(0))
-}
 
 /// Build a synthetic random graph of `n` nodes, each linked to `degree` random
 /// others, and create the simulator with default params (theta = 2.0).
@@ -87,30 +81,42 @@ pub extern "C" fn graph_seed(n: u32, degree: u32, seed: u32) {
     STATE.with(|s| *s.borrow_mut() = Some(GraphState { graph, edges }));
 }
 
-/// Build the simulator from a real graph: `edges_ptr` points to a flat `u32`
-/// array `[u0, v0, u1, v1, ...]` of length `edge_count * 2`, in the dense index
-/// space produced by `get_graph`.
+/// Build the simulator from a real graph: `edges_offset` is the linear-memory
+/// byte offset returned by `graph_alloc_edges`. The edge data is read from the
+/// owned `EDGE_BUF`, not from a caller-supplied raw pointer.
 #[no_mangle]
-pub extern "C" fn graph_build(node_count: u32, edges_ptr: *const u32, edge_count: u32) {
-    // Clamp reads to what was actually allocated in `graph_alloc_edges`: the
-    // worker passes its own count, but we never read past the buffer we own.
-    let slots = edge_count as usize * 2;
-    let len = slots.min(edge_buf_len());
-    let slice = unsafe { std::slice::from_raw_parts(edges_ptr, len) };
-    let mut edges: Vec<(u32, u32)> = Vec::with_capacity(len / 2);
-    let mut degree = vec![0u32; node_count as usize];
-    let mut i = 0;
-    while i + 1 < slice.len() {
-        let u = slice[i];
-        let v = slice[i + 1];
-        edges.push((u, v));
-        degree[u as usize] += 1;
-        degree[v as usize] += 1;
-        i += 2;
-    }
-    let layout = LayoutGraph::new(node_count as usize, edges.clone(), degree, vec![0u8; node_count as usize]);
-    let graph = ForceGraph::new(&layout, GraphParams::default());
-    STATE.with(|s| *s.borrow_mut() = Some(GraphState { graph, edges }));
+pub extern "C" fn graph_build(node_count: u32, edges_offset: u32, edge_count: u32) {
+    EDGE_BUF.with(|b| {
+        let edge_buf = b.borrow();
+        let buf = edge_buf.as_ref().expect("EDGE_BUF not allocated; call graph_alloc_edges first");
+
+        // SAFETY: `edges_offset` must equal `buf.as_ptr() as u32` (the linear-memory
+        // byte address of the buffer we own). We verify this and derive the slice from
+        // our Vec — no raw pointer from the caller is ever dereferenced.
+        assert_eq!(
+            edges_offset,
+            buf.as_ptr() as u32,
+            "edges_offset does not match EDGE_BUF base"
+        );
+
+        let slots = edge_count as usize * 2;
+        let len = slots.min(buf.len());
+        let slice = &buf[..len];
+        let mut edges: Vec<(u32, u32)> = Vec::with_capacity(len / 2);
+        let mut degree = vec![0u32; node_count as usize];
+        let mut i = 0;
+        while i + 1 < slice.len() {
+            let u = slice[i];
+            let v = slice[i + 1];
+            edges.push((u, v));
+            degree[u as usize] += 1;
+            degree[v as usize] += 1;
+            i += 2;
+        }
+        let layout = LayoutGraph::new(node_count as usize, edges.clone(), degree, vec![0u8; node_count as usize]);
+        let graph = ForceGraph::new(&layout, GraphParams::default());
+        STATE.with(|s| *s.borrow_mut() = Some(GraphState { graph, edges }));
+    });
 }
 
 /// Advance the layout one fixed timestep (forces scaled by the cooling alpha).

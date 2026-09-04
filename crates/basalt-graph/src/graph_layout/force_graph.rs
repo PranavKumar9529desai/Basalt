@@ -1,139 +1,5 @@
-//! Force-directed layout simulation for the graph view.
-//!
-//! The simulation owns the model-independent physics: a Barnes-Hut quadtree
-//! gives O(n log n) repulsion, edges are springs, a weak gravity term keeps the
-//! cloud centered, and a fixed-timestep damped symplectic integrator settles it
-//! without depending on frame rate. State lives in flat `f32` arrays so the
-//! WASM bridge hands the renderer a `Float32Array` with zero copy.
-//!
-//! Node indices in this module are dense `0..n`; `LayoutGraph::from_note_graph`
-//! remaps `basalt-graph`'s sparse arena `NodeId`s to that dense space.
-//!
-//! Performance note: the quadtree is rebuilt every step (positions move) and is
-//! then *reordered into BFS layout* so that a node's four children occupy
-//! contiguous slots. Barnes-Hut traversal is otherwise random-access and
-//! cache-thrash bound at 25k nodes. The `theta` opening criterion is the main
-//! speed/accuracy lever: `2.0` clears the ADR-021 60fps gate (≤16.6ms) at 25k
-//! with ~2x headroom, leaving room in the same frame budget for WebGL rendering.
-//! Lower it (≈1.0–1.2) for higher-quality local clusters on smaller graphs.
-
-use crate::arena::NodeId;
-use crate::graph::NoteGraph;
-use std::collections::HashMap;
-
-/// Tunable physics constants. Defaults chosen for a stable, quickly-settling
-/// layout at 25k nodes; tune these for visual quality on smaller graphs.
-#[derive(Debug, Clone)]
-pub struct GraphParams {
-    /// Repulsion strength (Coulomb-style, scaled by node mass).
-    pub repulsion: f32,
-    /// Rest length of an edge spring.
-    pub spring_length: f32,
-    /// Stiffness of an edge spring.
-    pub spring_strength: f32,
-    /// Pull toward `center` (keeps the cloud from drifting off-screen).
-    pub gravity: f32,
-    /// Velocity retained per step (1.0 = frictionless). Lower = faster settle.
-    pub damping: f32,
-    /// Barnes-Hut opening criterion: larger = faster but less accurate locally.
-    pub theta: f32,
-    /// Per-step speed cap to keep the integrator from exploding on collisions.
-    pub max_velocity: f32,
-    /// Fixed integration timestep.
-    pub dt: f32,
-    /// World-space point the graph is pulled toward.
-    pub center: [f32; 2],
-}
-
-impl Default for GraphParams {
-    fn default() -> Self {
-        Self {
-            repulsion: 100.0,
-            spring_length: 40.0,
-            spring_strength: 0.06,
-            gravity: 0.008,
-            damping: 0.85,
-            theta: 2.0,
-            max_velocity: 20.0,
-            dt: 0.35,
-            center: [0.0, 0.0],
-        }
-    }
-}
-
-/// Sparse graph reduced to the dense form the simulator needs.
-#[derive(Debug, Clone)]
-pub struct LayoutGraph {
-    pub node_count: usize,
-    /// Edges as dense index pairs `(u, v)`.
-    pub edges: Vec<(u32, u32)>,
-    /// Combined in+out degree per node (used as inertia mass).
-    pub degree: Vec<u32>,
-    /// Per-node kind: `0` = note, `1` = tag. Parallel to the dense node order.
-    /// Lets the renderer style/filter tags and the local graph traverse through
-    /// them (see docs/tag-graph-connections.md).
-    pub node_types: Vec<u8>,
-}
-
-impl LayoutGraph {
-    /// Build the dense layout graph from a `NoteGraph`, collapsing the sparse
-    /// arena ids into `0..n`. Nodes are the union of every note that has
-    /// outgoing links and every note referenced as a link target (so dangling
-    /// link targets appear as nodes, matching Obsidian with "existing files
-    /// only" off) **plus every tag node** (notes link to the tags they carry,
-    /// and nested tags link parent->child, so the tag tree is present). Edges are
-    /// the forward links.
-    pub fn from_note_graph(g: &NoteGraph) -> Self {
-        let mut ids: Vec<NodeId> = g
-            .forward_links
-            .keys()
-            .chain(g.back_links.keys())
-            .copied()
-            .collect();
-        ids.sort_unstable();
-        ids.dedup();
-
-        let remap: HashMap<NodeId, u32> = ids
-            .iter()
-            .enumerate()
-            .map(|(i, id)| (*id, i as u32))
-            .collect();
-
-        let mut degree = vec![0u32; ids.len()];
-        let mut edges = Vec::new();
-        for (src, targets) in &g.forward_links {
-            let u = remap[src];
-            for t in targets {
-                if let Some(&v) = remap.get(t) {
-                    edges.push((u, v));
-                    degree[u as usize] += 1;
-                    degree[v as usize] += 1;
-                }
-            }
-        }
-
-        let node_types = ids
-            .iter()
-            .map(|id| if g.tag_nodes.contains(id) { 1 } else { 0 })
-            .collect::<Vec<_>>();
-
-        Self {
-            node_count: ids.len(),
-            edges,
-            degree,
-            node_types,
-        }
-    }
-
-    pub fn new(node_count: usize, edges: Vec<(u32, u32)>, degree: Vec<u32>, node_types: Vec<u8>) -> Self {
-        Self {
-            node_count,
-            edges,
-            degree,
-            node_types,
-        }
-    }
-}
+use super::layout_graph::LayoutGraph;
+use super::params::GraphParams;
 
 /// A Barnes-Hut quadtree node stored in a flat `Vec` arena.
 #[derive(Clone, Copy)]
@@ -233,7 +99,6 @@ impl ForceGraph {
     pub fn reheat(&mut self) {
         self.alpha = 1.0;
     }
-
 
     #[inline]
     pub fn node_count(&self) -> usize {
@@ -366,9 +231,6 @@ impl ForceGraph {
 
         let quad = Self::quadrant(&self.quads[node], bx, by);
         let child = self.ensure_child(node, quad);
-        // `ensure_child` may append to `self.quads`, so no reference is held
-        // across the call (hence `bx`/`by` are copied, not borrowed).
-        let _ = (&bx, &by);
         self.insert(child, bi, depth + 1);
     }
 
@@ -588,98 +450,5 @@ impl ForceGraph {
             sum += (vx * vx + vy * vy).sqrt();
         }
         sum / self.n as f32
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::arena::StringArena;
-    use basalt_types::FileMetadata;
-
-    fn synthetic_graph(n: usize, links_per_node: usize) -> NoteGraph {
-        let mut arena = StringArena::new();
-        let mut graph = NoteGraph::new();
-        let mut state: u64 = 0x1234_5678;
-        let mut rng = || {
-            // xorshift64* — deterministic, no external dep.
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state
-        };
-        for i in 0..n {
-            let path = format!("note-{:05}.md", i);
-            let mut meta = FileMetadata::new();
-            meta.links = (0..links_per_node)
-                .map(|_| format!("note-{:05}.md", (rng() as usize) % n))
-                .collect();
-            graph.add_document(&path, meta, &mut arena);
-        }
-        graph
-    }
-
-    #[test]
-    fn layout_graph_remaps_dense_and_preserves_edges() {
-        let g = synthetic_graph(50, 2);
-        let lg = LayoutGraph::from_note_graph(&g);
-        assert_eq!(lg.node_count, 50);
-        assert!(!lg.edges.is_empty());
-        for &(u, v) in &lg.edges {
-            assert!(u < 50 && v < 50);
-        }
-    }
-
-    #[test]
-    fn graph_stays_finite_and_bounded() {
-        let g = synthetic_graph(500, 3);
-        let lg = LayoutGraph::from_note_graph(&g);
-        let mut graph = ForceGraph::new(&lg, GraphParams::default());
-        for _ in 0..200 {
-            graph.step();
-        }
-        for &p in graph.positions() {
-            assert!(p.is_finite(), "position became non-finite: {p}");
-            assert!(p.abs() < 1e6, "position diverged: {p}");
-        }
-    }
-
-    #[test]
-    fn graph_settles_over_time() {
-        let g = synthetic_graph(300, 3);
-        let lg = LayoutGraph::from_note_graph(&g);
-        let mut graph = ForceGraph::new(&lg, GraphParams::default());
-        for _ in 0..10 {
-            graph.step();
-        }
-        let early = graph.avg_speed();
-        for _ in 0..400 {
-            graph.step();
-        }
-        let late = graph.avg_speed();
-        assert!(late < early, "graph did not settle: early={early}, late={late}");
-        assert!(late.is_finite());
-    }
-    #[test]
-    fn layout_graph_tags_marked_as_tag_nodes() {
-        let mut graph = NoteGraph::new();
-        let mut arena = StringArena::new();
-        let meta = FileMetadata {
-            tags: vec!["area/sub".to_string()],
-            ..FileMetadata::new()
-        };
-        graph.add_document("note.md", meta, &mut arena);
-
-        let lg = LayoutGraph::from_note_graph(&graph);
-        // note.md + #area + #area/sub = 3 nodes
-        assert_eq!(lg.node_count, 3);
-        assert!(
-            lg.node_types.contains(&1),
-            "expected a tag node"
-        );
-        assert!(
-            lg.node_types.contains(&0),
-            "expected a note node"
-        );
     }
 }

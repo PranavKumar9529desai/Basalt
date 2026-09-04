@@ -503,7 +503,7 @@ class TagMarksPlugin {
 }
 
 function buildTagMarks(view: EditorView): DecorationSet {
-  performance.mark("basalt:buildTagMarks:start");
+  if (import.meta.env.DEV) performance.mark("basalt:buildTagMarks:start");
   const { collector, finish } = makeCollector();
   const ranges = view.state.field(livePreviewField).codeBlockRanges;
 
@@ -515,12 +515,14 @@ function buildTagMarks(view: EditorView): DecorationSet {
       handleTagsInLine(line.from, line.text, ranges, collector);
     }
   }
-  performance.mark("basalt:buildTagMarks:end");
-  performance.measure(
-    "basalt:buildTagMarks",
-    "basalt:buildTagMarks:start",
-    "basalt:buildTagMarks:end",
-  );
+  if (import.meta.env.DEV) {
+    performance.mark("basalt:buildTagMarks:end");
+    performance.measure(
+      "basalt:buildTagMarks",
+      "basalt:buildTagMarks:start",
+      "basalt:buildTagMarks:end",
+    );
+  }
   return finish();
 }
 

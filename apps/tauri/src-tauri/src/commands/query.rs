@@ -6,7 +6,11 @@ use crate::error::AppError;
 
 /// Execute a DQL query against the vault's indexed metadata.
 #[tauri::command]
-pub fn run_query(dql: String, _path: String, state: State<'_, AppState>) -> Result<QueryResult, AppError> {
+pub fn run_query(
+    dql: String,
+    _path: String,
+    state: State<'_, AppState>,
+) -> Result<QueryResult, AppError> {
     let vault = state
         .vault
         .read()

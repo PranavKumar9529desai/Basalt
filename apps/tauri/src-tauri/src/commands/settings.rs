@@ -31,11 +31,7 @@ pub fn get_workspace(
 }
 
 #[tauri::command]
-pub fn set_workspace_key(
-    key: String,
-    value: serde_json::Value,
-    state: State<'_, AppState>,
-) {
+pub fn set_workspace_key(key: String, value: serde_json::Value, state: State<'_, AppState>) {
     let vault_path = match state.vault_path.read() {
         Ok(guard) => guard.clone(),
         Err(_) => return,

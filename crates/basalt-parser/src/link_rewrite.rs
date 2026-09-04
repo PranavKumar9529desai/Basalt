@@ -289,14 +289,20 @@ mod tests {
     #[test]
     fn matches_case_insensitively() {
         let out = rewrite_wikilinks("[[note]] [[NOTE]] [[Folder/NOTE]]", &rename());
-        assert_eq!(out, "[[RenamedNote]] [[RenamedNote]] [[Folder/RenamedNote]]");
+        assert_eq!(
+            out,
+            "[[RenamedNote]] [[RenamedNote]] [[Folder/RenamedNote]]"
+        );
     }
 
     #[test]
     fn leaves_unrelated_links_alone() {
         let text = "[[Other]] [[Note2]] [[Noted]] Some [[Note|alias]] prose";
         let out = rewrite_wikilinks(text, &rename());
-        assert_eq!(out, "[[Other]] [[Note2]] [[Noted]] Some [[RenamedNote|alias]] prose");
+        assert_eq!(
+            out,
+            "[[Other]] [[Note2]] [[Noted]] Some [[RenamedNote|alias]] prose"
+        );
     }
 
     #[test]
@@ -374,7 +380,8 @@ mod tests {
 
     #[test]
     fn path_rename_matches_case_insensitively() {
-        let out = rewrite_wikilinks_path("[[folder/sub/note]] [[FOLDER/SUB/Note.]]", &path_rename());
+        let out =
+            rewrite_wikilinks_path("[[folder/sub/note]] [[FOLDER/SUB/Note.]]", &path_rename());
         assert_eq!(out, "[[Folder/Docs/note]] [[Folder/Docs/Note.]]");
     }
 
@@ -383,7 +390,10 @@ mod tests {
         let r = path_rename();
         let text = "[[Note]] [[Sub/Note]] [[Other/Sub/Note]] [[Folder/Sub/Note]]";
         let out = rewrite_wikilinks_path(text, &r);
-        assert_eq!(out, "[[Note]] [[Sub/Note]] [[Other/Sub/Note]] [[Folder/Docs/Note]]");
+        assert_eq!(
+            out,
+            "[[Note]] [[Sub/Note]] [[Other/Sub/Note]] [[Folder/Docs/Note]]"
+        );
     }
 
     #[test]
@@ -400,8 +410,14 @@ mod tests {
         let r = path_rename();
         assert!(r.matches("Folder/Sub/Note"));
         assert!(r.matches("folder/sub/note.md"));
-        assert!(!r.matches("Sub/Note"), "missing parent segment keeps other folders safe");
-        assert!(!r.matches("Folder/Sub"), "folder alone is not a link target");
+        assert!(
+            !r.matches("Sub/Note"),
+            "missing parent segment keeps other folders safe"
+        );
+        assert!(
+            !r.matches("Folder/Sub"),
+            "folder alone is not a link target"
+        );
         assert!(!r.matches("Folder/Sub2/Note"), "segment boundary respected");
         assert!(!r.matches("Other/Sub/Note"));
         assert!(!r.matches("Note"));

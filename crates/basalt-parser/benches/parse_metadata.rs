@@ -1,10 +1,16 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use basalt_parser::{extract_metadata, parse_frontmatter};
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 fn generate_docs(count: usize) -> Vec<String> {

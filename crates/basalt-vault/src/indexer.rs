@@ -1,6 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::asset_index::{AssetInfo, infer_file_type, infer_mime_type, compute_md5};
+use crate::asset_index::{compute_md5, infer_file_type, infer_mime_type, AssetInfo};
 use crate::utils::mtime_secs;
 use crate::vault::Vault;
 use ignore::WalkBuilder;
@@ -15,10 +15,7 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
         .ok()
         .and_then(|s| s.to_str())?
         .to_string();
-    let file_name = abs_path
-        .file_name()
-        .and_then(|n| n.to_str())?
-        .to_string();
+    let file_name = abs_path.file_name().and_then(|n| n.to_str())?.to_string();
 
     // Compute MD5 content hash (skip for very large files to avoid stalling).
     let content_hash = if meta.len() <= 100 * 1024 * 1024 {
@@ -193,9 +190,13 @@ mod tests {
 
         // Both non-md files should be in the asset index
         assert_eq!(vault.asset_index.len(), 2);
-        let img = vault.asset_index.get(&format!("{}/image.png", temp_dir.display()));
+        let img = vault
+            .asset_index
+            .get(&format!("{}/image.png", temp_dir.display()));
         assert!(img.is_some(), "image.png should be in asset index");
-        let pdf = vault.asset_index.get(&format!("{}/doc.pdf", temp_dir.display()));
+        let pdf = vault
+            .asset_index
+            .get(&format!("{}/doc.pdf", temp_dir.display()));
         assert!(pdf.is_some(), "doc.pdf should be in asset index");
 
         // The note's embed should be registered against the asset
@@ -225,8 +226,14 @@ mod tests {
         let old_mtimes = incremental_reindex(&temp_dir, &mut vault, &HashMap::new());
         // old.png should be gone, new.pdf should be present
         assert_eq!(vault.asset_index.len(), 1);
-        assert!(vault.asset_index.get(&format!("{}/new.pdf", temp_dir.display())).is_some());
-        assert!(vault.asset_index.get(&format!("{}/old.png", temp_dir.display())).is_none());
+        assert!(vault
+            .asset_index
+            .get(&format!("{}/new.pdf", temp_dir.display()))
+            .is_some());
+        assert!(vault
+            .asset_index
+            .get(&format!("{}/old.png", temp_dir.display()))
+            .is_none());
 
         // Cache should now track both
         assert!(old_mtimes.contains_key(&format!("{}/a.md", temp_dir.display())));

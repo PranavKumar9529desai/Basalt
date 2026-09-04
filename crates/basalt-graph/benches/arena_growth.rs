@@ -1,7 +1,7 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_graph::StringArena;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 fn bench_arena_growth(c: &mut Criterion) {
     let mut group = c.benchmark_group("arena_growth");

@@ -1,10 +1,16 @@
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use basalt_search::tantivy::index::TantivyIndex;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 const TAGS: &[&str] = &[
-    "project", "meeting", "idea", "todo", "reference", "archive", "draft",
+    "project",
+    "meeting",
+    "idea",
+    "todo",
+    "reference",
+    "archive",
+    "draft",
 ];
 
 const QUERIES: &[&str] = &[
@@ -34,9 +40,7 @@ fn populate_index(dir: &std::path::Path, count: usize) -> TantivyIndex {
     let mut index = TantivyIndex::open_or_create(dir).expect("open_or_create");
     for i in 0..count {
         let (path, title, body, tags) = generate_doc(i, count);
-        index
-            .update_document(&path, &title, &body, &tags)
-            .unwrap();
+        index.update_document(&path, &title, &body, &tags).unwrap();
     }
     index.commit().unwrap();
     index

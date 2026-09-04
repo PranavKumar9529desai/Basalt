@@ -35,7 +35,7 @@ export function ContextMenu({
 }: ContextMenuProps) {
   useEditorCommands(view);
 
-  const commands = useMemo(() => commandService.getCommands(), []);
+  const commands = commandService.getCommands();
 
   const handleCommand = useCallback(
     (commandId: string) => {

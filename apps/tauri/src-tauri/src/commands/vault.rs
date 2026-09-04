@@ -14,10 +14,7 @@ pub struct VaultSummary {
 }
 
 #[tauri::command]
-pub fn reindex_vault(
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> AppResult<VaultSummary> {
+pub fn reindex_vault(state: State<AppState>, app: tauri::AppHandle) -> AppResult<VaultSummary> {
     let vault_path = state
         .vault_path
         .read()
@@ -43,9 +40,7 @@ pub fn reindex_vault(
 /// index.  The frontend calls this after any `vault://file-changed` event to
 /// keep the sidebar in sync without a full restart.
 #[tauri::command]
-pub fn get_vault_tree(
-    state: State<AppState>,
-) -> AppResult<Vec<basalt_vault::FlatTreeNode>> {
+pub fn get_vault_tree(state: State<AppState>) -> AppResult<Vec<basalt_vault::FlatTreeNode>> {
     let vault_path = state
         .vault_path
         .read()
@@ -126,10 +121,7 @@ fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     }
     x
 }
-pub(crate) fn build_graph_snapshot(
-    vault: &Vault,
-    vault_path: &Path,
-) -> AppResult<GraphSnapshot> {
+pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResult<GraphSnapshot> {
     // Every file still on disk is a node. `.md` notes carry tags from the
     // metadata cache; everything else is an "attachment".
     let mut paths: Vec<String> = vault
@@ -202,7 +194,9 @@ pub(crate) fn build_graph_snapshot(
 
     let mut pair_counts: HashMap<u64, u32> = HashMap::new();
     for (src_id, targets) in &vault.graph.forward_links {
-        let Some(&u) = dense.get(src_id) else { continue };
+        let Some(&u) = dense.get(src_id) else {
+            continue;
+        };
         for t in targets {
             // `t` is the raw wikilink-text NodeId or a tag node; resolve it to a
             // dense index.
@@ -213,7 +207,11 @@ pub(crate) fn build_graph_snapshot(
                 resolver
                     .get(&lc)
                     .copied()
-                    .or_else(|| resolver.get(&raw.trim_end_matches(".md").to_lowercase()).copied())
+                    .or_else(|| {
+                        resolver
+                            .get(&raw.trim_end_matches(".md").to_lowercase())
+                            .copied()
+                    })
                     .or_else(|| {
                         Path::new(raw.as_str())
                             .file_stem()
@@ -368,8 +366,11 @@ mod tests {
 
         // Note nodes keep the absolute on-disk path; tag nodes use the bare tag
         // string. Locate each by what's stable about it.
-        let note_idx =
-            |suffix: &str| snap.nodes.iter().position(|n| !n.is_tag && n.path.ends_with(suffix));
+        let note_idx = |suffix: &str| {
+            snap.nodes
+                .iter()
+                .position(|n| !n.is_tag && n.path.ends_with(suffix))
+        };
         let a_idx = note_idx("a.md").expect("a.md node present");
         let b_idx = note_idx("b.md").expect("b.md node present");
         let tag_idx = |p: &str| snap.nodes.iter().position(|n| n.is_tag && n.path == p);
@@ -392,7 +393,10 @@ mod tests {
             .collect();
 
         // Notes link to their EXACT tag only (never the ancestor).
-        assert!(edge_pairs.contains(&(a_idx as u32, topic_idx as u32)), "a -> topic");
+        assert!(
+            edge_pairs.contains(&(a_idx as u32, topic_idx as u32)),
+            "a -> topic"
+        );
         assert!(
             edge_pairs.contains(&(a_idx as u32, proj_alpha_idx as u32)),
             "a -> project/alpha (exact leaf)"
@@ -430,17 +434,27 @@ mod tests {
         let mut vault = Vault::new();
         let mut ma = FileMetadata::new();
         ma.tags = vec!["x".to_string(), "y".to_string()];
-        vault.graph.add_document(a.to_str().unwrap(), ma, &mut vault.arena);
+        vault
+            .graph
+            .add_document(a.to_str().unwrap(), ma, &mut vault.arena);
         let mut mb = FileMetadata::new();
         mb.tags = vec!["x".to_string(), "y".to_string()];
-        vault.graph.add_document(b.to_str().unwrap(), mb, &mut vault.arena);
+        vault
+            .graph
+            .add_document(b.to_str().unwrap(), mb, &mut vault.arena);
         // Force a direct link a -> b so we can assert link + shared-tag strength.
         let a_id = vault.arena.get_id(a.to_str().unwrap()).expect("a interned");
         let b_id = vault.arena.get_id(b.to_str().unwrap()).expect("b interned");
-        vault.graph.forward_links.insert(a_id, std::collections::HashSet::from([b_id]));
+        vault
+            .graph
+            .forward_links
+            .insert(a_id, std::collections::HashSet::from([b_id]));
         let snap = build_graph_snapshot(&vault, &root).unwrap();
-        let note_idx =
-            |suffix: &str| snap.nodes.iter().position(|n| !n.is_tag && n.path.ends_with(suffix));
+        let note_idx = |suffix: &str| {
+            snap.nodes
+                .iter()
+                .position(|n| !n.is_tag && n.path.ends_with(suffix))
+        };
         let a_idx = note_idx("a.md").expect("a.md node present");
         let b_idx = note_idx("b.md").expect("b.md node present");
         let pair_w = snap
@@ -470,10 +484,14 @@ mod tests {
         let mut vault = Vault::new();
         let mut ma = FileMetadata::new();
         ma.tags = vec!["p".to_string()];
-        vault.graph.add_document(a.to_str().unwrap(), ma, &mut vault.arena);
+        vault
+            .graph
+            .add_document(a.to_str().unwrap(), ma, &mut vault.arena);
         let mut mb = FileMetadata::new();
         mb.tags = vec!["q".to_string()];
-        vault.graph.add_document(b.to_str().unwrap(), mb, &mut vault.arena);
+        vault
+            .graph
+            .add_document(b.to_str().unwrap(), mb, &mut vault.arena);
         let snap = build_graph_snapshot(&vault, &root).unwrap();
         let a_idx = snap
             .nodes
@@ -487,8 +505,7 @@ mod tests {
             .unwrap();
         // No link and no shared tag => distinct connected components.
         assert_ne!(
-            snap.nodes[a_idx].cluster,
-            snap.nodes[b_idx].cluster,
+            snap.nodes[a_idx].cluster, snap.nodes[b_idx].cluster,
             "disconnected notes => distinct clusters"
         );
         let _ = fs::remove_dir_all(&root);

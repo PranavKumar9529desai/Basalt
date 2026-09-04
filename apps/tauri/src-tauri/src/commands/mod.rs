@@ -18,20 +18,15 @@ pub use query::run_query;
 pub use files::{open_file, open_files, save_file, save_files};
 
 pub use notes::{
-    autocomplete_links, autocomplete_tags, create_note, create_untitled_note,
-    get_backlinks, rename_note,
+    autocomplete_links, autocomplete_tags, create_note, create_untitled_note, get_backlinks,
+    rename_note,
 };
 
-pub use folders::{
-    create_folder, delete_file, delete_paths, move_paths, rename_path,
-};
+pub use folders::{create_folder, delete_file, delete_paths, move_paths, rename_path};
 
-pub use assets::{
-    cleanup_assets, get_asset_audit, get_assets, reorganize_assets,
-    save_attachment,
-};
+pub use assets::{cleanup_assets, get_asset_audit, get_assets, reorganize_assets, save_attachment};
 
 pub use frontmatter::parse_frontmatter;
-pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
 pub use search::{search_content, search_files};
+pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
 pub use vault::{get_graph, get_vault_tree, open_vault_dialog, reindex_vault};

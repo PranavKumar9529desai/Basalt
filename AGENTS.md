@@ -276,6 +276,9 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [026-html-rendering-in-markdown](docs/adr/026-html-rendering-in-markdown.md)             | ADR-026: HTML Rendering in Markdown — Sanitization and Rendering Pipeline   |
 | [027-dql-query-engine](docs/adr/027-dql-query-engine.md)                                 | ADR-027: DQL Query Engine — basalt-tables Crate                             |
 | [028-dql-aggregation](docs/adr/028-dql-aggregation.md)                                   | ADR-028: DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions           |
+| [029-single-renderer-architecture](docs/adr/029-single-renderer-architecture.md)         | ADR-029: Single Renderer — Unify Edit and Reading Modes                     |
+| [030-rust-crates-quality-refactor](docs/adr/030-rust-crates-quality-refactor.md)         | ADR-030: Rust Crates Quality Refactor — Practices, Structure, Plan         |
+| [031-pdf-export-snapshot-reading-mode](docs/adr/031-pdf-export-snapshot-reading-mode.md) | ADR-031: PDF Export — Snapshot of Reading Mode                              |
 
 <!-- ADR_INDEX_END -->
 
