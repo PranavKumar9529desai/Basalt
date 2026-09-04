@@ -1,5 +1,7 @@
 export type TabId = string;
 export type TabPaneId = string;
+export type PaneId = string;
+export type TabGroupId = string;
 export type NoteViewMode = "edit" | "reading";
 
 export interface OpenableTabInput {
@@ -44,6 +46,32 @@ export interface TabPane {
   previewTabId: TabId | null;
 }
 
+// --- Split Pane Layout Tree (ADR-032) ---
+
+export interface TabGroup {
+  id: TabGroupId;
+  tabIds: TabId[];
+  activeTabId: TabId | null;
+  previewTabId: TabId | null;
+}
+
+export interface SplitNode {
+  id: PaneId;
+  type: "split";
+  orientation: "horizontal" | "vertical";
+  children: LayoutNode[];
+}
+
+export interface LeafNode {
+  id: PaneId;
+  type: "leaf";
+  tabGroup: TabGroup;
+}
+
+export type LayoutNode = SplitNode | LeafNode;
+
+// --- End Split Pane Layout Tree ---
+
 export interface SerializedTab {
   id: TabId;
   path: string;
@@ -66,8 +94,34 @@ export interface SerializedTabPane {
   previewTabId: TabId | null;
 }
 
-/** Backward-compat: old snapshots may have these fields. */
-export interface TabsWorkspaceSnapshot {
+// --- Serialized Layout Tree (ADR-032) ---
+
+export interface SerializedTabGroup {
+  id: TabGroupId;
+  tabIds: TabId[];
+  activeTabId: TabId | null;
+  previewTabId: TabId | null;
+}
+
+export interface SerializedSplitNode {
+  id: PaneId;
+  type: "split";
+  orientation: "horizontal" | "vertical";
+  children: SerializedLayoutNode[];
+}
+
+export interface SerializedLeafNode {
+  id: PaneId;
+  type: "leaf";
+  tabGroup: SerializedTabGroup;
+}
+
+export type SerializedLayoutNode = SerializedSplitNode | SerializedLeafNode;
+
+// --- End Serialized Layout Tree ---
+
+/** Version 1: single pane (legacy). */
+export interface TabsWorkspaceSnapshotV1 {
   version: 1;
   panes?: SerializedTabPane[];
   tabs: SerializedTab[];
@@ -78,3 +132,13 @@ export interface TabsWorkspaceSnapshot {
   /** Legacy — ignored on hydrate. */
   groupOrder?: string[];
 }
+
+/** Version 2: split pane layout tree (ADR-032). */
+export interface TabsWorkspaceSnapshotV2 {
+  version: 2;
+  root: SerializedLayoutNode;
+  activePaneId: PaneId;
+  tabs: SerializedTab[];
+}
+
+export type TabsWorkspaceSnapshot = TabsWorkspaceSnapshotV1 | TabsWorkspaceSnapshotV2;

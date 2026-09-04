@@ -5,10 +5,14 @@ import type {
   TabId,
   TabModel,
   TabsWorkspaceSnapshot,
+  PaneId,
+  LayoutNode,
 } from "../types";
 
 export type { TabPane };
 export type { TabPaneId };
+export type { PaneId };
+export type { LayoutNode };
 
 export interface CloseTabOptions {
   force?: boolean;
@@ -27,6 +31,10 @@ export interface TabsState {
    * document cache is not part of the workspace snapshot.
    */
   persistVersion: number;
+
+  // Split Pane Layout Tree (ADR-032)
+  root: LayoutNode;
+  activePaneId: PaneId;
 
   openInPreview: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;
   openPinned: (note: OpenableTabInput, options?: OpenTabOptions) => TabId;

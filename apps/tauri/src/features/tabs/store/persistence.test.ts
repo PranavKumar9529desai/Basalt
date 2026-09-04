@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCoreSlice } from "./core";
 import { createPersistenceSlice } from "./persistence";
 import { ROOT_PANE_ID } from "../constants";
-import type { TabId, TabModel } from "../types";
+import type { TabId, TabModel, LayoutNode } from "../types";
+import type { TabsWorkspaceSnapshotV2 } from "../types";
 import type { TabsState, TabPane } from "./types";
+import { createLeaf } from "../lib/layoutTree";
 
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
@@ -14,6 +16,7 @@ vi.mock("@workspace/views", () => ({
 }));
 
 function createTestStore(): TestStore {
+  const initialLeaf = createLeaf();
   return create<TabsState>()(
     (set, get, api) =>
       ({
@@ -24,6 +27,8 @@ function createTestStore(): TestStore {
           activeTabId: null,
           previewTabId: null,
         } as TabPane,
+        root: initialLeaf as LayoutNode,
+        activePaneId: initialLeaf.id,
         persistVersion: 0,
         ...createCoreSlice(set, get, api),
         ...createPersistenceSlice(set, get, api),
@@ -37,7 +42,7 @@ describe("tabs persistence", () => {
     store = createTestStore();
   });
 
-  it("serializes open tabs + pane into a v1 snapshot", () => {
+  it("serializes open tabs + layout tree into a v2 snapshot", () => {
     const a = store
       .getState()
       .openPinned({ path: "a.md" }, { activate: false });
@@ -46,11 +51,13 @@ describe("tabs persistence", () => {
       .openPinned({ path: "b.md" }, { activate: false });
     store.getState().activateTab(a);
     const snap = store.getState().toWorkspaceSnapshot();
-    expect(snap.version).toBe(1);
+    expect(snap.version).toBe(2);
     expect(snap.tabs).toHaveLength(2);
-    expect(snap.panes).toHaveLength(1);
-    expect(snap.panes?.[0].tabIds).toEqual([a, b]);
-    expect(snap.panes?.[0].activeTabId).toBe(a);
+    expect("root" in snap && snap.root).toBeDefined();
+    const root = (snap as TabsWorkspaceSnapshotV2).root;
+    expect(root.type).toBe("leaf");
+    expect(root.type === "leaf" ? root.tabGroup.tabIds : []).toEqual([a, b]);
+    expect(root.type === "leaf" ? root.tabGroup.activeTabId : null).toBe(a);
   });
 
   it("never serializes transient fields (line, renameOnOpen)", () => {
@@ -85,6 +92,9 @@ describe("tabs persistence", () => {
     expect(s.pane.activeTabId).toBe(a);
     expect(s.tabs[a]?.isDirty).toBe(true);
     expect(s.tabs[a]?.path).toBe("a.md");
+    // Layout tree is restored
+    expect(s.root).toBeDefined();
+    expect(s.root.type).toBe("leaf");
   });
 
   it("ignores snapshots with an unknown version (no-op hydrate)", () => {
@@ -92,7 +102,7 @@ describe("tabs persistence", () => {
     const before = store.getState().pane.tabIds;
     store
       .getState()
-      .hydrateFromWorkspaceSnapshot({ version: 2, tabs: [] } as never);
+      .hydrateFromWorkspaceSnapshot({ version: 99, tabs: [] } as never);
     expect(store.getState().pane.tabIds).toEqual(before);
     expect(store.getState().tabs[a]).toBeDefined();
   });
