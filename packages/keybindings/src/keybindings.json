@@ -20,5 +20,7 @@
   { "key": "CmdOrCtrl+Shift+P", "command": "export:note" },
   { "key": "CmdOrCtrl+S", "action": "saveActiveFile" },
   { "key": "F2", "action": "renameActiveNote" },
-  { "key": "Escape", "action": "closeTopModal", "when": "modalOpen" }
+  { "key": "Escape", "action": "closeTopModal", "when": "modalOpen" },
+  { "key": "CmdOrCtrl+\\", "command": "pane:split-right" },
+  { "key": "CmdOrCtrl+Shift+\\", "command": "pane:split-down" }
 ]

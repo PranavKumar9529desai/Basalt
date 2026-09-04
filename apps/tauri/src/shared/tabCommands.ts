@@ -83,3 +83,16 @@ commandService.registerCommand(
   },
   () => resolveActiveTab()?.leafType === "markdown",
 );
+
+commandService.registerCommand("pane:split-right", () => {
+  useTabsStore.getState().splitActivePane("vertical");
+});
+
+commandService.registerCommand("pane:split-down", () => {
+  useTabsStore.getState().splitActivePane("horizontal");
+});
+
+commandService.registerCommand("pane:close", () => {
+  const { activePaneId } = useTabsStore.getState();
+  useTabsStore.getState().closePane(activePaneId);
+});
