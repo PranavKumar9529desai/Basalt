@@ -43,8 +43,8 @@ function LeafPane({
   );
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
 
-  // For Phase 1, all leaves share the single `pane` activeTabId.
-  // In a future phase, each leaf will have its own activeTabId.
+  // Phase 1: all leaves share the single pane's activeTabId.
+  // Future: each leaf will have its own activeTabId.
   const ctx: LeafRenderContext = {
     activeTabId,
     markTabDirty,

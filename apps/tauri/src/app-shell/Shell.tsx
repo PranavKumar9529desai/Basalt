@@ -17,8 +17,7 @@ import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useMemo, useRef, useState, Suspense } from "react";
 
-import type { PaneRenderContext } from "../features/tabs";
-import { useTabsStore, Tabs, TabsBar } from "../features/tabs";
+import { useTabsStore, TabsBar, PaneRenderer, type LeafRenderContext } from "../features/tabs";
 import { parseFrontmatter } from "../features/editor";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
@@ -107,9 +106,11 @@ function WorkspaceShell({
     [leafServices.resolveAsset, findNote, openNote],
   );
 
-  const renderPane = useCallback(
-    (ctx: PaneRenderContext) => {
-      const tab = ctx.activeTab;
+  const renderLeaf = useCallback(
+    (ctx: LeafRenderContext) => {
+      const tab = ctx.activeTabId
+        ? useTabsStore.getState().tabs[ctx.activeTabId]
+        : null;
       if (!tab) return null;
 
       const leaf =
@@ -142,6 +143,8 @@ function WorkspaceShell({
     },
     [leafServices, ws.vaultPath],
   );
+
+  const root = useTabsStore((s) => s.root);
 
   const widthDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSidebarWidthChange = useCallback((width: number) => {
@@ -178,7 +181,7 @@ function WorkspaceShell({
             onPinToggle={handleTabPinToggle}
           />
 
-          <Tabs renderPane={renderPane} />
+          <PaneRenderer node={root} renderLeaf={renderLeaf} />
         </div>
 
         <HeaderBandRule className="col-start-2 col-end-[-1] row-start-1 self-end" />
