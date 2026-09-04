@@ -15,18 +15,19 @@ export type FetchTagsFn = (query: string) => Promise<string[]>;
  */
 
 /**
- * Externally-tagged serde value enum: `{ Text: "..." }`, `{ List: [...] }`,
- * `"None"`, …
+ * Internally-tagged serde value enum, unified with the DQL cell type
+ * (ADR-030 Phase 2): `{ type: "text", value }`, `{ type: "list", items }`,
+ * `{ type: "null" }`, …
  */
 export type FrontmatterValue =
-  | { Text: string }
-  | { List: FrontmatterValue[] }
-  | { Number: number }
-  | { Checkbox: boolean }
-  | { Date: string }
-  | { DateTime: string }
-  | { Link: string }
-  | "None";
+  | { type: "text"; value: string }
+  | { type: "number"; value: number }
+  | { type: "date"; value: string }
+  | { type: "datetime"; value: string }
+  | { type: "checkbox"; value: boolean }
+  | { type: "link"; name: string; path: string }
+  | { type: "list"; items: FrontmatterValue[] }
+  | { type: "null" };
 
 export type FrontmatterDiagnosticKind =
   | "DuplicateKey"

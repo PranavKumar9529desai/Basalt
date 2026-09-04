@@ -1,75 +1,114 @@
 /**
  * Tests for `src/frontmatter-utils.ts` — shared frontmatter predicates and
- * structural equality. `frontmatterValuesEqual` deep-compares variant values
- * without allocating a JSON string on every update.
+ * structural equality. `frontmatterValuesEqual` deep-compares type-tagged
+ * values without allocating a JSON string on every update.
  */
 import { describe, expect, it } from "vitest";
 import {
   frontmatterValuesEqual,
-  getVariantKey,
-  isFrontmatterObject,
+  isNullValue,
+  valueType,
 } from "../../src/frontmatter-utils";
 import type { FrontmatterValue } from "../../src/types";
 
-describe("isFrontmatterObject", () => {
-  it("rejects the None string sentinel", () => {
-    expect(isFrontmatterObject("None")).toBe(false);
+describe("isNullValue", () => {
+  it("accepts the null variant", () => {
+    expect(isNullValue({ type: "null" })).toBe(true);
   });
 
-  it("accepts variant objects", () => {
-    expect(isFrontmatterObject({ Text: "hi" })).toBe(true);
-    expect(isFrontmatterObject({ List: [] })).toBe(true);
+  it("rejects value-carrying variants", () => {
+    expect(isNullValue({ type: "text", value: "hi" })).toBe(false);
+    expect(isNullValue({ type: "list", items: [] })).toBe(false);
   });
 });
 
-describe("getVariantKey", () => {
-  it("finds a key case-insensitively", () => {
-    expect(getVariantKey({ Text: "hi" }, "text")).toBe("Text");
-    expect(getVariantKey({ DateTime: "x" }, "datetime")).toBe("DateTime");
-  });
-
-  it("returns undefined for a missing key", () => {
-    expect(getVariantKey({ Text: "hi" }, "Number")).toBeUndefined();
+describe("valueType", () => {
+  it("returns the interned discriminator", () => {
+    expect(valueType({ type: "text", value: "hi" })).toBe("text");
+    expect(valueType({ type: "datetime", value: "x" })).toBe("datetime");
   });
 });
 
 describe("frontmatterValuesEqual", () => {
-  it("compares None sentinels", () => {
-    expect(frontmatterValuesEqual("None", "None")).toBe(true);
-    expect(frontmatterValuesEqual("None", { Text: "x" })).toBe(false);
+  it("compares null variants", () => {
+    expect(frontmatterValuesEqual({ type: "null" }, { type: "null" })).toBe(
+      true,
+    );
+    expect(
+      frontmatterValuesEqual({ type: "null" }, { type: "text", value: "x" }),
+    ).toBe(false);
   });
 
-  it("compares scalar variants by key and value", () => {
-    expect(frontmatterValuesEqual({ Text: "a" }, { Text: "a" })).toBe(true);
-    expect(frontmatterValuesEqual({ Text: "a" }, { Text: "b" })).toBe(false);
-    expect(frontmatterValuesEqual({ Link: "x" }, { Text: "x" })).toBe(false);
-    expect(frontmatterValuesEqual({ Number: 1 }, { Number: 1 })).toBe(true);
-    expect(frontmatterValuesEqual({ Checkbox: true }, { Checkbox: false })).toBe(
+  it("compares scalar variants by type and value", () => {
+    expect(
+      frontmatterValuesEqual({ type: "text", value: "a" }, {
+        type: "text",
+        value: "a",
+      }),
+    ).toBe(true);
+    expect(
+      frontmatterValuesEqual({ type: "text", value: "a" }, {
+        type: "text",
+        value: "b",
+      }),
+    ).toBe(false);
+    expect(
+      frontmatterValuesEqual({ type: "link", name: "x", path: "x" }, {
+        type: "text",
+        value: "x",
+      }),
+    ).toBe(false);
+    expect(
+      frontmatterValuesEqual({ type: "number", value: 1 }, {
+        type: "number",
+        value: 1,
+      }),
+    ).toBe(true);
+    expect(
+      frontmatterValuesEqual({ type: "checkbox", value: true }, {
+        type: "checkbox",
+        value: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("compares link variants by name and path", () => {
+    const a: FrontmatterValue = { type: "link", name: "A", path: "A" };
+    expect(frontmatterValuesEqual(a, { type: "link", name: "A", path: "A" })).toBe(
+      true,
+    );
+    expect(frontmatterValuesEqual(a, { type: "link", name: "A", path: "B" })).toBe(
       false,
     );
   });
 
   it("compares list variants structurally", () => {
     expect(
-      frontmatterValuesEqual({ List: [{ Text: "a" }, { Text: "b" }] }, {
-        List: [{ Text: "a" }, { Text: "b" }],
-      } as FrontmatterValue),
+      frontmatterValuesEqual(
+        { type: "list", items: [{ type: "text", value: "a" }, { type: "text", value: "b" }] },
+        { type: "list", items: [{ type: "text", value: "a" }, { type: "text", value: "b" }] },
+      ),
     ).toBe(true);
     expect(
-      frontmatterValuesEqual({ List: [{ Text: "a" }] }, {
-        List: [{ Text: "a" }, { Text: "b" }],
-      } as FrontmatterValue),
+      frontmatterValuesEqual(
+        { type: "list", items: [{ type: "text", value: "a" }] },
+        { type: "list", items: [{ type: "text", value: "a" }, { type: "text", value: "b" }] },
+      ),
     ).toBe(false);
     expect(
-      frontmatterValuesEqual({ List: [{ Text: "a" }] }, {
-        List: [{ Number: 1 }],
-      } as FrontmatterValue),
+      frontmatterValuesEqual(
+        { type: "list", items: [{ type: "text", value: "a" }] },
+        { type: "list", items: [{ type: "number", value: 1 }] },
+      ),
     ).toBe(false);
   });
 
-  it("mismatches a list against a scalar of the same key shape", () => {
+  it("mismatches a list against a scalar", () => {
     expect(
-      frontmatterValuesEqual({ Text: "a" }, { List: [] } as FrontmatterValue),
+      frontmatterValuesEqual({ type: "text", value: "a" }, {
+        type: "list",
+        items: [],
+      }),
     ).toBe(false);
   });
 });

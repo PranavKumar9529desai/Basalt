@@ -1,20 +1,15 @@
 import type { FrontmatterValue } from "./types";
 
-export type FrontmatterVariant = Exclude<FrontmatterValue, "None">;
+export type FrontmatterType = FrontmatterValue["type"];
 
-export function isFrontmatterObject(v: FrontmatterValue): v is FrontmatterVariant {
-  return typeof v !== "string";
+/** True when the value is an explicit null / empty (`{ type: "null" }`). */
+export function isNullValue(v: FrontmatterValue): boolean {
+  return v.type === "null";
 }
 
-export function getVariantKey(
-  v: FrontmatterVariant,
-  name: string,
-): string | undefined {
-  const lower = name.toLowerCase();
-  for (const key of Object.keys(v)) {
-    if (key.toLowerCase() === lower) return key;
-  }
-  return undefined;
+/** The interned discriminator of a value ("text" | "number" | …). */
+export function valueType(v: FrontmatterValue): FrontmatterType {
+  return v.type;
 }
 
 /** Structural equality for two `FrontmatterValue`s (avoids JSON.stringify). */
@@ -22,25 +17,22 @@ export function frontmatterValuesEqual(
   a: FrontmatterValue,
   b: FrontmatterValue,
 ): boolean {
-  if (a === "None" || b === "None") return a === b;
-  if (typeof a === "string" || typeof b === "string") return a === b;
-
-  const aEntry = Object.entries(a)[0];
-  const bEntry = Object.entries(b)[0];
-  if (!aEntry || !bEntry) return aEntry === bEntry;
-  const [aKey, av] = aEntry;
-  const [bKey, bv] = bEntry;
-  if (aKey !== bKey) return false;
-
-  if (Array.isArray(av) && Array.isArray(bv)) {
-    if (av.length !== bv.length) return false;
-    return av.every((item, i) =>
-      frontmatterValuesEqual(
-        item as FrontmatterValue,
-        bv[i] as FrontmatterValue,
-      ),
-    );
+  switch (a.type) {
+    case "null":
+      return b.type === "null";
+    case "text":
+    case "number":
+    case "date":
+    case "datetime":
+    case "checkbox":
+      return a.type === b.type && a.value === b.value;
+    case "link":
+      return b.type === "link" && a.name === b.name && a.path === b.path;
+    case "list":
+      return (
+        b.type === "list" &&
+        a.items.length === b.items.length &&
+        a.items.every((item, i) => frontmatterValuesEqual(item, b.items[i]))
+      );
   }
-  if (Array.isArray(av) || Array.isArray(bv)) return false;
-  return av === bv;
 }

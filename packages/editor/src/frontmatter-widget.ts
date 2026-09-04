@@ -7,49 +7,39 @@ import type {
   FrontmatterValue,
 } from "./types";
 import { createFrontmatterIcon } from "./frontmatter-icons";
-import {
-  frontmatterValuesEqual,
-  getVariantKey,
-  isFrontmatterObject,
-  type FrontmatterVariant,
-} from "./frontmatter-utils";
+import { frontmatterValuesEqual, isNullValue } from "./frontmatter-utils";
 
-function variantValue<T>(v: FrontmatterValue, name: string): T | undefined {
-  if (!isFrontmatterObject(v)) return undefined;
-  const key = getVariantKey(v, name);
-  if (!key) return undefined;
-  return v[key as keyof FrontmatterVariant] as T;
+/** Narrow a `FrontmatterValue` to a specific internally-tagged variant. */
+function hasType<T extends FrontmatterValue["type"]>(
+  v: FrontmatterValue,
+  t: T,
+): v is Extract<FrontmatterValue, { type: T }> {
+  return v.type === t;
 }
 
 /** Human-readable form of a value for input fields. */
 export function displayValue(v: FrontmatterValue): string {
-  if (typeof v === "string") return ""; // "None"
-  const text = variantValue<string>(v, "Text");
-  if (text !== undefined) return text;
-  const link = variantValue<string>(v, "Link");
-  if (link !== undefined) return `[[${link}]]`;
-  const number = variantValue<number>(v, "Number");
-  if (number !== undefined) return String(number);
-  const checkbox = variantValue<boolean>(v, "Checkbox");
-  if (checkbox !== undefined) return checkbox ? "true" : "false";
-  const date = variantValue<string>(v, "Date");
-  if (date !== undefined) return date;
-  const dateTime = variantValue<string>(v, "DateTime");
-  if (dateTime !== undefined) return dateTime;
-  const list = variantValue<FrontmatterValue[]>(v, "List");
-  if (list !== undefined) return list.map(displayValue).join(", ");
+  if (isNullValue(v)) return "";
+  if (hasType(v, "text")) return v.value;
+  if (hasType(v, "link")) return `[[${v.name}]]`;
+  if (hasType(v, "number")) return String(v.value);
+  if (hasType(v, "checkbox")) return v.value ? "true" : "false";
+  if (hasType(v, "date")) return v.value;
+  if (hasType(v, "datetime")) return v.value;
+  if (hasType(v, "list")) return v.items.map(displayValue).join(", ");
   return "";
 }
 
 /** Infer a value type from free text (used when adding a new property). */
 function inferValue(text: string): FrontmatterValue {
   const t = text.trim();
-  if (t === "") return "None";
-  if (/^-?\d+(\.\d+)?$/.test(t)) return { Number: Number(t) };
-  if (t === "true" || t === "false") return { Checkbox: t === "true" };
+  if (t === "") return { type: "null" };
+  if (/^-?\d+(\.\d+)?$/.test(t)) return { type: "number", value: Number(t) };
+  if (t === "true" || t === "false")
+    return { type: "checkbox", value: t === "true" };
   const link = t.match(/^\[\[(.+)\]\]$/);
-  if (link) return { Link: link[1] };
-  return { Text: t };
+  if (link) return { type: "link", name: link[1], path: link[1] };
+  return { type: "text", value: t };
 }
 
 /**
@@ -58,24 +48,26 @@ function inferValue(text: string): FrontmatterValue {
  */
 function coerce(text: string, original?: FrontmatterValue): FrontmatterValue {
   const t = text.trim();
-  if (original && typeof original !== "string") {
-    if (variantValue<number>(original, "Number") !== undefined) {
-      const n = Number(t);
-      return Number.isNaN(n) ? { Text: t } : { Number: n };
-    }
-    if (variantValue<boolean>(original, "Checkbox") !== undefined) {
-      return { Checkbox: t === "true" || t === "yes" || t === "1" };
-    }
-    if (variantValue<string>(original, "Date") !== undefined)
-      return { Date: t };
-    if (variantValue<string>(original, "DateTime") !== undefined)
-      return { DateTime: t };
-    if (variantValue<string>(original, "Link") !== undefined) {
-      return { Link: t.replace(/^\[\[|\]\]$/g, "") };
-    }
-    if (variantValue<string>(original, "Text") !== undefined)
-      return { Text: t };
+  if (!original) return inferValue(t);
+  if (hasType(original, "number")) {
+    const n = Number(t);
+    return Number.isNaN(n)
+      ? { type: "text", value: t }
+      : { type: "number", value: n };
   }
+  if (hasType(original, "checkbox")) {
+    return {
+      type: "checkbox",
+      value: t === "true" || t === "yes" || t === "1",
+    };
+  }
+  if (hasType(original, "date")) return { type: "date", value: t };
+  if (hasType(original, "datetime")) return { type: "datetime", value: t };
+  if (hasType(original, "link")) {
+    const target = t.replace(/^\[\[|\]\]$/g, "");
+    return { type: "link", name: target, path: target };
+  }
+  if (hasType(original, "text")) return { type: "text", value: t };
   return inferValue(t);
 }
 
@@ -232,33 +224,26 @@ export class FrontmatterWidget extends WidgetType {
 
   private renderValue(entry: FrontmatterEntry): HTMLElement {
     const v = entry.value;
-    if (typeof v !== "string") {
-      const checkbox = variantValue<boolean>(v, "Checkbox");
-      if (checkbox !== undefined) {
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.className = "cm-fm-value cm-fm-checkbox";
-        cb.checked = checkbox;
-        cb.addEventListener("change", () =>
-          this.editWith(entry.key, { Checkbox: cb.checked }),
-        );
-        return cb;
-      }
-      const list = variantValue<FrontmatterValue[]>(v, "List");
-      if (list !== undefined) {
-        return this.renderList(entry.key, list);
-      }
+    if (hasType(v, "checkbox")) {
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "cm-fm-value cm-fm-checkbox";
+      cb.checked = v.value;
+      cb.addEventListener("change", () =>
+        this.editWith(entry.key, { type: "checkbox", value: cb.checked }),
+      );
+      return cb;
+    }
+    if (hasType(v, "list")) {
+      return this.renderList(entry.key, v.items);
     }
     const input = document.createElement("input");
-    const date =
-      typeof v !== "string" && variantValue<string>(v, "Date") !== undefined;
-    const dateTime =
-      typeof v !== "string" &&
-      variantValue<string>(v, "DateTime") !== undefined;
+    const date = hasType(v, "date");
+    const dateTime = hasType(v, "datetime");
     input.type = date ? "date" : dateTime ? "datetime-local" : "text";
     input.className = "cm-fm-value";
     input.value = dateTime ? displayValue(v).slice(0, 16) : displayValue(v);
-    if (typeof v === "string") {
+    if (isNullValue(v)) {
       input.classList.add("cm-fm-empty");
       input.placeholder = "Empty";
     }
@@ -285,7 +270,7 @@ export class FrontmatterWidget extends WidgetType {
       x.textContent = "✕";
       x.addEventListener("click", () => {
         const next = items.filter((it) => it !== item);
-        this.editWith(key, { List: next });
+        this.editWith(key, { type: "list", items: next });
       });
       chip.appendChild(x);
       wrap.appendChild(chip);
@@ -349,7 +334,10 @@ export class FrontmatterWidget extends WidgetType {
       if ((e as KeyboardEvent).key === "Enter") {
         const val = add.value.trim();
         if (val) {
-          this.editWith(key, { List: [...items, inferValue(val)] });
+          this.editWith(key, {
+            type: "list",
+            items: [...items, inferValue(val)],
+          });
           add.value = "";
         }
       }
@@ -384,7 +372,10 @@ export class FrontmatterWidget extends WidgetType {
       const k = keyInput.value.trim();
       const raw = valInput.value;
       if (k) {
-        this.editWith(k, raw.trim() === "" ? "None" : inferValue(raw));
+        this.editWith(
+          k,
+          raw.trim() === "" ? { type: "null" } : inferValue(raw),
+        );
         keyInput.value = "";
         valInput.value = "";
       }

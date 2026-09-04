@@ -1,5 +1,5 @@
 import type { FrontmatterEntry } from "./types";
-import { getVariantKey, isFrontmatterObject } from "./frontmatter-utils";
+import { valueType } from "./frontmatter-utils";
 
 export type FrontmatterIconName =
   | "file-text"
@@ -126,15 +126,22 @@ function resolveIconName(entry: FrontmatterEntry): FrontmatterIconName {
   if (key === "type") return "file-text";
 
   const value = entry.value;
-  if (!isFrontmatterObject(value)) return "note";
-  if (getVariantKey(value, "List")) return "list";
-  if (getVariantKey(value, "Checkbox")) return "check";
-  if (getVariantKey(value, "DateTime")) return "clock";
-  if (getVariantKey(value, "Date")) return "calendar";
-  if (getVariantKey(value, "Number")) return "hash";
-  if (getVariantKey(value, "Link")) return "link";
-  if (getVariantKey(value, "Text")) return "note";
-  return "note";
+  switch (valueType(value)) {
+    case "list":
+      return "list";
+    case "checkbox":
+      return "check";
+    case "datetime":
+      return "clock";
+    case "date":
+      return "calendar";
+    case "number":
+      return "hash";
+    case "link":
+      return "link";
+    default:
+      return "note";
+  }
 }
 
 export function createFrontmatterIcon(entry: FrontmatterEntry): HTMLElement {

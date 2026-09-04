@@ -22,17 +22,24 @@ export const parseFrontmatter: ParseFrontmatterFn = (text) =>
   parseFrontmatterSync(text);
 
 export function serializeFrontmatterValue(value: FrontmatterValue): string {
-  if (typeof value === "string") return '""';
-  if ("Text" in value) return JSON.stringify(value.Text);
-  if ("List" in value) {
-    return `[${value.List.map(serializeFrontmatterValue).join(", ")}]`;
+  switch (value.type) {
+    case "null":
+      return '""';
+    case "text":
+      return JSON.stringify(value.value);
+    case "list":
+      return `[${value.items.map(serializeFrontmatterValue).join(", ")}]`;
+    case "number":
+      return String(value.value);
+    case "checkbox":
+      return value.value ? "true" : "false";
+    case "date":
+      return value.value;
+    case "datetime":
+      return value.value;
+    case "link":
+      return JSON.stringify(`[[${value.name}]]`);
   }
-  if ("Number" in value) return String(value.Number);
-  if ("Checkbox" in value) return value.Checkbox ? "true" : "false";
-  if ("Date" in value) return value.Date;
-  if ("DateTime" in value) return value.DateTime;
-  if ("Link" in value) return JSON.stringify(`[[${value.Link}]]`);
-  return '""';
 }
 
 /**
