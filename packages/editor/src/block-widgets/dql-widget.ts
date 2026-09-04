@@ -348,11 +348,19 @@ export const DQL_WIDGET_THEME = EditorView.baseTheme({
     fontStyle: "italic",
   },
   ".cm-dql-footer": {
-    marginTop: "0.35em",
+    paddingTop: "0.35em",
     fontSize: "0.8em",
     color: "var(--sat-text-muted, #64748b)",
   },
 });
+
+// ---------------------------------------------------------------------------
+// Note on CM block-widget layout: multi-line block widgets must use
+// `block: true` (registry.ts), so CM draws them *between* lines in their own
+// block slot. Vertical PADDING on the container is fine (it's inside the box
+// and measured), but block widgets must not rely on vertical MARGIN, which
+// collapses out of CM's height measurement — prefer padding for spacing.
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // BlockWidgetSpec — registered in the live-preview walk

@@ -123,12 +123,14 @@ export function handleBlockWidgetsNode(
         to: number;
       });
     if (!span) continue;
-    // block:false — a block:true replace yanks the range out of line flow so
-    // ArrowUp/Down can't place the caret across it (live-preview.ts invariant).
-    // Widget CSS supplies the block visual. atomic=true re-exposes the collapsed
-    // multi-line span as an atomic range (live-preview.ts), so arrow travel
-    // skips it in one step while still letting the caret enter when it's raw.
-    collector.addReplace(span.from, span.to, widget, false, true);
+    // block:true — a multi-line replacement (DQL/HTML/table/frontmatter) must
+    // be a CM block widget drawn *between* lines, so its container gets its own
+    // block slot and its natural height never overlaps the line below. (With
+    // block:false the block-level <div> is placed inline over a multi-line
+    // range, and its height overflows into the next line — the observed
+    // overlap bug.) The old worry that block:true blocks caret travel is
+    // handled independently by the atomicRanges re-exposure below/above.
+    collector.addReplace(span.from, span.to, widget, true, true);
     (models[spec.id] ??= []).push(model);
     widgeted = true;
     found = true;
