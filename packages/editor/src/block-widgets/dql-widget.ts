@@ -3,7 +3,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
-import { escapeHtml } from "./utils";
+import { escapeHtml, notifyViewOfSizeChange } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Query result types — mirrors crates/basalt-types/src/query.rs exactly.
@@ -156,7 +156,7 @@ interface DqlModel {
   to: number;
 }
 
-class DqlResultWidget extends WidgetType {
+export class DqlResultWidget extends WidgetType {
   constructor(
     private readonly queryText: string,
     private readonly runQuery: RunQueryFn | undefined,
@@ -182,7 +182,7 @@ class DqlResultWidget extends WidgetType {
     });
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const div = document.createElement("div");
     div.className = "cm-dql-result";
 
@@ -205,9 +205,11 @@ class DqlResultWidget extends WidgetType {
           queryCache.set(queryText, result);
           div.innerHTML = renderDqlResult(result);
           this.bindLinks(div);
+          notifyViewOfSizeChange(div, view);
         })
         .catch((err) => {
           div.innerHTML = `<div class="cm-dql-error">Query error: ${escapeHtml(String(err))}</div>`;
+          notifyViewOfSizeChange(div, view);
         });
     } else {
       div.innerHTML =

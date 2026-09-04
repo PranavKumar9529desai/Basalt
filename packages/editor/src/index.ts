@@ -62,6 +62,7 @@ export {
   getBlockWidgetModel,
   requestPreviewRebuild,
 } from "./preview/live-preview";
+export { notifyViewOfSizeChange } from "./block-widgets/utils";
 export type { BlockWidgetSpec } from "./block-widgets/registry";
 export {
   blockWidgetModeFacet,

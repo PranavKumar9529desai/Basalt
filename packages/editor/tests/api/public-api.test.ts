@@ -35,6 +35,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "getWatchdogStats",
   "handleTagsInLine",
   "openLinkFacet",
+  "notifyViewOfSizeChange",
   "previewExtensions",
   "readingExtensions",
   "readingModeExtras",

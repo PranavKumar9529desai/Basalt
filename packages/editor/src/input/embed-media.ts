@@ -9,6 +9,7 @@ import {
 } from "@codemirror/view";
 import { resolveAssetFacet } from "../types";
 import { classifyMediaExtension, extensionOf, scanEmbedWikiLinks } from "./embed-utils";
+import { notifyViewOfSizeChange } from "../block-widgets/utils";
 
 const EMBED_MEDIA_CLASS = "cm-embed-media";
 
@@ -61,7 +62,7 @@ function mediaKind(target: string): "image" | "audio" | "video" | "pdf" {
   return kind;
 }
 
-class EmbedMediaWidget extends WidgetType {
+export class EmbedMediaWidget extends WidgetType {
   constructor(
     private readonly url: string,
     private readonly target: string,
@@ -73,7 +74,7 @@ class EmbedMediaWidget extends WidgetType {
     return this.url === other.url && this.target === other.target;
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = EMBED_MEDIA_CLASS;
 
@@ -105,6 +106,7 @@ class EmbedMediaWidget extends WidgetType {
         el.src = this.url;
         el.alt = this.target;
         el.loading = "lazy";
+        el.onload = () => notifyViewOfSizeChange(wrapper, view);
         wrapper.appendChild(el);
         break;
       }
