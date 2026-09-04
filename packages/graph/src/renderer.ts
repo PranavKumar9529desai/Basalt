@@ -305,6 +305,8 @@ export class GraphRenderer {
     // Premultiplied-alpha compositing: transparent clear + dimmed hover edges blend correctly.
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // Transparent clear — geometry only; app theme shows through.
+    gl.clearColor(0, 0, 0, 0);
 
     this.progScene = link(gl, VERT_SCENE, FRAG_POINTS);
     // Re-link the LINE fragment variant against the same scene vertex shader;
@@ -513,7 +515,6 @@ export class GraphRenderer {
   render(): void {
     if (this.lost) return;
     const gl = this.gl;
-    gl.clearColor(0, 0, 0, 0); // transparent — geometry only; app theme shows through
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (this.nodeCount === 0) return;
 

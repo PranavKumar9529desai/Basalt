@@ -17,20 +17,23 @@ import type { Command, CommandMetadata } from "./types";
 
 export class CommandService {
   private commands = new Map<string, Command>();
+  private metadataById: Map<string, CommandMetadata> = new Map(
+    COMMANDS.map((c) => [c.id, c]),
+  );
 
   registerCommand(
     id: string,
     callback: () => void | Promise<void>,
     checkCallback?: () => boolean,
   ): void {
-    const meta = COMMANDS.find((c) => c.id === id);
+    const meta = this.metadataById.get(id);
     if (!meta) {
       console.warn(`Unknown command id: "${id}". Add it to commands.json.`);
       return;
     }
     const IconComponent = resolveIcon(meta.icon);
     const icon = IconComponent
-      ? createElement(IconComponent, { size: 16 })
+      ? createElement(IconComponent, { size: meta.iconSize ?? 16 })
       : undefined;
     this.register({ ...meta, icon, callback, checkCallback });
   }
@@ -52,6 +55,11 @@ export class CommandService {
       // Commands own their error handling; palette dispatch is fire-and-forget.
       void cmd.callback();
     }
+  }
+
+  /** O(1) existence check — used by the keybinding hot path. */
+  hasCommand(id: string): boolean {
+    return this.commands.has(id);
   }
 
   getCommands(): Command[] {

@@ -1,4 +1,3 @@
-import { syntaxTree } from "@codemirror/language";
 import {
   Decoration,
   DecorationSet,
@@ -8,6 +7,11 @@ import {
   type ViewUpdate,
   type PluginValue,
 } from "@codemirror/view";
+import {
+  classifyMediaExtension,
+  extensionOf,
+  scanEmbedWikiLinks,
+} from "./embed-utils";
 
 /**
  * CM6 extension that renders `![[...]]` embeds as compact placeholder chips
@@ -53,12 +57,11 @@ const EMBED_THEME = EditorView.baseTheme({
 
 /** Icon by file type (inferred from extension). */
 function embedIcon(target: string): string {
-  const ext = target.split(".").pop()?.toLowerCase() ?? "";
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext))
-    return "🖼";
-  if (["mp4", "mov", "avi", "webm", "mkv"].includes(ext)) return "🎬";
-  if (["mp3", "wav", "flac", "ogg", "aac", "m4a"].includes(ext)) return "🎵";
-  if (["pdf"].includes(ext)) return "📄";
+  const kind = classifyMediaExtension(extensionOf(target));
+  if (kind === "image") return "🖼";
+  if (kind === "video") return "🎬";
+  if (kind === "audio") return "🎵";
+  if (kind === "pdf") return "📄";
   return "📎";
 }
 
@@ -96,40 +99,15 @@ class EmbedPreviewPlugin implements PluginValue {
   }
   buildDecorations(view: EditorView): DecorationSet {
     const deco: Array<{ from: number; to: number; value: Decoration }> = [];
-    const tree = syntaxTree(view.state);
-    const doc = view.state.doc;
 
-    // Scan all WikiLink nodes and check if preceded by '!'
-    tree.iterate({
-      enter(node) {
-        if (node.name !== "WikiLink") return;
-
-        const from = node.from;
-        const to = node.to;
-
-        // Check character immediately before the WikiLink's [[.
-        if (from < 1) return;
-        const charBefore = doc.sliceString(from - 1, from);
-        if (charBefore !== "!") return;
-
-        // Extract the target: text between [[ and ]]
-        const target = doc
-          .sliceString(from + 2, to - 2)
-          .split("|")[0] // strip alias
-          .split("#")[0] // strip anchor
-          .trim();
-
-        if (!target) return;
-
-        // Replace the entire `![[target]]` with the chip widget.
-        deco.push(
-          Decoration.replace({
-            widget: new EmbedChipWidget(target),
-            inclusive: true,
-          }).range(from - 1, to),
-        );
-      },
-    });
+    for (const { from, to, target } of scanEmbedWikiLinks(view)) {
+      deco.push(
+        Decoration.replace({
+          widget: new EmbedChipWidget(target),
+          inclusive: true,
+        }).range(from, to),
+      );
+    }
 
     return Decoration.set(deco, true);
   }

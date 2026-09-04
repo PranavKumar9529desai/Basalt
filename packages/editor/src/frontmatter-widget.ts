@@ -7,23 +7,12 @@ import type {
   FrontmatterValue,
 } from "./types";
 import { createFrontmatterIcon } from "./frontmatter-icons";
-
-type FrontmatterVariant = Exclude<FrontmatterValue, "None">;
-
-function isFrontmatterObject(v: FrontmatterValue): v is FrontmatterVariant {
-  return typeof v !== "string";
-}
-
-function getVariantKey(
-  v: FrontmatterVariant,
-  name: string,
-): string | undefined {
-  const lower = name.toLowerCase();
-  for (const key of Object.keys(v)) {
-    if (key.toLowerCase() === lower) return key;
-  }
-  return undefined;
-}
+import {
+  frontmatterValuesEqual,
+  getVariantKey,
+  isFrontmatterObject,
+  type FrontmatterVariant,
+} from "./frontmatter-utils";
 
 function variantValue<T>(v: FrontmatterValue, name: string): T | undefined {
   if (!isFrontmatterObject(v)) return undefined;
@@ -122,9 +111,23 @@ export class FrontmatterWidget extends WidgetType {
   }
 
   /** Reuse the DOM only when the rendered model is identical, so unrelated
-   * async refreshes don't blow away focus mid-edit. */
+   * async refreshes don't blow away focus mid-edit. Compares only the fields
+   * that drive rendering (avoids a full-document JSON.stringify per update). */
   eq(other: FrontmatterWidget): boolean {
-    return JSON.stringify(this.model) === JSON.stringify(other.model);
+    const a = this.model.entries;
+    const b = other.model.entries;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].key !== b[i].key) return false;
+      if (!frontmatterValuesEqual(a[i].value, b[i].value)) return false;
+      const as = a[i].valueSpan;
+      const bs = b[i].valueSpan;
+      if (as.start !== bs.start || as.end !== bs.end) return false;
+      const aks = a[i].keySpan;
+      const bks = b[i].keySpan;
+      if (aks.start !== bks.start || aks.end !== bks.end) return false;
+    }
+    return true;
   }
 
   /** Let the browser handle all events over the widget (typing, clicks). */

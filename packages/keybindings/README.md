@@ -25,7 +25,7 @@ imports from features.
 packages/keybindings/
 ├── keybindings.json       # static hotkey rules (source of truth)
 ├── types.ts               # Keybinding + WhenContext
-├── hotkey-parser.ts       # parseHotkey / matchesHotkey
+├── hotkey-parser.ts       # parseHotkey (hotkey string → matcher)
 ├── keybinding-service.ts  # KeybindingService class (singleton)
 ├── react.tsx              # KeybindingProvider + KeybindingListener + useKeybindingService
 └── index.ts               # public API barrel
@@ -38,7 +38,6 @@ import {
   keybindingService, // singleton
   KeybindingService,
   parseHotkey,
-  matchesHotkey,
   KeybindingProvider,
   KeybindingListener,
   useKeybindingService,

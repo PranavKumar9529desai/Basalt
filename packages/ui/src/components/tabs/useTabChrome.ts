@@ -3,9 +3,9 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import type { RefObject } from "react";
 import type { TabItemData } from "./types";
 
 export interface TabsChromeLayout {
@@ -19,11 +19,11 @@ export interface TabsChromeLayout {
 
 export function useTabChrome(
   tabs: TabItemData[],
+  containerRef: RefObject<HTMLDivElement | null>,
+  tabRefs: RefObject<Map<string, HTMLDivElement>>,
   visibleTabCount?: number,
   visibleTabStart = 0,
 ) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [chrome, setChrome] = useState<TabsChromeLayout>({
     activeLeft: null,
     activeWidth: 0,
@@ -41,7 +41,7 @@ export function useTabChrome(
     } else {
       tabRefs.current.delete(tabId);
     }
-  }, []);
+  }, [tabRefs]);
 
   const recalcChrome = useCallback(() => {
     const container = containerRef.current;
@@ -102,7 +102,7 @@ export function useTabChrome(
       }
       return { activeLeft, activeWidth, separatorXs };
     });
-  }, [activeTabId, tabs, visibleTabCount, visibleTabStart]);
+  }, [activeTabId, tabs, visibleTabCount, visibleTabStart, containerRef, tabRefs]);
 
   // Layout effect on mount/change
   useLayoutEffect(() => {
@@ -120,7 +120,7 @@ export function useTabChrome(
     ro.observe(container);
 
     return () => ro.disconnect();
-  }, [recalcChrome]);
+  }, [recalcChrome, containerRef]);
 
   return {
     containerRef,

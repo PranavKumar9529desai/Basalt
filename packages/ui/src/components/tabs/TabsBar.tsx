@@ -12,6 +12,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
 import { useTabChrome } from "./useTabChrome";
+import { useTabDragDrop } from "./useTabDragDrop";
+import { useTabOverflow } from "./useTabOverflow";
 
 export interface TabsBarProps {
   tabs: TabItemData[];
@@ -109,79 +111,35 @@ export function TabsBar({
     right: number;
   } | null>(null);
 
-  const tabWidthsRef = useRef<Map<string, number>>(new Map());
-  const [visibleTabCount, setVisibleTabCount] = useState(tabs.length);
-  const [visibleTabStart, setVisibleTabStart] = useState(0);
+  // Extract overflow computation so the visible window is known before
+  // computing chrome (which only draws for visible tabs). Also owns the
+  // container/tab refs shared with useTabChrome.
+  const { containerRef, tabRefs, visibleTabCount, visibleTabStart } =
+    useTabOverflow(tabs, dropdownWrapperRef);
 
   // Use the extracted useTabChrome hook with visibleTabCount so chrome is
   // only computed for tabs that aren't hidden
-  const { containerRef, tabRefs, chrome, setTabRef } = useTabChrome(
+  const { chrome, setTabRef } = useTabChrome(
     tabs,
+    containerRef,
+    tabRefs,
     visibleTabCount,
     visibleTabStart,
   );
 
-  /* eslint-disable react-hooks/exhaustive-deps -- tabRefs/tabWidths are live
-     refs; recalculation is driven by the effects below (resize + tabs change). */
-  const recalcOverflow = useCallback(() => {
-    const container = containerRef.current;
-    const dropdownWrapper = dropdownWrapperRef.current;
-    if (!container) return;
-
-    const dropdownWidth = dropdownWrapper?.offsetWidth || 0;
-    const availableWidth = container.clientWidth - dropdownWidth - 8; // 8px buffer
-
-    const widths = tabs.map((tab) => {
-      const el = tabRefs.current.get(tab.id);
-      // Measure width — if 0 (display:none), use cached value from when it was visible
-      const measuredWidth = el?.offsetWidth ?? 0;
-      if (measuredWidth > 0) {
-        tabWidthsRef.current.set(tab.id, measuredWidth);
-      }
-      return tabWidthsRef.current.get(tab.id) || 170;
-    });
-
-    if (tabs.length === 0) {
-      setVisibleTabStart(0);
-      setVisibleTabCount(0);
-      return;
-    }
-
-    // Keep the active tab in the strip. Fill to the right first, then use
-    // remaining space on the left so overflow never hides the current tab.
-    const activeIndex = tabs.findIndex((tab) => tab.isActive);
-    const anchor = activeIndex >= 0 ? activeIndex : 0;
-    let start = anchor;
-    let end = anchor + 1;
-    let usedWidth = widths[anchor] ?? 170;
-    while (end < tabs.length && usedWidth + widths[end] <= availableWidth) {
-      usedWidth += widths[end] ?? 170;
-      end += 1;
-    }
-    while (start > 0 && usedWidth + widths[start - 1] <= availableWidth) {
-      start -= 1;
-      usedWidth += widths[start] ?? 170;
-    }
-
-    setVisibleTabStart(start);
-    setVisibleTabCount(Math.max(1, end - start));
-  }, [tabs, containerRef]);
-  /* eslint-enable react-hooks/exhaustive-deps */
-
-  // ResizeObserver on the container
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const ro = new ResizeObserver(() => recalcOverflow());
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [recalcOverflow, containerRef]);
-
-  // Also recalc when tabs change
-  useEffect(() => {
-    recalcOverflow();
-  }, [recalcOverflow, tabs.length]);
+  const {
+    dropIndicator,
+    dropIndicatorRef,
+    setDropIndicatorBoth,
+    handleInternalDragOver,
+    handleInternalDrop,
+    handleInternalDragEnd,
+  } = useTabDragDrop(
+    tabRefs,
+    onTabDragOver,
+    onTabDrop,
+    onTabDragEnd,
+  );
 
   // Close dropdown on Escape
   useEffect(() => {
@@ -192,61 +150,6 @@ export function TabsBar({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [dropdownOpen]);
-
-  const [dropIndicator, setDropIndicator] = useState<{
-    tabId: string;
-    edge: "left" | "right";
-  } | null>(null);
-  const dropIndicatorRef = useRef<{
-    tabId: string;
-    edge: "left" | "right";
-  } | null>(null);
-  const setDropIndicatorBoth = useCallback(
-    (val: { tabId: string; edge: "left" | "right" } | null) => {
-      dropIndicatorRef.current = val;
-      setDropIndicator(val);
-    },
-    [],
-  );
-
-  const handleInternalDragOver = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      const el = tabRefs.current.get(tabId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const edge: "left" | "right" =
-          event.clientX < (rect.left + rect.right) / 2 ? "left" : "right";
-        setDropIndicatorBoth(
-          dropIndicatorRef.current?.tabId === tabId &&
-            dropIndicatorRef.current?.edge === edge
-            ? dropIndicatorRef.current
-            : { tabId, edge },
-        );
-      }
-      onTabDragOver?.(tabId, event);
-    },
-    [onTabDragOver, setDropIndicatorBoth, tabRefs],
-  );
-
-  const handleInternalDrop = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      const indicator = dropIndicatorRef.current;
-      setDropIndicatorBoth(null);
-      event.stopPropagation();
-      if (indicator) {
-        onTabDrop?.(tabId, event, indicator.edge);
-      }
-    },
-    [onTabDrop, setDropIndicatorBoth],
-  );
-
-  const handleInternalDragEnd = useCallback(
-    (tabId: string, event: DragEvent<HTMLElement>) => {
-      setDropIndicatorBoth(null);
-      onTabDragEnd?.(tabId, event);
-    },
-    [onTabDragEnd, setDropIndicatorBoth],
-  );
 
   const closeDropdown = useCallback(() => {
     setDropdownOpen(false);

@@ -3,8 +3,9 @@ import type { SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector } from "./types";
 import { isInCodeBlock } from "./types";
 
-/** Fresh regex instance per call — the `g` flag carries state between calls. */
-const TAG_RE = () => /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
+/** Module-scoped regex; `matchAll` uses an internal copy so the `g` flag's
+ * `lastIndex` is not shared across calls (no state leakage between lines). */
+const TAG_RE = /#([a-zA-Z][a-zA-Z0-9/_-]*)/g;
 export const INLINE_MARKS_THEME = EditorView.baseTheme({
   ".cm-live-inline-code": {
     fontFamily: "var(--sat-font-mono)",
@@ -120,11 +121,10 @@ export function handleTagsInLine(
   codeBlockRanges: { from: number; to: number }[],
   collector: DecorationCollector,
 ): void {
-  const tagRe = TAG_RE();
-  let match: RegExpExecArray | null = tagRe.exec(lineText);
+  const matches = lineText.matchAll(TAG_RE);
   let iterations = 0;
 
-  while (match !== null) {
+  for (const match of matches) {
     if (++iterations > MAX_TAG_ITERATIONS) {
       console.warn(
         `[WATCHDOG] handleTagsInLine exceeded ${MAX_TAG_ITERATIONS} iterations on line: "${lineText.slice(0, 80)}"`,
@@ -134,17 +134,12 @@ export function handleTagsInLine(
 
     const from = lineFrom + match.index;
     const to = from + match[0].length;
-    const prevMatch = match;
-    // Advance regex BEFORE any continue — prevents infinite loop when a
-    // match is inside a code block or not preceded by whitespace.
-    match = tagRe.exec(lineText);
 
     // Use binary-search-based isInCodeBlock (assumes ranges are sorted)
     if (isInCodeBlock(from, codeBlockRanges)) continue;
 
     // Must be preceded by whitespace or start of line
-    if (prevMatch.index > 0 && !/\s/.test(lineText[prevMatch.index - 1]))
-      continue;
+    if (match.index > 0 && !/\s/.test(lineText[match.index - 1])) continue;
 
     collector.addMark(from, to, "cm-live-tag");
   }

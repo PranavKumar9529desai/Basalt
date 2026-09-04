@@ -5,6 +5,7 @@ export interface CommandMetadata {
   name: string;
   category?: string;
   icon?: string;
+  iconSize?: number;
 }
 
 export interface Command extends Omit<CommandMetadata, "icon"> {

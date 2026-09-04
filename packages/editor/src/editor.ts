@@ -75,6 +75,36 @@ export interface EditorExtensionGroups {
   blockWidgets: Extension[];
 }
 
+/**
+ * Shared registration for the HTML/table/DQL block widgets plus their themes.
+ * Each block widget registers a spec (via `blockWidgetSpecsFacet.of`) and a
+ * base theme. When a `runQuery`/`onOpenLink` config is supplied, the DQL widget
+ * and the dependency facets are included (skip for read-only preview panes).
+ */
+function commonBlockWidgetExtensions(config?: {
+  runQuery?: EditorConfig["runQuery"];
+  onOpenLink?: EditorConfig["onOpenLink"];
+}): Extension[] {
+  const exts: Extension[] = [
+    // Sanitized HTML block widget + its theme.
+    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
+    HTML_BLOCK_THEME,
+    // Table block widget — renders markdown tables as rich <table> HTML.
+    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
+    TABLE_BLOCK_THEME,
+  ];
+  if (config?.runQuery || config?.onOpenLink) {
+    // DQL query block widget — renders ```dql code blocks as live table/list/task views.
+    exts.push(
+      blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
+      DQL_WIDGET_THEME,
+    );
+    exts.push(runQueryFacet.of(config.runQuery));
+    exts.push(openLinkFacet.of(config.onOpenLink));
+  }
+  return exts;
+}
+
 export function createEditorExtensionGroups(
   config: EditorConfig,
 ): EditorExtensionGroups {
@@ -131,17 +161,10 @@ export function createEditorExtensionGroups(
         onFetchTags: onFetchTags,
         onFetchLinks: onFetchLinks,
       }),
-      // Sanitized HTML block widget + its theme.
-      blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
-      HTML_BLOCK_THEME,
-      // Table block widget — renders markdown tables as rich <table> HTML.
-      blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
-      TABLE_BLOCK_THEME,
-      // DQL query block widget — renders ```dql code blocks as live table/list/task views.
-      blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
-      DQL_WIDGET_THEME,
-      runQueryFacet.of(config.runQuery),
-      openLinkFacet.of(config.onOpenLink),
+      ...commonBlockWidgetExtensions({
+        runQuery: config.runQuery,
+        onOpenLink: config.onOpenLink,
+      }),
     ],
   };
 }
@@ -181,12 +204,8 @@ export function previewExtensions(): Extension[] {
     // Dim-mode frontmatter only: no parser, no interactive panel.
     ...frontmatterBlockWidgetGroup({}),
     frontmatterDimMode,
-    // Sanitized HTML blocks render in read-only previews too.
-    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
-    HTML_BLOCK_THEME,
-    // Table block widget renders in read-only previews too.
-    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
-    TABLE_BLOCK_THEME,
+    // HTML + table widgets render in read-only previews too (no DQL).
+    ...commonBlockWidgetExtensions(),
     // Read-only preview panes always fully render (no cursor-based reveal).
     renderModeReading,
     EditorView.lineWrapping,
@@ -228,14 +247,10 @@ export function readingExtensions(config: {
     ...frontmatterBlockWidgetGroup({
       parseFrontmatter: config.parseFrontmatter,
     }),
-    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
-    HTML_BLOCK_THEME,
-    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
-    TABLE_BLOCK_THEME,
-    blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
-    DQL_WIDGET_THEME,
-    runQueryFacet.of(config.runQuery),
-    openLinkFacet.of(config.onOpenLink),
+    ...commonBlockWidgetExtensions({
+      runQuery: config.runQuery,
+      onOpenLink: config.onOpenLink,
+    }),
     // Embed asset resolution facet.
     resolveAssetFacet.of(config.resolveAsset),
     // Reading-mode embed: resolves ![[file]] to actual media.
@@ -260,14 +275,10 @@ export function readingModeExtras(config: {
     ...frontmatterBlockWidgetGroup({
       parseFrontmatter: config.parseFrontmatter,
     }),
-    blockWidgetSpecsFacet.of(htmlBlockSpec as BlockWidgetSpec),
-    HTML_BLOCK_THEME,
-    blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
-    TABLE_BLOCK_THEME,
-    blockWidgetSpecsFacet.of(dqlBlockSpec as BlockWidgetSpec),
-    DQL_WIDGET_THEME,
-    runQueryFacet.of(config.runQuery),
-    openLinkFacet.of(config.onOpenLink),
+    ...commonBlockWidgetExtensions({
+      runQuery: config.runQuery,
+      onOpenLink: config.onOpenLink,
+    }),
     resolveAssetFacet.of(config.resolveAsset),
     EMBED_MEDIA_THEME,
     embedMediaPlugin,

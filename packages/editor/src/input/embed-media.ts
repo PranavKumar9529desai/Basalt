@@ -1,4 +1,3 @@
-import { syntaxTree } from "@codemirror/language";
 import {
   Decoration,
   DecorationSet,
@@ -9,6 +8,7 @@ import {
   type PluginValue,
 } from "@codemirror/view";
 import { resolveAssetFacet } from "../types";
+import { classifyMediaExtension, extensionOf, scanEmbedWikiLinks } from "./embed-utils";
 
 const EMBED_MEDIA_CLASS = "cm-embed-media";
 
@@ -56,12 +56,9 @@ const EMBED_MEDIA_THEME = EditorView.baseTheme({
 });
 
 function mediaKind(target: string): "image" | "audio" | "video" | "pdf" {
-  const ext = target.split(".")?.pop()?.toLowerCase() ?? "";
-  if (["mp3", "wav", "ogg", "aac", "flac", "m4a", "opus"].includes(ext))
-    return "audio";
-  if (["mp4", "webm", "mov", "mkv", "avi", "m4v"].includes(ext)) return "video";
-  if (ext === "pdf") return "pdf";
-  return "image";
+  const kind = classifyMediaExtension(extensionOf(target));
+  if (kind === "other") return "image";
+  return kind;
 }
 
 class EmbedMediaWidget extends WidgetType {
@@ -139,59 +136,39 @@ class EmbedMediaPlugin implements PluginValue {
     if (!resolveAsset) return Decoration.none;
 
     const deco: Array<{ from: number; to: number; value: Decoration }> = [];
-    const tree = syntaxTree(view.state);
-    const doc = view.state.doc;
 
-    tree.iterate({
-      enter(node) {
-        if (node.name !== "WikiLink") return;
-
-        const from = node.from;
-        const to = node.to;
-        if (from < 1) return;
-        const charBefore = doc.sliceString(from - 1, from);
-        if (charBefore !== "!") return;
-
-        const target = doc
-          .sliceString(from + 2, to - 2)
-          .split("|")[0]
-          .split("#")[0]
-          .trim();
-
-        if (!target) return;
-
-        const url = resolveAsset(target);
-        if (!url) {
-          const fallback = document.createElement("span");
-          fallback.className = "cm-embed-fallback";
-          fallback.textContent = `⚠ ${target}`;
-          deco.push(
-            Decoration.replace({
-              widget: new (class extends WidgetType {
-                toDOM() {
-                  return fallback;
-                }
-                eq() {
-                  return true;
-                }
-                ignoreEvent() {
-                  return true;
-                }
-              })(),
-              inclusive: true,
-            }).range(from - 1, to),
-          );
-          return;
-        }
-
+    for (const { from, to, target } of scanEmbedWikiLinks(view)) {
+      const url = resolveAsset(target);
+      if (!url) {
+        const fallback = document.createElement("span");
+        fallback.className = "cm-embed-fallback";
+        fallback.textContent = `⚠ ${target}`;
         deco.push(
           Decoration.replace({
-            widget: new EmbedMediaWidget(url, target),
+            widget: new (class extends WidgetType {
+              toDOM() {
+                return fallback;
+              }
+              eq() {
+                return true;
+              }
+              ignoreEvent() {
+                return true;
+              }
+            })(),
             inclusive: true,
-          }).range(from - 1, to),
+          }).range(from, to),
         );
-      },
-    });
+        continue;
+      }
+
+      deco.push(
+        Decoration.replace({
+          widget: new EmbedMediaWidget(url, target),
+          inclusive: true,
+        }).range(from, to),
+      );
+    }
 
     return Decoration.set(deco, true);
   }

@@ -3,6 +3,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
+import { escapeHtml } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Table block widget — renders markdown tables as rich <table> HTML.
@@ -77,14 +78,6 @@ function parseMarkdownTable(raw: string): {
 // ---------------------------------------------------------------------------
 // HTML rendering
 // ---------------------------------------------------------------------------
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 /** Render inline markdown: [[wikilinks]], **bold**, *italic*, `code`. */
 function renderInlineCell(text: string): string {

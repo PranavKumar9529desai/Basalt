@@ -160,6 +160,11 @@ const codeSyntaxHighlighter = HighlightStyle.define([
   { tag: t.color, class: "sat-syntax-atom" },
 ]);
 
+const CODE_HIGHLIGHT_EXTENSION: Extension = [
+  CODE_HIGHLIGHT_THEME,
+  syntaxHighlighting(codeSyntaxHighlighter),
+];
+
 /**
  * CodeMirror extension that provides dark-theme-optimised syntax
  * highlighting for code blocks.  Uses CSS class names (styled via
@@ -167,10 +172,11 @@ const codeSyntaxHighlighter = HighlightStyle.define([
  *
  * Include this in your editor extension stack. Because only code-specific
  * tags are mapped, the highlighter naturally only affects fenced code blocks
- * with a recognised programming language.
+ * with a recognised programming language. Returns a module-scoped singleton
+ * so repeated calls don't allocate fresh extensions.
  */
 export function codeSyntaxHighlightingExtension(): Extension {
-  return [CODE_HIGHLIGHT_THEME, syntaxHighlighting(codeSyntaxHighlighter)];
+  return CODE_HIGHLIGHT_EXTENSION;
 }
 
 /** The token highlighter used by the editor, reused by the reading view. */

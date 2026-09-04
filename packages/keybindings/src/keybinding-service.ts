@@ -12,25 +12,49 @@
  * modalOpen) via setContext(); the service never imports from features.
  */
 import { commandService } from "@workspace/commands";
-import { parseHotkey } from "./hotkey-parser";
+import { parseHotkey, type ParsedHotkey } from "./hotkey-parser";
 import KEYBINDINGS from "./keybindings.json";
 import type { Keybinding, WhenContext } from "./types";
+
+interface PreparedBinding {
+  original: Keybinding;
+  parsed: ParsedHotkey;
+}
 
 export class KeybindingService {
   private bindings: Keybinding[];
   private context: WhenContext = {};
   private actions = new Map<string, () => void>();
+  /** Parsed + sorted cache; rebuilt only when bindings change. */
+  private prepared: PreparedBinding[];
 
   constructor() {
     this.bindings = KEYBINDINGS.map((b) => ({ ...b }));
+    this.prepared = [];
+    this.rebuild();
+  }
+
+  private rebuild(): void {
+    // Bindings without a `when` clause take priority over conditional ones.
+    const sorted = [...this.bindings].sort((a, b) => {
+      if (a.when && !b.when) return 1;
+      if (!a.when && b.when) return -1;
+      return 0;
+    });
+    this.prepared = sorted.map((b) => ({
+      original: b,
+      parsed: parseHotkey(b.key),
+    }));
   }
 
   register(binding: Keybinding): void {
     this.bindings.push(binding);
+    this.rebuild();
   }
 
   unregister(key: string): void {
     this.bindings = this.bindings.filter((b) => b.key !== key);
+    this.rebuild();
   }
 
   registerAction(name: string, handler: () => void): void {
@@ -62,14 +86,7 @@ export class KeybindingService {
   }
 
   resolve(event: KeyboardEvent): Keybinding | null {
-    const sorted = [...this.bindings].sort((a, b) => {
-      if (a.when && !b.when) return -1;
-      if (!a.when && b.when) return 1;
-      return 0;
-    });
-
-    for (const binding of sorted) {
-      const parsed = parseHotkey(binding.key);
+    for (const { original, parsed } of this.prepared) {
       const keyMatch = event.key.toLowerCase() === parsed.key;
       const modMatch = parsed.cmdOrCtrl
         ? event.ctrlKey || event.metaKey
@@ -78,17 +95,13 @@ export class KeybindingService {
       const altMatch = parsed.alt ? event.altKey : !event.altKey;
 
       if (!keyMatch || !modMatch || !shiftMatch || !altMatch) continue;
-      if (!this.evaluateWhen(binding.when)) continue;
+      if (!this.evaluateWhen(original.when)) continue;
 
-      if (binding.command) {
-        const allCmds = commandService.getCommands();
-        const cmd = allCmds.find((c) => c.id === binding.command);
-        if (!cmd) continue;
-      }
+      if (original.command && !commandService.hasCommand(original.command))
+        continue;
+      if (original.action && !this.actions.has(original.action)) continue;
 
-      if (binding.action && !this.actions.has(binding.action)) continue;
-
-      return binding;
+      return original;
     }
     return null;
   }

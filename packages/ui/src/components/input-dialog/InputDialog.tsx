@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogFooter } from "../ui/dialog";
+import { DialogFrame } from "../ui/dialog-frame";
 import { Input } from "../ui/input";
 
 export interface InputDialogProps {
@@ -71,18 +65,7 @@ export function InputDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] bg-[var(--sat-surface-2)] border-[var(--sat-layout-border)]">
-        <DialogHeader>
-          <DialogTitle className="text-[var(--sat-text-primary)]">
-            {title}
-          </DialogTitle>
-          {description && (
-            <DialogDescription className="text-[var(--sat-text-muted)]">
-              {description}
-            </DialogDescription>
-          )}
-        </DialogHeader>
-
+      <DialogFrame title={title} description={description}>
         <div className="py-2">
           <Input
             ref={inputRef}
@@ -103,21 +86,20 @@ export function InputDialog({
 
         <DialogFooter>
           <Button
-            variant="ghost"
+            variant="sat-ghost"
             onClick={() => onOpenChange(false)}
-            className="text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)]"
           >
             Cancel
           </Button>
           <Button
+            variant="sat-primary"
             onClick={handleSubmit}
             disabled={!value.trim() || isLoading}
-            className="bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)] hover:opacity-90"
           >
             {isLoading ? "Creating…" : submitLabel}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </DialogFrame>
     </Dialog>
   );
 }

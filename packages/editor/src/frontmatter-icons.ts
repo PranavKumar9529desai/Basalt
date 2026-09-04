@@ -1,4 +1,5 @@
-import type { FrontmatterEntry, FrontmatterValue } from "./types";
+import type { FrontmatterEntry } from "./types";
+import { getVariantKey, isFrontmatterObject } from "./frontmatter-utils";
 
 export type FrontmatterIconName =
   | "file-text"
@@ -107,20 +108,6 @@ function createSvg(paths: string[]): SVGSVGElement {
   return svg;
 }
 
-function isFrontmatterObject(
-  v: FrontmatterValue,
-): v is Exclude<FrontmatterValue, "None"> {
-  return typeof v !== "string";
-}
-
-function variantKey(
-  v: Exclude<FrontmatterValue, "None">,
-  name: string,
-): boolean {
-  const lower = name.toLowerCase();
-  return Object.keys(v).some((key) => key.toLowerCase() === lower);
-}
-
 function resolveIconName(entry: FrontmatterEntry): FrontmatterIconName {
   const key = entry.key.trim().toLowerCase();
   if (key === "title") return "file-text";
@@ -140,13 +127,13 @@ function resolveIconName(entry: FrontmatterEntry): FrontmatterIconName {
 
   const value = entry.value;
   if (!isFrontmatterObject(value)) return "note";
-  if (variantKey(value, "List")) return "list";
-  if (variantKey(value, "Checkbox")) return "check";
-  if (variantKey(value, "DateTime")) return "clock";
-  if (variantKey(value, "Date")) return "calendar";
-  if (variantKey(value, "Number")) return "hash";
-  if (variantKey(value, "Link")) return "link";
-  if (variantKey(value, "Text")) return "note";
+  if (getVariantKey(value, "List")) return "list";
+  if (getVariantKey(value, "Checkbox")) return "check";
+  if (getVariantKey(value, "DateTime")) return "clock";
+  if (getVariantKey(value, "Date")) return "calendar";
+  if (getVariantKey(value, "Number")) return "hash";
+  if (getVariantKey(value, "Link")) return "link";
+  if (getVariantKey(value, "Text")) return "note";
   return "note";
 }
 

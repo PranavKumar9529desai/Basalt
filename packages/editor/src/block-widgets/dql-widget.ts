@@ -3,6 +3,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
+import { escapeHtml } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Query result types — mirrors crates/basalt-types/src/query.rs exactly.
@@ -65,14 +66,6 @@ export function clearQueryCache(): void {
 // ---------------------------------------------------------------------------
 // HTML rendering helpers
 // ---------------------------------------------------------------------------
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function renderCellHtml(value: TypedValue): string {
   switch (value.type) {

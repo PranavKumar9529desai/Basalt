@@ -864,8 +864,9 @@ export function Graph({ tab }: LeafProps) {
         // Hover flags: hovered = 1, neighbor = 2, else 0.
         const fl = flagsRef.current;
         if (fl.length === activeMapRef.current.length) {
+          const nbSet = new Set(nb);
           for (let i = 0; i < fl.length; i++) {
-            fl[i] = i === hit ? 1 : nb.includes(i) ? 2 : 0;
+            fl[i] = i === hit ? 1 : nbSet.has(i) ? 2 : 0;
           }
         }
         flagsDirtyRef.current = true;
