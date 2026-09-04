@@ -57,6 +57,12 @@ export interface TabsState {
    * only path/title change, so leaf caches keyed by id survive the move
    * and dirty state is preserved. */
   updateTabPaths: (moves: Array<{ from: string; to: string }>) => void;
+
+  // Split Pane Layout Tree actions (ADR-032 Phase 3)
+  splitActivePane: (direction: "horizontal" | "vertical") => void;
+  closePane: (paneId: PaneId) => void;
+  activatePane: (paneId: PaneId) => void;
+
   toWorkspaceSnapshot: () => TabsWorkspaceSnapshot;
   hydrateFromWorkspaceSnapshot: (snapshot: TabsWorkspaceSnapshot) => void;
   reset: () => void;

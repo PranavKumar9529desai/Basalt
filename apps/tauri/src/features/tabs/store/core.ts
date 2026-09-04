@@ -3,6 +3,12 @@ import type { StateCreator } from "zustand";
 import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, TabPaneId } from "../types";
 import type { TabsState } from "./types";
+import {
+  createLeaf,
+  splitLeaf,
+  removeLeaf,
+  collectLeaves,
+} from "../lib/layoutTree";
 
 function nowMs() {
   return Date.now();
@@ -67,6 +73,9 @@ export interface CoreSlice {
   togglePinTab: TabsState["togglePinTab"];
   moveTabWithinPane: TabsState["moveTabWithinPane"];
   updateTabPaths: TabsState["updateTabPaths"];
+  splitActivePane: TabsState["splitActivePane"];
+  closePane: TabsState["closePane"];
+  activatePane: TabsState["activatePane"];
 
   reset: TabsState["reset"];
 }
@@ -489,5 +498,48 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
 
   reset: () => {
     set(buildInitialState());
+  },
+
+  // --- Split Pane Layout Tree actions (ADR-032 Phase 3) ---
+
+  splitActivePane: (direction) => {
+    set((state) => {
+      const newLeaf = createLeaf();
+      const root = splitLeaf(state.root, state.activePaneId, direction);
+      return {
+        root,
+        activePaneId: newLeaf.id,
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  closePane: (paneId) => {
+    set((state) => {
+      // Don't close if it's the last pane
+      const leaves = collectLeaves(state.root);
+      if (leaves.length <= 1) return state;
+
+      const newRoot = removeLeaf(state.root, paneId);
+      if (!newRoot) return state; // should never happen (last pane guard)
+
+      // Activate the first available leaf
+      const remaining = collectLeaves(newRoot);
+      const activePaneId =
+        remaining.length > 0 ? remaining[0].id : state.activePaneId;
+
+      return {
+        root: newRoot,
+        activePaneId,
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  activatePane: (paneId) => {
+    set((state) => {
+      if (state.activePaneId === paneId) return state;
+      return { activePaneId: paneId };
+    });
   },
 });
