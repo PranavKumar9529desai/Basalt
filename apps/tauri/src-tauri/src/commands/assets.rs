@@ -473,7 +473,8 @@ fn reorganize_assets_impl(
                     .unwrap_or(&updated.file_name)
                     .to_string();
                 updated.file_type = basalt_vault::asset_index::infer_file_type(&updated.file_name);
-                updated.mime_type = basalt_vault::asset_index::infer_mime_type(&updated.file_name);
+                updated.mime_type =
+                    basalt_vault::asset_index::infer_mime_type(&updated.file_name).to_string();
                 vault.asset_index.upsert(updated);
             }
 
@@ -696,7 +697,7 @@ pub fn save_attachment(
             abs_path: abs_path.clone(),
             file_name: final_name.clone(),
             file_type: infer_file_type(&final_name),
-            mime_type: infer_mime_type(&final_name),
+            mime_type: infer_mime_type(&final_name).to_string(),
             size_bytes: data.len() as u64,
             content_hash,
             width: None,
