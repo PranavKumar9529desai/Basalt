@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use basalt_types::{
-    FrontmatterDiagnostic, FrontmatterDiagnosticKind, FrontmatterEntry, FrontmatterModel,
-    FrontmatterValue, Span,
+    yaml_to_typed, FrontmatterDiagnostic, FrontmatterDiagnosticKind, FrontmatterEntry,
+    FrontmatterModel, FrontmatterValue, Span, TypedValue,
 };
 use serde_yaml_ng::Value;
 
@@ -79,7 +79,7 @@ pub fn parse_frontmatter(input: &str) -> FrontmatterModel {
 
                 let is_list = !list_items.is_empty();
                 let (value, malformed) = if is_list {
-                    (FrontmatterValue::List(list_items), None)
+                    (TypedValue::List { items: list_items }, None)
                 } else {
                     coerce_scalar(value_text)
                 };
@@ -205,62 +205,21 @@ fn parse_key_line(line: &str) -> Option<(String, &str, usize)> {
     Some((key.to_string(), value_text, vstart))
 }
 
-/// Coerce a raw value string into a typed `FrontmatterValue`. Returns the value
-/// plus an optional `MalformedValue` flag when YAML parsing fails.
+/// Coerce a raw value string into a typed value. Returns the value plus an
+/// optional `MalformedValue` flag when YAML parsing fails.
 fn coerce_scalar(text: &str) -> (FrontmatterValue, Option<FrontmatterDiagnosticKind>) {
     let trimmed = text.trim();
     if trimmed.is_empty() {
-        return (FrontmatterValue::None, None);
+        return (TypedValue::Null, None);
     }
     match serde_yaml_ng::from_str::<Value>(trimmed) {
-        Ok(v) => (yaml_to_value(&v), None),
+        Ok(v) => (yaml_to_typed(&v), None),
         Err(_) => (
-            FrontmatterValue::Text(trimmed.to_string()),
+            TypedValue::Text {
+                value: trimmed.to_string(),
+            },
             Some(FrontmatterDiagnosticKind::MalformedValue),
         ),
-    }
-}
-
-fn yaml_to_value(v: &Value) -> FrontmatterValue {
-    match v {
-        Value::Null => FrontmatterValue::None,
-        Value::Bool(b) => FrontmatterValue::Checkbox(*b),
-        Value::Number(n) => FrontmatterValue::Number(n.as_f64().unwrap_or(0.0)),
-        Value::String(s) => infer_string(s),
-        Value::Sequence(seq) => FrontmatterValue::List(seq.iter().map(yaml_to_value).collect()),
-        Value::Tagged(_) => FrontmatterValue::Text(serde_yaml_ng::to_string(v).unwrap_or_default()),
-        Value::Mapping(_) => {
-            FrontmatterValue::Text(serde_yaml_ng::to_string(v).unwrap_or_default())
-        }
-    }
-}
-
-fn infer_string(s: &str) -> FrontmatterValue {
-    if s.contains("[[") && s.contains("]]") {
-        if let Some(target) = first_wikilink_target(s) {
-            return FrontmatterValue::Link(target);
-        }
-    }
-    if is_iso_date(s) {
-        return FrontmatterValue::Date(s.to_string());
-    }
-    if is_iso_datetime(s) {
-        return FrontmatterValue::DateTime(s.to_string());
-    }
-    FrontmatterValue::Text(s.to_string())
-}
-
-/// Extract the first `[[Target]]` target from a string (ignoring alias/`#`).
-pub(crate) fn first_wikilink_target(s: &str) -> Option<String> {
-    let open = s.find("[[")?;
-    let rest = &s[open + 2..];
-    let close = rest.find("]]")?;
-    let inner = &rest[..close];
-    let target = inner.split(['|', '#']).next().unwrap_or("").trim();
-    if target.is_empty() {
-        None
-    } else {
-        Some(target.to_string())
     }
 }
 
@@ -334,26 +293,6 @@ fn extract_tag_like(v: &Value, out: &mut Vec<String>) {
     }
 }
 
-pub(crate) fn is_iso_date(s: &str) -> bool {
-    let b = s.as_bytes();
-    if b.len() != 10 {
-        return false;
-    }
-    b[4] == b'-'
-        && b[7] == b'-'
-        && b[0..4].iter().all(|c| c.is_ascii_digit())
-        && b[5..7].iter().all(|c| c.is_ascii_digit())
-        && b[8..10].iter().all(|c| c.is_ascii_digit())
-}
-
-pub(crate) fn is_iso_datetime(s: &str) -> bool {
-    let b = s.as_bytes();
-    if b.len() < 11 {
-        return false;
-    }
-    b[10] == b'T' && is_iso_date(&s[..10])
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,12 +305,19 @@ mod tests {
     fn parses_scalar_types() {
         let m = model("---\ntitle: Hello\nrating: 5\npublished: true\ndate: 2024-01-01\n---\nbody");
         assert_eq!(m.entries.len(), 4);
-        assert_eq!(m.entries[0].value, FrontmatterValue::Text("Hello".into()));
-        assert_eq!(m.entries[1].value, FrontmatterValue::Number(5.0));
-        assert_eq!(m.entries[2].value, FrontmatterValue::Checkbox(true));
+        assert_eq!(
+            m.entries[0].value,
+            TypedValue::Text {
+                value: "Hello".into()
+            }
+        );
+        assert_eq!(m.entries[1].value, TypedValue::Number { value: 5.0 });
+        assert_eq!(m.entries[2].value, TypedValue::Checkbox { value: true });
         assert_eq!(
             m.entries[3].value,
-            FrontmatterValue::Date("2024-01-01".into())
+            TypedValue::Date {
+                value: "2024-01-01".into()
+            }
         );
         assert!(m.diagnostics.is_empty());
     }
@@ -382,10 +328,12 @@ mod tests {
         assert_eq!(m.entries.len(), 1);
         assert_eq!(
             m.entries[0].value,
-            FrontmatterValue::List(vec![
-                FrontmatterValue::Text("a".into()),
-                FrontmatterValue::Text("b".into())
-            ])
+            TypedValue::List {
+                items: vec![
+                    TypedValue::Text { value: "a".into() },
+                    TypedValue::Text { value: "b".into() }
+                ]
+            }
         );
     }
 
@@ -394,7 +342,10 @@ mod tests {
         let m = model("---\nrelated: \"[[Other Note]]\"\n---\nbody");
         assert_eq!(
             m.entries[0].value,
-            FrontmatterValue::Link("Other Note".into())
+            TypedValue::Link {
+                name: "Other Note".into(),
+                path: "Other Note".into(),
+            }
         );
     }
 
@@ -437,6 +388,6 @@ mod tests {
     fn crlf_safe() {
         let m = model("---\r\ntitle: Hi\r\n---\r\nbody");
         assert_eq!(m.entries.len(), 1);
-        assert_eq!(m.entries[0].value, FrontmatterValue::Text("Hi".into()));
+        assert_eq!(m.entries[0].value, TypedValue::Text { value: "Hi".into() });
     }
 }

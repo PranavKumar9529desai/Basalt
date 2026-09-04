@@ -8,6 +8,7 @@ basalt-types = { path = "../basalt-types" }
 basalt-parser = { path = "../basalt-parser" }
 basalt-vault = { path = "../basalt-vault" }
 basalt-graph = { path = "../basalt-graph" }
+thiserror = "2"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

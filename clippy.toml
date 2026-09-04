@@ -1,0 +1,14 @@
+# Clippy lint configuration (ADR-030 §2.6).
+# These thresholds bound the lints that catch our failure modes (deeply nested
+# control flow, wide call signatures, monstrous types). They take effect when
+# the corresponding clippy lints are enabled; `cargo clippy -D warnings` runs
+# the default set on top of this config.
+
+# A function's cognitive complexity (nesting, boolean operators, etc.).
+cognitive-complexity-threshold = 30
+
+# Number of arguments before a function signature is flagged.
+too-many-arguments-threshold = 8
+
+# Type nesting complexity before `clippy::type_complexity` fires.
+type-complexity-threshold = 250

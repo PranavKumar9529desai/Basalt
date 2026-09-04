@@ -12,4 +12,6 @@ pub use node::{Document, MarkdownNode};
 pub use search::{ContextLine, FileMatch, FileResult, Highlight, LineMatch, SearchContentResult};
 pub mod query;
 
-pub use query::{yaml_to_typed, yaml_to_typed_pairs, QueryColumn, QueryResult, TypedValue};
+pub use query::{
+    yaml_to_typed, yaml_to_typed_pairs, QueryColumn, QueryColumnType, QueryResult, TypedValue,
+};

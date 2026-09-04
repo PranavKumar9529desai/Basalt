@@ -20,9 +20,16 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
     // Compute MD5 content hash (skip for very large files to avoid stalling).
     let content_hash = if meta.len() <= 100 * 1024 * 1024 {
         // ≤100 MiB: read and hash
-        std::fs::read(abs_path)
-            .map(|data| compute_md5(&data))
-            .unwrap_or_default()
+        match std::fs::read(abs_path) {
+            Ok(data) => compute_md5(&data),
+            Err(e) => {
+                eprintln!(
+                    "[indexer] failed to read {} for hash: {e}",
+                    abs_path.display()
+                );
+                String::new()
+            }
+        }
     } else {
         String::new()
     };
@@ -32,7 +39,7 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
         abs_path: abs_path.to_string_lossy().to_string(),
         file_name,
         file_type: infer_file_type(&abs_path.to_string_lossy()),
-        mime_type: infer_mime_type(&abs_path.to_string_lossy()),
+        mime_type: infer_mime_type(&abs_path.to_string_lossy()).to_string(),
         size_bytes: meta.len(),
         content_hash,
         width: None,

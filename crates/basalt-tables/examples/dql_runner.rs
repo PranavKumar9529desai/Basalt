@@ -64,6 +64,7 @@ fn print_result(label: &str, dql: &str, result: &QueryResult) {
                 TypedValue::Link { name, path } => format!("{} -> {}", name, path),
                 TypedValue::Null => "null".to_string(),
                 TypedValue::Date { value } => value.clone(),
+                TypedValue::DateTime { value } => value.clone(),
                 TypedValue::List { items } => {
                     let parts: Vec<String> = items
                         .iter()

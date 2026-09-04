@@ -10,8 +10,8 @@ basalt-vault = { path = "../basalt-vault" }
 tantivy = "0.22"
 nucleo-matcher = "0.3"
 aho-corasick = "1.1"
-anyhow = "1.0"
 serde = { version = "1", features = ["derive"] }
+thiserror = "2"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }

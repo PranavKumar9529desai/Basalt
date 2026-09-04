@@ -42,14 +42,15 @@ pub fn infer_file_type(filename: &str) -> FileType {
     }
 }
 
-/// Infer MIME type from a filename's extension.
-pub fn infer_mime_type(filename: &str) -> String {
+/// Infer MIME type from a filename's extension. Returns a static string so the
+/// hot path performs no allocation (ADR-030 §2.5).
+pub fn infer_mime_type(filename: &str) -> &'static str {
     let ext = Path::new(filename)
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let mime = match ext.as_str() {
+    match ext.as_str() {
         "png" => "image/png",
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
@@ -77,6 +78,5 @@ pub fn infer_mime_type(filename: &str) -> String {
         "csv" => "text/csv",
         "json" => "application/json",
         _ => "application/octet-stream",
-    };
-    mime.to_string()
+    }
 }

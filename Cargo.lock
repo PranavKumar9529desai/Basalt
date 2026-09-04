@@ -277,7 +277,6 @@ name = "basalt-search"
 version = "0.1.0"
 dependencies = [
  "aho-corasick",
- "anyhow",
  "basalt-graph",
  "basalt-types",
  "basalt-vault",
@@ -286,6 +285,7 @@ dependencies = [
  "serde",
  "tantivy",
  "tempfile",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -297,6 +297,7 @@ dependencies = [
  "basalt-types",
  "basalt-vault",
  "criterion",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -304,6 +305,7 @@ name = "basalt-types"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
  "serde_yaml_ng",
 ]
 

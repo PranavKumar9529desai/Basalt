@@ -47,6 +47,12 @@ pub struct ForceGraph {
     stack: Vec<usize>,
     /// Reusable remap buffer for the BFS reorder (avoids per-step allocation).
     reorder: Vec<usize>,
+    /// Reusable BFS traversal order (old-slot → new-slot), reused each step.
+    order: Vec<usize>,
+    /// Reusable BFS queue, reused each step.
+    queue: std::collections::VecDeque<usize>,
+    /// Reusable output quads for the BFS reorder, reused each step.
+    reordered: Vec<Quad>,
     params: GraphParams,
     /// Cooling factor: 1.0 at full force, decays toward ALPHA_MIN as it settles.
     alpha: f32,
@@ -86,6 +92,9 @@ impl ForceGraph {
             quads: Vec::with_capacity(n * 2),
             stack: Vec::with_capacity(256),
             reorder: Vec::new(),
+            order: Vec::new(),
+            queue: std::collections::VecDeque::new(),
+            reordered: Vec::new(),
             params,
             alpha: 1.0,
         }
@@ -276,35 +285,35 @@ impl ForceGraph {
         }
         self.reorder.clear();
         self.reorder.resize(count, UNPLACED);
-        let mut order: Vec<usize> = Vec::with_capacity(count);
-        let mut queue: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
-        queue.push_back(0);
+        self.order.clear();
+        self.queue.clear();
+        self.queue.push_back(0);
 
-        while let Some(old) = queue.pop_front() {
+        while let Some(old) = self.queue.pop_front() {
             if self.reorder[old] != UNPLACED {
                 continue;
             }
-            let ni = order.len();
+            let ni = self.order.len();
             self.reorder[old] = ni;
-            order.push(old);
+            self.order.push(old);
             for &c in &self.quads[old].children {
                 if c != EMPTY {
-                    queue.push_back(c as usize);
+                    self.queue.push_back(c as usize);
                 }
             }
         }
 
-        let mut reordered = Vec::with_capacity(count);
-        for &old in &order {
+        self.reordered.clear();
+        for &old in &self.order {
             let mut q = self.quads[old];
             for c in q.children.iter_mut() {
                 if *c != EMPTY {
                     *c = self.reorder[*c as usize] as i32;
                 }
             }
-            reordered.push(q);
+            self.reordered.push(q);
         }
-        self.quads = reordered;
+        std::mem::swap(&mut self.quads, &mut self.reordered);
     }
 
     fn compute_forces(&mut self) {

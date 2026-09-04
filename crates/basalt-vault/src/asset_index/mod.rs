@@ -175,31 +175,26 @@ impl AssetIndex {
     /// Stem matching is what lets extension-less embeds be counted as
     /// referenced — without it every `![[image]]` looks orphaned.
     pub fn resolve_asset(&self, target: &str) -> Option<&AssetInfo> {
-        let target_lower = target.trim().to_lowercase();
+        let target = target.trim();
 
-        // 1. Exact rel_path match
+        // 1. Exact rel_path match (case-insensitive)
         for asset in self.assets.values() {
-            if asset.rel_path.to_lowercase() == target_lower {
+            if asset.rel_path.eq_ignore_ascii_case(target) {
                 return Some(asset);
             }
         }
 
         // 2. Bare filename match
-        if let Some(target_name) = Path::new(&target_lower)
-            .file_name()
-            .and_then(|n| n.to_str())
-        {
+        if let Some(target_name) = Path::new(target).file_name().and_then(|n| n.to_str()) {
             for asset in self.assets.values() {
-                if asset.file_name.to_lowercase() == target_name {
+                if asset.file_name.eq_ignore_ascii_case(target_name) {
                     return Some(asset);
                 }
             }
         }
 
         // 3. Stem match — `![[image]]` (no extension) → `image.png`.
-        let target_stem = Path::new(&target_lower)
-            .file_stem()
-            .and_then(|s| s.to_str());
+        let target_stem = Path::new(target).file_stem().and_then(|s| s.to_str());
         if let Some(stem) = target_stem {
             if !stem.is_empty() {
                 let mut best: Option<&AssetInfo> = None;

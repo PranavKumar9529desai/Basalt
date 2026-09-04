@@ -12,7 +12,7 @@ fn sample_asset(rel: &str) -> AssetInfo {
         abs_path: format!("/vault/{rel}"),
         file_name,
         file_type: infer_file_type(rel),
-        mime_type: infer_mime_type(rel),
+        mime_type: infer_mime_type(rel).to_string(),
         size_bytes: 1024,
         content_hash: "abc123".to_string(),
         width: None,

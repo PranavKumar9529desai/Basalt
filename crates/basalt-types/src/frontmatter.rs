@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Span;
+use crate::{Span, TypedValue};
 
 /// The logical type of a frontmatter property value.
 ///
@@ -20,34 +20,24 @@ pub enum PropertyType {
     Link,
 }
 
-/// A frontmatter value, typed. `None` represents an explicit null / empty value.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum FrontmatterValue {
-    Text(String),
-    List(Vec<FrontmatterValue>),
-    Number(f64),
-    Checkbox(bool),
-    /// ISO-8601 date (`YYYY-MM-DD`).
-    Date(String),
-    /// ISO-8601 date-time.
-    DateTime(String),
-    /// A wikilink target, e.g. `"Note"` for `[[Note]]`. Always a graph edge.
-    Link(String),
-    None,
-}
+/// A frontmatter property value — the same unified `TypedValue` used by the
+/// DQL engine (ADR-030 Phase 2). `TypedValue::Null` represents an explicit
+/// null / empty value.
+pub type FrontmatterValue = TypedValue;
 
 impl FrontmatterValue {
-    pub fn property_type(&self) -> PropertyType {
+    /// The logical `PropertyType` of a value. `Null` (an explicit empty / null
+    /// value) has no type.
+    pub fn property_type(&self) -> Option<PropertyType> {
         match self {
-            FrontmatterValue::Text(_) => PropertyType::Text,
-            FrontmatterValue::List(_) => PropertyType::List,
-            FrontmatterValue::Number(_) => PropertyType::Number,
-            FrontmatterValue::Checkbox(_) => PropertyType::Checkbox,
-            FrontmatterValue::Date(_) => PropertyType::Date,
-            FrontmatterValue::DateTime(_) => PropertyType::DateTime,
-            FrontmatterValue::Link(_) => PropertyType::Link,
-            FrontmatterValue::None => PropertyType::Text,
+            TypedValue::Text { .. } => Some(PropertyType::Text),
+            TypedValue::List { .. } => Some(PropertyType::List),
+            TypedValue::Number { .. } => Some(PropertyType::Number),
+            TypedValue::Checkbox { .. } => Some(PropertyType::Checkbox),
+            TypedValue::Date { .. } => Some(PropertyType::Date),
+            TypedValue::DateTime { .. } => Some(PropertyType::DateTime),
+            TypedValue::Link { .. } => Some(PropertyType::Link),
+            TypedValue::Null => None,
         }
     }
 }

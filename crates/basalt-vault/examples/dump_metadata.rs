@@ -1,3 +1,4 @@
+use basalt_graph::NodeId;
 use basalt_vault::indexer::index_directory;
 use std::fs;
 use std::path::Path;
@@ -60,8 +61,8 @@ fn main() {
 
     report.push_str("\n--- String Arena Sample ---\n");
     for id in 0..std::cmp::min(20, vault.arena.len() as u32) {
-        if let Some(val) = vault.arena.get_string(id) {
-            report.push_str(&format!("{}: {}\n", id, val));
+        if let Some(val) = vault.arena.get_string(NodeId::new(id)) {
+            report.push_str(&format!("{}: {}\n", NodeId::new(id), val));
         }
     }
 

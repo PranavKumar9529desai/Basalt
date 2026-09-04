@@ -1,43 +1,21 @@
 use basalt_parser::query::{
     CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection,
 };
-use basalt_types::{QueryColumn, QueryResult, TypedValue};
+use basalt_types::{QueryColumn, QueryColumnType, QueryResult, TypedValue};
 use basalt_vault::Vault;
 
 use crate::expr::{compare_typed, eval_expr, eval_to_typed, EvalCtx};
 use crate::page_row::{build_page_rows, matches_source, PageRow};
 
 /// Runtime errors during DQL query execution.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum DqlError {
     /// Query text failed to parse.
-    Parse(basalt_parser::ParseError),
+    #[error("parse error: {0}")]
+    Parse(#[from] basalt_parser::ParseError),
     /// Runtime error during execution.
+    #[error("{0}")]
     Runtime(String),
-}
-
-impl std::fmt::Display for DqlError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DqlError::Parse(e) => write!(f, "parse error: {e}"),
-            DqlError::Runtime(msg) => write!(f, "{msg}"),
-        }
-    }
-}
-
-impl std::error::Error for DqlError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            DqlError::Parse(e) => Some(e),
-            _ => None,
-        }
-    }
-}
-
-impl From<basalt_parser::ParseError> for DqlError {
-    fn from(e: basalt_parser::ParseError) -> Self {
-        DqlError::Parse(e)
-    }
 }
 
 /// A row during query execution: a single page, or a group of pages produced
@@ -190,7 +168,7 @@ fn execute_table_query(
 fn execute_list_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, DqlError> {
     let columns = vec![QueryColumn {
         name: "File".to_string(),
-        type_: "link".to_string(),
+        type_: QueryColumnType::Link,
     }];
     let data: Vec<Vec<TypedValue>> = rows
         .iter()
@@ -212,11 +190,11 @@ fn execute_task_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, Dql
     let columns = vec![
         QueryColumn {
             name: "File".to_string(),
-            type_: "link".to_string(),
+            type_: QueryColumnType::Link,
         },
         QueryColumn {
             name: "Task".to_string(),
-            type_: "text".to_string(),
+            type_: QueryColumnType::Text,
         },
     ];
     let data: Vec<Vec<TypedValue>> = rows
@@ -261,6 +239,12 @@ fn first_page(row: &WorkRow) -> Option<&PageRow> {
 /// Group page rows by the evaluated key expression, preserving first-seen
 /// group order. Rows that are already groups pass through unchanged (nested
 /// grouping is deferred).
+///
+/// Groups are indexed by a hashable [`GroupKey`] so this is O(N) rather than a
+/// per-row linear scan of existing groups (O(N·G)). Grouping uses strict
+/// type-and-value equality, so `Number(3)` and `Text("3")` are *not* the same
+/// group — matching Dataview semantics (the old `compare_typed == Equal` test
+/// conflated unrelated cross-type values, per ADR-030 §3).
 fn group_rows(rows: Vec<WorkRow>, expr: &Expr) -> Vec<WorkRow> {
     // A simple-field GROUP BY lets that field resolve to the group key in the
     // output (Dataview swizzling); computed GROUP BY exposes only `key`.
@@ -268,18 +252,22 @@ fn group_rows(rows: Vec<WorkRow>, expr: &Expr) -> Vec<WorkRow> {
         Expr::Field(FieldRef(parts)) => Some(parts.clone()),
         _ => None,
     };
-    let mut groups: Vec<(TypedValue, Vec<PageRow>)> = Vec::new();
+    let mut groups: Vec<(GroupKey, TypedValue, Vec<PageRow>)> = Vec::new();
+    // Maps a group's identity to its position in `groups` (first-seen order).
+    let mut index: std::collections::HashMap<GroupKey, usize> = std::collections::HashMap::new();
     let mut carried: Vec<WorkRow> = Vec::new();
     for row in rows {
         match row {
             WorkRow::Page(page) => {
                 let key = eval_to_typed(expr, &EvalCtx::Page(&page));
-                match groups
-                    .iter_mut()
-                    .find(|(k, _)| compare_typed(k, &key) == std::cmp::Ordering::Equal)
-                {
-                    Some((_, members)) => members.push(page),
-                    None => groups.push((key, vec![page])),
+                let id = GroupKey::from_typed(&key);
+                match index.get(&id) {
+                    Some(&pos) => groups[pos].2.push(page),
+                    None => {
+                        let pos = groups.len();
+                        groups.push((id.clone(), key, vec![page]));
+                        index.insert(id, pos);
+                    }
                 }
             }
             other => carried.push(other),
@@ -287,7 +275,7 @@ fn group_rows(rows: Vec<WorkRow>, expr: &Expr) -> Vec<WorkRow> {
     }
     let mut out: Vec<WorkRow> = groups
         .into_iter()
-        .map(|(key, members)| WorkRow::Group {
+        .map(|(_id, key, members)| WorkRow::Group {
             key,
             members,
             group_by_path: group_by_path.clone(),
@@ -297,12 +285,53 @@ fn group_rows(rows: Vec<WorkRow>, expr: &Expr) -> Vec<WorkRow> {
     out
 }
 
+/// Hashable identity of a group key value (strict type+value equality).
+/// Required because [`TypedValue`] holds an `f64` and is neither `Eq` nor
+/// `Hash`; `Number` is canonicalized so `-0.0` and `0.0` group together.
+#[derive(Clone, PartialEq, Eq, Hash)]
+enum GroupKey {
+    Text(String),
+    Number(u64),
+    Date(String),
+    Checkbox(bool),
+    Link(String, String),
+    List(Vec<GroupKey>),
+    Null,
+}
+
+impl GroupKey {
+    fn from_typed(v: &TypedValue) -> GroupKey {
+        match v {
+            TypedValue::Text { value } => GroupKey::Text(value.clone()),
+            TypedValue::Number { value } => GroupKey::Number(canonical_bits(*value)),
+            TypedValue::Date { value } => GroupKey::Date(value.clone()),
+            TypedValue::DateTime { value } => GroupKey::Date(value.clone()),
+            TypedValue::Checkbox { value } => GroupKey::Checkbox(*value),
+            TypedValue::Link { name, path } => GroupKey::Link(name.clone(), path.clone()),
+            TypedValue::List { items } => {
+                GroupKey::List(items.iter().map(GroupKey::from_typed).collect())
+            }
+            TypedValue::Null => GroupKey::Null,
+        }
+    }
+}
+
+/// Canonical f64 bits so `-0.0` and `0.0` hash/compare equal. NaNs keep their
+/// raw bits (two NaNs never group together), matching `f64`'s `PartialEq`.
+fn canonical_bits(value: f64) -> u64 {
+    if value == 0.0 {
+        0.0f64.to_bits()
+    } else {
+        value.to_bits()
+    }
+}
+
 fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
     if plan.fields.is_empty() {
         // Default: show file link
         return vec![QueryColumn {
             name: "File".to_string(),
-            type_: "link".to_string(),
+            type_: QueryColumnType::Link,
         }];
     }
     plan.fields
@@ -312,20 +341,9 @@ fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
             // Infer type from first non-null value
             let type_ = rows
                 .iter()
-                .map(|r| {
-                    let v = eval_to_typed(&f.expr, &r.ctx());
-                    match v {
-                        TypedValue::Number { .. } => "number",
-                        TypedValue::Checkbox { .. } => "checkbox",
-                        TypedValue::Link { .. } => "link",
-                        TypedValue::Date { .. } => "date",
-                        TypedValue::List { .. } => "list",
-                        _ => "text",
-                    }
-                })
+                .map(|r| QueryColumnType::from_typed(&eval_to_typed(&f.expr, &r.ctx())))
                 .next()
-                .unwrap_or("text")
-                .to_string();
+                .unwrap_or(QueryColumnType::Text);
             QueryColumn { name, type_ }
         })
         .collect()

@@ -1,7 +1,6 @@
 use std::path::Path;
 
-use super::snippets::extract_file_matches;
-use anyhow::{Context, Result};
+use super::snippets::{extract_file_matches, TermMatcher};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query};
@@ -11,6 +10,9 @@ use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument, Term};
 use basalt_types::FileMatch;
 
 use super::schema::build_schema;
+use crate::error::SearchError;
+
+type Result<T> = std::result::Result<T, SearchError>;
 
 /// Wraps a tantivy index storing four fields per note.
 /// `body` is indexed but not stored — snippets are built by re-scanning the raw
@@ -52,12 +54,12 @@ impl TantivyIndex {
 
     /// Open existing index at `dir` or create a fresh one.
     pub fn open_or_create(dir: &Path) -> Result<Self> {
-        std::fs::create_dir_all(dir)
-            .with_context(|| format!("creating index dir {}", dir.display()))?;
+        std::fs::create_dir_all(dir)?;
 
         let (schema, path_field, title_field, body_field, tags_field) = build_schema();
 
-        let mmap_dir = MmapDirectory::open(dir).with_context(|| "opening mmap directory")?;
+        let mmap_dir =
+            MmapDirectory::open(dir).map_err(|e| SearchError::Io(std::io::Error::other(e)))?;
 
         let mut index = Index::open_or_create(mmap_dir, schema.clone())?;
 
@@ -65,10 +67,12 @@ impl TantivyIndex {
         // build_schema(), wipe the directory and recreate from scratch.
         let current_schema = index.schema();
         if current_schema != schema {
-            std::fs::remove_dir_all(dir)
-                .with_context(|| format!("removing stale index at {}", dir.display()))?;
-            std::fs::create_dir_all(dir)
-                .with_context(|| format!("recreating index dir {}", dir.display()))?;
+            eprintln!(
+                "[search] index schema mismatch at {}; wiping and rebuilding",
+                dir.display()
+            );
+            std::fs::remove_dir_all(dir)?;
+            std::fs::create_dir_all(dir)?;
             index = Index::create_in_dir(dir, schema)?;
         }
 
@@ -191,6 +195,10 @@ impl TantivyIndex {
         let total_docs = total_docs as u64;
 
         let terms: Vec<&str> = words.iter().map(|w| w.as_str()).collect();
+        // Build the case-insensitive matcher once for the whole query, then reuse
+        // it across every result doc (avoids rebuilding the AhoCorasick automaton
+        // per document — ADR-030 §2.5).
+        let matcher = TermMatcher::new(&terms);
         const MAX_MATCHES_PER_FILE: usize = 30;
         const CONTEXT_LINES: usize = 4;
 
@@ -216,10 +224,11 @@ impl TantivyIndex {
                 .unwrap_or("")
                 .to_string();
 
-            let matches = if body.is_empty() {
-                vec![]
-            } else {
-                extract_file_matches(&body, &terms, MAX_MATCHES_PER_FILE, CONTEXT_LINES)
+            let matches = match &matcher {
+                Some(m) if !body.is_empty() => {
+                    extract_file_matches(&body, m, MAX_MATCHES_PER_FILE, CONTEXT_LINES)
+                }
+                _ => vec![],
             };
 
             results.push(FileMatch {

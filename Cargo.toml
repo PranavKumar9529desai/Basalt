@@ -6,6 +6,7 @@ members = [
   "crates/basalt-graph",
   "crates/basalt-vault",
   "crates/basalt-tables",
+  "crates/basalt-search",
   "apps/tauri/src-tauri",
 ]
 

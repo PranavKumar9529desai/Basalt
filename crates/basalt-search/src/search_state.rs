@@ -2,12 +2,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant, UNIX_EPOCH};
 
-use anyhow::Result;
 use basalt_vault::Vault;
 
+use crate::error::SearchError;
 use crate::nucleo_scorer::NucleoScorer;
 use crate::tantivy::TantivyIndex;
 use basalt_types::{FileResult, SearchContentResult};
+
+type Result<T> = std::result::Result<T, SearchError>;
 
 /// How long the index may hold uncommitted in-memory updates before the
 /// next flush writes them to disk. Commits create a new tantivy segment
@@ -91,7 +93,9 @@ impl SearchState {
                         .map(|w| w.trim_start_matches('#'))
                         .collect::<Vec<_>>()
                         .join(" ");
-                    let _ = tantivy.update_document(path, &title, &content, &tags);
+                    if let Err(e) = tantivy.update_document(path, &title, &content, &tags) {
+                        eprintln!("[search] failed to index {path}: {e}");
+                    }
                     any_indexed = true;
                 }
             }
@@ -117,7 +121,7 @@ impl SearchState {
     /// plus `total_hits` — the total number of matching documents, from tantivy's
     /// `Count` collector (instant, independent of vault size).
     pub fn search_content(&mut self, query: &str, limit: usize) -> SearchContentResult {
-        let _ = self.flush_pending();
+        self.flush_best_effort();
         let (files, total_docs) = match self.tantivy.search(query, limit) {
             Ok(r) => r,
             Err(e) => {
@@ -138,7 +142,7 @@ impl SearchState {
     /// Fuzzy file-name search via nucleo. Requires `&mut self` because
     /// `nucleo_matcher::Matcher::score` takes `&mut self`.
     pub fn search_files(&mut self, query: &str, limit: usize) -> Vec<FileResult> {
-        let _ = self.flush_pending();
+        self.flush_best_effort();
         self.nucleo.search(query, limit)
     }
 
@@ -195,6 +199,14 @@ impl SearchState {
     fn mark_pending(&mut self) {
         self.pending = true;
         self.last_change = Some(Instant::now());
+    }
+
+    /// Flush pending writes before a query; a failure is logged but non-fatal
+    /// so the stale-but-usable index still serves results.
+    fn flush_best_effort(&mut self) {
+        if let Err(e) = self.flush_pending() {
+            eprintln!("[search] flush failed: {e}");
+        }
     }
 
     /// Remove a note from both indexes when it is deleted.
