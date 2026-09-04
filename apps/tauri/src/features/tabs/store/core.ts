@@ -4,7 +4,6 @@ import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, TabPaneId } from "../types";
 import type { TabsState } from "./types";
 import {
-  createLeaf,
   splitLeaf,
   removeLeaf,
   collectLeaves,
@@ -504,11 +503,10 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
 
   splitActivePane: (direction) => {
     set((state) => {
-      const newLeaf = createLeaf();
-      const root = splitLeaf(state.root, state.activePaneId, direction);
+      const result = splitLeaf(state.root, state.activePaneId, direction);
       return {
-        root,
-        activePaneId: newLeaf.id,
+        root: result.root,
+        activePaneId: result.newLeafId,
         persistVersion: state.persistVersion + 1,
       };
     });

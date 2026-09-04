@@ -105,24 +105,39 @@ export function removeLeaf(
   return { ...root, children: newChildren };
 }
 
-/** Split a leaf in the given direction, creating a new sibling. */
+export interface SplitResult {
+  root: LayoutNode;
+  newLeafId: PaneId;
+}
+
+/** Split a leaf in the given direction, creating a new sibling. Returns the new tree and new leaf ID. */
 export function splitLeaf(
   root: LayoutNode,
   targetId: PaneId,
   direction: "horizontal" | "vertical",
   newTabIds: TabId[] = [],
-): LayoutNode {
+): SplitResult {
   if (root.type === "leaf") {
-    if (root.id !== targetId) return root;
+    if (root.id !== targetId) return { root, newLeafId: targetId };
     const newLeaf = createLeaf(newTabIds);
-    return createSplit(direction, root, newLeaf);
+    return {
+      root: createSplit(direction, root, newLeaf),
+      newLeafId: newLeaf.id,
+    };
   }
 
+  let newLeafId = targetId;
+  const newChildren = root.children.map((child) => {
+    const result = splitLeaf(child, targetId, direction, newTabIds);
+    if (result.root !== child) {
+      newLeafId = result.newLeafId;
+    }
+    return result.root;
+  });
+
   return {
-    ...root,
-    children: root.children.map((child) =>
-      splitLeaf(child, targetId, direction, newTabIds),
-    ),
+    root: { ...root, children: newChildren },
+    newLeafId,
   };
 }
 
