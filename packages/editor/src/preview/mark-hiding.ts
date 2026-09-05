@@ -1,6 +1,7 @@
 import type { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
+import { syntaxHiddenMarks } from "../syntax/registry";
 import type { DecorationCollector, DecorationContext } from "./types";
 
 /** Count trailing spaces after a position on the same line (no sliceString calls). */
@@ -11,16 +12,24 @@ function skipTrailingSpaces(pos: number, state: EditorState): number {
   return pos + (spaces ? spaces[0].length : 0);
 }
 
-/** Lezer node types whose syntax markers should be hidden on non-active lines */
-export const HIDE_MARKS = new Set([
+/** Base-package mark names whose syntax markers should be hidden on
+ * non-active lines (from the CommonMark grammar and its standard Markdown
+ * configs). Basalt syntaxes contribute their delimiters via the syntax
+ * registry (ADR-033) — e.g. "WikiLinkMark", "EmbedMark". */
+const BUILTIN_HIDE_MARKS = new Set([
   "HeaderMark",
   "QuoteMark",
   "LinkMark",
   "EmphasisMark",
   "CodeMark",
-  "WikiLinkMark",
   "HighlightMark",
   "StrikethroughMark",
+]);
+
+/** Lezer node types whose syntax markers should be hidden on non-active lines */
+export const HIDE_MARKS = new Set([
+  ...BUILTIN_HIDE_MARKS,
+  ...syntaxHiddenMarks(),
 ]);
 
 export const MARK_HIDING_THEME = EditorView.baseTheme({

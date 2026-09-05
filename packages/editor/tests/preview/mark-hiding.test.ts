@@ -3,8 +3,10 @@
  * (`handleMarkHidingNode`).
  *
  * Behavior contract (from source):
- *  - HIDE_MARKS = { HeaderMark, QuoteMark, LinkMark, EmphasisMark, CodeMark,
- *    WikiLinkMark, HighlightMark, StrikethroughMark }.
+ *  - HIDE_MARKS = base marker node types (HeaderMark, QuoteMark, LinkMark,
+ *    EmphasisMark, CodeMark, HighlightMark, StrikethroughMark) plus the
+ *    delimiters Basalt syntaxes declare via the syntax registry (WikiLinkMark,
+ *    EmbedMark — ADR-033).
  *  - On the ACTIVE (focused) line: mark the marker as muted
  *    (cm-live-block-mark for HeaderMark/QuoteMark incl. trailing space;
  *    cm-live-inline-mark for the rest).
@@ -25,6 +27,7 @@ describe("HIDE_MARKS", () => {
   it("contains the expected marker node types", () => {
     expect([...HIDE_MARKS].sort()).toEqual([
       "CodeMark",
+      "EmbedMark",
       "EmphasisMark",
       "HeaderMark",
       "HighlightMark",

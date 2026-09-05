@@ -1,6 +1,5 @@
 import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { Table } from "@lezer/markdown";
 import { languages } from "@codemirror/language-data";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
@@ -16,9 +15,8 @@ import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
 import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
 import { BASE_EDITOR_THEME } from "./styling/base";
 import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
-import { yamlFrontmatterExtension } from "./syntax/frontmatter";
-import { highlightExtension } from "./syntax/highlight";
-import { clickableLinksPlugin, wikiLinkExtension } from "./syntax/wiki-links";
+import { clickableLinksPlugin } from "./syntax/wiki-links";
+import { createBasaltGrammar } from "./syntax/registry";
 import {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
@@ -45,12 +43,10 @@ import {
 import type { EditorConfig } from "./types";
 import { resolveAssetFacet } from "./types";
 import { renderModeReading } from "./preview/render-mode";
-const basaltMarkdownExtensions = [
-  wikiLinkExtension,
-  highlightExtension,
-  yamlFrontmatterExtension,
-  Table,
-];
+
+/** The ONE grammar list for the editor (ADR-033) — folded from the syntax
+ * registry's manifests. Consumed by edit, reading, and preview surfaces. */
+const basaltMarkdownExtensions = createBasaltGrammar();
 
 /**
  * Editor extensions grouped by concern, so the benchmark harness can run

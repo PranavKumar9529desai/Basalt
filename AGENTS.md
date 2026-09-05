@@ -56,7 +56,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                                                                                                           |
 | **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                                                                                                           |
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                                                                                                           |
-| Layout as serializable tree / pane splits (ADR-032)                  | 📝 Accepted — implementation phases defined                                                                                            |
+| Layout as serializable tree / pane splits (ADR-032)                  | ✅ Complete — root layout tree, per-pane tab bars, DnD between panes, v2 persistence; sashes + edge-drop zones deferred |
 | Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                    |
 | **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                           |
 | **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                            |
@@ -281,6 +281,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [030-rust-crates-quality-refactor](docs/adr/030-rust-crates-quality-refactor.md)         | ADR-030: Rust Crates Quality Refactor — Practices, Structure, Plan         |
 | [031-pdf-export-snapshot-reading-mode](docs/adr/031-pdf-export-snapshot-reading-mode.md) | ADR-031: PDF Export — Snapshot of Reading Mode                              |
 | [032-split-pane-layout-tree](docs/adr/032-split-pane-layout-tree.md)                   | ADR-032: Split Pane Layout Tree — VS Code Grid + Obsidian Flexibility      |
+| [033-syntax-registry](docs/adr/033-syntax-registry.md)                                 | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
 
 <!-- ADR_INDEX_END -->
 

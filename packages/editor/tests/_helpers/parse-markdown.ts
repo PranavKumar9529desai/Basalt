@@ -1,11 +1,13 @@
 /**
  * Test helper: create an EditorState configured with Basalt's markdown grammar
- * (wikilinks, highlights, frontmatter, tables) and optionally extra extensions
- * (e.g. the live-preview plugin), then read a guaranteed-complete Lezer tree.
+ * (wikilinks, embeds, highlights, frontmatter, tables) and optionally extra
+ * extensions (e.g. the live-preview plugin), then read a guaranteed-complete
+ * Lezer tree.
  *
- * This mirrors the `base` extension group from `edit-mode`/`readingModeExtras`
- * without pulling in the full extension stack (suggestions, WASM block-widget
- * parsers, themes) that isn't needed for grammar/handler unit tests.
+ * This mirrors the `base` extension group from edit/reading surfaces via the
+ * syntax registry (ADR-033) without pulling in the full extension stack
+ * (suggestions, WASM block-widget parsers, themes) that isn't needed for
+ * grammar/handler unit tests.
  */
 
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -14,19 +16,12 @@ import {
   ensureSyntaxTree,
 } from "@codemirror/language";
 import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
-import { Table } from "@lezer/markdown";
 import type { Tree } from "@lezer/common";
-import { yamlFrontmatterExtension } from "../../src/syntax/frontmatter";
-import { wikiLinkExtension } from "../../src/syntax/wiki-links";
-import { highlightExtension } from "../../src/syntax/highlight";
+import { createBasaltGrammar } from "../../src/syntax/registry";
 
-/** The custom Lezer markdown extensions Basalt adds on top of CommonMark. */
-export const basaltMarkdownExtensions = [
-  wikiLinkExtension,
-  highlightExtension,
-  yamlFrontmatterExtension,
-  Table,
-];
+/** The custom Lezer markdown extensions Basalt adds on top of CommonMark —
+ * folded from the syntax registry, the single source of truth. */
+export const basaltMarkdownExtensions = createBasaltGrammar();
 
 /**
  * A doc string with `|` markers for one or more cursors, e.g. `"# He|llo"`.
@@ -62,18 +57,24 @@ export interface ParseMarkdownResult {
 /**
  * Create an EditorState + guaranteed-complete syntax tree for a markdown doc.
  *
- * @param doc  Raw markdown; may contain `|` cursor markers.
+ * @param doc  Raw markdown; may contain `|` cursor markers (unless
+ *             `opts.pipes` is false, for docs where `|` is literal — tables,
+ *             embed aliases).
  * @param opts.extensions  Extra CM6 extensions to layer on (e.g. `livePreviewPlugin`).
  * @param opts.selection   Cursor to set (overrides any `|` markers in `doc`).
+ * @param opts.pipes       Set false to keep `|` as literal text (no cursor markers).
  */
 export function parseMarkdown(
   doc: string,
   opts: {
     extensions?: Extension[];
     selection?: number | { anchor: number; head: number };
+    pipes?: boolean;
   } = {},
 ): ParseMarkdownResult {
-  const { doc: cleanDoc, cursors } = stripPipes(doc);
+  const stripped = opts.pipes === false ? null : stripPipes(doc);
+  const cleanDoc = stripped?.doc ?? doc;
+  const cursors = stripped?.cursors ?? [];
 
   let selection: { anchor: number; head: number } | undefined;
   if (

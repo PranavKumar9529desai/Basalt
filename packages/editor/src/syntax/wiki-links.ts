@@ -3,16 +3,28 @@ import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 import type { InlineContext, MarkdownConfig } from "@lezer/markdown";
 
+/** Syntax node for the `!` prefix of an `![[embed]]` (sibling of its `WikiLink`). */
+export const EMBED_MARK = "EmbedMark";
+
 /**
- * Extends the Lezer Markdown parser to recognize [[WikiLinks]].
- * It defines two nodes:
+ * Extends the Lezer Markdown parser to recognize [[WikiLinks]] and `![[Embeds]]`.
+ * It defines three nodes:
  * 1. `WikiLink`: The parent node containing the entire link (e.g., `[[My Note]]`).
  * 2. `WikiLinkMark`: The syntax tokens (i.e., `[[` and `]]`).
+ * 3. `EmbedMark`: The `!` prefix on `![[embed]]`, emitted as the sibling
+ *    immediately before the `WikiLink` node.
+ *
+ * Why an explicit `![[` parser (ADR-033): the built-in `Image` parser swallows
+ * `![` before the `WikiLink` (before: "Link") parser ever runs, so embeds never
+ * produced a `WikiLink` node and `scanEmbedWikiLinks` found nothing. Matching
+ * `![[` in a parser registered `before: "Image"` keeps `![alt](url)` images on
+ * the `Image` path while making `![[target]]` a first-class link node.
  */
 export const wikiLinkExtension: MarkdownConfig = {
   defineNodes: [
     { name: "WikiLink", style: t.link },
     { name: "WikiLinkMark", style: t.processingInstruction },
+    { name: EMBED_MARK, style: t.processingInstruction },
   ],
   parseInline: [
     {
@@ -40,6 +52,36 @@ export const wikiLinkExtension: MarkdownConfig = {
         return -1;
       },
       before: "Link", // Run before the standard Markdown link parser
+    },
+    {
+      // `![[embed]]` — registered before `Image` so the built-in image parser
+      // can't swallow the `!` and hide the wiki link (ADR-033).
+      name: "WikilinkEmbed",
+      before: "Image",
+      parse(cx: InlineContext, next: number, pos: number): number {
+        // '!'
+        if (next !== 33) return -1;
+        // Must be followed by `[[`
+        if (cx.char(pos + 1) !== 91 || cx.char(pos + 2) !== 91) return -1;
+        for (let i = pos + 3; i < cx.end; i++) {
+          if (cx.char(i) === 93 && cx.char(i + 1) === 93) {
+            // `!` is its own node; the WikiLink node spans `[[target]]` so the
+            // existing scan (WikiLink preceded by `!`) keeps working unchanged.
+            cx.addElement(cx.elt(EMBED_MARK, pos, pos + 1));
+            return cx.addElement(
+              cx.elt("WikiLink", pos + 1, i + 2, [
+                cx.elt("WikiLinkMark", pos + 1, pos + 3), // The opening `[[`
+                cx.elt("WikiLinkMark", i, i + 2), // The closing `]]`
+              ]),
+            );
+          }
+          // Stop parsing if we hit a newline (embeds are single-line)
+          if (cx.char(i) === 10) {
+            break;
+          }
+        }
+        return -1;
+      },
     },
   ],
 };
