@@ -13,8 +13,9 @@ interface UseTabPersistenceOptions {
 function isTabSnapshot(value: unknown): value is TabsWorkspaceSnapshot {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<TabsWorkspaceSnapshot>;
+  // v2 = split-pane layout root (ADR-032); v1 = legacy flat `panes` format.
+  if (candidate.version === 2) return candidate.root !== undefined;
   if (candidate.version !== 1) return false;
-  // Accept new `panes` format or legacy `groups`/`groupOrder` format
   return (
     Array.isArray(candidate.panes) ||
     Array.isArray(candidate.groups) ||
