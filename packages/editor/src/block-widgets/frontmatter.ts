@@ -261,10 +261,15 @@ const render = (
 export const frontmatterBlockWidget: BlockWidgetSpec<FrontmatterModel> = {
   id: "frontmatter",
   matches: (node) => node.type.name === "YAMLFrontMatter",
-  parse: (state) => {
+  parse: (state, node) => {
     const fn = state.facet(frontmatterParserFacet);
     if (!fn) return null;
-    return fn(state.doc.toString());
+    // Frontmatter is always top-of-file (`YAMLFrontMatter` starts at offset 0),
+    // so slicing 0..node.to passes the parser the exact same relative text the
+    // full document would — the returned spans are already absolute — but
+    // avoids serializing a huge note body on the keystroke path (ADR-019).
+    // The parser only ever inspects this region anyway.
+    return fn(state.doc.sliceString(node.from, node.to));
   },
   render,
   span: spanFor,
