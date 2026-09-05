@@ -9,4 +9,6 @@ export interface Keybinding {
   when?: string;
 }
 
-export type WhenContext = Record<string, boolean>;
+export type ContextValue = boolean | string | number;
+
+export type WhenContext = Record<string, ContextValue>;

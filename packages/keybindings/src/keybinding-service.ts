@@ -14,18 +14,23 @@
 import { commandService } from "@workspace/commands";
 import { parseHotkey, type ParsedHotkey } from "./hotkey-parser";
 import KEYBINDINGS from "./keybindings.json";
-import type { Keybinding, WhenContext } from "./types";
+import { parseWhen, type WhenEvaluator } from "./when-parser";
+import type { ContextValue, Keybinding, WhenContext } from "./types";
 
 interface PreparedBinding {
   original: Keybinding;
   parsed: ParsedHotkey;
+  /** when-clause evaluator; `null` = unconditional (always active). */
+  evaluate: WhenEvaluator | null;
+  /** True when a when clause failed to compile — never matches. */
+  broken: boolean;
 }
 
 export class KeybindingService {
   private bindings: Keybinding[];
   private context: WhenContext = {};
   private actions = new Map<string, () => void>();
-  /** Parsed + sorted cache; rebuilt only when bindings change. */
+  /** Parsed + compiled cache; rebuilt only when bindings change. */
   private prepared: PreparedBinding[];
 
   constructor() {
@@ -35,16 +40,21 @@ export class KeybindingService {
   }
 
   private rebuild(): void {
-    // Bindings without a `when` clause take priority over conditional ones.
-    const sorted = [...this.bindings].sort((a, b) => {
-      if (a.when && !b.when) return 1;
-      if (!a.when && b.when) return -1;
-      return 0;
+    this.prepared = this.bindings.map((b) => {
+      const evaluate = b.when ? parseWhen(b.when) : null;
+      const broken = b.when !== undefined && b.when.trim() !== "" && evaluate === null;
+      if (broken) {
+        console.warn(
+          `[keybindings] invalid when clause "${b.when}" in binding "${b.key}" — it will never match`,
+        );
+      }
+      return {
+        original: b,
+        parsed: parseHotkey(b.key),
+        evaluate,
+        broken,
+      };
     });
-    this.prepared = sorted.map((b) => ({
-      original: b,
-      parsed: parseHotkey(b.key),
-    }));
   }
 
   register(binding: Keybinding): void {
@@ -65,11 +75,15 @@ export class KeybindingService {
     this.actions.delete(name);
   }
 
-  setContext(key: string, value: boolean): void {
+  setContext(key: string, value: ContextValue): void {
     this.context[key] = value;
   }
 
-  updateContext(values: Record<string, boolean>): void {
+  removeContext(key: string): void {
+    delete this.context[key];
+  }
+
+  updateContext(values: Partial<WhenContext>): void {
     Object.assign(this.context, values);
   }
 
@@ -79,29 +93,44 @@ export class KeybindingService {
 
   evaluateWhen(when?: string): boolean {
     if (!when) return true;
-    if (when.startsWith("!")) {
-      return this.context[when.slice(1)] !== true;
-    }
-    return this.context[when] === true;
+    const evaluator = parseWhen(when);
+    if (!evaluator) return false;
+    return evaluator(this.context);
   }
 
   resolve(event: KeyboardEvent): Keybinding | null {
-    for (const { original, parsed } of this.prepared) {
-      const keyMatch = event.key.toLowerCase() === parsed.key;
-      const modMatch = parsed.cmdOrCtrl
+    const candidates: PreparedBinding[] = [];
+
+    for (const binding of this.prepared) {
+      const keyMatch = event.key.toLowerCase() === binding.parsed.key;
+      const modMatch = binding.parsed.cmdOrCtrl
         ? event.ctrlKey || event.metaKey
         : !event.ctrlKey && !event.metaKey;
-      const shiftMatch = parsed.shift ? event.shiftKey : !event.shiftKey;
-      const altMatch = parsed.alt ? event.altKey : !event.altKey;
+      const shiftMatch = binding.parsed.shift
+        ? event.shiftKey
+        : !event.shiftKey;
+      const altMatch = binding.parsed.alt ? event.altKey : !event.altKey;
 
       if (!keyMatch || !modMatch || !shiftMatch || !altMatch) continue;
-      if (!this.evaluateWhen(original.when)) continue;
-
-      if (original.command && !commandService.hasCommand(original.command))
+      if (binding.broken) continue;
+      if (
+        binding.original.command &&
+        !commandService.hasCommand(binding.original.command)
+      )
         continue;
-      if (original.action && !this.actions.has(original.action)) continue;
+      if (binding.original.action && !this.actions.has(binding.original.action))
+        continue;
 
-      return original;
+      candidates.push(binding);
+    }
+
+    // Most-specific match wins: a binding whose when-clause evaluates true
+    // beats an unconditional one; unconditional bindings are the fallback.
+    for (const binding of candidates) {
+      if (binding.evaluate && binding.evaluate(this.context)) return binding.original;
+    }
+    for (const binding of candidates) {
+      if (!binding.evaluate) return binding.original;
     }
     return null;
   }
