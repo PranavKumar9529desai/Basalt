@@ -69,6 +69,7 @@ src/
 │   ├── tti.ts                # ttiMark() marks; writeTtiReport() → Rust timings
 │   ├── (tab handlers inlined in Shell.tsx)
 │   └── views/                # FileExplorer, Backlinks (two registered views)
+└── features/
     ├── tabs/                 # Tab state, split panes, persistence (ADR-032: layoutTree, PaneRenderer, SplitPane)
     ├── editor/               # CodeMirror 6, single renderer (ADR-029), autosave, inline title
     ├── search/               # Tantivy + Nucleo search modal + quick switcher
