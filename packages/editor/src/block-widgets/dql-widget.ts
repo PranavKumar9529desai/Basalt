@@ -203,11 +203,18 @@ export class DqlResultWidget extends WidgetType {
       this.runQuery(queryText)
         .then((result) => {
           queryCache.set(queryText, result);
+          // The user may have typed/closed this block — or the view may have
+          // been destroyed — while the query was in flight. CM detaches the
+          // replaced widget's element, so painting into it would target a dead
+          // node and the size measurement would read a detached layout. Skip
+          // both when the widget no longer renders this exact query.
+          if (!div.isConnected || this.queryText !== queryText) return;
           div.innerHTML = renderDqlResult(result);
           this.bindLinks(div);
           notifyViewOfSizeChange(div, view);
         })
         .catch((err) => {
+          if (!div.isConnected || this.queryText !== queryText) return;
           div.innerHTML = `<div class="cm-dql-error">Query error: ${escapeHtml(String(err))}</div>`;
           notifyViewOfSizeChange(div, view);
         });

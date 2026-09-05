@@ -9,7 +9,7 @@
  * widgets). This test pins that behavior by rendering the widget through a
  * real view facade.
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { EditorState, type Extension } from "@codemirror/state";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
@@ -52,6 +52,8 @@ const TABLE_RESULT: QueryResult = {
 
 describe("DqlResultWidget layout notification", () => {
   beforeEach(() => clearQueryCache());
+  afterEach(() => document.body.replaceChildren());
+
   it("calls requestMeasure after async result replaces the loading placeholder", async () => {
     const { view, requestMeasure } = mockView();
     const runQuery = vi.fn().mockResolvedValue(TABLE_RESULT);
@@ -62,6 +64,9 @@ describe("DqlResultWidget layout notification", () => {
     );
 
     const dom = widget.toDOM(view);
+    // Real views attach the widget element synchronously; toDOM's async paint
+    // guard requires that for the result to land on screen.
+    document.body.appendChild(dom);
 
     // Starts as loading placeholder; the view must not be told to measure yet.
     expect(dom.innerHTML).toContain("cm-dql-loading");
@@ -82,12 +87,41 @@ describe("DqlResultWidget layout notification", () => {
     const widget = new DqlResultWidget("TABLE FROM \"docs\"", runQuery, undefined);
 
     const dom = widget.toDOM(view);
+    document.body.appendChild(dom);
     expect(dom.innerHTML).toContain("cm-dql-loading");
 
     await runQuery("TABLE FROM \"docs\"").catch(() => {});
 
     expect(dom.innerHTML).toContain("cm-dql-error");
     expect(requestMeasure).toHaveBeenCalled();
+  });
+
+  it("skips the stale paint + measurement when the widget was replaced mid-flight", async () => {
+    const { view, requestMeasure } = mockView();
+    let resolveQuery!: (r: QueryResult) => void;
+    const runQuery = vi.fn(
+      () => new Promise<QueryResult>((resolve) => (resolveQuery = resolve)),
+    );
+    const widget = new DqlResultWidget(
+      "TABLE FROM \"docs\"",
+      runQuery,
+      undefined,
+    );
+
+    const dom = widget.toDOM(view);
+    document.body.appendChild(dom);
+    expect(dom.innerHTML).toContain("cm-dql-loading");
+
+    // The user edited/closed the block (or the view died) while the query was
+    // in flight — CM detaches the replaced widget's element.
+    dom.remove();
+    resolveQuery(TABLE_RESULT);
+    // Flush the microtask queue so toDOM's .then handler runs.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+
+    // No stale paint into a detached node, no measurement against dead layout.
+    expect(dom.innerHTML).toContain("cm-dql-loading");
+    expect(requestMeasure).not.toHaveBeenCalled();
   });
 });
 
