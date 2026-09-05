@@ -79,7 +79,8 @@ impl VaultWatcher {
         match event.kind {
             EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_) => {
                 for path in event.paths {
-                    if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                    let ext = path.extension().and_then(|e| e.to_str());
+                    if ext == Some("md") || ext == Some("canvas") {
                         pending.insert(path);
                     }
                 }

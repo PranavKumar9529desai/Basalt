@@ -76,7 +76,7 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         .metadata_cache
         .keys()
         .filter_map(|id| vault.arena.get_string(*id).cloned())
-        .filter(|p| p.ends_with(".md") && Path::new(p).exists())
+        .filter(|p| (p.ends_with(".md") || p.ends_with(".canvas")) && Path::new(p).exists())
         .collect();
     paths.sort_unstable();
 

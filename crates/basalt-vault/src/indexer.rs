@@ -63,8 +63,11 @@ pub fn index_directory(path: &Path) -> Vault {
                     if let Ok(text) = std::fs::read_to_string(entry_path) {
                         vault.add_document(path_str, &text);
                     }
+                } else if entry_path.extension().and_then(|ext| ext.to_str()) == Some("canvas") {
+                    // Canvas: track path in metadata cache (no markdown parsing)
+                    vault.add_document(path_str, "");
                 } else if let Some(info) = build_asset_info(entry_path, path) {
-                    // Non-markdown: register in asset index
+                    // Other non-markdown: register in asset index
                     vault.asset_index.upsert(info);
                 }
             }
