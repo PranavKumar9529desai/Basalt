@@ -24,7 +24,7 @@ import { useRenameSignalStore } from "../store/renameSignal";
  * handled by reconfiguring a Compartment in the controller — scroll position
  * and undo history survive the transition natively.
  */
-export function EditorView({ tab }: LeafProps) {
+export function EditorView({ tab, paneId }: LeafProps) {
   const {
     controller,
     io,
@@ -36,7 +36,7 @@ export function EditorView({ tab }: LeafProps) {
     handleReady,
     handleKeepMine,
     handleDiscard,
-  } = useEditor(tab);
+  } = useEditor(tab, paneId);
 
   const titleSlotRef = useRef<HTMLElement | null>(null);
   const titleRootRef = useRef<ReturnType<typeof createRoot> | null>(null);

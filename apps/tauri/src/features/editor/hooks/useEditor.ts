@@ -27,6 +27,7 @@ import {
   type EditorControllerOptions,
 } from "../controller/EditorController";
 import { decideReconcileAction } from "../lib/reconcile";
+import { editorControllerRegistry } from "../registry";
 import { useActiveNoteStore } from "../store/activeNote";
 import { useRenameSignalStore } from "../store/renameSignal";
 
@@ -40,7 +41,10 @@ import { useRenameSignalStore } from "../store/renameSignal";
  * update listener and all per-tab caches; this hook only observes tab-level
  * events (switch, close, blur, unmount, external file change).
  */
-export function useEditor(tab: LeafProps["tab"]) {
+export function useEditor(
+  tab: LeafProps["tab"],
+  paneId: LeafProps["paneId"],
+) {
   const services = useLeafServices();
   const io = useNoteIO();
   const keybindingService = useKeybindingService();
@@ -74,6 +78,16 @@ export function useEditor(tab: LeafProps["tab"]) {
     controllerRef.current = new EditorController(options);
   }
   const controller = controllerRef.current;
+
+  // Register this pane's controller in the global registry for the app's
+  // lifetime of the pane. Global commands/actions resolve the active pane's
+  // controller at EXECUTION time from here — never capture a per-pane
+  // controller in a closure registered elsewhere. Unregister is keyed by
+  // paneId, so an unmounting pane can only ever remove its own entry.
+  useEffect(() => {
+    editorControllerRegistry.register(paneId, controller);
+    return () => editorControllerRegistry.unregister(paneId);
+  }, [paneId, controller]);
 
   // Tab changes: capture the outgoing tab's scroll, flush its unsaved
   // edits, then show the new tab (cached state or disk read).
