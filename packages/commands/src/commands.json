@@ -112,5 +112,23 @@
     "name": "Export as PDF",
     "category": "File",
     "icon": "IconPrinter"
+  },
+  {
+    "id": "pane:split-right",
+    "name": "Split Pane Right",
+    "category": "Pane",
+    "icon": "IconLayoutSidebarRight"
+  },
+  {
+    "id": "pane:split-down",
+    "name": "Split Pane Down",
+    "category": "Pane",
+    "icon": "IconLayoutNavbar"
+  },
+  {
+    "id": "pane:close",
+    "name": "Close Pane",
+    "category": "Pane",
+    "icon": "IconX"
   }
 ]

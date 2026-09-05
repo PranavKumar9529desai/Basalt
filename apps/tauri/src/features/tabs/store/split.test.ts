@@ -134,7 +134,9 @@ describe("split pane actions", () => {
 
     const snap = store.getState().toWorkspaceSnapshot();
     expect(snap.version).toBe(2);
-    expect(snap.root.type).toBe("split");
+    if (snap.version === 2) {
+      expect(snap.root.type).toBe("split");
+    }
 
     store.getState().reset();
     store.getState().hydrateFromWorkspaceSnapshot(snap);
