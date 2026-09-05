@@ -437,4 +437,98 @@ describe("split pane actions", () => {
     const leaves = collectLeaves(root);
     expect(leaves).toHaveLength(2);
   });
+
+  describe("resize sashes (ADR-032 Phase 6)", () => {
+    it("split children start with equal 0.5 sizes", () => {
+      store.getState().openPinned({ path: "a.md" });
+      store.getState().splitActivePane("vertical");
+
+      const root = store.getState().root;
+      expect(root.type).toBe("split");
+      if (root.type === "split") {
+        expect(root.children[0].size).toBe(0.5);
+        expect(root.children[1].size).toBe(0.5);
+      }
+    });
+
+    it("resizeSplit writes normalized sizes onto the split children", () => {
+      store.getState().openPinned({ path: "a.md" });
+      store.getState().splitActivePane("vertical");
+      const root = store.getState().root;
+      expect(root.type).toBe("split");
+      if (root.type !== "split") return;
+      const splitId = root.id;
+
+      // Deliberately non-normalized (e.g. some error in pointer math).
+      store.getState().resizeSplit(splitId, [0.75, 0.5]);
+
+      const after = store.getState().root;
+      expect(after.type).toBe("split");
+      if (after.type === "split") {
+        expect(after.children[0].size).toBeCloseTo(0.6, 5);
+        expect(after.children[1].size).toBeCloseTo(0.4, 5);
+      }
+    });
+
+    it("resizeSplit is a no-op for an unknown split or wrong child count", () => {
+      store.getState().openPinned({ path: "a.md" });
+      store.getState().splitActivePane("vertical");
+      const before = store.getState().root;
+
+      store.getState().resizeSplit("pane-ghost", [0.5, 0.5]);
+      expect(store.getState().root).toBe(before);
+
+      const root = store.getState().root;
+      if (root.type === "split") {
+        store.getState().resizeSplit(root.id, [0.9]); // only 1 of 2 sizes
+        expect(store.getState().root).toBe(before);
+      }
+    });
+
+    it("split sizes survive the v2 persistence round-trip", () => {
+      store.getState().openPinned({ path: "a.md" });
+      store.getState().splitActivePane("vertical");
+      const firstRoot = store.getState().root;
+      if (firstRoot.type !== "split") throw new Error("expected split");
+      store.getState().resizeSplit(firstRoot.id, [0.7, 0.3]);
+
+      const snap = store.getState().toWorkspaceSnapshot();
+      store.getState().reset();
+      store.getState().hydrateFromWorkspaceSnapshot(snap);
+
+      const root = store.getState().root;
+      expect(root.type).toBe("split");
+      if (root.type === "split") {
+        expect(root.children[0].size).toBeCloseTo(0.7, 5);
+        expect(root.children[1].size).toBeCloseTo(0.3, 5);
+      }
+    });
+
+    it("moveTabToNewPane placement 'before' puts the fresh pane first", () => {
+      store.getState().openPinned({ path: "a.md" });
+      const paneId = store.getState().activePaneId;
+
+      store.getState().moveTabToNewPane(
+        "tab:a.md",
+        paneId,
+        "horizontal",
+        "before",
+      );
+
+      const root = store.getState().root;
+      expect(root.type).toBe("split");
+      if (root.type === "split") {
+        expect(root.orientation).toBe("horizontal");
+        expect(root.children[0].type).toBe("leaf");
+        const first = root.children[0];
+        if (first.type === "leaf") {
+          expect(first.tabGroup.tabIds).toEqual(["tab:a.md"]);
+        }
+        // The original (now empty) leaf trails behind.
+        expect(
+          collectLeaves(store.getState().root)[1].tabGroup.tabIds,
+        ).toEqual([]);
+      }
+    });
+  });
 });

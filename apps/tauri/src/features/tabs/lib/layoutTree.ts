@@ -31,7 +31,7 @@ export function createLeaf(tabIds: TabId[] = []): LeafNode {
   };
 }
 
-/** Create a split node with two children. */
+/** Create a split node with two children. Children get equal half shares. */
 export function createSplit(
   orientation: "horizontal" | "vertical",
   first: LayoutNode,
@@ -41,7 +41,7 @@ export function createSplit(
     id: makePaneId(),
     type: "split",
     orientation,
-    children: [first, second],
+    children: [{ ...first, size: 0.5 }, { ...second, size: 0.5 }],
   };
 }
 
@@ -119,6 +119,38 @@ export function findParent(
   return null;
 }
 
+/** Find a split node by id (sash resize targets a split, not a leaf). */
+export function findSplit(
+  root: LayoutNode,
+  splitId: PaneId,
+): SplitNode | null {
+  if (root.type === "split") {
+    if (root.id === splitId) return root;
+    for (const child of root.children) {
+      const found = findSplit(child, splitId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** Immutably map over the split node at `splitId`, returning the new tree. */
+export function mapSplit(
+  root: LayoutNode,
+  splitId: PaneId,
+  updater: (split: SplitNode) => SplitNode,
+): LayoutNode {
+  if (root.type === "leaf") return root;
+  if (root.id === splitId) return updater(root);
+  let changed = false;
+  const children = root.children.map((child) => {
+    const next = mapSplit(child, splitId, updater);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { ...root, children } : root;
+}
+
 /** Remove a leaf from the tree and unwrap single-child splits. */
 export function removeLeaf(
   root: LayoutNode,
@@ -143,25 +175,39 @@ export interface SplitResult {
   newLeafId: PaneId;
 }
 
-/** Split a leaf in the given direction, creating a new sibling. Returns the new tree and new leaf ID. */
+export type SplitPlacement = "before" | "after";
+
+/**
+ * Split a leaf in the given direction, creating a new sibling. `placement`
+ * "after" puts the fresh pane to the right/below (second child); "before" puts
+ * it to the left/above (first child) — used by edge-drop split zones.
+ * Returns the new tree and the NEW leaf's id.
+ */
+/** Split a leaf in the given direction, creating a new sibling. `placement`
+ * "after" puts the fresh pane to the right/below (second child); "before" puts
+ * it to the left/above (first child) — used by edge-drop split zones.
+ * Returns the new tree and the NEW leaf's id. */
 export function splitLeaf(
   root: LayoutNode,
   targetId: PaneId,
   direction: "horizontal" | "vertical",
   newTabIds: TabId[] = [],
+  placement: SplitPlacement = "after",
 ): SplitResult {
   if (root.type === "leaf") {
     if (root.id !== targetId) return { root, newLeafId: targetId };
     const newLeaf = createLeaf(newTabIds);
-    return {
-      root: createSplit(direction, root, newLeaf),
-      newLeafId: newLeaf.id,
-    };
+    const split = createSplit(direction, root, newLeaf);
+    // createSplit orders [existing, new]; "before" drag directions (left/top)
+    // need [new, existing]. Each child carries its own size, so a plain swap
+    // preserves proportions.
+    if (placement === "before") split.children.reverse();
+    return { root: split, newLeafId: newLeaf.id };
   }
 
   let newLeafId = targetId;
   const newChildren = root.children.map((child) => {
-    const result = splitLeaf(child, targetId, direction, newTabIds);
+    const result = splitLeaf(child, targetId, direction, newTabIds, placement);
     if (result.root !== child) {
       newLeafId = result.newLeafId;
     }
@@ -189,6 +235,7 @@ export function serializeNode(
       id: node.id,
       type: "leaf",
       tabGroup: { ...node.tabGroup },
+      size: node.size,
     };
   }
   return {
@@ -196,6 +243,7 @@ export function serializeNode(
     type: "split",
     orientation: node.orientation,
     children: node.children.map(serializeNode),
+    size: node.size,
   };
 }
 
@@ -208,6 +256,7 @@ export function deserializeNode(
       id: node.id,
       type: "leaf",
       tabGroup: { ...node.tabGroup },
+      size: node.size,
     };
   }
   return {
@@ -215,5 +264,6 @@ export function deserializeNode(
     type: "split",
     orientation: node.orientation,
     children: node.children.map(deserializeNode),
+    size: node.size,
   };
 }

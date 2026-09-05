@@ -56,7 +56,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                                                                                                           |
 | **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                                                                                                           |
 | **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                                                                                                           |
-| Layout as serializable tree / pane splits (ADR-032)                  | ✅ Complete — root layout tree, per-pane tab bars, DnD between panes, v2 persistence; sashes + edge-drop zones deferred |
+| Layout as serializable tree / pane splits (ADR-032)                  | ✅ Complete — root layout tree, per-pane tab bars, DnD between panes, v2 persistence, resize sashes (persisted `size` ratios), edge-drop split zones |
 | Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                    |
 | **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                           |
 | **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                            |

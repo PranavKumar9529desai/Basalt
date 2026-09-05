@@ -233,5 +233,10 @@ All validation items pass in the implementation (branch `feat/split-pane-layout`
 3. ✅ **Split actions**: `splitActivePane()`, `closePane()`, activate-on-click; palette + commands
 4. ✅ **Drag & drop**: Move tabs between panes (tab-drop, pane-body drop, `moveTabToPane`/`moveTabToNewPane`)
 5. ✅ **Persistence**: Serialize/deserialize tree; workspace.json v2 format; boot restore
-6. ⏳ **Resize sashes**: Proportional sizing (`size` ratios) on drag — deferred from v1
-7. ⏳ **Edge-drop split zones**: Visual drop targets at pane edges for `moveTabToNewPane` — deferred
+6. ✅ **Resize sashes**: `size` ratios (0–1 fraction per split child) in the layout
+   tree, `resizeSplit()` store action, controlled `SplitPane`; sizes persist in
+   the v2 snapshot and restore on boot; backward compatible (absent → equal)
+7. ✅ **Edge-drop split zones**: `EdgeDropZones` overlay on every leaf while a tab
+   drags (shared module-level drag state in `useTabDnD`); left/right/top/bottom
+   wedges call `moveTabToNewPane` with placement `before`/`after` so the fresh
+   pane lands on the hovered side

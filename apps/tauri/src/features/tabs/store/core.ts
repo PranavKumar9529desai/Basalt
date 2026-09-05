@@ -9,6 +9,8 @@ import {
   collectLeaves,
   findLeaf,
   findLeafByTab,
+  findSplit,
+  mapSplit,
   mapLeaf,
 } from "../lib/layoutTree";
 
@@ -86,6 +88,7 @@ export interface CoreSlice {
   splitActivePane: TabsState["splitActivePane"];
   closePane: TabsState["closePane"];
   activatePane: TabsState["activatePane"];
+  resizeSplit: TabsState["resizeSplit"];
 
   reset: TabsState["reset"];
 }
@@ -697,7 +700,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     });
   },
 
-  moveTabToNewPane: (tabId, paneId, direction) => {
+  moveTabToNewPane: (tabId, paneId, direction, placement = "after") => {
     set((state) => {
       const tab = state.tabs[tabId];
       const sourceLeaf = findLeaf(state.root, paneId);
@@ -727,7 +730,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
 
       // Split the source pane and drop the tab into the fresh pane. Focus
       // follows the tab (ADR-032: drag out of a pane to create a new one).
-      const split = splitLeaf(root, paneId, direction, [tabId]);
+      const split = splitLeaf(root, paneId, direction, [tabId], placement);
       return {
         root: split.root,
         tabs: {
@@ -855,6 +858,34 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     set((state) => {
       if (state.activePaneId === paneId) return state;
       return { activePaneId: paneId };
+    });
+  },
+
+  resizeSplit: (splitPaneId, sizes) => {
+    set((state) => {
+      const split = findSplit(state.root, splitPaneId);
+      if (!split) return state;
+      if (sizes.length !== split.children.length) return state;
+
+      // Guard against NaN / non-finite values (a drag could hand us garbage).
+      const valid = sizes.every(
+        (n) => typeof n === "number" && Number.isFinite(n) && n > 0,
+      );
+      if (!valid) return state;
+
+      const total = sizes.reduce((sum, n) => sum + n, 0);
+      const normalized = sizes.map((n) => n / total);
+
+      return {
+        root: mapSplit(state.root, splitPaneId, (s) => ({
+          ...s,
+          children: s.children.map((child, i) => ({
+            ...child,
+            size: normalized[i],
+          })),
+        })),
+        persistVersion: state.persistVersion + 1,
+      };
     });
   },
 });

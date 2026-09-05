@@ -67,11 +67,14 @@ export interface TabsState {
     insertIndex?: number,
   ) => void;
   /** Split `paneId` in `direction` and move an existing tab into the new
-   * pane (drag-to-edge / move-to-new-pane). Focus follows the tab. */
+   * pane (drag-to-edge / move-to-new-pane). `placement` controls whether the
+   * fresh pane lands after (right/below) or before (left/above) the target.
+   * Focus follows the tab. */
   moveTabToNewPane: (
     tabId: TabId,
     paneId: PaneId,
     direction: "horizontal" | "vertical",
+    placement?: "before" | "after",
   ) => void;
   /** Repoint open tabs after files/folders moved on disk. Ids are STABLE:
    * only path/title change, so leaf caches keyed by id survive the move
@@ -82,6 +85,9 @@ export interface TabsState {
   splitActivePane: (direction: "horizontal" | "vertical") => void;
   closePane: (paneId: PaneId) => void;
   activatePane: (paneId: PaneId) => void;
+  /** Resize a split's children (0–1 fractions) — ADR-032 Phase 6 sashes.
+   * Sizes are normalized to sum to 1 and persisted with the layout tree. */
+  resizeSplit: (splitPaneId: PaneId, sizes: number[]) => void;
 
   toWorkspaceSnapshot: () => TabsWorkspaceSnapshot;
   hydrateFromWorkspaceSnapshot: (snapshot: TabsWorkspaceSnapshot) => void;

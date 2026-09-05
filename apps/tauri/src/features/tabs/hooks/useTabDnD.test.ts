@@ -4,7 +4,7 @@ import type { DragEvent as ReactDragEvent } from "react";
 
 import { useTabsStore } from "../store";
 import { createLeaf, collectLeaves } from "../lib/layoutTree";
-import { useTabDnD } from "./useTabDnD";
+import { useTabDnD, resetTabDnDStateForTests } from "./useTabDnD";
 import type { TabId } from "../types";
 
 vi.mock("@workspace/views", () => ({
@@ -43,6 +43,7 @@ function seedPane(tabIds: string[]) {
 describe("useTabDnD", () => {
   beforeEach(() => {
     act(() => useTabsStore.getState().reset());
+    resetTabDnDStateForTests();
   });
 
   it("sets isDraggingTab on drag start and clears it on drag end", () => {
@@ -154,6 +155,114 @@ describe("useTabDnD", () => {
     expect(useTabsStore.getState().tabs["tab:a.md"]).toMatchObject({
       isPinned: true,
       isPreview: false,
+    });
+  });
+
+  it("isDraggingTab is shared across hook instances (module drag state)", () => {
+    const first = renderHook(() => useTabDnD());
+    const second = renderHook(() => useTabDnD());
+    seedPane(["a"]);
+    act(() => first.result.current.handleTabDragStart("a", dragEvent()));
+    // A second instance — the pane the drop will land on — sees the drag too.
+    expect(second.result.current.isDraggingTab).toBe(true);
+    act(() => first.result.current.handleTabDragEnd(dragEvent()));
+    expect(second.result.current.isDraggingTab).toBe(false);
+  });
+
+  describe("edge-drop split zones (ADR-032 Phase 7)", () => {
+    it("right edge splits into columns with the tab on the right", () => {
+      act(() => {
+        const s = useTabsStore.getState();
+        s.openPinned({ path: "a.md" });
+      });
+      const paneId = useTabsStore.getState().activePaneId;
+
+      const { result } = renderHook(() => useTabDnD());
+      act(() => result.current.handleTabDragStart("tab:a.md", dragEvent()));
+      act(() => result.current.handleEdgeDrop("right", paneId, dragEvent()));
+
+      const root = useTabsStore.getState().root;
+      expect(root.type).toBe("split");
+      if (root.type === "split") {
+        expect(root.orientation).toBe("horizontal");
+        expect(collectLeaves(root).length).toBe(2);
+      }
+      const leaves = collectLeaves(root);
+      expect(leaves[1].tabGroup.tabIds).toEqual(["tab:a.md"]);
+      expect(leaves[1].tabGroup.activeTabId).toBe("tab:a.md");
+      expect(useTabsStore.getState().activePaneId).toBe(leaves[1].id);
+    });
+
+    it("left edge splits into columns with the tab on the left", () => {
+      act(() => {
+        const s = useTabsStore.getState();
+        s.openPinned({ path: "a.md" });
+      });
+      const paneId = useTabsStore.getState().activePaneId;
+
+      const { result } = renderHook(() => useTabDnD());
+      act(() => result.current.handleTabDragStart("tab:a.md", dragEvent()));
+      act(() => result.current.handleEdgeDrop("left", paneId, dragEvent()));
+
+      const root = useTabsStore.getState().root;
+      const leaves = collectLeaves(root);
+      expect(root.type).toBe("split");
+      if (root.type === "split") expect(root.orientation).toBe("horizontal");
+      expect(leaves.length).toBe(2);
+      expect(leaves[0].tabGroup.tabIds).toEqual(["tab:a.md"]);
+      expect(useTabsStore.getState().activePaneId).toBe(leaves[0].id);
+    });
+
+    it("top edge splits into rows with the tab above", () => {
+      act(() => {
+        const s = useTabsStore.getState();
+        s.openPinned({ path: "a.md" });
+      });
+      const paneId = useTabsStore.getState().activePaneId;
+
+      const { result } = renderHook(() => useTabDnD());
+      act(() => result.current.handleTabDragStart("tab:a.md", dragEvent()));
+      act(() => result.current.handleEdgeDrop("top", paneId, dragEvent()));
+
+      const root = useTabsStore.getState().root;
+      const leaves = collectLeaves(root);
+      expect(root.type).toBe("split");
+      if (root.type === "split") expect(root.orientation).toBe("vertical");
+      expect(leaves[0].tabGroup.tabIds).toEqual(["tab:a.md"]);
+      expect(useTabsStore.getState().activePaneId).toBe(leaves[0].id);
+    });
+
+    it("bottom edge splits into rows with the tab below", () => {
+      act(() => {
+        const s = useTabsStore.getState();
+        s.openPinned({ path: "a.md" });
+      });
+      const paneId = useTabsStore.getState().activePaneId;
+
+      const { result } = renderHook(() => useTabDnD());
+      act(() => result.current.handleTabDragStart("tab:a.md", dragEvent()));
+      act(() => result.current.handleEdgeDrop("bottom", paneId, dragEvent()));
+
+      const root = useTabsStore.getState().root;
+      const leaves = collectLeaves(root);
+      expect(root.type).toBe("split");
+      if (root.type === "split") expect(root.orientation).toBe("vertical");
+      expect(leaves[1].tabGroup.tabIds).toEqual(["tab:a.md"]);
+      expect(useTabsStore.getState().activePaneId).toBe(leaves[1].id);
+    });
+
+    it("does nothing when the dropped tab is not in the target pane", () => {
+      act(() => {
+        const s = useTabsStore.getState();
+        s.openPinned({ path: "a.md" });
+      });
+      const paneId = useTabsStore.getState().activePaneId;
+
+      const { result } = renderHook(() => useTabDnD());
+      act(() => result.current.handleTabDragStart("tab:nope.md", dragEvent()));
+      const before = useTabsStore.getState().root;
+      act(() => result.current.handleEdgeDrop("right", paneId, dragEvent()));
+      expect(useTabsStore.getState().root).toEqual(before);
     });
   });
 });

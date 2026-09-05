@@ -60,12 +60,16 @@ export interface SplitNode {
   type: "split";
   orientation: "horizontal" | "vertical";
   children: LayoutNode[];
+  /** Child size fraction within the parent split (optional; equal if absent). */
+  size?: number;
 }
 
 export interface LeafNode {
   id: PaneId;
   type: "leaf";
   tabGroup: TabGroup;
+  /** Child size fraction within the parent split (optional; equal if absent). */
+  size?: number;
 }
 
 export type LayoutNode = SplitNode | LeafNode;
@@ -108,12 +112,16 @@ export interface SerializedSplitNode {
   type: "split";
   orientation: "horizontal" | "vertical";
   children: SerializedLayoutNode[];
+  /** Child size fraction within the parent split (optional; equal if absent). */
+  size?: number;
 }
 
 export interface SerializedLeafNode {
   id: PaneId;
   type: "leaf";
   tabGroup: SerializedTabGroup;
+  /** Child size fraction within the parent split (optional; equal if absent). */
+  size?: number;
 }
 
 export type SerializedLayoutNode = SerializedSplitNode | SerializedLeafNode;
