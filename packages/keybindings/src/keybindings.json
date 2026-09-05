@@ -22,5 +22,6 @@
   { "key": "F2", "action": "renameActiveNote" },
   { "key": "Escape", "action": "closeTopModal", "when": "modalOpen" },
   { "key": "CmdOrCtrl+\\", "command": "pane:split-right" },
-  { "key": "CmdOrCtrl+Shift+\\", "command": "pane:split-down" }
+  { "key": "CmdOrCtrl+Shift+\\", "command": "pane:split-down" },
+  { "key": "CmdOrCtrl+Alt+W", "command": "pane:close" }
 ]
