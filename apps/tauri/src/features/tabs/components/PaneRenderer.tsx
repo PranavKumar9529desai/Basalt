@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import type { LayoutNode, LeafNode, PaneId } from "../types";
 import { useTabsStore } from "../store";
+import { useTabDnD } from "../hooks/useTabDnD";
 import { SplitPane } from "./SplitPane";
 
 export interface LeafRenderContext {
@@ -42,6 +43,7 @@ function LeafPane({
 }) {
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
   const activatePane = useTabsStore((state) => state.activatePane);
+  const tabDnD = useTabDnD();
 
   // The node prop carries this leaf's own tab group (root is the source of
   // truth in ADR-032), so each pane renders ITS active tab — never another
@@ -54,13 +56,21 @@ function LeafPane({
 
   return (
     <section
-      aria-label={`Pane ${node.id}`}
       className="flex flex-1 min-h-0 min-w-0 flex-col"
       // Focus anywhere inside a leaf (its tab bar, header, or editor) — or a
       // plain mousedown on blank pane space — focuses that pane, the only way
       // `activePaneId` tracks user intent.
       onFocusCapture={() => activatePane(node.id)}
       onMouseDownCapture={() => activatePane(node.id)}
+      // Drop a tab on a pane's body (below the bars, incl. empty panes): the
+      // tab moves into THIS pane at the end and focus follows it there.
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("application/x-basalt-tab")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      }}
+      onDrop={(e) => tabDnD.handlePaneBodyDrop(node.id, e)}
     >
       {renderLeaf(ctx)}
     </section>

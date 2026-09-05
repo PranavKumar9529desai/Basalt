@@ -57,6 +57,22 @@ export interface TabsState {
     toIndex: number,
     paneId?: PaneId,
   ) => void;
+  /** Move a tab into another pane's group (cross-pane drag & drop). The
+   * tab is pinned on drop so preview eviction can't claim it, the target
+   * pane becomes active, and the dropped tab is focused. `insertIndex`
+   * defaults to appending at the end of the target group. */
+  moveTabToPane: (
+    tabId: TabId,
+    targetPaneId: PaneId,
+    insertIndex?: number,
+  ) => void;
+  /** Split `paneId` in `direction` and move an existing tab into the new
+   * pane (drag-to-edge / move-to-new-pane). Focus follows the tab. */
+  moveTabToNewPane: (
+    tabId: TabId,
+    paneId: PaneId,
+    direction: "horizontal" | "vertical",
+  ) => void;
   /** Repoint open tabs after files/folders moved on disk. Ids are STABLE:
    * only path/title change, so leaf caches keyed by id survive the move
    * and dirty state is preserved. */

@@ -67,6 +67,8 @@ export interface CoreSlice {
   unpinTab: TabsState["unpinTab"];
   togglePinTab: TabsState["togglePinTab"];
   moveTabWithinPane: TabsState["moveTabWithinPane"];
+  moveTabToPane: TabsState["moveTabToPane"];
+  moveTabToNewPane: TabsState["moveTabToNewPane"];
   updateTabPaths: TabsState["updateTabPaths"];
   splitActivePane: TabsState["splitActivePane"];
   closePane: TabsState["closePane"];
@@ -581,6 +583,119 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           ...l,
           tabGroup: { ...l.tabGroup, tabIds: next },
         })),
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  moveTabToPane: (tabId, targetPaneId, insertIndex) => {
+    set((state) => {
+      const tab = state.tabs[tabId];
+      const sourceLeaf = findLeafByTab(state.root, tabId);
+      const targetLeaf = findLeaf(state.root, targetPaneId);
+      if (!tab || !targetLeaf) return state;
+      if (sourceLeaf?.id === targetLeaf.id) return state;
+
+      let root = state.root;
+
+      // Remove from the source pane's group.
+      if (sourceLeaf) {
+        const sourceTabIds = sourceLeaf.tabGroup.tabIds;
+        const remaining = sourceTabIds.filter((id) => id !== tabId);
+        const removedIndex = sourceTabIds.indexOf(tabId);
+        const activeTabId =
+          sourceLeaf.tabGroup.activeTabId === tabId
+            ? (remaining[removedIndex] ?? remaining[removedIndex - 1] ?? null)
+            : sourceLeaf.tabGroup.activeTabId;
+        root = mapLeaf(root, sourceLeaf.id, (l) => ({
+          ...l,
+          tabGroup: {
+            ...l.tabGroup,
+            tabIds: remaining,
+            activeTabId,
+            previewTabId:
+              l.tabGroup.previewTabId === tabId
+                ? null
+                : l.tabGroup.previewTabId,
+          },
+        }));
+      }
+
+      // Insert into the target group at the requested slot.
+      const targetTabIds = targetLeaf.tabGroup.tabIds;
+      const index =
+        insertIndex === undefined
+          ? targetTabIds.length
+          : Math.max(0, Math.min(insertIndex, targetTabIds.length));
+      const targetNext = [...targetTabIds];
+      targetNext.splice(index, 0, tabId);
+      root = mapLeaf(root, targetLeaf.id, (l) => ({
+        ...l,
+        tabGroup: { ...l.tabGroup, tabIds: targetNext, activeTabId: tabId },
+      }));
+
+      // A dropped tab becomes a persistent tab in the new pane — never a
+      // preview that preview-eviction could silently reclaim.
+      return {
+        root,
+        tabs: {
+          ...state.tabs,
+          [tabId]: {
+            ...tab,
+            isPinned: true,
+            isPreview: false,
+            lastAccessedAt: nowMs(),
+          },
+        },
+        activePaneId: targetLeaf.id,
+        persistVersion: state.persistVersion + 1,
+      };
+    });
+  },
+
+  moveTabToNewPane: (tabId, paneId, direction) => {
+    set((state) => {
+      const tab = state.tabs[tabId];
+      const sourceLeaf = findLeaf(state.root, paneId);
+      if (!tab || !sourceLeaf) return state;
+      if (!sourceLeaf.tabGroup.tabIds.includes(tabId)) return state;
+
+      // Remove from the source pane's group.
+      const sourceTabIds = sourceLeaf.tabGroup.tabIds;
+      const remaining = sourceTabIds.filter((id) => id !== tabId);
+      const removedIndex = sourceTabIds.indexOf(tabId);
+      const activeTabId =
+        sourceLeaf.tabGroup.activeTabId === tabId
+          ? (remaining[removedIndex] ?? remaining[removedIndex - 1] ?? null)
+          : sourceLeaf.tabGroup.activeTabId;
+      const root = mapLeaf(state.root, sourceLeaf.id, (l) => ({
+        ...l,
+        tabGroup: {
+          ...l.tabGroup,
+          tabIds: remaining,
+          activeTabId,
+          previewTabId:
+            l.tabGroup.previewTabId === tabId
+              ? null
+              : l.tabGroup.previewTabId,
+        },
+      }));
+
+      // Split the source pane and drop the tab into the fresh pane. Focus
+      // follows the tab (ADR-032: drag out of a pane to create a new one).
+      const split = splitLeaf(root, paneId, direction, [tabId]);
+      return {
+        root: split.root,
+        tabs: {
+          ...state.tabs,
+          [tabId]: {
+            ...tab,
+            isPinned: true,
+            isPreview: false,
+            lastAccessedAt: nowMs(),
+          },
+        },
+        activePaneId: split.newLeafId,
         persistVersion: state.persistVersion + 1,
       };
     });

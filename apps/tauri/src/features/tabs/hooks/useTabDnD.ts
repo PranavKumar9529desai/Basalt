@@ -7,10 +7,11 @@ import {
   useState,
 } from "react";
 import { useTabsStore } from "../store";
-import { findLeaf } from "../lib/layoutTree";
+import { findLeaf, findLeafByTab } from "../lib/layoutTree";
 
 interface DraggedTabState {
   tabId: string;
+  sourcePaneId: string;
 }
 
 // Read drag state from the ref first, then fall back to dataTransfer.
@@ -52,12 +53,17 @@ export function useTabDnD() {
 
   const handleTabDragStart = useCallback(
     (tabId: string, event: DragEvent<HTMLElement>) => {
-      draggedTabRef.current = { tabId };
+      const sourcePaneId = findLeafByTab(
+        useTabsStore.getState().root,
+        tabId,
+      )?.id;
+      if (!sourcePaneId) return;
+      draggedTabRef.current = { tabId, sourcePaneId };
       setIsDraggingTab(true);
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData(
         "application/x-basalt-tab",
-        JSON.stringify({ tabId }),
+        JSON.stringify({ tabId, sourcePaneId }),
       );
     },
     [],
@@ -82,12 +88,28 @@ export function useTabDnD() {
       }
 
       const state = useTabsStore.getState();
-      const leaf = findLeaf(state.root, state.activePaneId);
-      if (!leaf) {
+      const targetLeaf = findLeafByTab(state.root, targetTabId);
+      if (!targetLeaf) {
         clearDragState();
         return;
       }
-      const tabIds = leaf.tabGroup.tabIds;
+
+      // Cross-pane drop (ADR-032): the tab moves into the target pane at the
+      // dropped edge's slot and focus follows it there.
+      if (dragged.sourcePaneId !== targetLeaf.id) {
+        const targetIndex =
+          targetLeaf.tabGroup.tabIds.indexOf(targetTabId);
+        state.moveTabToPane(
+          dragged.tabId,
+          targetLeaf.id,
+          targetIndex + (edge === "right" ? 1 : 0),
+        );
+        clearDragState();
+        return;
+      }
+
+      // Same-pane drop = reorder.
+      const tabIds = targetLeaf.tabGroup.tabIds;
       const fromIndex = tabIds.indexOf(dragged.tabId);
       const toIndex = tabIds.indexOf(targetTabId);
       if (fromIndex === -1 || toIndex === -1) {
@@ -108,6 +130,28 @@ export function useTabDnD() {
     [clearDragState],
   );
 
+  /** Drop a tab on a pane's body (non-tab area, incl. empty panes): moves the
+   * tab into that pane at the end. */
+  const handlePaneBodyDrop = useCallback(
+    (paneId: string, event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const dragged = readDraggedTab(draggedTabRef, event);
+      if (!dragged) {
+        clearDragState();
+        return;
+      }
+      const state = useTabsStore.getState();
+      const targetLeaf = findLeaf(state.root, paneId);
+      if (targetLeaf && dragged.sourcePaneId !== targetLeaf.id) {
+        state.moveTabToPane(dragged.tabId, paneId);
+        state.activateTab(dragged.tabId);
+      }
+      clearDragState();
+    },
+    [clearDragState],
+  );
+
   const handleTabDragEnd = useCallback(
     (_: DragEvent<HTMLElement>) => {
       clearDragState();
@@ -121,6 +165,7 @@ export function useTabDnD() {
       handleTabDragStart,
       handleTabDragOver,
       handleTabDropOnTab,
+      handlePaneBodyDrop,
       handleTabDragEnd,
     }),
     [
@@ -128,6 +173,7 @@ export function useTabDnD() {
       handleTabDragStart,
       handleTabDragOver,
       handleTabDropOnTab,
+      handlePaneBodyDrop,
       handleTabDragEnd,
     ],
   );

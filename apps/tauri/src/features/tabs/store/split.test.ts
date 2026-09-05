@@ -187,6 +187,61 @@ describe("split pane actions", () => {
     }
   });
 
+  it("moveTabToPane moves a tab into another pane and pins it (ADR-032)", () => {
+    store.getState().openPinned({ path: "a.md" });
+    store.getState().openPinned({ path: "b.md" });
+    store.getState().splitActivePane("horizontal"); // clones b into new pane
+    const leaves = collectLeaves(store.getState().root);
+    const [left, right] = leaves;
+    const cloneId = right.tabGroup.activeTabId as TabId;
+
+    store.getState().moveTabToPane("tab:a.md", right.id, 0);
+
+    const after = collectLeaves(store.getState().root);
+    const afterLeft = after.find((l) => l.id === left.id)!;
+    const afterRight = after.find((l) => l.id === right.id)!;
+    expect(afterLeft.tabGroup.tabIds).toEqual(["tab:b.md"]);
+    expect(afterRight.tabGroup.tabIds).toEqual(["tab:a.md", cloneId]);
+    expect(afterRight.tabGroup.activeTabId).toBe("tab:a.md");
+    expect(store.getState().activePaneId).toBe(right.id);
+    expect(store.getState().tabs["tab:a.md"]).toMatchObject({
+      isPinned: true,
+      isPreview: false,
+    });
+  });
+
+  it("moveTabToPane is a no-op within the same pane", () => {
+    store.getState().openPinned({ path: "a.md" });
+    store.getState().openPinned({ path: "b.md" });
+    const before = store.getState().root;
+    const paneId = store.getState().activePaneId;
+    store.getState().moveTabToPane("tab:a.md", paneId, 1);
+    expect(store.getState().root).toBe(before); // same reference = no-op
+  });
+
+  it("moveTabToNewPane splits a new pane and moves the tab into it", () => {
+    const a = store.getState().openPinned({ path: "a.md" });
+    const b = store.getState().openPinned({ path: "b.md" });
+
+    store.getState().moveTabToNewPane(
+      a,
+      store.getState().activePaneId,
+      "vertical",
+    );
+
+    const leaves = collectLeaves(store.getState().root);
+    expect(leaves).toHaveLength(2);
+    const newLeaf = leaves.find((l) => l.tabGroup.tabIds.includes(a))!;
+    expect(newLeaf.tabGroup.activeTabId).toBe(a);
+    const oldLeaf = leaves.find((l) => l.id !== newLeaf.id)!;
+    expect(oldLeaf.tabGroup.tabIds).toEqual([b]);
+    expect(store.getState().activePaneId).toBe(newLeaf.id);
+    expect(store.getState().tabs[a]).toMatchObject({
+      isPinned: true,
+      isPreview: false,
+    });
+  });
+
   it("v2 round-trip preserves split layout", () => {
     store.getState().openPinned({ path: "a.md" });
     store.getState().splitActivePane("vertical");
