@@ -15,6 +15,7 @@
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
 import { useTabsStore, TabsBar, PaneRenderer, TabDragGhost, type LeafRenderContext } from "../features/tabs";
@@ -107,6 +108,9 @@ function WorkspaceShell({
       onOpenLink: (name: string) => {
         const target = findNote(name) ?? findNote(`${name}.md`);
         if (target) openNote(target.path);
+      },
+      openExternalLink: (url: string) => {
+        void openUrl(url);
       },
     }),
     [leafServices.resolveAsset, findNote, openNote],

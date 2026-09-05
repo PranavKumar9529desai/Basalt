@@ -80,10 +80,19 @@ export type OnPasteImageFn = (
   filename: string,
 ) => Promise<string | null>;
 
+/** Open an external (http/https) URL in the system browser. Injected by the
+ * feature layer (Tauri `openUrl`); `packages/editor` stays pure — links are
+ * never opened with `window.open`, which behaves wrongly inside a WebView
+ * (no default browser routing, loses `noreferrer` guarantees per platform). */
+export type OpenExternalLinkFn = (url: string) => void;
+
 export interface EditorConfig {
   onFetchLinks?: FetchLinksFn;
   onFetchTags?: FetchTagsFn;
   onOpenLink?: (link: string) => void;
+  /** Open an external http(s) link in the system browser (warehouse of the
+   * reading-mode link handler). Default: links are not opened (no-op). */
+  openExternalLink?: OpenExternalLinkFn;
   /** Save a pasted image and return its vault-relative path for `![[…]]`. */
   onPasteImage?: OnPasteImageFn;
   themeExtensions?: Extension[];
@@ -120,4 +129,11 @@ export interface EditorConfig {
 export const resolveAssetFacet = Facet.define<
   ((target: string) => string | null) | undefined,
   ((target: string) => string | null) | undefined
+>({ combine: (values) => values[0] });
+
+/** Open an external (http/https) URL in the system browser. Injected by the
+ * feature layer so `packages/editor` stays pure. */
+export const openExternalLinkFacet = Facet.define<
+  OpenExternalLinkFn | undefined,
+  OpenExternalLinkFn | undefined
 >({ combine: (values) => values[0] });

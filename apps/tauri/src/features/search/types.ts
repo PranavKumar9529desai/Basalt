@@ -62,4 +62,6 @@ export interface PreviewDeps {
   resolveAsset: (target: string) => string | null;
   /** Open a note linked from a preview (wikilink / DQL result / link). */
   onOpenLink: (name: string) => void;
+  /** Open an external http(s) link in the system browser (Tauri opener). */
+  openExternalLink: (url: string) => void;
 }

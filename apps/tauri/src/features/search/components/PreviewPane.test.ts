@@ -13,6 +13,7 @@ const deps: PreviewDeps = {
   runQuery: async () => ({ columns: [], rows: [], total: 0 }),
   resolveAsset: () => null,
   onOpenLink: () => {},
+  openExternalLink: () => {},
 };
 
 function rangeSet(

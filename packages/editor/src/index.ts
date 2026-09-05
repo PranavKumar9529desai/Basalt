@@ -40,10 +40,11 @@ export type {
   FrontmatterDiagnostic,
   FrontmatterDiagnosticKind,
   OnPasteImageFn,
+  OpenExternalLinkFn,
   ParseFrontmatterFn,
   RunQueryFn,
 } from "./types";
-export { resolveAssetFacet } from "./types";
+export { openExternalLinkFacet, resolveAssetFacet } from "./types";
 
 export {
   dqlBlockSpec,

@@ -36,6 +36,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "getBlockWidgetModel",
   "getWatchdogStats",
   "handleTagsInLine",
+  "openExternalLinkFacet",
   "openLinkFacet",
   "notifyViewOfSizeChange",
   "previewExtensions",

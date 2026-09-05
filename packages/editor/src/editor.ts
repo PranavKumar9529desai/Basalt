@@ -40,7 +40,7 @@ import {
   type BlockWidgetSpec,
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
-import { resolveAssetFacet } from "./types";
+import { openExternalLinkFacet, resolveAssetFacet } from "./types";
 import { renderModeReading } from "./preview/render-mode";
 
 /** The ONE grammar list for the editor (ADR-033) — folded from the syntax
@@ -140,7 +140,12 @@ export function createEditorExtensionGroups(
     ],
     livePreview: [
       LIVE_PREVIEW_THEME,
+      EMBED_MEDIA_THEME,
       livePreviewPlugin,
+      // Live-preview embeds resolve to real media off the caret's line
+      // (ADR-034 part C); the reading-mode path re-feeds this inside
+      // the mode compartment.
+      resolveAssetFacet.of(config.resolveAsset),
     ],
     suggestions: [
       SUGGESTIONS_THEME,
@@ -223,6 +228,7 @@ export function previewExtensions(): Extension[] {
 export function readingExtensions(config: {
   runQuery?: EditorConfig["runQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
+  openExternalLink?: EditorConfig["openExternalLink"];
   resolveAsset?: EditorConfig["resolveAsset"];
   parseFrontmatter?: EditorConfig["parseFrontmatter"];
 }): Extension[] {
@@ -246,6 +252,8 @@ export function readingExtensions(config: {
     }),
     // Embed asset resolution facet.
     resolveAssetFacet.of(config.resolveAsset),
+    // External http/https links — system browser via injected opener.
+    openExternalLinkFacet.of(config.openExternalLink),
     // Reading-mode embed: resolves ![[file]] to actual media.
     EMBED_MEDIA_THEME,
     embedMediaPlugin,
@@ -261,6 +269,7 @@ export function readingExtensions(config: {
 export function readingModeExtras(config: {
   runQuery?: EditorConfig["runQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
+  openExternalLink?: EditorConfig["openExternalLink"];
   resolveAsset?: EditorConfig["resolveAsset"];
   parseFrontmatter?: EditorConfig["parseFrontmatter"];
 }): Extension[] {
@@ -273,6 +282,7 @@ export function readingModeExtras(config: {
       onOpenLink: config.onOpenLink,
     }),
     resolveAssetFacet.of(config.resolveAsset),
+    openExternalLinkFacet.of(config.openExternalLink),
     EMBED_MEDIA_THEME,
     embedMediaPlugin,
     readingLinkHandler(),
@@ -310,7 +320,9 @@ function readingLinkHandler(): Extension {
         const href = anchor.getAttribute("href");
         if (href?.startsWith("#")) return false; // internal anchor, don't intercept
         if (href?.startsWith("http")) {
-          window.open(href, "_blank", "noreferrer");
+          // Routed through the injected opener (Tauri system browser) — never
+          // window.open inside the WebView.
+          view.state.facet(openExternalLinkFacet)?.(href);
           return true;
         }
         // Wikilink rendered as <a> by block widgets (DQL results etc.)

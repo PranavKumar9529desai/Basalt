@@ -10,6 +10,7 @@ import {
   readingModeExtras,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
 import { pruneClosedTabCaches } from "../lib/pruneCache";
@@ -125,6 +126,7 @@ export class EditorController {
       parseFrontmatter: options.io.parseFrontmatter,
       editFrontmatter,
       runQuery: options.io.runQuery,
+      resolveAsset: this.services.resolveAsset,
     });
     // Shared extensions live outside the compartment — present in both modes.
     // The compartment holds mode-specific extensions (edit or reading).
@@ -163,6 +165,13 @@ export class EditorController {
     }
   };
 
+  /** Open an external http(s) link in the system browser (Tauri opener plugin),
+   * injected into the reading-mode link handler — never `window.open` in the
+   * WebView. */
+  openExternalLink = (url: string) => {
+    void openUrl(url);
+  };
+
   /** Set the live view (called once Host reports its EditorView). */
   setView(view: EditorView) {
     this.view = view;
@@ -188,6 +197,7 @@ export class EditorController {
           readingModeExtras({
             runQuery: this.io.runQuery,
             onOpenLink: this.handleOpenLink,
+            openExternalLink: this.openExternalLink,
             resolveAsset: this.services.resolveAsset,
             parseFrontmatter: this.io.parseFrontmatter,
           }),
@@ -203,6 +213,7 @@ export class EditorController {
         parseFrontmatter: this.io.parseFrontmatter,
         editFrontmatter,
         runQuery: this.io.runQuery,
+        resolveAsset: this.services.resolveAsset,
       });
       view.dispatch({
         effects: this.modeCompartment.reconfigure([
