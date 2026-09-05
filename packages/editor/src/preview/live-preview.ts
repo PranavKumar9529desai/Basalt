@@ -48,6 +48,27 @@ import {
 import { editorBenchmarkState } from "../benchmark";
 import { renderModeFacet } from "./render-mode";
 
+/**
+ * Docs at or below this size rebuild their preview synchronously per
+ * keystroke (measured ~1–2ms there — cheaper than bookkeeping). Larger docs
+ * map decorations lazily through the change and defer full structure rebuilds
+ * to an idle tick. See `livePreviewField` below.
+ */
+const LAZY_DOC_THRESHOLD = 48 * 1024;
+
+/**
+ * Forced-parse budget for `ensureSyntaxTree`, doc-size adaptive (see
+ * `buildPreviewState`): small docs (≤ LAZY_DOC_THRESHOLD) get enough headroom
+ * to finish in one synchronous pass on the keystroke path; huge docs — where
+ * typing already takes the lazy path and full rebuilds only happen on
+ * selection moves / idle catch-up — are capped to ~1 frame so opening a
+ * 25k-note-scale document never blocks the main thread for hundreds of ms.
+ * The idle `PreviewScheduler` + CM's own background parse worker grow the
+ * tree to full coverage between interactions.
+ */
+const PARSE_BUDGET_MS = 16;
+const FULL_PARSE_BUDGET_MS = 300;
+
 class HorizontalRuleWidget extends WidgetType {
   eq() {
     return true;
@@ -204,8 +225,14 @@ function buildPreviewState(
 
   // Full-document coverage is required for StateField-provided line/replace
   // decorations. Budgeted so first paint on huge notes is never blocked; once
-  // parsed, subsequent calls short-circuit.
-  const tree = ensureSyntaxTree(state, doc.length, 300);
+  // parsed, subsequent calls short-circuit. Small docs get a generous budget —
+  // they re-walk synchronously per keystroke and must finish in one pass. Huge
+  // docs cap each forced parse to ~1 frame: the keystroke path is lazy there,
+  // and `previewScheduler` + CM's background parse worker grow the tree to full
+  // coverage on idle between interactions.
+  const budget =
+    doc.length <= LAZY_DOC_THRESHOLD ? FULL_PARSE_BUDGET_MS : PARSE_BUDGET_MS;
+  const tree = ensureSyntaxTree(state, doc.length, budget);
   if (!tree) {
     return {
       decorations: Decoration.none,
@@ -347,8 +374,6 @@ const rebuildPreview = StateEffect.define<null>();
  * keystroke path.
  */
 
-const LAZY_DOC_THRESHOLD = 48 * 1024;
-
 export const livePreviewField = StateField.define<PreviewState>({
   create: (state) => buildPreviewState(state, false),
 
@@ -474,6 +499,15 @@ class PreviewScheduler {
       this.scheduled = false;
       if (editorBenchmarkState.active) return;
       view.dispatch({ effects: rebuildPreview.of(null) });
+      // A huge doc may take several budgeted passes to reach full coverage
+      // (each capped at ~1 frame — see `buildPreviewState`). Keep re-arming
+      // the idle loop until the forced rebuild completes; otherwise the doc
+      // would stay undecorated until the next interaction. Bounded: the parse
+      // is monotonic, so the loop terminates once the tree covers the doc.
+      const field = view.state.field(livePreviewField, false);
+      if (field !== undefined && !field.complete && !editorBenchmarkState.active) {
+        this.schedule(view);
+      }
     };
     if (typeof window.requestIdleCallback === "function") {
       window.requestIdleCallback(run, { timeout: IDLE_REBUILD_TIMEOUT_MS });
