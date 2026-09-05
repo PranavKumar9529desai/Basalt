@@ -28,6 +28,20 @@ export {
 } from "./editor";
 export type { ContextMenuState } from "./input/context-menu";
 export { contextMenuExtension } from "./input/context-menu";
+export {
+  applyTableMutation,
+  tablePositionAtCursor,
+} from "./input/table-navigation";
+export {
+  insertRowAbove,
+  insertRowBelow,
+  deleteRow,
+  insertColumnLeft,
+  insertColumnRight,
+  deleteColumn,
+  setAlignment,
+} from "./input/table-mutations";
+export type { Alignment, MutationResult } from "./input/table-mutations";
 export type {
   EditorConfig,
   FrontmatterEditFn,

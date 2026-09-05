@@ -49,6 +49,7 @@ export function ContextMenu({
 
   const formatCommands = commands.filter((c) => c.category === "Format");
   const editorCommands = commands.filter((c) => c.category === "Editor");
+  const tableCommands = commands.filter((c) => c.category === "Table");
 
   return (
     <MenuRoot
@@ -98,6 +99,24 @@ export function ContextMenu({
               ))}
             </ContextMenuSubContent>
           </ContextMenuSub>
+          {menuState.inTable && tableCommands.length > 0 && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>Table</ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {tableCommands.map((cmd) => (
+                  <ContextMenuItem
+                    key={cmd.id}
+                    onClick={() => handleCommand(cmd.id)}
+                  >
+                    <div className="mr-2 flex size-4 shrink-0 items-center justify-center opacity-90">
+                      {cmd.icon}
+                    </div>
+                    <span>{cmd.name}</span>
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
         </ContextMenuContent>
       )}
     </MenuRoot>

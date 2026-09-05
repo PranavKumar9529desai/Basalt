@@ -1,3 +1,4 @@
+import { tableNodeAt } from "./table-navigation";
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
@@ -13,6 +14,8 @@ export interface ContextMenuState {
     text: string;
     isWord: boolean;
   };
+  /** True when the cursor is inside a markdown table (for table submenu). */
+  inTable: boolean;
 }
 
 /**
@@ -49,6 +52,7 @@ export function contextMenuExtension(
           text,
           isWord: text.length > 0 && !text.includes(" "),
         },
+        inTable: tableNodeAt(view.state, view.state.selection.main.head) !== null,
       });
 
       return true;

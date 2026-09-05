@@ -5,6 +5,7 @@ import { syntaxTree } from "@codemirror/language";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
+import { tableNavigationKeymap } from "./input/table-navigation";
 import { pasteImageExtension } from "./input/paste-image";
 import { embedMediaPlugin, EMBED_MEDIA_THEME } from "./input/embed-media";
 import {
@@ -141,6 +142,7 @@ export function createEditorExtensionGroups(
       taskListPlugin,
       closeBrackets(),
       keymap.of(backticksKeymap),
+      keymap.of(tableNavigationKeymap),
       pasteImageExtension(config.onPasteImage),
     ],
     livePreview: [
