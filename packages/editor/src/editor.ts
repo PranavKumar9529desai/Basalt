@@ -1,6 +1,7 @@
 import { closeBrackets } from "@codemirror/autocomplete";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
+import { syntaxTree } from "@codemirror/language";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
@@ -14,7 +15,11 @@ import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
 import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
 import { BASE_EDITOR_THEME } from "./styling/base";
 import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
-import { clickableLinksPlugin } from "./syntax/wiki-links";
+import {
+  clickableLinksPlugin,
+  normalizeWikiLinkTarget,
+  targetFromWikiLinkNode,
+} from "./syntax/wiki-links";
 import { createBasaltGrammar } from "./syntax/registry";
 import {
   frontmatterBlockWidgetGroup,
@@ -293,9 +298,11 @@ export function readingModeExtras(config: {
 }
 
 /**
- * ViewPlugin that intercepts clicks on wikilinks and markdown links in
- * reading mode, navigating via `openLinkFacet`. Uses event delegation on
- * `.cm-content` — one listener for all link types.
+ * ViewPlugin that intercepts clicks on wikilinks, markdown links, and
+ * `.cm-table-link[data-name]` widgets in reading mode, navigating via
+ * `openLinkFacet`. Uses event delegation on `.cm-content` — one listener for
+ * all link types. Wikilink targets are sliced from the syntax tree so the
+ * `[[`/`]]` brackets never reach the lookup (ADR-034 part D).
  */
 function readingLinkHandler(): Extension {
   return EditorView.domEventHandlers({
@@ -303,10 +310,25 @@ function readingLinkHandler(): Extension {
       const target = event.target as HTMLElement | null;
       if (!target) return false;
 
-      // Wikilink: .cm-live-wikilink spans
+      // Videos/audios own their clicks (playback controls) — never navigate.
+      if (target.closest?.("video, audio")) return false;
+
+      // Rich table cells and media embeds carry .cm-table-link[data-name].
+      const tableLink = target.closest?.(".cm-table-link");
+      if (tableLink) {
+        const name = tableLink.getAttribute("data-name")?.trim();
+        if (name) {
+          const onOpenLink = view.state.facet(openLinkFacet);
+          onOpenLink?.(name);
+          return true;
+        }
+      }
+
+      // Wikilink: .cm-live-wikilink spans. Resolve the span's doc position to
+      // a WikiLink syntax node and slice the brackets via its syntax offsets.
       const wikiSpan = target.closest?.(".cm-live-wikilink");
       if (wikiSpan) {
-        const text = wikiSpan.textContent?.trim();
+        const text = wikiLinkTargetAt(view, event) ?? "";
         if (text) {
           const onOpenLink = view.state.facet(openLinkFacet);
           onOpenLink?.(text);
@@ -338,4 +360,25 @@ function readingLinkHandler(): Extension {
       return false;
     },
   });
+}
+
+/**
+ * Resolve the wikilink target under a click. Primary path: map the event
+ * coordinates to a doc position and slice `[[`/`]]` via the WikiLink syntax
+ * node. Fallback (coordinate-less environments / widget boundaries): strip the
+ * brackets from the mark's own text content and normalize the same way.
+ */
+function wikiLinkTargetAt(view: EditorView, event: MouseEvent): string | null {
+  const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+  if (pos !== null) {
+    const tree = syntaxTree(view.state);
+    let node = tree.resolveInner(pos, 1);
+    if (node.name !== "WikiLink" && node.parent?.name === "WikiLink") {
+      node = node.parent;
+    }
+    const viaSyntax = targetFromWikiLinkNode(view.state, node);
+    if (viaSyntax) return viaSyntax;
+  }
+  const text = (event.target as HTMLElement | null)?.textContent ?? "";
+  return normalizeWikiLinkTarget(text.replace(/^\[\[/, "").replace(/\]\]$/, ""));
 }

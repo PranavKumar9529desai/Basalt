@@ -1,6 +1,8 @@
 import { syntaxTree } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
+import type { SyntaxNodeRef } from "@lezer/common";
 import type { InlineContext, MarkdownConfig } from "@lezer/markdown";
 
 /** Syntax node for the `!` prefix of an `![[embed]]` (sibling of its `WikiLink`). */
@@ -87,6 +89,34 @@ export const wikiLinkExtension: MarkdownConfig = {
 };
 
 /**
+ * Normalize a wikilink's inner text to its lookup target: strips an alias
+ * (`Note|Alias` → `Note`) and a section fragment (`Note#Section` → `Note`),
+ * then trims. Mirrors `embedTargetFromWikiLink` so clicking a link and
+ * resolving an embed yield the same target. Returns null when empty.
+ */
+export function normalizeWikiLinkTarget(inner: string): string | null {
+  const target = inner.split("|")[0].split("#")[0].trim();
+  return target || null;
+}
+
+/**
+ * Lookup target of a `WikiLink` node from its syntax span — the canonical
+ * bracket-slicing: `node.from + 2 .. node.to - 2` drops `[[`/`]]` without
+ * touching the document (reading-mode clicks must not pass the brackets to
+ * `onOpenLink`). Null for non-WikiLink or malformed nodes.
+ */
+export function targetFromWikiLinkNode(
+  state: EditorState,
+  node: SyntaxNodeRef,
+): string | null {
+  if (node.name !== "WikiLink") return null;
+  if (node.from + 2 > node.to - 2) return null;
+  return normalizeWikiLinkTarget(
+    state.doc.sliceString(node.from + 2, node.to - 2),
+  );
+}
+
+/**
  * Adds an event listener to the editor that detects clicks on WikiLinks.
  * When a user clicks a WikiLink, it extracts the note name and calls `onOpenLink`.
  */
@@ -111,9 +141,11 @@ export function clickableLinksPlugin(onOpenLink?: (link: string) => void) {
       }
 
       if (node.name === "WikiLink") {
-        // Extract the text content, slicing off the `[[` and `]]`
-        const text = view.state.doc.sliceString(node.from + 2, node.to - 2);
-        onOpenLink(text.trim());
+        // Slice the `[[`/`]]` off via the syntax span (never plain textContent —
+        // the brackets would leak into the lookup).
+        const text = targetFromWikiLinkNode(view.state, node);
+        if (!text) return false;
+        onOpenLink(text);
         // Prevent default cursor movement if we are actually navigating
         event.preventDefault();
         return true;
