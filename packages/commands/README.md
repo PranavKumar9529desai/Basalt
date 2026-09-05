@@ -8,8 +8,7 @@ Global command registry for the Basalt workspace.
 packages/commands/
 ├── commands.json   ← static metadata (id, name, category, icon)
 ├── types.ts        ← CommandMetadata + Command interfaces
-├── service.ts      ← CommandService class (singleton)
-├── react.tsx       ← CommandProvider + useCommandService hook
+├── service.ts      ← CommandService class (singleton) + CommandProvider + useCommandService hook
 ├── icons.ts        ← icon name → React component resolver
 └── index.ts        ← barrel exports
 ```

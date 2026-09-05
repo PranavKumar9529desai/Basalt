@@ -57,7 +57,9 @@ API: `register(view)`, `unregister(type)`, `get(type)`,
 
 `ViewDescriptor` fields: `type`, `name`, `icon` (Tabler-icon compatible
 `ComponentType<{size?, stroke?}>`), `side`, `component`
-(`ComponentType<Record<string, never>>`), optional `headerActions`.
+(`ComponentType<Record<string, never>>`), optional `headerActions`, optional `section`
+(boolean — when `true` and all views for a side are sections, `SideDock` renders
+them stacked vertically with collapse chevrons).
 
 ## LeafRegistry (tab content)
 

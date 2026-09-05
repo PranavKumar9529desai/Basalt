@@ -9,24 +9,23 @@ Uses `pulldown-cmark` for CommonMark parsing and `ropey` for byte↔UTF-16
 offset conversion. Depends on `basalt-types`. Pure native Rust (no wasm);
 consumed by `basalt-vault` and `frontmatter-wasm`.
 
-## Modules
-
 | Module         | Provides                                                                    |
 | -------------- | --------------------------------------------------------------------------- |
-| `parser`       | `parse_markdown(input) -> Document`, `process_markdown(input) -> ProcessedMarkdown` |
+| `parser`       | `process_markdown(input) -> ProcessedMarkdown` (HTML render)                 |
 | `metadata`     | `extract_metadata(input) -> FileMetadata` — a zero-AST extractor             |
 | `frontmatter`  | `parse_frontmatter(input) -> FrontmatterModel` — typed YAML frontmatter (ADR-022) |
 | `inline`       | `parse_inline_text(input) -> Vec<MarkdownNode>`                              |
 | `link_rewrite` | `rewrite_wikilinks`, `rewrite_wikilinks_path`, `NoteRename`, `PathRename`    |
 | `utf16`        | `TextDocument` — byte↔UTF-16 offset converter                                 |
+| `query`        | DQL grammar — `parse_query`, `QueryPlan`, `Expr`, `DataCommand`, `CompareOp` (ADR-027) |
 
 ## Public API
 
-- `parse_markdown` — full markdown → `Document` (frontmatter + AST + tags/links)
-- `process_markdown` — higher-level processed result
+- `process_markdown` — HTML render from CommonMark input
 - `extract_metadata` — fast **zero-AST** extraction of `FileMetadata`
   (tags/links/headings/block IDs) — ideal for indexing hot paths
 - `parse_frontmatter` — typed YAML frontmatter with diagnostics + UTF-16 spans
+- `parse_query` — DQL grammar → `QueryPlan` (ADR-027)
 - `rewrite_wikilinks` / `rewrite_wikilinks_path` — surgical wikilink rewriting
   for note renames (`NoteRename`) and folder/attachment renames (`PathRename`)
 - `TextDocument` — byte↔UTF-16 offset conversion (span correctness)
@@ -35,3 +34,5 @@ consumed by `basalt-vault` and `frontmatter-wasm`.
 
 - ADR-022: [Frontmatter Engine — Structured, Typed, First-Class Properties](../../docs/adr/022-frontmatter-engine.md)
 - ADR-023: [Inline Note Title + Rename](../../docs/adr/023-inline-title-rename.md)
+
+- ADR-027: [DQL Query Engine](../../docs/adr/027-dql-query-engine.md) — `query` module grammar

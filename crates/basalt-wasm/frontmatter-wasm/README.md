@@ -17,7 +17,7 @@ All functions are `#[no_mangle]` `extern "C"`:
 | Function       | Purpose                                            |
 | -------------- | -------------------------------------------------- |
 | `fm_alloc(cap)` | Allocate the input buffer in wasm linear memory     |
-| `fm_parse(ptr, len)` | Parse the frontmatter at `ptr`/`len`; returns a JSON pointer |
+| `fm_parse(ptr, len)` | Parse the frontmatter at `ptr`/`len`; returns the JSON byte length (0 = failure); JSON is read via `fm_ptr()` |
 | `fm_ptr()`     | Get the output JSON pointer (wasm-linear-memory offset) |
 | `fm_len()`     | Get the output JSON byte length                     |
 
@@ -30,7 +30,7 @@ JSON result so the JS side can copy them in/out via `fm_ptr`/`fm_len`.
 The editor's frontmatter decoration state invokes this synchronously on each
 keystroke, pulls the JSON `FrontmatterModel`, and renders the frontmatter
 widget without a round-trip to the main process. See
-`apps/tauri/src/features/editor/frontmatter-wasm.ts`.
+`apps/tauri/src/features/editor/lib/frontmatter-wasm.ts`.
 
 ## Documentation
 

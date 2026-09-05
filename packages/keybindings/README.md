@@ -26,6 +26,7 @@ packages/keybindings/
 ├── keybindings.json       # static hotkey rules (source of truth)
 ├── types.ts               # Keybinding + WhenContext
 ├── hotkey-parser.ts       # parseHotkey (hotkey string → matcher)
+├── when-parser.ts         # when-clause compiler → evaluator closures
 ├── keybinding-service.ts  # KeybindingService class (singleton)
 ├── react.tsx              # KeybindingProvider + KeybindingListener + useKeybindingService
 └── index.ts               # public API barrel

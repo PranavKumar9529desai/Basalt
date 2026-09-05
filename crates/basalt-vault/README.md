@@ -19,7 +19,8 @@ filesystem dependencies (`ignore`) are gated with
 | `tree`        | `build_flat_tree`, `FlatTreeNode`, `NodeKind`                          |
 | `watcher`     | `VaultWatcher::watch(...)` — notify-based, debounced                   |
 | `path_utils`  | `resolve_creation_path(...)` — safe path/name resolution               |
-| `utils`       | helpers + `FileSystem` trait (read/write/list abstraction)             |
+| `asset_index` | `AssetIndex`, `AssetInfo`, `AssetAuditReport`, `FileType` — asset tracking |
+| `utils`       | helpers (`mtime_secs`, etc.)                                           |
 
 ## Public API
 
@@ -31,7 +32,7 @@ filesystem dependencies (`ignore`) are gated with
 - `VaultWatcher::watch` — recursive file watching with debounce
 - `resolve_creation_path` — safe name/path resolution for note creation
   (ADR-010)
-- `FileSystem` — trait abstraction over the filesystem (testability)
+- `AssetIndex`, `AssetInfo`, `AssetAuditReport`, `FileType` — asset tracking
 
 ## Documentation
 

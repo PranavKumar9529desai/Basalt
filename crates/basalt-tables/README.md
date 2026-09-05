@@ -8,7 +8,7 @@ Depends on `basalt-types`, `basalt-parser`, `basalt-vault`, `basalt-graph`.
 
 ## Public API
 
-- `execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, String>`
+- `execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError>` — `DqlError` is a thiserror enum (Parse/Runtime variants, ADR-030)
 
 ## Modules
 
@@ -19,7 +19,7 @@ Depends on `basalt-types`, `basalt-parser`, `basalt-vault`, `basalt-graph`.
 | `page_row`  | `PageRow`, `build_page_rows`, `matches_source`                                      |
 
 ## Documentation
-- ADR-027: [`basalt-tables` Crate — Query Execution and Event Tables](../../docs/adr/027-basalt-tables-crate.md)
+- ADR-027: [`basalt-tables` Crate — Query Execution and Event Tables](../../docs/adr/027-dql-query-engine.md)
 - ADR-028: [DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions](../../docs/adr/028-dql-aggregation.md)
 
 ## Supported Features

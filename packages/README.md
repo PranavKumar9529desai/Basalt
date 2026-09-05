@@ -12,6 +12,7 @@ Shared libraries for the Basalt workspace app.
 | [`@workspace/commands`](./commands)       | CommandService — global command registry               | Never  |
 | [`@workspace/keybindings`](./keybindings) | KeybindingService — hotkey resolution + when clauses   | Never  |
 | [`@workspace/theme`](./theme)             | SAT CSS token system & themes                          | Never  |
+| [`@workspace/graph`](./graph)             | WebGL2 graph renderer (ADR-021), no React/Tauri        | Never  |
 
 ## Architecture
 

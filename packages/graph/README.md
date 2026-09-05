@@ -6,7 +6,7 @@ scene buffers it draws nodes, edges, and directional arrowheads. It contains
 **no React, no Tauri, no business state** — it renders purely from position
 buffers (the `packages/` litmus from `AGENTS.md`). The simulation, label
 overlay, hit-testing, and dirty-gating that feed it live one layer up, in
-`apps/tauri/src/graph/` (see [Relationship to the feature layer](#relationship-to-the-feature-layer)).
+`apps/tauri/src/features/graph/` (see [Relationship to the feature layer](#relationship-to-the-feature-layer)).
 
 Exported surface: `GraphRenderer` and the `GraphTransform` type
 (`src/index.ts`).
@@ -181,7 +181,7 @@ triangles if arrows are shown) and early-returns when `nodeCount === 0`.
 ## Relationship to the feature layer
 
 This package is the dumb drawing surface. Everything that decides _what_ to
-draw lives in `apps/tauri/src/graph/`:
+draw lives in `apps/tauri/src/features/graph/`:
 
 - **`GraphWorker.ts`** — a **Web Worker** running the WASM force simulation;
   posts `Float32Array` positions to the main thread. The expensive node physics

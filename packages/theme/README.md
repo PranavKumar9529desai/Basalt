@@ -50,8 +50,6 @@ themes/           # Theme override files
 ├── dracula.json
 ├── solarized-dark.json / solarized-light.json
 ├── catppuccin-latte.json / catppuccin-mocha.json
-src/
-└── index.ts        # Re-exports from themes/manifest
 build.ts            # Token build script
 ```
 

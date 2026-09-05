@@ -128,20 +128,86 @@ renderer walks `WikiLink`/`EmbedMark` nodes from the same parser. Give syntaxes
 readable names and keep them in `nodeNames` so preview/input features can rely
 on the registry as their schema.
 
+## Single Renderer (ADR-029)
+
+The editor uses **one CodeMirror 6 view** for both live and reading modes.
+There is no separate reading-mode component; both modes share the same CM6
+grammar, live-preview StateField, and view — only the mode-compartment
+extensions differ.
+
+Mode switching is controlled by `renderModeFacet` (`preview/render-mode.ts`),
+a `Facet<RenderMode>` where `RenderMode` is `"live" | "reading" | "source"`.
+The facet carries the current surface mode so every cursor-gating decoration
+and block-widget layer can opt into "always fully rendered" without
+re-deriving the mode per-element. The pre-built extension
+`renderModeReading` sets the facet to `"reading"`.
+
+`readingExtensions(config)` (`editor.ts`) builds the full reading-mode
+extension stack: the shared markdown grammar + live-preview plugins (same as
+live mode), plus reading-mode extras — `EMBED_MEDIA_THEME`, `embedMediaPlugin`,
+link handler, `EditorView.lineWrapping`. `readingModeExtras(config)` returns
+just the reading-specific extensions for use inside a CM6 Compartment.
+
+`EditorController.setMode("live" | "reading")` swaps the compartment
+extensions without recreating the view. Both modes share the same
+`livePreviewField` StateField — in reading mode, `handleEmbedNode` in
+`preview/embeds.ts` returns early (no cursor gating needed), deferring media
+rendering to `embedMediaPlugin`.
+
+See [ADR-029](../../../docs/adr/029-single-renderer.md).
+
+## Embed Rendering (ADR-034)
+
+Media embeds (`![[…]]`) are rendered by three cooperating pieces:
+
+**Shared widget** — `EmbedMediaWidget` (`input/embed-media.ts`) is the
+CM6 `WidgetType` for resolved media. `buildEmbedWidget(url, target)` creates
+an instance; it is called from both the live-preview walk and the
+reading-mode plugin.
+
+**Live preview** — `handleEmbedNode()` (`preview/embeds.ts`) walks
+`WikiLink`/`EmbedMark` syntax nodes, resolves the target via
+`resolveAssetFacet`, and emits an `EmbedMediaWidget` decoration via
+`buildEmbedWidget`.
+
+**Reading mode** — `embedMediaPlugin` (`input/embed-media.ts`) is a
+`ViewPlugin` that scans the syntax tree for `![[…]]` via
+`scanEmbedWikiLinks` and creates `Decoration.replace` widgets backed by
+`EmbedMediaWidget`. This plugin runs independently of the live-preview walk.
+
+**Table cells** — `renderInlineCell()` (`block-widgets/table-widget.ts`)
+handles `![[…]]` inside rich table cells, using `classifyMediaExtension`
+from `input/embed-utils.ts` to route to `embedMediaHtml`.
+
+`resolveAssetFacet` (`types.ts`) provides the URL resolver; it is injected
+from the app-shell layer. `EMBED_MEDIA_THEME` (`input/embed-media.ts`)
+provides base styles for media elements (`img`, `video`, `audio`, `iframe`,
+fallback).
+
+See [ADR-034](../../../docs/adr/034-embed-rendering.md).
+
 ## Public API
 
 ```ts
-// The factory that assembles all editor extensions
-import { createEditorExtensions } from "@workspace/editor";
+import {
+  createEditorExtensions,   // Full extension stack (ADR-029 live mode)
+  createEditorExtensionGroups, // Extensions partitioned by concern
+  previewExtensions,        // Read-only preview pane (search results, etc.)
+  readingExtensions,        // Full reading-mode stack (ADR-029)
+  readingModeExtras,        // Reading-specific extras for the mode compartment
+  contextMenuExtension,     // Right-click state capture
+} from "@workspace/editor";
 import type {
   EditorConfig,
+  EditorExtensionGroups,
   FetchLinksFn,
   FetchTagsFn,
+  RenderMode,
+  ContextMenuState,
 } from "@workspace/editor";
 
-// The context menu state capture extension (for feature-level context menus)
-import { contextMenuExtension } from "@workspace/editor";
-import type { ContextMenuState } from "@workspace/editor";
+// Facet for live/reading/source mode — used to gate cursor-based decorations
+import { renderModeFacet, renderModeReading } from "@workspace/editor";
 ```
 
 ### `createEditorExtensions(config: EditorConfig): Extension[]`
@@ -153,7 +219,7 @@ Builds the full stack of CM6 extensions:
 - **Styling**: custom editor theme (via `EditorView.theme()` + `HighlightStyle`)
 - **Live preview**: decorations for headings, blockquotes, code blocks, callouts,
   tables, lists, inline marks (bold/italic/code/wiki-link/highlight/strikethrough),
-  embed chips (ADR-033), tag highlighting, mark hiding
+  embeds (ADR-034), tag highlighting, mark hiding
 - **Task lists**: clickable `- [ ]` / `- [x]` checkboxes
 - **Autocomplete**: `[[link` and `#tag` suggestions via callbacks
 - **Editable**: close brackets, line wrapping, backtick keymap
@@ -162,6 +228,40 @@ Builds the full stack of CM6 extensions:
 
 A CM6 DOM event handler that captures right-click events and provides
 cursor position + selection text. Pure state capture — no UI.
+
+### `createEditorExtensionGroups(config: EditorConfig): EditorExtensionGroups`
+
+Partitions extensions by concern (syntax, preview, styling, input, etc.) into
+named groups. Used by the benchmark harness to isolate per-group extension
+cost. The full stack is the union of all groups.
+
+### `previewExtensions(): Extension[]`
+
+A small set of markdown extensions for a read-only preview pane (e.g. search
+results). Grammar + syntax highlighting only — no interaction, no widgets.
+
+### `readingExtensions(config: ReadingConfig): Extension[]`
+
+Full extension stack for reading mode (ADR-029). Includes the shared
+markdown grammar + live-preview plugins (same as live mode) plus
+reading-mode extras: `EMBED_MEDIA_THEME`, `embedMediaPlugin`,
+`readingLinkHandler`, `EditorView.lineWrapping`. The config supplies only
+the optional callbacks needed by reading mode (`runQuery`, `onOpenLink`,
+`openExternalLink`, `resolveAsset`, `parseFrontmatter`).
+
+### `readingModeExtras(config: ReadingConfig): Extension[]`
+
+Reading-specific extensions only — block widgets, embed media plugin,
+link handler, `renderModeReading`, `readOnly`, non-editable. Used inside
+the mode compartment; the shared grammar + live-preview live outside it.
+
+### `renderModeFacet` / `renderModeReading`
+
+`renderModeFacet` is the `Facet<RenderMode>` that carries the current
+surface mode (`"live" | "reading" | "source"`). `renderModeReading` is
+a pre-built extension that sets the facet to `"reading"`. Both are
+exported from `@workspace/editor` for consumers that need to gate
+behavior on the active render mode.
 
 ## Architecture
 
@@ -187,12 +287,16 @@ src/
 │   ├── lists.ts
 │   ├── mark-hiding.ts
 │   ├── tables.ts
+│   ├── render-mode.ts     # renderModeFacet — live/reading/source mode switch
 │   └── types.ts         # DecorationCollector, DecorationContext
 ├── input/               # User interaction & input handling
 │   ├── backticks.ts     # Triple backtick key binding
 │   ├── context-menu.ts  # Right-click state capture
 │   ├── suggestions.ts   # [[link]] / #tag autocomplete
 │   ├── task-list.ts     # Clickable checkboxes
+│   ├── embed-media.ts   # EmbedMediaWidget + reading-mode plugin (ADR-034)
+│   ├── embed-utils.ts   # classifyMediaExtension, scanEmbedWikiLinks
+│   ├── paste-image.ts   # Image paste handler
 │   └── index.ts
 ├── styling/             # CodeMirror editor visual theme (NOT SAT tokens)
 │   ├── base.ts          # EditorView.theme() + HighlightStyle
@@ -200,9 +304,15 @@ src/
 │   └── index.ts
 ├── block-widgets/       # Decoration/block widget collection
 │   ├── frontmatter.ts   # YAML frontmatter widget
+│   ├── table-widget.ts  # Rich table rendering + cell embeds
+│   ├── dql-widget.ts    # DQL query block
+│   ├── html-block.ts    # HTML block widget
+│   ├── utils.ts         # Block-widget helpers
 │   └── registry.ts
 ├── syntax/code-highlight-style.ts  # Per-language code highlight overrides
-├── frontmatter-widget.ts / frontmatter-icons.ts
+├── frontmatter-widget.ts  # YAML frontmatter widget
+├── frontmatter-utils.ts   # Frontmatter helpers
+├── frontmatter-icons.ts   # Frontmatter field icons
 ├── scroll-header.ts     # Adapter that slots a React title into .cm-scroller (ADR-023)
 ├── benchmark.ts         # runTypingBenchmark() — editor perf harness
 ├── editor.ts            # createEditorExtensions() — the main factory
@@ -227,7 +337,7 @@ via CSS variables — it's not a design token system itself.
 ## External conventions (for feature-layer consumers)
 
 The React `<Host>` wrapper with `onViewReady` lives in
-`apps/tauri/src/features/editor/components/editor-component.tsx`.
+`apps/tauri/src/features/editor/components/Host.tsx`.
 
 The `useEditorCommands` hook (registers bold/italic/etc. in the global command
-palette) lives in `apps/tauri/src/features/editor/hooks/useEditorCommands.ts`.
+palette) lives in `apps/tauri/src/shared/editorCommands.tsx`.

@@ -51,6 +51,8 @@ src/
 │   └── index.tsx             # "/" loader → invoke("boot") → renders <Boot/>
 ├── shared/
 │   ├── useWorkspace.ts       # useWorkspace — the single cross-feature orchestrator
+│   ├── editorCommands.tsx    # Side-effect command registrations for editor features
+│   ├── activeEditor.ts       # Active editor state tracking
 │   └── tabCommands.ts        # Side-effect command registrations needing tabs + editor
 ├── app-shell/
 │   ├── Boot.tsx              # One-time boot boundary: settings seed + tab hydration
@@ -63,16 +65,18 @@ src/
 │   ├── ViewHeader.tsx        # Per-leaf header band (pin, close, rename gate)
 │   ├── StatusBar.tsx         # Note name + word/char counts
 │   ├── registrations.ts    # ★ viewRegistry + leafRegistry registration entry point
+│   ├── mediaServer.ts        # ADR-034 loopback HTTP server for embed media on Linux
 │   ├── tti.ts                # ttiMark() marks; writeTtiReport() → Rust timings
 │   ├── (tab handlers inlined in Shell.tsx)
 │   └── views/                # FileExplorer, Backlinks (two registered views)
-└── features/
-    ├── vault/                # File tree, CRUD, IPC (useVaultTree/Controller/Mutations)
-    ├── tabs/                 # Tab state + persistence (store/{core,persistence})
-    ├── editor/               # CodeMirror 6, autosave, inline title, reading view
+    ├── tabs/                 # Tab state, split panes, persistence (ADR-032: layoutTree, PaneRenderer, SplitPane)
+    ├── editor/               # CodeMirror 6, single renderer (ADR-029), autosave, inline title
     ├── search/               # Tantivy + Nucleo search modal + quick switcher
     ├── settings/             # Preferences + theme + settings-section registry
+    ├── export/               # PDF export (ADR-031)
+    ├── assets/               # Asset management (media, images, attachments)
     └── graph/                # Graph leaf: WASM force sim + WebGL2 renderer
+
 ```
 
 ---
@@ -113,7 +117,7 @@ TTI instrumentation (ADR-017) is spread across two sides:
 | ----------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
 | Cross-feature orchestration   | `shared/useWorkspace.ts` + `app-shell/AppProvider.tsx` | Consumed via `useAppContext()`                              |
 | Vault tree / CRUD / selection | `features/vault/`                                      | `useVaultTree`, `useVaultController`, `useVaultMutations`   |
-| Tabs + persistence            | `features/tabs/store/`                                 | `core.ts` (single pane) + `persistence.ts` (debounced save) |
+| Tabs + persistence            | `features/tabs/store/`                                 | `core.ts` (layout tree: panes + tabs, ADR-032) + `persistence.ts` (debounced save) |
 | Active note + stats           | `features/editor/store.ts`                             | `useActiveNoteStore` — **stats only, never content**        |
 | Search + switcher             | `features/search/store.ts`                             | Seq guards against out-of-order IPC                         |
 | Settings                      | `features/settings/`                                   | `useSetting(key)` selector + settings-section registry      |
@@ -183,7 +187,7 @@ renders whatever the registries hold.
 | --------------------------------- | -------------------------------------------------------------------------------- |
 | Add a sidebar dock / leaf         | `app-shell/registrations.ts` + `packages/views`                                  |
 | Wire two features together        | `shared/` (never inside a feature)                                               |
-| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `logic/saveManager`                     |
+| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `lib/saveManager`                         |
 | Understand the editor typing path | `packages/editor` (CM6 extensions) — **keep the keystroke path React-free**      |
 | Add an IPC command                | `src-tauri/src/lib.rs` + `commands/*`; expose via a feature hook                 |
 | Understand boot / TTI             | `app-shell/Boot.tsx`, `routes/index.tsx`, `app-shell/tti.ts`, `commands/boot.rs` |

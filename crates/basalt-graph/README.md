@@ -26,7 +26,7 @@ compiled to wasm when consumed through the `graph-wasm` bridge. Backs the
 - **`fuzzy_match` / `search_commands`** — fuzzy scoring used by the command
   palette / quick switcher.
 - **`LayoutGraph`** — static graph structure (`from_note_graph`), with
-  `node_count` / `edges` / `positions` accessors.
+  `node_count` / `edges` accessors.
 - **`ForceGraph`** — the mutable simulation: `step()`, `positions()`,
   `set_position`, `alpha()` / `reheat()`. Exposes flat `f32` `[x0,y0,...]`
   positions for zero-copy transfer to WebGL/wasm.

@@ -17,6 +17,8 @@ indexing). Native Rust only — uses the filesystem, no wasm.
 
 ## Public API
 
+- `SearchError` — thiserror enum (Io/Tantivy variants) wrapping index errors (ADR-030)
+
 ### `SearchState`
 
 | Method              | Purpose                                                       |
@@ -40,7 +42,7 @@ indexing). Native Rust only — uses the filesystem, no wasm.
 Writes are **batched**, never committed per save: `update_document` /
 `remove_document` mark the index pending, `flush_if_due()` commits after 10s
 idle, and `flush_pending()` forces a commit before any query so results are
-always current. A background flusher thread (started from boot) drains pending
+always current. A background flusher thread (started from boot in src-tauri) drains pending
 changes. This is deliberate — a Tantivy commit + fsync per autosave would stall
 typing.
 

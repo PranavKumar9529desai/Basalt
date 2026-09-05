@@ -32,8 +32,8 @@ src/components/
 │   ├── command.tsx
 │   ├── context-menu.tsx
 │   ├── dialog.tsx
+│   ├── dialog-frame.tsx
 │   ├── input.tsx
-│   ├── input-group.tsx
 │   ├── scroll-area.tsx
 │   ├── separator.tsx
 │   ├── textarea.tsx
