@@ -1,9 +1,54 @@
 import type { LeafServices } from "@workspace/views";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useCallback, useMemo } from "react";
+import {
+  classifyMediaExtension,
+  extensionOf,
+} from "@workspace/editor";
 
 import { useTabsStore } from "../features/tabs";
+import type { FlatTreeNode } from "../features/vault";
 import type { AppContextValue } from "./AppProvider";
+import { isLinux, mediaUrlFor } from "./mediaServer";
+
+/**
+ * Part E stem resolution: when the target is extension-less (e.g. `asset-png`)
+ * Obsidian resolves it by filename across the vault. Returns the unique file
+ * whose stem matches, or null when zero/ambiguous.
+ */
+function stemMatch(treeNodes: FlatTreeNode[] | undefined, stem: string): FlatTreeNode | null {
+  if (!treeNodes) return null;
+  const wanted = stem.toLowerCase();
+  let match: FlatTreeNode | null = null;
+  for (const node of treeNodes) {
+    if (node.kind !== "file") continue;
+    const dot = node.name.lastIndexOf(".");
+    const nodeStem = dot > 0 ? node.name.slice(0, dot) : node.name;
+    if (nodeStem.toLowerCase() !== wanted) continue;
+    if (match) return null; // ambiguous — Obsidian shows a picker
+    match = node;
+  }
+  return match;
+}
+
+/**
+ * Resolve an embed target to an absolute file path:
+ *  - direct `vaultPath/target` join first;
+ *  - extension-less/non-media targets fall back to a unique stem lookup (part E).
+ * Returns null when the target cannot resolve to a real file.
+ */
+function resolveEmbedTarget(
+  target: string,
+  vaultPath: string,
+  treeNodes: FlatTreeNode[] | undefined,
+): string | null {
+  const direct = target.startsWith("/") ? target : `${vaultPath}/${target}`;
+  if (classifyMediaExtension(extensionOf(target)) !== "other") {
+    return direct;
+  }
+  const byStem = stemMatch(treeNodes, target);
+  return byStem ? byStem.path : null;
+}
 
 /**
  * Builds and memoizes the stable `LeafServices` bag the shell passes to
@@ -54,10 +99,13 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
       renameNote: ws.renameNote,
       resolveAsset: ws.vaultPath
         ? (target: string) => {
-            const absPath = target.startsWith("/")
-              ? target
-              : `${ws.vaultPath}/${target}`;
-            return convertFileSrc(absPath);
+            const absPath = resolveEmbedTarget(target, ws.vaultPath, ws.treeNodes);
+            if (!absPath) return null; // no broken <img> for unresolvable targets
+            if (classifyMediaExtension(extensionOf(absPath)) === "other") {
+              return null; // .txt etc → fallback chip (ADR-034), never a broken <img>
+            }
+            if (isLinux()) return mediaUrlFor(absPath); // http://127.0.0.1:PORT/media?path=…
+            return convertFileSrc(absPath); // asset:// works on macOS/Windows
           }
         : undefined,
     }),
@@ -66,6 +114,7 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
       markTabDirty,
       ws.findNote,
       ws.activeNote,
+      ws.treeNodes,
       getOpenTabIds,
       getOpenTabPaths,
       getTabInfo,

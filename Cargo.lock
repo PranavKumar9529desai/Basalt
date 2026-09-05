@@ -4409,6 +4409,7 @@ dependencies = [
  "basalt-tables",
  "basalt-types",
  "basalt-vault",
+ "http-range",
  "serde",
  "serde_json",
  "tauri 2.10.2",

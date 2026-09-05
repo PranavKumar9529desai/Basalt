@@ -30,4 +30,7 @@ basalt-search = { path = "../../../crates/basalt-search" }
 basalt-parser = { path = "../../../crates/basalt-parser" }
 basalt-tables = { path = "../../../crates/basalt-tables" }
 thiserror = "2"
+# Range/206 parsing for the loopback media server (ADR-034 part A) — already
+# a transitive dep of tauri; promoted to allow direct use.
+http-range = "0.1"
 

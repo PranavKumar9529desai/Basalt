@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { Boot } from "../app-shell";
+import { ensureMediaServerUrl } from "../app-shell/mediaServer";
 import type { BootResult } from "../features/vault";
 import { ttiMark } from "../app-shell/tti";
 
@@ -11,7 +12,11 @@ interface LoaderData {
 export const Route = createFileRoute("/")({
   loader: async (): Promise<LoaderData> => {
     ttiMark("loader_start");
-    const boot = await invoke<BootResult>("boot");
+    const bootPromise = invoke<BootResult>("boot");
+    // Fire the loopback media-server fetch in parallel — off the TTI path.
+    // Linux embeds need the URL before first paint; other platforms no-op.
+    void ensureMediaServerUrl();
+    const boot = await bootPromise;
     ttiMark("boot_resolved");
     return { boot };
   },
