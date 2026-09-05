@@ -1,4 +1,3 @@
-import type { EditorView } from "@codemirror/view";
 import { commandService } from "@workspace/commands";
 import { type ContextMenuState } from "@workspace/editor";
 import {
@@ -11,14 +10,11 @@ import {
   ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
 import { useCallback, useMemo } from "react";
-import { useEditorCommands } from "../hooks/useEditorCommands";
 
 export interface ContextMenuProps {
   /** null = closed. Coordinates come from the CM contextMenu extension. */
   menuState: ContextMenuState | null;
   onMenuStateChange: (state: ContextMenuState | null) => void;
-  /** The live EditorView — wires format commands into the palette. */
-  view: EditorView | null;
   onSearch?: (query: string) => void;
 }
 
@@ -26,15 +22,14 @@ export interface ContextMenuProps {
  * Presentational context-menu overlay for the editor. Anchored at the
  * right-click coordinates emitted by the CM contextMenu extension; the
  * menu state lives in the leaf component so it survives document swaps.
+ * Command registrations are app-level (shared/editorCommands) and resolve
+ * the active editor at execution time — this menu just reads the registry.
  */
 export function ContextMenu({
   menuState,
   onMenuStateChange,
-  view,
   onSearch,
 }: ContextMenuProps) {
-  useEditorCommands(view);
-
   const commands = commandService.getCommands();
 
   const handleCommand = useCallback(

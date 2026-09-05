@@ -1,20 +1,9 @@
 import { EditorView } from "@codemirror/view";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { commandService } from "@workspace/commands";
 import {
-  type BenchmarkReportRow,
   type ContextMenuState,
   clearQueryCache,
-  createEditorExtensionGroups,
-  formatBenchmarkReport,
-  formatWatchdogReport,
-  getWatchdogStats,
   requestPreviewRebuild,
-  runIsolationBenchmark,
-  runTypingBenchmark,
-  startWatchdog,
-  stopWatchdog,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
 import { type LeafProps, useLeafServices } from "@workspace/views";
@@ -29,7 +18,6 @@ import {
 import { decideReconcileAction } from "../lib/reconcile";
 import { editorControllerRegistry } from "../registry";
 import { useActiveNoteStore } from "../store/activeNote";
-import { useRenameSignalStore } from "../store/renameSignal";
 
 /**
  * Orchestrates the Markdown editor leaf: constructs the controller once,
@@ -127,137 +115,6 @@ export function useEditor(
   useEffect(() => {
     return servicesRef.current.onTabStructureChanged(() => controller.prune());
   }, [servicesRef, controller]);
-
-  useEffect(() => {
-    keybindingService.registerAction("saveActiveFile", () => {
-      const t = tabRef.current;
-      if (t) void controller.saveTab(t.id);
-    });
-    return () => keybindingService.unregisterAction("saveActiveFile");
-  }, [keybindingService, controller, tabRef]);
-
-  useEffect(() => {
-    // F2 (and any chrome-level "rename note" affordance): hand the active
-    // tab's id to the rename signal; the inline title reacts and enters
-    // edit mode. No direct editor access here — the title owns rename state.
-    keybindingService.registerAction("renameActiveNote", () => {
-      const t = tabRef.current;
-      if (t) useRenameSignalStore.getState().request(t.id);
-    });
-    return () => keybindingService.unregisterAction("renameActiveNote");
-  }, [keybindingService, tabRef]);
-
-  // Dev: editor typing benchmark. Results go to a temp file via
-  // write_dev_report so prod runs need NO devtools open (devtools inflate
-  // measurements 2–5×); console output is a convenience copy only.
-  useEffect(() => {
-    if (!view) return;
-
-    const report = async (title: string, rows: BenchmarkReportRow[]) => {
-      console.table(rows);
-      const md = formatBenchmarkReport(title, rows);
-      try {
-        const path = await invoke<string>("write_dev_report", {
-          fileName: "editor-benchmark.md",
-          contents: md,
-        });
-        ioRef.current.setStatus(`Benchmark written to ${path}`);
-      } catch (err) {
-        console.error("[EditorView] report write failed:", err);
-        ioRef.current.setStatus(
-          "Benchmark done; report write failed (see console)",
-        );
-      }
-    };
-
-    commandService.registerCommand("dev:editor-benchmark", () => {
-      try {
-        void report(
-          "Editor typing benchmark — full extension stack",
-          runTypingBenchmark(view),
-        );
-      } catch (err) {
-        console.error("[EditorView] benchmark failed:", err);
-      }
-    });
-
-    commandService.registerCommand("dev:editor-benchmark-isolation", () => {
-      try {
-        // Fresh groups per run — never share plugin instances with states
-        // other than the ones they were built for.
-        const g = createEditorExtensionGroups({
-          onFetchLinks: io.onFetchLinks,
-          onFetchTags: io.onFetchTags,
-          onOpenLink: controller.handleOpenLink,
-          parseFrontmatter: io.parseFrontmatter,
-          runQuery: io.runQuery,
-        });
-        const full = [
-          ...g.base,
-          ...g.syntax,
-          ...g.input,
-          ...g.livePreview,
-          ...g.suggestions,
-          ...g.links,
-
-          ...g.blockWidgets,
-        ];
-        const results = runIsolationBenchmark(view, [
-          { name: "base", extensions: g.base },
-          { name: "+syntax", extensions: [...g.base, ...g.syntax] },
-          { name: "+input", extensions: [...g.base, ...g.input] },
-          { name: "+live-preview", extensions: [...g.base, ...g.livePreview] },
-          { name: "+suggestions", extensions: [...g.base, ...g.suggestions] },
-          { name: "+links", extensions: [...g.base, ...g.links] },
-
-          {
-            name: "+block-widgets",
-            extensions: [...g.base, ...g.blockWidgets],
-          },
-          { name: "full", extensions: full },
-        ]);
-        void report("Editor typing benchmark — extension isolation", results);
-      } catch (err) {
-        console.error("[EditorView] isolation benchmark failed:", err);
-      }
-    });
-
-    // Dev: main-thread watchdog. Toggle on/off; report writes to temp file.
-    let watchdogActive = false;
-    commandService.registerCommand("dev:watchdog", () => {
-      if (watchdogActive) {
-        stopWatchdog();
-        watchdogActive = false;
-        ioRef.current.setStatus("Watchdog stopped");
-      } else {
-        startWatchdog(100);
-        watchdogActive = true;
-        ioRef.current.setStatus("Watchdog started (100ms threshold)");
-      }
-    });
-    commandService.registerCommand("dev:watchdog-report", async () => {
-      const s = getWatchdogStats();
-      const md = formatWatchdogReport(s);
-      try {
-        const path = await invoke<string>("write_dev_report", {
-          fileName: "watchdog-report.md",
-          contents: md,
-        });
-        ioRef.current.setStatus(`Watchdog report written to ${path}`);
-      } catch (err) {
-        console.error("[EditorView] watchdog report write failed:", err);
-        ioRef.current.setStatus("Watchdog report failed (see console)");
-      }
-    });
-
-    return () => {
-      commandService.unregister("dev:editor-benchmark");
-      commandService.unregister("dev:editor-benchmark-isolation");
-      commandService.unregister("dev:watchdog");
-      commandService.unregister("dev:watchdog-report");
-      if (watchdogActive) stopWatchdog();
-    };
-  }, [view, io, ioRef, controller]);
 
   // Window blur: flush the active tab's edits so focus loss never strands
   // work the autosave timer hadn't reached yet.

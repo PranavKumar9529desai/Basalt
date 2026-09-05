@@ -99,7 +99,6 @@ export function EditorView({ tab, paneId }: LeafProps) {
       <ContextMenu
         menuState={menuState}
         onMenuStateChange={setMenuState}
-        view={view}
         onSearch={() => commandService.execute("search:open")}
       />
     </>
