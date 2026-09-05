@@ -63,6 +63,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
 | **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                           |
 | **Rust quality-hardening (ADR-030)**                                | ✅ Complete (all phases 0–5: typed errors, module splits, `NodeId`/`QueryColumnType`, search `SearchError`, perf: HashMap `group_rows`, `eq_ignore_ascii_case`, hoisted `AhoCorasick`; Phase 2 value-type unification — `FrontmatterValue` collapsed into the internally-tagged `TypedValue`) |
+| **Embed rendering (ADR-034)**                                       | ✅ Complete — real media (img/video/audio) in reading + live preview + rich table cells; Linux loopback Range server (Part A), table embeds (B), live-preview media in every caret state (C), reading-mode link bracket slicing + table-link navigation (D), stem-aware `resolveAsset` (E) |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                        |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                       |
 
@@ -282,6 +283,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [031-pdf-export-snapshot-reading-mode](docs/adr/031-pdf-export-snapshot-reading-mode.md) | ADR-031: PDF Export — Snapshot of Reading Mode                              |
 | [032-split-pane-layout-tree](docs/adr/032-split-pane-layout-tree.md)                   | ADR-032: Split Pane Layout Tree — VS Code Grid + Obsidian Flexibility      |
 | [033-syntax-registry](docs/adr/033-syntax-registry.md)                                 | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
+| [034-embed-rendering](docs/adr/034-embed-rendering.md)                               | ADR-034: Embed Rendering — Real Media in Every Surface                     |
 
 <!-- ADR_INDEX_END -->
 

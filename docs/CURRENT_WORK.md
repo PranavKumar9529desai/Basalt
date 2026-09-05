@@ -7,6 +7,51 @@
 
 ---
 
+## Embed Rendering (ADR-034) — COMPLETE
+
+**Branch:** `feat/adr34-embed-rendering`
+**Status:** All five parts committed + docs done; ADR-034 moved Proposed → Accepted
+with the implementation appendix. Full suite green: editor tests 196/196, app
+tests 275/275, `cargo test --workspace`, oxlint + tsc clean, clippy clean.
+
+### Commits
+
+- `c4bdf8c` Part A/E — `feat(media): Linux embed playback via loopback HTTP
+  server + stem-aware resolveAsset`. New `media_server_url` command in
+  `apps/tauri/src-tauri/src/commands/media.rs` (`http-range` dep, lazy OnceLock
+  bind on `127.0.0.1:0`, per-connection threads, 64 KiB streaming, path-traversal
+  guard, 9 unit tests); frontend `app-shell/mediaServer.ts` + `resolveAsset`
+  rewrite in `useLeafServices.ts` (stem match over `ws.treeNodes`, unique match
+  or null).
+- `3c5e191` Part B — `feat(editor): render media embeds inside rich table cells`.
+  `table-widget.ts` new `renderInlineCell(text, resolve)` (`EMBED_RE`, real
+  `<img>/<video>/<audio>`, `.cm-table-link[data-name]` + `.cm-table-media`);
+  reads `resolveAssetFacet` at render time. 5 new tests.
+- `cd67988` Part C — `feat(editor): render real media for embeds in live
+  preview`. `embed-media.ts` exports `buildEmbedWidget(url, target)`; `embeds.ts`
+  swaps the chip for media off the active line; `editor.ts` livePreview group
+  gets `EMBED_MEDIA_THEME` + `resolveAssetFacet.of(config.resolveAsset)`.
+- `8088178` Part D — `fix(editor): reading-mode wikilink clicks slice brackets;
+  bind table links`. `wiki-links.ts` exports `targetFromWikiLinkNode` +
+  `normalizeWikiLinkTarget`; `readingLinkHandler` gates `video,audio` →
+  `.cm-table-link[data-name]` → `.cm-live-wikilink`. 9 new tests.
+- `1e889d2` Part C correction — `feat(editor): render media embeds even with the
+  caret on their line`. ADR decided media renders in EVERY caret state
+  (Obsidian parity), dropping the WYSIWYM reveal for valid embeds. Broken
+  embeds keep the chip AND the caret reveal (raw source under the caret stays
+  editable).
+
+### Notes
+
+- `ec856d3` (user's commit, mid-session) swept in the Part W wiring to
+  `editor.ts` (livePreview group) + `EditorController.ts` (`resolveAsset`
+  passes) — content identical to intent, no redo needed.
+- User's concurrent WIP (dql-widget.ts, dql-layout.test.ts, AGENTS.md,
+  `crates/README.md`, `crates/basalt-tables/tests/complex_queries.rs`,
+  `docs/plan/`) is NOT part of these commits.
+
+---
+
 ## Split Pane Layout Tree (ADR-032) — COMPLETE
 
 **Branch:** `feat/split-pane-layout`
