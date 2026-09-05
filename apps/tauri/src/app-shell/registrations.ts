@@ -65,6 +65,7 @@ viewRegistry.register({
   icon: IconTable,
   side: "right",
   component: TableControls,
+  section: true,
 });
 
 leafRegistry.register({
