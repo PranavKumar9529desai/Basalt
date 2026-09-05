@@ -1,9 +1,10 @@
 import { type ReactNode } from "react";
-import type { LayoutNode, LeafNode } from "../types";
+import type { LayoutNode, LeafNode, PaneId } from "../types";
 import { useTabsStore } from "../store";
 import { SplitPane } from "./SplitPane";
 
 export interface LeafRenderContext {
+  paneId: PaneId;
   activeTabId: string | null;
   markTabDirty: (tabId: string, dirty: boolean) => void;
 }
@@ -40,18 +41,28 @@ function LeafPane({
   renderLeaf: (ctx: LeafRenderContext) => ReactNode;
 }) {
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
+  const activatePane = useTabsStore((state) => state.activatePane);
 
   // The node prop carries this leaf's own tab group (root is the source of
   // truth in ADR-032), so each pane renders ITS active tab — never another
   // pane's. Rerenders arrive through the tree subscription in the shell.
   const ctx: LeafRenderContext = {
+    paneId: node.id,
     activeTabId: node.tabGroup.activeTabId,
     markTabDirty,
   };
 
   return (
-    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+    <section
+      aria-label={`Pane ${node.id}`}
+      className="flex flex-1 min-h-0 min-w-0 flex-col"
+      // Focus anywhere inside a leaf (its tab bar, header, or editor) — or a
+      // plain mousedown on blank pane space — focuses that pane, the only way
+      // `activePaneId` tracks user intent.
+      onFocusCapture={() => activatePane(node.id)}
+      onMouseDownCapture={() => activatePane(node.id)}
+    >
       {renderLeaf(ctx)}
-    </div>
+    </section>
   );
 }

@@ -120,6 +120,12 @@ function WorkspaceShell({
 
       return (
         <div className="flex h-full min-h-0 flex-col">
+          <TabsBar
+            paneId={ctx.paneId}
+            onSelectTab={handleTabSelect}
+            onCloseTab={handleTabClose}
+            onPinToggle={handleTabPinToggle}
+          />
           <ViewHeader
             tab={tab}
             vaultPath={ws.vaultPath}
@@ -141,7 +147,13 @@ function WorkspaceShell({
         </div>
       );
     },
-    [leafServices, ws.vaultPath],
+    [
+      leafServices,
+      ws.vaultPath,
+      handleTabSelect,
+      handleTabClose,
+      handleTabPinToggle,
+    ],
   );
 
   const root = useTabsStore((s) => s.root);
@@ -175,12 +187,6 @@ function WorkspaceShell({
         />
 
         <div className="col-start-3 row-span-full flex min-h-0 min-w-0 flex-col">
-          <TabsBar
-            onSelectTab={handleTabSelect}
-            onCloseTab={handleTabClose}
-            onPinToggle={handleTabPinToggle}
-          />
-
           <PaneRenderer node={root} renderLeaf={renderLeaf} />
         </div>
 

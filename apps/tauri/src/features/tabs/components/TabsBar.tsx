@@ -4,23 +4,27 @@ import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
 import { findLeaf } from "../lib/layoutTree";
+import type { PaneId } from "../types";
 
 export interface TabsBarProps {
+  /** Which pane's tab group this bar renders. Defaults to the active pane. */
+  paneId?: PaneId;
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onPinToggle: (tabId: string) => void;
 }
 
-// TabsBar — store→view wiring for the editor tab bar. Rendered by
-// the shell as the header cell of the editor column in the workspace grid.
-// The bottom hairline is owned by the shell's <HeaderBandRule>, not drawn here.
+// TabsBar — store→view wiring for a single pane's tab bar. Rendered
+// by the shell inside each leaf (ADR-032), so every pane shows its own
+// tabs. The bottom hairline is owned by the shell's <HeaderBandRule>.
 export function TabsBar({
+  paneId,
   onSelectTab,
   onCloseTab,
   onPinToggle,
 }: TabsBarProps) {
   // Project only the data each pill needs. The selector picks STABLE
-  // references — the active leaf's `tabIds` array, the `tabs` map, and its
+  // references — the pane's `tabIds` array, the `tabs` map, and its
   // active id — so useShallow's shallow compare short-circuits and the
   // snapshot only changes when a render-affecting change actually lands.
   // Building the tab array (or pill shape) here would allocate a fresh array
@@ -29,7 +33,7 @@ export function TabsBar({
   // reference list is derived below in a useMemo instead.
   const { tabIds, tabsRef, activeTabId } = useTabsStore(
     useShallow((s) => {
-      const leaf = findLeaf(s.root, s.activePaneId);
+      const leaf = findLeaf(s.root, paneId ?? s.activePaneId);
       return {
         tabIds: leaf?.tabGroup.tabIds ?? [],
         tabsRef: s.tabs,
