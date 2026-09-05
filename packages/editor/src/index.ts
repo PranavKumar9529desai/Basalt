@@ -40,7 +40,13 @@ export {
   insertColumnRight,
   deleteColumn,
   setAlignment,
+  moveRowUp,
+  moveRowDown,
 } from "./input/table-mutations";
+export {
+  tableCursorExtension,
+  type TableCursorState,
+} from "./input/table-cursor";
 export type { Alignment, MutationResult } from "./input/table-mutations";
 export type {
   EditorConfig,

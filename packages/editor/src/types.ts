@@ -122,6 +122,11 @@ export interface EditorConfig {
    * resolvable file. Injected so `packages/editor` stays pure.
    */
   resolveAsset?: (target: string) => string | null;
+  /**
+   * Called when the cursor enters/leaves a markdown table or moves within one.
+   * Used by the table controls sidebar to enable/disable buttons.
+   */
+  onTableCursorChange?: (state: { inTable: boolean; row: number; col: number } | null) => void;
 }
 
 /** Resolve an embed target (`![[file]]`) to a loadable asset URL.

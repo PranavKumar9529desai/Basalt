@@ -51,6 +51,9 @@ export interface EditorControllerOptions {
   onStatus: (status: string | null) => void;
   /** Notifies the leaf when a tab document has been loaded or reloaded. */
   onDocumentReady?: () => void;
+  onTableCursorChange?: (
+    state: { inTable: boolean; row: number; col: number } | null,
+  ) => void;
 }
 
 /**
@@ -127,6 +130,7 @@ export class EditorController {
       editFrontmatter,
       runQuery: options.io.runQuery,
       resolveAsset: this.services.resolveAsset,
+      onTableCursorChange: options.onTableCursorChange,
     });
     // Shared extensions live outside the compartment — present in both modes.
     // The compartment holds mode-specific extensions (edit or reading).

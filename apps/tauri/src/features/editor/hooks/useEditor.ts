@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileChangeEvent } from "../../vault/types";
 import { useLatestRef } from "./useLatestRef";
 import { useNoteIO } from "./useNoteIO";
+import { useTableCursorStore } from "../store/tableCursor";
 import {
   EditorController,
   type EditorControllerOptions,
@@ -62,6 +63,7 @@ export function useEditor(
       setContextMenuState: setMenuState,
       onStatus: io.setStatus,
       onDocumentReady: () => setDocumentRevision((revision) => revision + 1),
+      onTableCursorChange: useTableCursorStore.getState().setTableCursor,
     };
     controllerRef.current = new EditorController(options);
   }

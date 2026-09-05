@@ -1,10 +1,12 @@
 import { lazy } from "react";
 import {
   IconFileText,
+  IconTable,
   IconFolder,
   IconLink,
   IconPaperclip,
 } from "@tabler/icons-react";
+import { TableControls } from "./views/TableControls";
 import { leafRegistry, viewRegistry } from "@workspace/views";
 import { EditorView } from "../features/editor";
 import { Backlinks } from "./views/Backlinks";
@@ -55,6 +57,14 @@ viewRegistry.register({
   side: "right",
   component: AssetsView,
   section: true,
+});
+
+viewRegistry.register({
+  type: "table-controls",
+  name: "Table",
+  icon: IconTable,
+  side: "right",
+  component: TableControls,
 });
 
 leafRegistry.register({

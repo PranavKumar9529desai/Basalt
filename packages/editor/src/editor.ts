@@ -6,6 +6,7 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { tableNavigationKeymap } from "./input/table-navigation";
+import { tableCursorExtension } from "./input/table-cursor";
 import { pasteImageExtension } from "./input/paste-image";
 import { embedMediaPlugin, EMBED_MEDIA_THEME } from "./input/embed-media";
 import {
@@ -144,6 +145,9 @@ export function createEditorExtensionGroups(
       keymap.of(backticksKeymap),
       keymap.of(tableNavigationKeymap),
       pasteImageExtension(config.onPasteImage),
+      ...(config.onTableCursorChange
+        ? [tableCursorExtension(config.onTableCursorChange)]
+        : []),
     ],
     livePreview: [
       LIVE_PREVIEW_THEME,

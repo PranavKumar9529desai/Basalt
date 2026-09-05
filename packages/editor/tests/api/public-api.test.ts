@@ -43,6 +43,8 @@ const EXPECTED_VALUE_EXPORTS = [
   "insertColumnRight",
   "insertRowAbove",
   "insertRowBelow",
+  "moveRowDown",
+  "moveRowUp",
   "openExternalLinkFacet",
   "openLinkFacet",
   "notifyViewOfSizeChange",
@@ -62,6 +64,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "startWatchdog",
   "stopWatchdog",
   "tableBlockSpec",
+  "tableCursorExtension",
   "tablePositionAtCursor",
   "tokenizeCode",
 ].sort();
