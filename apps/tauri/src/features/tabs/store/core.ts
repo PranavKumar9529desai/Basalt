@@ -1,6 +1,6 @@
 import { leafRegistry } from "@workspace/views";
 import type { StateCreator } from "zustand";
-import type { TabId, TabModel } from "../types";
+import type { TabId, TabModel, PaneId, LayoutNode } from "../types";
 import type { TabsState } from "./types";
 import {
   createLeaf,
@@ -33,6 +33,19 @@ function titleFromPath(path: string) {
   const normalized = path.replace(/\\/g, "/");
   const file = normalized.split("/").pop() ?? path;
   return file.endsWith(".md") ? file.slice(0, -3) : file;
+}
+
+/**
+ * Resolve the pane a new tab is inserted into. Falls back to the first leaf
+ * when `activePaneId` is stale (references a pane no longer in the tree), so
+ * `mapLeaf` can never silently no-op and strand a tab in `tabs` without a
+ * group (the graph-open orphan regression). Returns null only when the tree
+ * has no leaf at all, which cannot happen (root is always a leaf or split).
+ */
+function resolveInsertPaneId(root: LayoutNode, activePaneId: PaneId): PaneId | null {
+  if (findLeaf(root, activePaneId)) return activePaneId;
+  const leaves = collectLeaves(root);
+  return leaves[0]?.id ?? null;
 }
 
 function buildInitialState() {
@@ -133,7 +146,10 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       const timestamp = nowMs();
 
       // Preview eviction happens within the ACTIVE leaf's tab group.
-      const root = mapLeaf(state.root, state.activePaneId, (leaf) => {
+      const paneId =
+        resolveInsertPaneId(state.root, state.activePaneId) ??
+        state.activePaneId;
+      const root = mapLeaf(state.root, paneId, (leaf) => {
         const group = leaf.tabGroup;
         let tabIds = group.tabIds;
         let previewTabId = group.previewTabId;
@@ -188,6 +204,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       return {
         tabs,
         root,
+        activePaneId: paneId,
         persistVersion: get().persistVersion + 1,
       };
     });
@@ -252,7 +269,10 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
         renameOnOpen: note.renameOnOpen,
       };
 
-      const root = mapLeaf(state.root, state.activePaneId, (leaf) => ({
+      const paneId =
+        resolveInsertPaneId(state.root, state.activePaneId) ??
+        state.activePaneId;
+      const root = mapLeaf(state.root, paneId, (leaf) => ({
         ...leaf,
         tabGroup: {
           ...leaf.tabGroup,
@@ -264,6 +284,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       return {
         tabs,
         root,
+        activePaneId: paneId,
         persistVersion: get().persistVersion + 1,
       };
     });
@@ -279,8 +300,27 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       get().tabs[incomingTabId] ??
       Object.values(get().tabs).find((t) => t.path === path);
     if (existing) {
-      if (activate) get().activateTab(existing.id);
-      return existing.id;
+      // Self-heal (graph-open regression): a tab in `tabs` that no leaf's
+      // tabGroup references is invisible to every pane, and `activateTab`
+      // silently no-ops on it — "nothing appears" on every open. Drop the
+      // orphan and fall through so the tab is created fresh and attached.
+      if (!findLeafByTab(get().root, existing.id)) {
+        console.warn(`[openView:${leafType}] tab exists but is in NO pane`, {
+          id: existing.id,
+          path,
+          activePaneId: get().activePaneId,
+        });
+        set((state) => {
+          const tabs = { ...state.tabs };
+          delete tabs[existing.id];
+          return { tabs, persistVersion: state.persistVersion + 1 };
+        });
+      } else if (activate) {
+        get().activateTab(existing.id);
+        return existing.id;
+      } else {
+        return existing.id;
+      }
     }
 
     set((state) => {
@@ -299,7 +339,10 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
         lastAccessedAt: timestamp,
       };
 
-      const root = mapLeaf(state.root, state.activePaneId, (leaf) => ({
+      const paneId =
+        resolveInsertPaneId(state.root, state.activePaneId) ??
+        state.activePaneId;
+      const root = mapLeaf(state.root, paneId, (leaf) => ({
         ...leaf,
         tabGroup: {
           ...leaf.tabGroup,
@@ -311,6 +354,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       return {
         tabs,
         root,
+        activePaneId: paneId,
         persistVersion: get().persistVersion + 1,
       };
     });

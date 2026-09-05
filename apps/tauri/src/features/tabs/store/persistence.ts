@@ -15,6 +15,7 @@ import {
   deserializeNode,
   createLeaf,
   mapLeaves,
+  collectLeaves,
 } from "../lib/layoutTree";
 
 export interface PersistenceSlice {
@@ -94,6 +95,20 @@ export const createPersistenceSlice: StateCreator<
         tabGroup: sanitizeTabGroup(leaf.tabGroup, tabs),
       }));
 
+      // Prune tabs orphaned in the tree. A tab in `tabs` that no leaf's
+      // tabGroup references is invisible to every pane: openView finds it
+      // and `activateTab` silently no-ops on it (graph-open regression).
+      // They were already unreachable, so dropping them heals the snapshot
+      // instead of resurrecting stale duplicates on every boot.
+      const referenced = new Set<TabId>();
+      for (const leaf of collectLeaves(root)) {
+        for (const id of leaf.tabGroup.tabIds) referenced.add(id);
+      }
+      const prunedTabs: typeof tabs = {};
+      for (const [id, tab] of Object.entries(tabs)) {
+        if (referenced.has(id as TabId)) prunedTabs[id as TabId] = tab;
+      }
+
       const findLeafById = (
         node: LayoutNode,
         id: PaneId,
@@ -122,7 +137,7 @@ export const createPersistenceSlice: StateCreator<
           ? snapshot.activePaneId
           : (firstLeafId ?? (ROOT_PANE_ID as PaneId));
 
-      set({ tabs, root, activePaneId });
+      set({ tabs: prunedTabs, root, activePaneId });
       return;
     }
 

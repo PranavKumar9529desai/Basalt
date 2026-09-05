@@ -3,9 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCoreSlice } from "./core";
 import { createPersistenceSlice } from "./persistence";
-import type { TabId, TabModel, LayoutNode } from "../types";
+import type {
+  TabId,
+  TabModel,
+  LayoutNode,
+  SerializedTab,
+  TabsWorkspaceSnapshotV2,
+} from "../types";
 import type { TabsState } from "./types";
-import { createLeaf, collectLeaves } from "../lib/layoutTree";
+import {
+  createLeaf,
+  collectLeaves,
+  findLeaf,
+  findLeafByTab,
+} from "../lib/layoutTree";
 
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
@@ -240,6 +251,171 @@ describe("split pane actions", () => {
       isPinned: true,
       isPreview: false,
     });
+  });
+
+  it("openView attaches a view tab to the active leaf and activates it", () => {
+    store.getState().openPinned({ path: "a.md" });
+    const graphId = store.getState().openView("graph", { title: "Graph" });
+
+    expect(graphId).toBe("tab:view://graph");
+    expect(store.getState().tabs["tab:view://graph"]).toMatchObject({
+      id: "tab:view://graph",
+      path: "view://graph",
+      title: "Graph",
+      leafType: "graph",
+      isPinned: true,
+      isPreview: false,
+    });
+
+    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
+    expect(leaf?.tabGroup.tabIds).toContain("tab:view://graph");
+    expect(leaf?.tabGroup.activeTabId).toBe("tab:view://graph");
+  });
+
+  it("openView is idempotent: reopening activates the existing tab, no duplicate", () => {
+    store.getState().openPinned({ path: "a.md" });
+    store.getState().openView("graph", { title: "Graph" });
+
+    const count = (ids: TabId[]) =>
+      ids.filter((id) => id === "tab:view://graph").length;
+
+    const first = findLeaf(
+      store.getState().root,
+      store.getState().activePaneId,
+    );
+    expect(count(first?.tabGroup.tabIds ?? [])).toBe(1);
+
+    // Switch back to the note, then reopen the graph — must not duplicate.
+    store.getState().activateTab("tab:a.md");
+    store.getState().openView("graph", { title: "Graph" });
+
+    const second = findLeaf(
+      store.getState().root,
+      store.getState().activePaneId,
+    );
+    expect(count(second?.tabGroup.tabIds ?? [])).toBe(1);
+    expect(second?.tabGroup.activeTabId).toBe("tab:view://graph");
+  });
+
+  it("openView lands in the ACTIVE pane after a split (deep leaf)", () => {
+    store.getState().openPinned({ path: "a.md" });
+    store.getState().splitActivePane("vertical");
+    collectLeaves(store.getState().root); // [clone pane] is active now
+
+    store.getState().openView("graph", { title: "Graph" });
+
+    const target = findLeaf(
+      store.getState().root,
+      store.getState().activePaneId,
+    );
+    expect(target?.tabGroup.tabIds).toContain("tab:view://graph");
+    expect(target?.tabGroup.activeTabId).toBe("tab:view://graph");
+  });
+
+  it("hydration prunes tabs not referenced by any pane (graph-open regression)", () => {
+    // A V2 snapshot whose `tabs` map has MORE tabs than the tree references —
+    // the exact corrupt state that stranded "view://graph" in the wild: tabs
+    // exist in `tabs` but belong to no leaf's tabGroup, so openView finds them
+    // and activateTab silently no-ops → "nothing appears".
+    const note: SerializedTab = {
+      id: "tab:a.md",
+      path: "a.md",
+      title: "a",
+      leafType: "markdown",
+      viewMode: "edit",
+      isPinned: true,
+      isPreview: false,
+      isDirty: false,
+      createdAt: 0,
+      lastAccessedAt: 0,
+    };
+    const orphanGraph: SerializedTab = {
+      id: "tab:view://graph",
+      path: "view://graph",
+      title: "Graph",
+      leafType: "graph",
+      viewMode: "edit",
+      isPinned: true,
+      isPreview: false,
+      isDirty: false,
+      createdAt: 0,
+      lastAccessedAt: 0,
+    };
+    const snap: TabsWorkspaceSnapshotV2 = {
+      version: 2,
+      activePaneId: "pane-1",
+      root: {
+        id: "pane-1",
+        type: "leaf",
+        tabGroup: {
+          id: "group-1",
+          tabIds: [note.id],
+          activeTabId: note.id,
+          previewTabId: null,
+        },
+      },
+      tabs: [note, orphanGraph],
+    };
+
+    store.getState().reset();
+    store.getState().hydrateFromWorkspaceSnapshot(snap);
+
+    expect(store.getState().tabs).toHaveProperty("tab:a.md");
+    expect(store.getState().tabs).not.toHaveProperty("tab:view://graph");
+  });
+
+  it("openView self-heals a mid-session orphaned graph tab (in tabs, no pane)", () => {
+    store.getState().openPinned({ path: "a.md" });
+
+    // Simulate corruption at runtime: graph tab lives in `tabs` but refers to
+    // no leaf. Before the fix openView found it and activateTab no-oped.
+    store.setState((s) => ({
+      tabs: {
+        ...s.tabs,
+        "tab:view://graph": {
+          id: "tab:view://graph",
+          path: "view://graph",
+          title: "Graph",
+          leafType: "graph",
+          viewMode: "edit",
+          isPinned: true,
+          isPreview: false,
+          isDirty: false,
+          createdAt: 1,
+          lastAccessedAt: 1,
+        },
+      },
+    }));
+    expect(
+      findLeafByTab(store.getState().root, "tab:view://graph"),
+    ).toBeNull();
+
+    store.getState().openView("graph", { title: "Graph" });
+
+    const leaf = findLeaf(
+      store.getState().root,
+      store.getState().activePaneId,
+    );
+    expect(leaf?.tabGroup.tabIds).toContain("tab:view://graph");
+    expect(leaf?.tabGroup.activeTabId).toBe("tab:view://graph");
+  });
+
+  it("open actions fall back to the first leaf and repair a stale activePaneId", () => {
+    store.getState().openPinned({ path: "a.md" });
+
+    // Corrupt activePaneId to a pane that doesn't exist in the tree.
+    store.setState({ activePaneId: "pane-ghost" });
+
+    const id = store.getState().openPinned({ path: "b.md" });
+
+    const leaf = findLeaf(
+      store.getState().root,
+      store.getState().activePaneId,
+    );
+    expect(leaf).not.toBeNull();
+    expect(store.getState().activePaneId).toBe(leaf?.id);
+    expect(leaf?.tabGroup.tabIds).toContain(id);
+    expect(leaf?.tabGroup.activeTabId).toBe(id);
   });
 
   it("v2 round-trip preserves split layout", () => {
