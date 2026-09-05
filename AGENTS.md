@@ -284,6 +284,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [032-split-pane-layout-tree](docs/adr/032-split-pane-layout-tree.md)                   | ADR-032: Split Pane Layout Tree — VS Code Grid + Obsidian Flexibility      |
 | [033-syntax-registry](docs/adr/033-syntax-registry.md)                                 | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
 | [034-embed-rendering](docs/adr/034-embed-rendering.md)                               | ADR-034: Embed Rendering — Real Media in Every Surface                     |
+| [035-infinite-canvas](docs/adr/035-infinite-canvas.md)                                 | ADR-035: Infinite Canvas — Spatial Note Layout                              |
 
 <!-- ADR_INDEX_END -->
 
@@ -307,6 +308,9 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add vault/filesystem operations       | `crates/basalt-vault/`                     |
 | Add shared Rust domain types          | `crates/basalt-types/`                     |
 | Add graph/backlinks compute           | `crates/basalt-graph/`                     |
+| Add canvas/viewport business logic      | `apps/tauri/src/features/canvas/`          |
+| Add canvas viewport primitive           | `packages/canvas-viewport/`                |
+| Add canvas compute (Rust)               | `crates/basalt-canvas/`                    |
 | Add search/indexing compute           | `crates/basalt-search/`                    |
 
 ---
