@@ -29,6 +29,17 @@ export function contextMenuExtension(
     contextmenu: (event, view) => {
       event.preventDefault();
 
+      // Right-click on a rendered table widget: move cursor into the table
+      // source so the Table submenu appears. Without this, the cursor stays
+      // outside the table node and inTable stays false.
+      const target = (event.target as HTMLElement).closest?.(".cm-table-block");
+      if (target) {
+        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (pos !== null) {
+          view.dispatch({ selection: { anchor: pos } });
+        }
+      }
+
       let { from, to } = view.state.selection.main;
       let text = view.state.sliceDoc(from, to);
 
