@@ -66,6 +66,10 @@ layers. Depth: `./README.md#2-directory-map`.
 
 - Register new views/leaves (docks, tab types, graph leaf) in
   `app-shell/registrations.ts`; that single registration is the wiring step.
+- Register commands/actions **once** at boot (side-effect imports in `shared/`),
+  resolving the active editor at execution time via `editorControllerRegistry`
+  + `tabsStore.activePaneId`. Never register per-pane — the CommandService
+  "already registered. Overwriting." warning is the dev guard against it.
 - Put anything needing 2+ features in `shared/`.
 - Batch related `invoke(...)` calls into one (`save_files`/`open_files` exist).
 - Virtualize lists over ~100 items (`@tanstack/react-virtual`).

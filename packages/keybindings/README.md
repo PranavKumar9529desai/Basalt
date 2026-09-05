@@ -52,7 +52,8 @@ import {
 | `unregister(key)`          | Remove a binding by its `key` string             |
 | `registerAction(name, fn)` | Register a plain action handler (non-command)    |
 | `unregisterAction(name)`   | Remove an action handler                         |
-| `setContext(key, value)`   | Set a `when` context flag (e.g. `editorFocused`) |
+| `setContext(key, value)`   | Set/update a `when` context value (`boolean \| string \| number`) |
+| `removeContext(key)`       | Delete a context key                              |
 | `updateContext(values)`    | Bulk-set context flags                           |
 | `getContext()`             | Snapshot of the current context                  |
 | `evaluateWhen(when?)`      | Evaluate a when clause against context           |
@@ -78,8 +79,10 @@ Each entry is a `Keybinding`:
   (exactly one of the two)
 - `when` — optional context gate; absent = always active
 
-Resolution priority: bindings with a `when` clause sort **before** unqualified
-ones, so context-gated editor bindings win over same-key global ones.
+Resolution: among key-matching bindings, one whose `when` clause evaluates
+true wins over an unconditional same-key binding; unconditional bindings act
+as the fallback when no `when` clause matches. If nothing matches, `resolve`
+returns `null` and `handleKeydown` does **not** `preventDefault`.
 
 ### Modifier semantics
 
@@ -95,9 +98,19 @@ The key portion matches `KeyboardEvent.key` (lowercased).
 
 ### When-clause semantics
 
-- Absent → always matches.
-- `"key"` → active when `context[key] === true` (e.g. `editorFocused`).
-- `"!key"` → active when `context[key] !== true` (negation).
+`when` clauses are compiled **once** (at service rebuild) into plain
+evaluator closures; evaluation per keypress is a simple map lookup.
+
+- Absent / empty → unconditional (always active).
+- `"key"` → active when `context[key] === true`.
+- `"!key"` → active when `context[key] !== true`.
+- `"a && b"`, `"a || b"`, `"!"`, and parentheses compose freely.
+- `"key == 'value'"` / `"key != 'value'"` compare a typed context value
+  against a quoted string, number, or boolean literal
+  (`viewMode == 'reading'`, `tabCount == 3`, `editorFocused == 'true'`).
+
+A clause with a syntax error is treated as **never matching** (a broken
+binding can never fire unexpectedly); a warning is logged at compile time.
 
 ## React integration
 
