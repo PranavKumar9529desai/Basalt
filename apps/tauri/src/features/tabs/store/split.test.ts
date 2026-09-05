@@ -57,6 +57,73 @@ describe("split pane actions", () => {
     expect(afterId).not.toBe(beforeId);
   });
 
+  it("splitActivePane duplicates the active tab into the new pane (distinct id)", () => {
+    const a = store.getState().openPinned({ path: "a.md" });
+    store.getState().splitActivePane("vertical");
+
+    const leaves = collectLeaves(store.getState().root);
+    expect(leaves).toHaveLength(2);
+    const [left, right] = leaves;
+
+    // Source pane keeps its tab; the new pane shows the SAME note but with a
+    // fresh id so each pane has an independent editor controller.
+    expect(left.tabGroup.activeTabId).toBe(a);
+    const rightTabId = right.tabGroup.activeTabId as TabId;
+    expect(rightTabId).not.toBe(a);
+    const rightTab = store.getState().tabs[rightTabId];
+    expect(rightTab).toMatchObject({
+      path: "a.md",
+      title: "a",
+      isDirty: false,
+      isPreview: false,
+    });
+  });
+
+  it("creates an empty new pane when there is no active tab", () => {
+    store.getState().splitActivePane("vertical");
+    const leaves = collectLeaves(store.getState().root);
+    expect(leaves).toHaveLength(2);
+    expect(leaves[1].tabGroup.tabIds).toEqual([]);
+  });
+
+  it("tab activation in one pane does not leak into another pane (Bug 1)", () => {
+    const a = store.getState().openPinned({ path: "a.md" });
+    const b = store.getState().openPinned({ path: "b.md" });
+    store.getState().openPinned({ path: "c.md" });
+    const leavesBefore = collectLeaves(store.getState().root);
+    store.getState().activateTab(leavesBefore[0].tabGroup.tabIds[2] as TabId);
+    store.getState().splitActivePane("vertical");
+
+    const leaves = collectLeaves(store.getState().root);
+    const [left, right] = leaves;
+    const rightActiveId = right.tabGroup.activeTabId;
+
+    // Click around the LEFT pane's tabs — the right pane's active tab must
+    // not follow along.
+    store.getState().activatePane(left.id);
+    store.getState().activateTab(a);
+    store.getState().activateTab(b);
+
+    const after = collectLeaves(store.getState().root);
+    expect(after.find((l) => l.id === right.id)?.tabGroup.activeTabId).toBe(
+      rightActiveId,
+    );
+  });
+
+  it("closing the last tab of a pane closes the pane itself", () => {
+    const a = store.getState().openPinned({ path: "a.md" });
+    store.getState().splitActivePane("vertical");
+    const leaves = collectLeaves(store.getState().root);
+    expect(leaves).toHaveLength(2);
+
+    // Left pane holds [a], right pane holds the clone. Close the only tab
+    // of the left pane -> the pane itself closes and the tree unwraps.
+    store.getState().activatePane(leaves[0].id);
+    store.getState().closeTab(a);
+
+    expect(store.getState().root.type).toBe("leaf");
+  });
+
   it("closePane removes a leaf and unwraps single-child split", () => {
     store.getState().splitActivePane("vertical");
     const root = store.getState().root;

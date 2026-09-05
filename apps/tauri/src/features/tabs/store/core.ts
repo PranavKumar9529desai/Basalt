@@ -20,6 +20,15 @@ function makeTabId(path: string): TabId {
   return `tab:${path}` as TabId;
 }
 
+let cloneCounter = 0;
+
+/** A split duplicates the active tab into the new pane. The clone gets a
+ * DISTINCT id (same path) so each pane has an independent editor/controller;
+ * sharing a tab id across panes would mount two controllers over one doc. */
+function makeCloneTabId(source: TabModel): TabId {
+  return `tab:${source.id}#clone-${++cloneCounter}` as TabId;
+}
+
 function titleFromPath(path: string) {
   const normalized = path.replace(/\\/g, "/");
   const file = normalized.split("/").pop() ?? path;
@@ -606,9 +615,44 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
   // --- Split Pane Layout Tree actions (ADR-032 Phase 3) ---
 
   splitActivePane: (direction) => {
+    const sourceLeaf = findLeaf(get().root, get().activePaneId);
+    const sourceTabId = sourceLeaf?.tabGroup.activeTabId;
+    const sourceTab = sourceTabId ? get().tabs[sourceTabId] : undefined;
+
     set((state) => {
-      const result = splitLeaf(state.root, state.activePaneId, direction);
+      let tabs = state.tabs;
+      let newTabIds: TabId[] = [];
+
+      if (sourceTab) {
+        // Duplicate the active tab into the new pane (Obsidian behavior,
+        // ADR-032 validation): same note, fresh id, clean state.
+        const cloneId = makeCloneTabId(sourceTab);
+        tabs = {
+          ...state.tabs,
+          [cloneId]: {
+            id: cloneId,
+            path: sourceTab.path,
+            title: sourceTab.title,
+            leafType: sourceTab.leafType,
+            viewMode: sourceTab.viewMode ?? "edit",
+            isPinned: false,
+            isPreview: false,
+            isDirty: false,
+            createdAt: nowMs(),
+            lastAccessedAt: nowMs(),
+          },
+        };
+        newTabIds = [cloneId];
+      }
+
+      const result = splitLeaf(
+        state.root,
+        state.activePaneId,
+        direction,
+        newTabIds,
+      );
       return {
+        tabs,
         root: result.root,
         activePaneId: result.newLeafId,
         persistVersion: state.persistVersion + 1,
