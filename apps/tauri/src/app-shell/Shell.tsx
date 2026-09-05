@@ -15,7 +15,7 @@
 import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useMemo, useRef, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
 import { useTabsStore, TabsBar, PaneRenderer, type LeafRenderContext } from "../features/tabs";
 import { parseFrontmatter } from "../features/editor";
@@ -23,6 +23,7 @@ import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
 import type { PreviewDeps } from "../features/search";
 import "../shared/tabCommands";
+import { startEditorContextSync } from "../shared/activeEditor";
 import "../features/export/commands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
@@ -84,6 +85,10 @@ function WorkspaceShell({
   useShellCommands(ws);
   const leafServices = useLeafServices(ws);
   const { openNote, findNote } = ws;
+
+  // Derive keybinding contexts (editorFocused) from the active-editor
+  // authority — single owner, so pane churn can't leave stale flags.
+  useEffect(() => startEditorContextSync(), []);
 
   // Reading-mode deps for the search preview, composed where editor + vault
   // services coexist. See features/search/types.ts (PreviewDeps) — ADR-029

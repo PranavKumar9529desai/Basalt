@@ -1,28 +1,20 @@
 /**
  * tabCommands — Cross-feature command registrations (tabs + editor).
  *
- * Architecture: This file registers tab-related commands that depend on
- * editor state (the focused pane). It imports from BOTH `features/tabs`
- * and `features/editor`, so it lives in `shared/` — not inside either
- * feature. Features must never import from each other directly.
+ * Architecture: This file registers tab-related commands. It imports from
+ * BOTH `features/tabs` and `features/editor`, so it lives in `shared/` —
+ * not inside either feature. Features must never import from each other
+ * directly. Active-tab resolution is delegated to `shared/activeEditor.ts`
+ * (the single cross-feature authority).
  *
  * These commands are registered as a side effect when this module is
  * imported. The import is triggered from `app-shell/` (the composition
- * root), not from within any feature.
+ * root), not from within any feature. Registration happens ONCE; handlers
+ * resolve the active tab at execution time.
  */
 import { commandService } from "@workspace/commands";
-import { useActiveNoteStore } from "../features/editor";
-import { findLeaf, getTabByPath, useTabsStore } from "../features/tabs";
-
-function resolveActiveTab() {
-  const selected = useActiveNoteStore.getState().activeNote;
-  if (!selected?.path) return null;
-  const { root, activePaneId, tabs } = useTabsStore.getState();
-  const leaf = findLeaf(root, activePaneId);
-  if (!leaf) return null;
-  const tab = getTabByPath(leaf.tabGroup.tabIds, tabs, selected.path);
-  return tab;
-}
+import { useTabsStore } from "../features/tabs";
+import { resolveActiveTab } from "./activeEditor";
 
 commandService.registerCommand(
   "tabs:close-active",

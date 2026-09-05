@@ -147,11 +147,6 @@ export function useEditor(
     return () => keybindingService.unregisterAction("renameActiveNote");
   }, [keybindingService, tabRef]);
 
-  useEffect(() => {
-    keybindingService.setContext("editorFocused", true);
-    return () => keybindingService.setContext("editorFocused", false);
-  }, [keybindingService]);
-
   // Dev: editor typing benchmark. Results go to a temp file via
   // write_dev_report so prod runs need NO devtools open (devtools inflate
   // measurements 2–5×); console output is a convenience copy only.
