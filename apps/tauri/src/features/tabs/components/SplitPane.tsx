@@ -112,15 +112,40 @@ export function SplitPane({
             <button
               type="button"
               aria-label="Resize pane"
-              className="shrink-0 hover:bg-[var(--sat-accent-primary)] transition-colors border-0 p-0 bg-transparent"
+              className="group relative shrink-0 border-0 bg-transparent p-0"
               style={{
                 width: isVertical ? SASH_SIZE : "100%",
                 height: isVertical ? "100%" : SASH_SIZE,
                 cursor: isVertical ? "col-resize" : "row-resize",
-                background: "var(--sat-layout-border)",
               }}
               onMouseDown={(e) => handleSashMouseDown(i, e)}
-            />
+            >
+              {/* 1px hairline — visually identical to the shell's
+                  <HeaderBandRule> (h-px bg-[var(--sat-layout-border)]), so
+                  every pane border reads as one continuous line. Accent on
+                  hover keeps the lean sash grabbable. */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bg-[var(--sat-layout-border)] transition-colors group-hover:bg-[var(--sat-accent-primary)]"
+                style={
+                  isVertical
+                    ? {
+                        left: "50%",
+                        top: 0,
+                        width: 1,
+                        height: "100%",
+                        transform: "translateX(-50%)",
+                      }
+                    : {
+                        top: "50%",
+                        left: 0,
+                        height: 1,
+                        width: "100%",
+                        transform: "translateY(-50%)",
+                      }
+                }
+              />
+            </button>
           )}
         </Fragment>
       ))}
