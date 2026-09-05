@@ -35,8 +35,8 @@ use commands::{
     autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
     create_untitled_note, delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks,
     get_graph, get_settings, get_vault_tree, get_workspace, media_server_url, move_paths,
-    open_file, open_files, open_vault_dialog, parse_frontmatter, reindex_vault, rename_note,
-    rename_path, reorganize_assets, run_query, save_attachment, save_file, save_files,
+    open_file, open_files, open_vault_dialog, parse_canvas, parse_frontmatter, reindex_vault,
+    rename_note, rename_path, reorganize_assets, run_query, save_attachment, save_file, save_files,
     search_content, search_files, set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
@@ -111,6 +111,7 @@ pub fn run() {
             write_dev_report,
             parse_frontmatter,
             run_query,
+            parse_canvas,
             media_server_url,
         ])
         .run(tauri::generate_context!())

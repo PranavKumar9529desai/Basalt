@@ -17,6 +17,10 @@ import { FileExplorerHeaderActions, FileExplorer } from "./views/FileExplorer";
 const Graph = lazy(() =>
   import("../features/graph").then((m) => ({ default: m.Graph })),
 );
+// Canvas pulls in WebGL2 viewport renderer — lazy-load like graph.
+const Canvas = lazy(() =>
+  import("../features/canvas").then((m) => ({ default: m.CanvasView })),
+);
 
 /**
  * Boot-time view registrations.
@@ -41,6 +45,7 @@ viewRegistry.register({
   icon: IconLink,
   side: "right",
   component: Backlinks,
+  section: true,
 });
 
 viewRegistry.register({
@@ -49,6 +54,7 @@ viewRegistry.register({
   icon: IconPaperclip,
   side: "right",
   component: AssetsView,
+  section: true,
 });
 
 leafRegistry.register({
@@ -63,4 +69,10 @@ leafRegistry.register({
   name: "Graph",
   extensions: [],
   component: Graph,
+});
+leafRegistry.register({
+  type: "canvas",
+  name: "Canvas",
+  extensions: [".canvas"],
+  component: Canvas,
 });

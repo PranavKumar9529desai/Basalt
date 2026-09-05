@@ -1,4 +1,5 @@
 pub mod assets;
+pub mod canvas;
 pub mod boot;
 pub mod common;
 pub mod dev;
@@ -28,6 +29,7 @@ pub use folders::{create_folder, delete_file, delete_paths, move_paths, rename_p
 pub use assets::{cleanup_assets, get_asset_audit, get_assets, reorganize_assets, save_attachment};
 pub use media::media_server_url;
 
+pub use canvas::parse_canvas;
 pub use frontmatter::parse_frontmatter;
 pub use search::{search_content, search_files};
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
