@@ -3,6 +3,11 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
+import {
+  classifyMediaExtension,
+  extensionOf,
+} from "../input/embed-utils";
+import { resolveAssetFacet } from "../types";
 import { escapeHtml } from "./utils";
 
 // ---------------------------------------------------------------------------
@@ -79,15 +84,78 @@ function parseMarkdownTable(raw: string): {
 // HTML rendering
 // ---------------------------------------------------------------------------
 
-/** Render inline markdown: [[wikilinks]], **bold**, *italic*, `code`. */
-function renderInlineCell(text: string): string {
+type ResolveAssetFn = (target: string) => string | null;
+
+/**
+ * Decode the three entities `escapeHtml` produces so an embed target captured
+ * from already-escaped cell text can be passed to `resolveAsset` verbatim.
+ */
+function htmlDecode(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+/** Real media element for a resolvable `![[target]]` embed (ADR-034 part B). */
+function embedMediaHtml(
+  kind: "image" | "video" | "audio",
+  url: string,
+  name: string,
+): string {
+  const attrs =
+    ' class="cm-table-link cm-table-media" data-name="' + escapeHtml(name) + '"';
+  switch (kind) {
+    case "image":
+      return `<img${attrs} src="${escapeHtml(url)}" alt="${escapeHtml(
+        name,
+      )}" loading="lazy">`;
+    case "video":
+      return `<video${attrs} src="${escapeHtml(
+        url,
+      )}" controls preload="metadata"></video>`;
+    case "audio":
+      return `<audio${attrs} src="${escapeHtml(url)}" controls></audio>`;
+  }
+}
+
+/** Highlighted table-cell link carrying the resolved target for clicks. */
+function tableLinkHtml(target: string, display: string): string {
+  return `<span class="cm-table-link" data-name="${escapeHtml(
+    target,
+  )}">${display}</span>`;
+}
+
+/**
+ * Render inline markdown: `[[wikilinks]]` (optionally `!`-prefixed media
+ * embeds), **bold**, *italic*, `code`. `resolve` resolves an embed target to a
+ * loadable URL; aliased links and unresolvable/non-media targets stay links
+ * (the `!` is an embed only when it becomes real media).
+ */
+function renderInlineCell(
+  text: string,
+  resolve: ResolveAssetFn | undefined,
+): string {
   let result = escapeHtml(text);
 
-  // [[target]] or [[target|alias]]
-  result = result.replace(/\[\[([^\]]+)\]\]/g, (_match, inner: string) => {
+  result = result.replace(/(!?)\[\[([^\]]+)\]\]/g, (_m, bang: string, inner: string) => {
     const [target, alias] = inner.split("|");
-    const display = alias ?? target;
-    return `<span class="cm-table-link">${escapeHtml(display)}</span>`;
+    const cleanTarget = target.split("#")[0].trim();
+    const display = alias?.trim() || cleanTarget;
+
+    // `![[target]]` without an alias → real media when the target resolves so;
+    // an alias turns an embed into a plain link (Obsidian rule).
+    if (bang && !alias && resolve) {
+      const url = resolve(htmlDecode(cleanTarget));
+      if (url) {
+        const kind = classifyMediaExtension(extensionOf(cleanTarget));
+        if (kind === "image" || kind === "video" || kind === "audio") {
+          return embedMediaHtml(kind, url, cleanTarget);
+        }
+      }
+    }
+    return tableLinkHtml(cleanTarget, display);
   });
 
   // **bold**
@@ -100,7 +168,7 @@ function renderInlineCell(text: string): string {
   return result;
 }
 
-function buildTableHtml(model: TableBlockModel): string {
+function buildTableHtml(model: TableBlockModel, resolve: ResolveAssetFn | undefined): string {
   const { headers, body, alignments } = model;
 
   let html = '<table class="cm-table-rendered">';
@@ -117,7 +185,7 @@ function buildTableHtml(model: TableBlockModel): string {
           : a === "right"
             ? ' style="text-align:right"'
             : "";
-    html += `<th${styleAttr}>${renderInlineCell(headers[i])}</th>`;
+    html += `<th${styleAttr}>${renderInlineCell(headers[i], resolve)}</th>`;
   }
   html += "</tr></thead>";
 
@@ -137,7 +205,7 @@ function buildTableHtml(model: TableBlockModel): string {
               ? ' style="text-align:right"'
               : "";
       const cell = body[r]?.[c] ?? "";
-      html += `<td${styleAttr}>${renderInlineCell(cell)}</td>`;
+      html += `<td${styleAttr}>${renderInlineCell(cell, resolve)}</td>`;
     }
     html += "</tr>";
   }
@@ -151,18 +219,21 @@ function buildTableHtml(model: TableBlockModel): string {
 // ---------------------------------------------------------------------------
 
 class TableBlockWidget extends WidgetType {
-  constructor(readonly model: TableBlockModel) {
+  constructor(
+    readonly model: TableBlockModel,
+    readonly html: string,
+  ) {
     super();
   }
 
   eq(other: TableBlockWidget): boolean {
-    return this.model.raw === other.model.raw;
+    return this.model.raw === other.model.raw && this.html === other.html;
   }
 
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-table-block";
-    wrapper.innerHTML = buildTableHtml(this.model);
+    wrapper.innerHTML = this.html;
     return wrapper;
   }
 
@@ -214,11 +285,12 @@ const span = (model: TableBlockModel): { from: number; to: number } => ({
 
 const render = (
   model: TableBlockModel,
-  _state: EditorState,
+  state: EditorState,
 ): TableBlockWidget | null => {
   // Cursor inside → show raw source (editable). Cursor outside → show rich table.
   if (model.active) return null;
-  return new TableBlockWidget(model);
+  const html = buildTableHtml(model, state.facet(resolveAssetFacet));
+  return new TableBlockWidget(model, html);
 };
 
 export const tableBlockSpec: BlockWidgetSpec<TableBlockModel> = {
@@ -259,6 +331,16 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     borderBottom: "1px solid var(--sat-layout-divider, rgba(255,255,255,0.06))",
     verticalAlign: "top",
     whiteSpace: "nowrap",
+  },
+  ".cm-table-block .cm-table-media": {
+    maxWidth: "100%",
+    maxHeight: "360px",
+    borderRadius: "6px",
+    verticalAlign: "middle",
+    whiteSpace: "normal",
+  },
+  ".cm-table-block img.cm-table-media": {
+    cursor: "pointer",
   },
   ".cm-table-block tr.cm-table-row-alt td": {
     background: "var(--sat-surface-2, rgba(255,255,255,0.02))",
