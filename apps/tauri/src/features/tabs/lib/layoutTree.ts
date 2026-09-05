@@ -72,6 +72,39 @@ export function findLeafByTab(
   return null;
 }
 
+/** Immutably map over the single leaf at `paneId`, returning the new tree. */
+export function mapLeaf(
+  root: LayoutNode,
+  paneId: PaneId,
+  updater: (leaf: LeafNode) => LeafNode,
+): LayoutNode {
+  if (root.type === "leaf") {
+    return root.id === paneId ? updater(root) : root;
+  }
+  let changed = false;
+  const children = root.children.map((child) => {
+    const next = mapLeaf(child, paneId, updater);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { ...root, children } : root;
+}
+
+/** Immutably map over every leaf in the tree. */
+export function mapLeaves(
+  root: LayoutNode,
+  updater: (leaf: LeafNode) => LeafNode,
+): LayoutNode {
+  if (root.type === "leaf") return updater(root);
+  let changed = false;
+  const children = root.children.map((child) => {
+    const next = mapLeaves(child, updater);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { ...root, children } : root;
+}
+
 /** Find the parent split of a leaf. */
 export function findParent(
   root: LayoutNode,

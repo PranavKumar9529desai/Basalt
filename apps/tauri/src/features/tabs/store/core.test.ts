@@ -1,11 +1,11 @@
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TabId, TabModel } from "../types";
-import type { TabsState, TabPane } from "./types";
+import type { TabsState } from "./types";
 
 import { createCoreSlice } from "./core";
 import { createPersistenceSlice } from "./persistence";
-import { ROOT_PANE_ID } from "../constants";
+import { createLeaf, findLeaf } from "../lib/layoutTree";
 
 vi.mock("@workspace/views", () => ({
   leafRegistry: { leafTypeForPath: () => "markdown" },
@@ -14,21 +14,25 @@ vi.mock("@workspace/views", () => ({
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
 function createTestStore(): TestStore {
+  const initialLeaf = createLeaf();
   return create<TabsState>()(
     (set, get, api) =>
       ({
         tabs: {} as Record<TabId, TabModel>,
-        pane: {
-          id: ROOT_PANE_ID,
-          tabIds: [],
-          activeTabId: null,
-          previewTabId: null,
-        } as TabPane,
+        root: initialLeaf,
+        activePaneId: initialLeaf.id,
         persistVersion: 0,
         ...createCoreSlice(set, get, api),
         ...createPersistenceSlice(set, get, api),
       }) as unknown as TabsState,
   );
+}
+
+/** The tab group of the currently active pane (the ADR-032 equivalent of the
+ * removed flat `pane`). */
+function activeGroup(store: TestStore) {
+  const { root, activePaneId } = store.getState();
+  return findLeaf(root, activePaneId)?.tabGroup ?? null;
 }
 
 describe("tabs core slice", () => {
@@ -51,8 +55,8 @@ describe("tabs core slice", () => {
         isPreview: true,
         isDirty: false,
       });
-      expect(store.getState().pane.previewTabId).toBe(id);
-      expect(store.getState().pane.activeTabId).toBe(id);
+      expect(activeGroup(store)?.previewTabId).toBe(id);
+      expect(activeGroup(store)?.activeTabId).toBe(id);
     });
 
     it("uses an explicit title when provided", () => {
@@ -123,8 +127,8 @@ describe("tabs core slice", () => {
       const id = store
         .getState()
         .openInPreview({ path: "a.md" }, { activate: false });
-      expect(store.getState().pane.activeTabId).toBe(null);
-      expect(store.getState().pane.previewTabId).toBe(id);
+      expect(activeGroup(store)?.activeTabId).toBe(null);
+      expect(activeGroup(store)?.previewTabId).toBe(id);
     });
   });
 
@@ -134,8 +138,8 @@ describe("tabs core slice", () => {
       const tab = store.getState().tabs[id];
       expect(tab.isPinned).toBe(true);
       expect(tab.isPreview).toBe(false);
-      expect(store.getState().pane.activeTabId).toBe(id);
-      expect(store.getState().pane.previewTabId).toBe(null);
+      expect(activeGroup(store)?.activeTabId).toBe(id);
+      expect(activeGroup(store)?.previewTabId).toBe(null);
     });
 
     it("promotes an existing tab to pinned instead of duplicating", () => {
@@ -150,18 +154,18 @@ describe("tabs core slice", () => {
   describe("activateTab", () => {
     it("no-ops for an unknown id", () => {
       store.getState().activateTab("nope");
-      expect(store.getState().pane.activeTabId).toBe(null);
+      expect(activeGroup(store)?.activeTabId).toBe(null);
     });
 
     it("sets activeTabId for an open tab", () => {
       const id = store.getState().openInPreview({ path: "a.md" });
-      expect(store.getState().pane.activeTabId).toBe(id);
+      expect(activeGroup(store)?.activeTabId).toBe(id);
     });
 
     it("no-ops when the tab is already active", () => {
       const id = store.getState().openInPreview({ path: "a.md" });
       store.getState().activateTab(id);
-      expect(store.getState().pane.activeTabId).toBe(id);
+      expect(activeGroup(store)?.activeTabId).toBe(id);
     });
 
     it("no-ops for a tab no longer in the pane", () => {
@@ -169,7 +173,7 @@ describe("tabs core slice", () => {
       const b = store.getState().openPinned({ path: "b.md" });
       store.getState().closeTab(a);
       store.getState().activateTab(a);
-      expect(store.getState().pane.activeTabId).toBe(b);
+      expect(activeGroup(store)?.activeTabId).toBe(b);
     });
   });
 
@@ -194,7 +198,7 @@ describe("tabs core slice", () => {
       store.getState().activateTab(b);
       store.getState().closeTab(b);
       expect(store.getState().tabs[b]).toBeUndefined();
-      expect(store.getState().pane.activeTabId).toBe(a);
+      expect(activeGroup(store)?.activeTabId).toBe(a);
     });
 
     it("selects the next tab to the right when closing the active middle tab", () => {
@@ -203,8 +207,8 @@ describe("tabs core slice", () => {
       const c = store.getState().openPinned({ path: "c.md" });
       store.getState().activateTab(b);
       store.getState().closeTab(b);
-      expect(store.getState().pane.tabIds).toEqual([a, c]);
-      expect(store.getState().pane.activeTabId).toBe(c);
+      expect(activeGroup(store)?.tabIds).toEqual([a, c]);
+      expect(activeGroup(store)?.activeTabId).toBe(c);
     });
 
     it("selects the previous tab when closing the active last tab", () => {
@@ -212,7 +216,7 @@ describe("tabs core slice", () => {
       const b = store.getState().openPinned({ path: "b.md" });
       store.getState().activateTab(b);
       store.getState().closeTab(b);
-      expect(store.getState().pane.activeTabId).toBe(a);
+      expect(activeGroup(store)?.activeTabId).toBe(a);
     });
   });
 
@@ -223,7 +227,7 @@ describe("tabs core slice", () => {
       store.getState().openPinned({ path: "c.md" });
       store.getState().closeOtherTabs(b);
       expect(Object.keys(store.getState().tabs)).toEqual([b]);
-      expect(store.getState().pane.activeTabId).toBe(b);
+      expect(activeGroup(store)?.activeTabId).toBe(b);
     });
   });
 
@@ -234,7 +238,7 @@ describe("tabs core slice", () => {
       store.getState().openPinned({ path: "c.md" });
       store.getState().closeTabsToRight(a);
       expect(Object.keys(store.getState().tabs)).toEqual([a]);
-      expect(store.getState().pane.activeTabId).toBe(a);
+      expect(activeGroup(store)?.activeTabId).toBe(a);
     });
   });
 
@@ -272,7 +276,7 @@ describe("tabs core slice", () => {
       store.getState().pinTab(id);
       expect(store.getState().tabs[id].isPinned).toBe(true);
       expect(store.getState().tabs[id].isPreview).toBe(false);
-      expect(store.getState().pane.previewTabId).toBe(null);
+      expect(activeGroup(store)?.previewTabId).toBe(null);
       store.getState().unpinTab(id);
       expect(store.getState().tabs[id].isPinned).toBe(false);
       store.getState().togglePinTab(id);
@@ -288,13 +292,13 @@ describe("tabs core slice", () => {
       const b = store.getState().openPinned({ path: "b.md" });
       const c = store.getState().openPinned({ path: "c.md" });
       store.getState().moveTabWithinPane(0, 2);
-      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      expect(activeGroup(store)?.tabIds).toEqual([b, c, a]);
       store.getState().moveTabWithinPane(0, 0);
-      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      expect(activeGroup(store)?.tabIds).toEqual([b, c, a]);
       store.getState().moveTabWithinPane(-1, 1);
-      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      expect(activeGroup(store)?.tabIds).toEqual([b, c, a]);
       store.getState().moveTabWithinPane(0, 99);
-      expect(store.getState().pane.tabIds).toEqual([b, c, a]);
+      expect(activeGroup(store)?.tabIds).toEqual([b, c, a]);
     });
   });
 
@@ -324,9 +328,9 @@ describe("tabs core slice", () => {
       store.getState().openPinned({ path: "a.md" });
       store.getState().reset();
       expect(Object.keys(store.getState().tabs)).toHaveLength(0);
-      expect(store.getState().pane.tabIds).toEqual([]);
+      expect(activeGroup(store)?.tabIds).toEqual([]);
       store.getState().moveTabWithinPane(0, 99);
-      expect(store.getState().pane.previewTabId).toBe(null);
+      expect(activeGroup(store)?.previewTabId).toBe(null);
     });
   });
 });

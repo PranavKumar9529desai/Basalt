@@ -3,6 +3,7 @@ import { type DragEvent, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
+import { findLeaf } from "../lib/layoutTree";
 
 export interface TabsBarProps {
   onSelectTab: (tabId: string) => void;
@@ -19,7 +20,7 @@ export function TabsBar({
   onPinToggle,
 }: TabsBarProps) {
   // Project only the data each pill needs. The selector picks STABLE
-  // references — the stored `pane.tabIds` array, the `tabs` map, and the
+  // references — the active leaf's `tabIds` array, the `tabs` map, and its
   // active id — so useShallow's shallow compare short-circuits and the
   // snapshot only changes when a render-affecting change actually lands.
   // Building the tab array (or pill shape) here would allocate a fresh array
@@ -27,11 +28,14 @@ export function TabsBar({
   // causing an infinite render loop ("Maximum depth reached"). The tab
   // reference list is derived below in a useMemo instead.
   const { tabIds, tabsRef, activeTabId } = useTabsStore(
-    useShallow((s) => ({
-      tabIds: s.pane.tabIds,
-      tabsRef: s.tabs,
-      activeTabId: s.pane.activeTabId,
-    })),
+    useShallow((s) => {
+      const leaf = findLeaf(s.root, s.activePaneId);
+      return {
+        tabIds: leaf?.tabGroup.tabIds ?? [],
+        tabsRef: s.tabs,
+        activeTabId: leaf?.tabGroup.activeTabId ?? null,
+      };
+    }),
   );
   const tabRefs = useMemo(
     () =>

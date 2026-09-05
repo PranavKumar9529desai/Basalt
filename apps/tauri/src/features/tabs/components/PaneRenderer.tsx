@@ -33,20 +33,19 @@ export function PaneRenderer({ node, renderLeaf }: PaneRendererProps) {
 }
 
 function LeafPane({
+  node,
   renderLeaf,
 }: {
   node: LeafNode;
   renderLeaf: (ctx: LeafRenderContext) => ReactNode;
 }) {
-  const activeTabId = useTabsStore(
-    (state) => state.pane.activeTabId,
-  );
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
 
-  // Phase 1: all leaves share the single pane's activeTabId.
-  // Future: each leaf will have its own activeTabId.
+  // The node prop carries this leaf's own tab group (root is the source of
+  // truth in ADR-032), so each pane renders ITS active tab — never another
+  // pane's. Rerenders arrive through the tree subscription in the shell.
   const ctx: LeafRenderContext = {
-    activeTabId,
+    activeTabId: node.tabGroup.activeTabId,
     markTabDirty,
   };
 

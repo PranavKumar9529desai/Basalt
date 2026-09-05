@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { LeafTabInfo } from "@workspace/views";
 import { ViewHeader } from "./ViewHeader";
-import { useTabsStore } from "../features/tabs";
+import { createLeaf, useTabsStore } from "../features/tabs";
 
 const tab: LeafTabInfo = {
   id: "tab:/vault/Notes/DSA/Binary Search.md",
@@ -12,14 +12,11 @@ const tab: LeafTabInfo = {
 
 describe("ViewHeader", () => {
   beforeEach(() => {
+    const leaf = createLeaf();
     useTabsStore.setState({
       tabs: {},
-      pane: {
-        id: "root",
-        tabIds: [],
-        activeTabId: null,
-        previewTabId: null,
-      },
+      root: leaf,
+      activePaneId: leaf.id,
       persistVersion: 0,
     });
   });

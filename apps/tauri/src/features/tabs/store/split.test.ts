@@ -3,9 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCoreSlice } from "./core";
 import { createPersistenceSlice } from "./persistence";
-import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, LayoutNode } from "../types";
-import type { TabsState, TabPane } from "./types";
+import type { TabsState } from "./types";
 import { createLeaf, collectLeaves } from "../lib/layoutTree";
 
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
@@ -20,12 +19,6 @@ function createTestStore(): TestStore {
     (set, get, api) =>
       ({
         tabs: {} as Record<TabId, TabModel>,
-        pane: {
-          id: ROOT_PANE_ID,
-          tabIds: [],
-          activeTabId: null,
-          previewTabId: null,
-        } as TabPane,
         root: initialLeaf as LayoutNode,
         activePaneId: initialLeaf.id,
         persistVersion: 0,

@@ -1,5 +1,3 @@
-export type { PaneRenderContext } from "./components/Tabs";
-export { Tabs } from "./components/Tabs";
 export { TabsBar } from "./components/TabsBar";
 export { PaneRenderer } from "./components/PaneRenderer";
 export type { LeafRenderContext } from "./components/PaneRenderer";
@@ -32,4 +30,6 @@ export {
   findLeaf,
   findLeafByTab,
   collectLeaves,
+  mapLeaf,
+  mapLeaves,
 } from "./lib/layoutTree";

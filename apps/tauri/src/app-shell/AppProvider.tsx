@@ -1,5 +1,5 @@
 import { useActiveNoteStore } from "../features/editor";
-import { getTabByPath, useTabsStore } from "../features/tabs";
+import { findLeaf, getTabByPath, useTabsStore } from "../features/tabs";
 import {
   findNoteByName,
   useVaultTree,
@@ -22,13 +22,17 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const closeTab = useTabsStore((s) => s.closeTab);
 
   // Select ONLY the tab for the active note's path (a single TabModel ref),
-  // never the whole tabs/pane records. zustand re-renders when the returned
+  // never the whole tabs/root records. zustand re-renders when the returned
   // value changes (Object.is), so picking one tab reference means unrelated
   // tab/pane mutations — markTabDirty / setTabTitle on other tabs, activateTab
   // between notes — don't re-render the whole app shell.
-  const activeNoteTab = useTabsStore((s) =>
-    activeNotePath ? getTabByPath(s.pane, s.tabs, activeNotePath) : null,
-  );
+  const activeNoteTab = useTabsStore((s) => {
+    if (!activeNotePath) return null;
+    const leaf = findLeaf(s.root, s.activePaneId);
+    return leaf
+      ? getTabByPath(leaf.tabGroup.tabIds, s.tabs, activeNotePath)
+      : null;
+  });
 
   const workspace = useWorkspace({
     vaultPath,

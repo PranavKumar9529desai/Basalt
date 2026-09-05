@@ -6,8 +6,8 @@ import { createPersistenceSlice } from "./persistence";
 import { ROOT_PANE_ID } from "../constants";
 import type { TabId, TabModel, LayoutNode } from "../types";
 import type { TabsWorkspaceSnapshotV2 } from "../types";
-import type { TabsState, TabPane } from "./types";
-import { createLeaf } from "../lib/layoutTree";
+import type { TabsState } from "./types";
+import { createLeaf, findLeaf } from "../lib/layoutTree";
 
 type TestStore = UseBoundStore<StoreApi<TabsState>>;
 
@@ -21,12 +21,6 @@ function createTestStore(): TestStore {
     (set, get, api) =>
       ({
         tabs: {} as Record<TabId, TabModel>,
-        pane: {
-          id: ROOT_PANE_ID,
-          tabIds: [],
-          activeTabId: null,
-          previewTabId: null,
-        } as TabPane,
         root: initialLeaf as LayoutNode,
         activePaneId: initialLeaf.id,
         persistVersion: 0,
@@ -34,6 +28,13 @@ function createTestStore(): TestStore {
         ...createPersistenceSlice(set, get, api),
       }) as unknown as TabsState,
   );
+}
+
+/** The tab group of the currently active pane (the ADR-032 equivalent of the
+ * removed flat `pane`). */
+function activeGroup(store: TestStore) {
+  const { root, activePaneId } = store.getState();
+  return findLeaf(root, activePaneId)?.tabGroup ?? null;
 }
 
 describe("tabs persistence", () => {
@@ -84,12 +85,12 @@ describe("tabs persistence", () => {
     const snap = store.getState().toWorkspaceSnapshot();
 
     store.getState().reset();
-    expect(store.getState().pane.tabIds).toEqual([]);
+    expect(activeGroup(store)?.tabIds).toEqual([]);
 
     store.getState().hydrateFromWorkspaceSnapshot(snap);
     const s = store.getState();
-    expect(s.pane.tabIds).toEqual([a, b]);
-    expect(s.pane.activeTabId).toBe(a);
+    expect(activeGroup(store)?.tabIds).toEqual([a, b]);
+    expect(activeGroup(store)?.activeTabId).toBe(a);
     expect(s.tabs[a]?.isDirty).toBe(true);
     expect(s.tabs[a]?.path).toBe("a.md");
     // Layout tree is restored
@@ -99,11 +100,11 @@ describe("tabs persistence", () => {
 
   it("ignores snapshots with an unknown version (no-op hydrate)", () => {
     const a = store.getState().openPinned({ path: "a.md" });
-    const before = store.getState().pane.tabIds;
+    const before = activeGroup(store)?.tabIds;
     store
       .getState()
       .hydrateFromWorkspaceSnapshot({ version: 99, tabs: [] } as never);
-    expect(store.getState().pane.tabIds).toEqual(before);
+    expect(activeGroup(store)?.tabIds).toEqual(before);
     expect(store.getState().tabs[a]).toBeDefined();
   });
 
@@ -132,8 +133,8 @@ describe("tabs persistence", () => {
       ],
     } as never;
     store.getState().hydrateFromWorkspaceSnapshot(snapshot);
-    expect(store.getState().pane.tabIds).toEqual(["tab:x.md"]);
-    expect(store.getState().pane.activeTabId).toBe("tab:x.md");
+    expect(activeGroup(store)?.tabIds).toEqual(["tab:x.md"]);
+    expect(activeGroup(store)?.activeTabId).toBe("tab:x.md");
   });
 
   it("maps legacy `viewType` to `leafType`, defaulting to markdown", () => {
@@ -194,17 +195,20 @@ describe("tabs persistence", () => {
     expect(store.getState().tabs["tab:x.md"]?.leafType).toBe("markdown");
   });
 
-  it("drops pane.tabIds that reference missing tabs and restores to a surviving tab", () => {
+  it("drops tabIds that reference missing tabs and restores to a surviving tab", () => {
     const snapshot = {
-      version: 1,
-      panes: [
-        {
-          id: ROOT_PANE_ID,
+      version: 2,
+      root: {
+        id: "pane-root",
+        type: "leaf",
+        tabGroup: {
+          id: "group-root",
           tabIds: ["tab:real.md", "tab:ghost.md"],
           activeTabId: "tab:ghost.md",
           previewTabId: null,
         },
-      ],
+      },
+      activePaneId: "pane-root",
       tabs: [
         {
           id: "tab:real.md",
@@ -219,8 +223,7 @@ describe("tabs persistence", () => {
       ],
     } as never;
     store.getState().hydrateFromWorkspaceSnapshot(snapshot);
-    const s = store.getState();
-    expect(s.pane.tabIds).toEqual(["tab:real.md"]);
-    expect(s.pane.activeTabId).toBe("tab:real.md");
+    expect(activeGroup(store)?.tabIds).toEqual(["tab:real.md"]);
+    expect(activeGroup(store)?.activeTabId).toBe("tab:real.md");
   });
 });

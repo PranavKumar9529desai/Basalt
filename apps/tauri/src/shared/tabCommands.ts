@@ -12,14 +12,15 @@
  */
 import { commandService } from "@workspace/commands";
 import { useActiveNoteStore } from "../features/editor";
-import { getTabByPath, useTabsStore } from "../features/tabs";
+import { findLeaf, getTabByPath, useTabsStore } from "../features/tabs";
 
 function resolveActiveTab() {
   const selected = useActiveNoteStore.getState().activeNote;
   if (!selected?.path) return null;
-  const { tabs, pane } = useTabsStore.getState();
-  const tab = getTabByPath(pane, tabs, selected.path);
-  if (!tab) return null;
+  const { root, activePaneId, tabs } = useTabsStore.getState();
+  const leaf = findLeaf(root, activePaneId);
+  if (!leaf) return null;
+  const tab = getTabByPath(leaf.tabGroup.tabIds, tabs, selected.path);
   return tab;
 }
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DragEvent as ReactDragEvent } from "react";
 
 import { useTabsStore } from "../store";
+import { createLeaf } from "../lib/layoutTree";
 import { useTabDnD } from "./useTabDnD";
 
 function dragEvent(): ReactDragEvent<HTMLElement> {
@@ -21,13 +22,11 @@ function seedPane(tabIds: string[]) {
   const moveTabWithinPane = vi.fn();
   const activateTab = vi.fn();
   act(() => {
+    const leaf = createLeaf(tabIds);
     useTabsStore.setState({
-      pane: {
-        id: "p1",
-        tabIds,
-        activeTabId: tabIds[0] ?? null,
-        previewTabId: null,
-      },
+      tabs: {},
+      root: leaf,
+      activePaneId: leaf.id,
       moveTabWithinPane,
       activateTab,
     });

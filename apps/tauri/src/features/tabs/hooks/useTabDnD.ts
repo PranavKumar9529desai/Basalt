@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useTabsStore } from "../store";
+import { findLeaf } from "../lib/layoutTree";
 
 interface DraggedTabState {
   tabId: string;
@@ -81,9 +82,14 @@ export function useTabDnD() {
       }
 
       const state = useTabsStore.getState();
-      const pane = state.pane;
-      const fromIndex = pane.tabIds.indexOf(dragged.tabId);
-      const toIndex = pane.tabIds.indexOf(targetTabId);
+      const leaf = findLeaf(state.root, state.activePaneId);
+      if (!leaf) {
+        clearDragState();
+        return;
+      }
+      const tabIds = leaf.tabGroup.tabIds;
+      const fromIndex = tabIds.indexOf(dragged.tabId);
+      const toIndex = tabIds.indexOf(targetTabId);
       if (fromIndex === -1 || toIndex === -1) {
         clearDragState();
         return;

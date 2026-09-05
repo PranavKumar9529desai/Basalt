@@ -4,19 +4,42 @@ import type {
   TabPaneId,
   TabPane,
   TabId,
+  TabModel,
   PaneId,
   LayoutNode,
+  TabGroup,
 } from "../types";
 import type { TabsState } from "./types";
 import {
   serializeNode,
   deserializeNode,
   createLeaf,
+  mapLeaves,
 } from "../lib/layoutTree";
 
 export interface PersistenceSlice {
   toWorkspaceSnapshot: TabsState["toWorkspaceSnapshot"];
   hydrateFromWorkspaceSnapshot: TabsState["hydrateFromWorkspaceSnapshot"];
+}
+
+/** Drop references to tabs no longer present in the `tabs` map. */
+function sanitizeTabGroup(
+  group: TabGroup,
+  tabs: Record<TabId, TabModel>,
+): TabGroup {
+  const tabIds = group.tabIds.filter((id) => Boolean(tabs[id]));
+  return {
+    ...group,
+    tabIds,
+    activeTabId:
+      group.activeTabId && tabs[group.activeTabId]
+        ? group.activeTabId
+        : (tabIds[tabIds.length - 1] ?? null),
+    previewTabId:
+      group.previewTabId && tabs[group.previewTabId]
+        ? group.previewTabId
+        : null,
+  };
 }
 
 export const createPersistenceSlice: StateCreator<
@@ -40,21 +63,9 @@ export const createPersistenceSlice: StateCreator<
       lastAccessedAt: tab.lastAccessedAt,
     }));
 
-    // Phase 1: derive v2 root from flat pane state.
-    // In a future phase, root becomes the source of truth and pane is derived.
-    const root = serializeNode(state.root);
-    if (root.type === "leaf") {
-      root.tabGroup = {
-        id: state.pane.id,
-        tabIds: [...state.pane.tabIds],
-        activeTabId: state.pane.activeTabId,
-        previewTabId: state.pane.previewTabId,
-      };
-    }
-
     return {
       version: 2 as const,
-      root,
+      root: serializeNode(state.root),
       activePaneId: state.activePaneId,
       tabs: serializedTabs,
     };
@@ -76,8 +87,12 @@ export const createPersistenceSlice: StateCreator<
     ) as Record<TabId, import("../types").TabModel>;
 
     if (snapshot.version === 2) {
-      // V2: deserialize the layout tree
-      const root = deserializeNode(snapshot.root);
+      // V2: deserialize the layout tree, sanitize each leaf's tab group
+      // against the tabs map, and restore focus to the recorded pane.
+      const root = mapLeaves(deserializeNode(snapshot.root), (leaf) => ({
+        ...leaf,
+        tabGroup: sanitizeTabGroup(leaf.tabGroup, tabs),
+      }));
 
       const findLeafById = (
         node: LayoutNode,
@@ -107,20 +122,7 @@ export const createPersistenceSlice: StateCreator<
           ? snapshot.activePaneId
           : (firstLeafId ?? (ROOT_PANE_ID as PaneId));
 
-      // Phase 1: derive flat pane from active leaf for backward compat.
-      const leaf = findLeafById(root, activePaneId);
-      const tg = leaf?.tabGroup;
-
-      const pane: TabPane = {
-        id: (tg?.id ?? ROOT_PANE_ID) as TabPaneId,
-        tabIds: (tg?.tabIds ?? []).filter((id) => Boolean(tabs[id])),
-        activeTabId:
-          tg?.activeTabId && tabs[tg.activeTabId] ? tg.activeTabId : null,
-        previewTabId:
-          tg?.previewTabId && tabs[tg.previewTabId] ? tg.previewTabId : null,
-      };
-
-      set({ tabs, root, activePaneId, pane });
+      set({ tabs, root, activePaneId });
       return;
     }
 
@@ -155,7 +157,6 @@ export const createPersistenceSlice: StateCreator<
 
     set({
       tabs,
-      pane,
       root: leaf,
       activePaneId: leaf.id,
     });

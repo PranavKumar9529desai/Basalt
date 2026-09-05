@@ -1,12 +1,15 @@
 import { leafRegistry } from "@workspace/views";
 import type { StateCreator } from "zustand";
-import { ROOT_PANE_ID } from "../constants";
-import type { TabId, TabModel, TabPaneId } from "../types";
+import type { TabId, TabModel } from "../types";
 import type { TabsState } from "./types";
 import {
+  createLeaf,
   splitLeaf,
   removeLeaf,
   collectLeaves,
+  findLeaf,
+  findLeafByTab,
+  mapLeaf,
 } from "../lib/layoutTree";
 
 function nowMs() {
@@ -23,38 +26,22 @@ function titleFromPath(path: string) {
   return file.endsWith(".md") ? file.slice(0, -3) : file;
 }
 
-function removeTabFromPane(pane: TabsState["pane"], tabId: TabId): void {
-  const removedIndex = pane.tabIds.indexOf(tabId);
-  if (removedIndex === -1) return;
-  pane.tabIds = pane.tabIds.filter((id) => id !== tabId);
-  if (pane.previewTabId === tabId) pane.previewTabId = null;
-  if (pane.activeTabId === tabId) {
-    // Prefer the tab to the right, then the tab to the left, instead of
-    // jumping to the end of the strip when an active tab closes.
-    pane.activeTabId =
-      pane.tabIds.length > 0
-        ? ((pane.tabIds[removedIndex] ??
-            pane.tabIds[removedIndex - 1]) as TabId | null)
-        : null;
-  }
-}
-
 function buildInitialState() {
+  const leaf = createLeaf();
   return {
     tabs: {} as Record<TabId, TabModel>,
-    pane: {
-      id: ROOT_PANE_ID as TabPaneId,
-      tabIds: [],
-      activeTabId: null,
-      previewTabId: null,
-    },
+    root: leaf,
+    activePaneId: leaf.id,
     persistVersion: 0,
   };
 }
 
 /**
- * Core slice — all tab state mutations in one StateCreator. Single-pane
- * model: one TabPane holds all open tabs.
+ * Core slice — all tab state mutations in one StateCreator.
+ *
+ * The layout tree (ADR-032) is the single source of truth: every mutation
+ * targets the active leaf's `tabGroup` (resolved via `activePaneId`) or the
+ * leaf containing the affected tab. There is no derived flat pane anymore.
  */
 export interface CoreSlice {
   openInPreview: TabsState["openInPreview"];
@@ -130,47 +117,68 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       return targetId;
     }
 
-    const current = get();
-    const tabs = { ...current.tabs };
-    const pane = { ...current.pane };
+    set((state) => {
+      const tabs = { ...state.tabs };
+      const timestamp = nowMs();
 
-    if (pane.previewTabId) {
-      const preview = tabs[pane.previewTabId];
-      if (preview && !preview.isDirty) {
-        delete tabs[preview.id];
-        removeTabFromPane(pane, preview.id);
-      } else if (preview) {
-        preview.isPreview = false;
-        preview.isPinned = true;
-        pane.previewTabId = null;
-      }
-    }
+      // Preview eviction happens within the ACTIVE leaf's tab group.
+      const root = mapLeaf(state.root, state.activePaneId, (leaf) => {
+        const group = leaf.tabGroup;
+        let tabIds = group.tabIds;
+        let previewTabId = group.previewTabId;
+        let activeTabId = group.activeTabId;
 
-    const timestamp = nowMs();
-    tabs[incomingTabId] = {
-      id: incomingTabId,
-      path: note.path,
-      title: note.title ?? titleFromPath(note.path),
-      leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
-      viewMode: "edit",
-      isPinned: false,
-      isPreview: true,
-      isDirty: false,
-      createdAt: timestamp,
-      lastAccessedAt: timestamp,
-      line: note.line,
-      focusOnOpen: note.focusOnOpen,
-      renameOnOpen: note.renameOnOpen,
-    };
+        if (previewTabId) {
+          const preview = tabs[previewTabId];
+          if (preview && !preview.isDirty) {
+            delete tabs[preview.id];
+            tabIds = tabIds.filter((id) => id !== previewTabId);
+            previewTabId = null;
+          } else if (preview) {
+            tabs[previewTabId] = {
+              ...preview,
+              isPreview: false,
+              isPinned: true,
+            };
+            previewTabId = null;
+          }
+        }
 
-    pane.tabIds = [...pane.tabIds, incomingTabId];
-    pane.previewTabId = incomingTabId;
-    if (activate) pane.activeTabId = incomingTabId;
+        tabIds = [...tabIds, incomingTabId];
+        if (activate) activeTabId = incomingTabId;
 
-    set({
-      tabs,
-      pane,
-      persistVersion: get().persistVersion + 1,
+        return {
+          ...leaf,
+          tabGroup: {
+            ...group,
+            tabIds,
+            activeTabId,
+            previewTabId: incomingTabId,
+          },
+        };
+      });
+
+      tabs[incomingTabId] = {
+        id: incomingTabId,
+        path: note.path,
+        title: note.title ?? titleFromPath(note.path),
+        leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+        viewMode: "edit",
+        isPinned: false,
+        isPreview: true,
+        isDirty: false,
+        createdAt: timestamp,
+        lastAccessedAt: timestamp,
+        line: note.line,
+        focusOnOpen: note.focusOnOpen,
+        renameOnOpen: note.renameOnOpen,
+      };
+
+      return {
+        tabs,
+        root,
+        persistVersion: get().persistVersion + 1,
+      };
     });
 
     return incomingTabId;
@@ -214,38 +222,44 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       return targetId;
     }
 
-    const current = get();
-    const tabs = { ...current.tabs };
-    const pane = { ...current.pane };
+    set((state) => {
+      const tabs = { ...state.tabs };
+      const timestamp = nowMs();
+      tabs[incomingTabId] = {
+        id: incomingTabId,
+        path: note.path,
+        title: note.title ?? titleFromPath(note.path),
+        leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+        viewMode: "edit",
+        isPinned: true,
+        isPreview: false,
+        isDirty: false,
+        createdAt: timestamp,
+        lastAccessedAt: timestamp,
+        line: note.line,
+        focusOnOpen: note.focusOnOpen,
+        renameOnOpen: note.renameOnOpen,
+      };
 
-    const timestamp = nowMs();
-    tabs[incomingTabId] = {
-      id: incomingTabId,
-      path: note.path,
-      title: note.title ?? titleFromPath(note.path),
-      leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
-      viewMode: "edit",
-      isPinned: true,
-      isPreview: false,
-      isDirty: false,
-      createdAt: timestamp,
-      lastAccessedAt: timestamp,
-      line: note.line,
-      focusOnOpen: note.focusOnOpen,
-      renameOnOpen: note.renameOnOpen,
-    };
+      const root = mapLeaf(state.root, state.activePaneId, (leaf) => ({
+        ...leaf,
+        tabGroup: {
+          ...leaf.tabGroup,
+          tabIds: [...leaf.tabGroup.tabIds, incomingTabId],
+          activeTabId: activate ? incomingTabId : leaf.tabGroup.activeTabId,
+        },
+      }));
 
-    pane.tabIds = [...pane.tabIds, incomingTabId];
-    if (activate) pane.activeTabId = incomingTabId;
-
-    set({
-      tabs,
-      pane,
-      persistVersion: get().persistVersion + 1,
+      return {
+        tabs,
+        root,
+        persistVersion: get().persistVersion + 1,
+      };
     });
 
     return incomingTabId;
   },
+
   openView: (leafType, options) => {
     const activate = options?.activate ?? true;
     const path = options?.path ?? `view://${leafType}`;
@@ -257,35 +271,59 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       if (activate) get().activateTab(existing.id);
       return existing.id;
     }
-    const current = get();
-    const tabs = { ...current.tabs };
-    const pane = { ...current.pane };
-    const timestamp = nowMs();
-    tabs[incomingTabId] = {
-      id: incomingTabId,
-      path,
-      title: options?.title ?? leafType,
-      leafType,
-      viewMode: "edit",
-      isPinned: true,
-      isPreview: false,
-      isDirty: false,
-      createdAt: timestamp,
-      lastAccessedAt: timestamp,
-    };
-    pane.tabIds = [...pane.tabIds, incomingTabId];
-    if (activate) pane.activeTabId = incomingTabId;
-    set({ tabs, pane, persistVersion: get().persistVersion + 1 });
+
+    set((state) => {
+      const tabs = { ...state.tabs };
+      const timestamp = nowMs();
+      tabs[incomingTabId] = {
+        id: incomingTabId,
+        path,
+        title: options?.title ?? leafType,
+        leafType,
+        viewMode: "edit",
+        isPinned: true,
+        isPreview: false,
+        isDirty: false,
+        createdAt: timestamp,
+        lastAccessedAt: timestamp,
+      };
+
+      const root = mapLeaf(state.root, state.activePaneId, (leaf) => ({
+        ...leaf,
+        tabGroup: {
+          ...leaf.tabGroup,
+          tabIds: [...leaf.tabGroup.tabIds, incomingTabId],
+          activeTabId: activate ? incomingTabId : leaf.tabGroup.activeTabId,
+        },
+      }));
+
+      return {
+        tabs,
+        root,
+        persistVersion: get().persistVersion + 1,
+      };
+    });
     return incomingTabId;
   },
 
   activateTab: (tabId) => {
     set((state) => {
       const tab = state.tabs[tabId];
-      if (!tab || !state.pane.tabIds.includes(tabId)) return state;
-      if (state.pane.activeTabId === tabId) return state;
+      if (!tab) return state;
+      const leaf = findLeafByTab(state.root, tabId);
+      if (!leaf) return state;
+      if (
+        state.activePaneId === leaf.id &&
+        leaf.tabGroup.activeTabId === tabId
+      ) {
+        return state;
+      }
       return {
-        pane: { ...state.pane, activeTabId: tabId },
+        root: mapLeaf(state.root, leaf.id, (l) => ({
+          ...l,
+          tabGroup: { ...l.tabGroup, activeTabId: tabId },
+        })),
+        activePaneId: leaf.id,
         tabs: {
           ...state.tabs,
           [tabId]: { ...tab, lastAccessedAt: nowMs() },
@@ -302,15 +340,56 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       if (!tab) return state;
       if (!force && tab.isDirty) return state;
 
-      const nextTabs = { ...state.tabs };
-      delete nextTabs[tabId];
+      const tabs = { ...state.tabs };
+      delete tabs[tabId];
 
-      const pane = { ...state.pane };
-      removeTabFromPane(pane, tabId);
+      const leaf = findLeafByTab(state.root, tabId);
+      if (!leaf) return { ...state, tabs };
+
+      const group = leaf.tabGroup;
+      const remaining = group.tabIds.filter((id) => id !== tabId);
+      const leaves = collectLeaves(state.root);
+      const isLastInPane = remaining.length === 0;
+      const onlyPane = leaves.length === 1;
+
+      // Closing the last tab of a pane closes the pane itself (ADR-032
+      // validation), unless it is the only pane left.
+      if (isLastInPane && !onlyPane) {
+        const newRoot = removeLeaf(state.root, leaf.id);
+        if (!newRoot) return { ...state, tabs };
+        const remainingLeaves = collectLeaves(newRoot);
+        const activePaneId =
+          state.activePaneId === leaf.id
+            ? (remainingLeaves[0]?.id ?? state.activePaneId)
+            : state.activePaneId;
+        return {
+          tabs,
+          root: newRoot,
+          activePaneId,
+          persistVersion: state.persistVersion + 1,
+        };
+      }
+
+      const removedIndex = group.tabIds.indexOf(tabId);
+      const activeTabId =
+        group.activeTabId === tabId
+          ? (remaining[removedIndex] ?? remaining[removedIndex - 1] ?? null)
+          : group.activeTabId;
 
       return {
-        tabs: nextTabs,
-        pane,
+        tabs,
+        root: mapLeaf(state.root, leaf.id, (l) => ({
+          ...l,
+          tabGroup: {
+            ...l.tabGroup,
+            tabIds: remaining,
+            activeTabId,
+            previewTabId:
+              l.tabGroup.previewTabId === tabId
+                ? null
+                : l.tabGroup.previewTabId,
+          },
+        })),
         persistVersion: state.persistVersion + 1,
       };
     });
@@ -318,20 +397,27 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
 
   closeOtherTabs: (tabId) => {
     set((state) => {
-      const pane = state.pane;
-      if (!pane.tabIds.includes(tabId)) return state;
-      const nextTabs = { ...state.tabs };
-      for (const candidateId of pane.tabIds) {
-        if (candidateId !== tabId) delete nextTabs[candidateId];
+      const leaf = findLeafByTab(state.root, tabId);
+      if (!leaf) return state;
+
+      const tabs = { ...state.tabs };
+      for (const candidateId of leaf.tabGroup.tabIds) {
+        if (candidateId !== tabId) delete tabs[candidateId];
       }
+
       return {
-        tabs: nextTabs,
-        pane: {
-          ...pane,
-          tabIds: [tabId],
-          activeTabId: tabId,
-          previewTabId: pane.previewTabId === tabId ? tabId : null,
-        },
+        tabs,
+        root: mapLeaf(state.root, leaf.id, (l) => ({
+          ...l,
+          tabGroup: {
+            ...l.tabGroup,
+            tabIds: [tabId],
+            activeTabId: tabId,
+            previewTabId:
+              l.tabGroup.previewTabId === tabId ? tabId : null,
+          },
+        })),
+        activePaneId: leaf.id,
         persistVersion: state.persistVersion + 1,
       };
     });
@@ -339,29 +425,38 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
 
   closeTabsToRight: (tabId) => {
     set((state) => {
-      const pane = state.pane;
-      const currentIndex = pane.tabIds.indexOf(tabId);
+      const leaf = findLeafByTab(state.root, tabId);
+      if (!leaf) return state;
+
+      const currentIndex = leaf.tabGroup.tabIds.indexOf(tabId);
       if (currentIndex === -1) return state;
-      const keepIds = pane.tabIds.slice(0, currentIndex + 1);
+      const keepIds = leaf.tabGroup.tabIds.slice(0, currentIndex + 1);
       const keepSet = new Set(keepIds);
-      const nextTabs = { ...state.tabs };
-      for (const candidateId of pane.tabIds) {
-        if (!keepSet.has(candidateId)) delete nextTabs[candidateId];
+
+      const tabs = { ...state.tabs };
+      for (const candidateId of leaf.tabGroup.tabIds) {
+        if (!keepSet.has(candidateId)) delete tabs[candidateId];
       }
+
       return {
-        tabs: nextTabs,
-        pane: {
-          ...pane,
-          tabIds: keepIds,
-          activeTabId:
-            pane.activeTabId && keepSet.has(pane.activeTabId)
-              ? pane.activeTabId
-              : tabId,
-          previewTabId:
-            pane.previewTabId && keepSet.has(pane.previewTabId)
-              ? pane.previewTabId
-              : null,
-        },
+        tabs,
+        root: mapLeaf(state.root, leaf.id, (l) => ({
+          ...l,
+          tabGroup: {
+            ...l.tabGroup,
+            tabIds: keepIds,
+            activeTabId:
+              l.tabGroup.activeTabId && keepSet.has(l.tabGroup.activeTabId)
+                ? l.tabGroup.activeTabId
+                : tabId,
+            previewTabId:
+              l.tabGroup.previewTabId &&
+              keepSet.has(l.tabGroup.previewTabId)
+                ? l.tabGroup.previewTabId
+                : null,
+          },
+        })),
+        activePaneId: leaf.id,
         persistVersion: state.persistVersion + 1,
       };
     });
@@ -411,16 +506,19 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     set((state) => {
       const tab = state.tabs[tabId];
       if (!tab) return state;
-      const pane = state.pane;
+      const leaf = findLeafByTab(state.root, tabId);
       return {
         tabs: {
           ...state.tabs,
           [tabId]: { ...tab, isPinned: true, isPreview: false },
         },
-        pane: {
-          ...pane,
-          previewTabId: pane.previewTabId === tabId ? null : pane.previewTabId,
-        },
+        root:
+          leaf && leaf.tabGroup.previewTabId === tabId
+            ? mapLeaf(state.root, leaf.id, (l) => ({
+                ...l,
+                tabGroup: { ...l.tabGroup, previewTabId: null },
+              }))
+            : state.root,
         persistVersion: state.persistVersion + 1,
       };
     });
@@ -450,24 +548,30 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     }
   },
 
-  moveTabWithinPane: (fromIndex, toIndex) => {
+  moveTabWithinPane: (fromIndex, toIndex, paneId) => {
     set((state) => {
-      const pane = state.pane;
+      const targetId = paneId ?? state.activePaneId;
+      const leaf = findLeaf(state.root, targetId);
+      if (!leaf) return state;
+      const tabIds = leaf.tabGroup.tabIds;
       if (
         fromIndex < 0 ||
-        fromIndex >= pane.tabIds.length ||
+        fromIndex >= tabIds.length ||
         toIndex < 0 ||
-        toIndex >= pane.tabIds.length ||
+        toIndex >= tabIds.length ||
         fromIndex === toIndex
       ) {
         return state;
       }
-      const tabIds = [...pane.tabIds];
-      const [moved] = tabIds.splice(fromIndex, 1);
-      const insertIndex = Math.max(0, Math.min(toIndex, tabIds.length));
-      tabIds.splice(insertIndex, 0, moved);
+      const next = [...tabIds];
+      const [moved] = next.splice(fromIndex, 1);
+      const insertIndex = Math.max(0, Math.min(toIndex, next.length));
+      next.splice(insertIndex, 0, moved);
       return {
-        pane: { ...pane, tabIds },
+        root: mapLeaf(state.root, targetId, (l) => ({
+          ...l,
+          tabGroup: { ...l.tabGroup, tabIds: next },
+        })),
         persistVersion: state.persistVersion + 1,
       };
     });
@@ -518,15 +622,25 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
       const leaves = collectLeaves(state.root);
       if (leaves.length <= 1) return state;
 
+      const targetLeaf = leaves.find((leaf) => leaf.id === paneId);
       const newRoot = removeLeaf(state.root, paneId);
       if (!newRoot) return state; // should never happen (last pane guard)
 
-      // Activate the first available leaf
+      // The pane's tabs close with it.
+      const tabs = { ...state.tabs };
+      if (targetLeaf) {
+        for (const tabId of targetLeaf.tabGroup.tabIds) delete tabs[tabId];
+      }
+
+      // If the active pane closed, activate the first remaining leaf.
       const remaining = collectLeaves(newRoot);
       const activePaneId =
-        remaining.length > 0 ? remaining[0].id : state.activePaneId;
+        state.activePaneId === paneId
+          ? (remaining[0]?.id ?? state.activePaneId)
+          : state.activePaneId;
 
       return {
+        tabs,
         root: newRoot,
         activePaneId,
         persistVersion: state.persistVersion + 1,

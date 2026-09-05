@@ -1,7 +1,6 @@
 import type {
   OpenableTabInput,
   TabPaneId,
-  TabPane,
   TabId,
   TabModel,
   TabsWorkspaceSnapshot,
@@ -9,7 +8,6 @@ import type {
   LayoutNode,
 } from "../types";
 
-export type { TabPane };
 export type { TabPaneId };
 export type { PaneId };
 export type { LayoutNode };
@@ -24,7 +22,6 @@ export interface OpenTabOptions {
 
 export interface TabsState {
   tabs: Record<TabId, TabModel>;
-  pane: TabPane;
   /**
    * Monotonically increasing version counter bumped on workspace mutations
    * that must be persisted. Dirty state remains ephemeral because the editor
@@ -32,7 +29,9 @@ export interface TabsState {
    */
   persistVersion: number;
 
-  // Split Pane Layout Tree (ADR-032)
+  // Split Pane Layout Tree (ADR-032) — the single source of truth. There is
+  // no derived flat pane; consumers resolve a leaf's tab group via
+  // `findLeaf(root, paneId)`.
   root: LayoutNode;
   activePaneId: PaneId;
 
@@ -52,7 +51,12 @@ export interface TabsState {
   closeTab: (tabId: TabId, options?: CloseTabOptions) => void;
   closeOtherTabs: (tabId: TabId) => void;
   closeTabsToRight: (tabId: TabId) => void;
-  moveTabWithinPane: (fromIndex: number, toIndex: number) => void;
+  /** Reorder tabs within a pane's group (`paneId` defaults to the active pane). */
+  moveTabWithinPane: (
+    fromIndex: number,
+    toIndex: number,
+    paneId?: PaneId,
+  ) => void;
   /** Repoint open tabs after files/folders moved on disk. Ids are STABLE:
    * only path/title change, so leaf caches keyed by id survive the move
    * and dirty state is preserved. */
