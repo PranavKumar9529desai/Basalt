@@ -199,7 +199,8 @@ function buildPreviewState(
   state: EditorState,
   hasFocus: boolean,
 ): PreviewState {
-  const { collector, finish, finishAtomic } = makeCollector();
+    const t0 = performance.now();
+    const { collector, finish, finishAtomic } = makeCollector();
   const headPos = state.selection.main.head;
   const doc = state.doc;
   // Reading mode never reveals raw syntax, regardless of caret/focus — force
@@ -234,6 +235,7 @@ function buildPreviewState(
     doc.length <= LAZY_DOC_THRESHOLD ? FULL_PARSE_BUDGET_MS : PARSE_BUDGET_MS;
   const tree = ensureSyntaxTree(state, doc.length, budget);
   if (!tree) {
+    console.log(`[live-preview] incomplete tree — no decorations (budget hit) docLen=${doc.length}`);
     return {
       decorations: Decoration.none,
       atomicRanges: Decoration.none,
@@ -345,6 +347,11 @@ function buildPreviewState(
   // contract of isInCodeBlock deserves a cheap defensive sort.
   sortCodeBlockRanges(ctx.codeBlockRanges);
 
+  const elapsed = performance.now() - t0;
+  console.log(
+    `[live-preview] walk docLen=${doc.length} mode=${state.facet(renderModeFacet)} elapsed=${elapsed.toFixed(1)}ms`,
+  );
+
   return {
     decorations: finish(),
     atomicRanges: finishAtomic(),
@@ -399,6 +406,16 @@ export const livePreviewField = StateField.define<PreviewState>({
       // and they are off the keystroke path. Pure-change transactions
       // (typing) have no explicit selection and take the lazy path.
       !tr.selection;
+
+    const path = lazy
+      ? tr.docChanged
+        ? "lazy-map"
+        : "no-op"
+      : "full-rebuild";
+    if (path !== "no-op")
+      console.log(
+        `[live-preview] field.update path=${path} docChanged=${tr.docChanged} selection=${!!tr.selection} forced=${forced} focusChanged=${focusChanged}`,
+      );
 
     if (!lazy) {
       // Full rebuild: small docs, idle-tick catch-up, focus flips, or an
