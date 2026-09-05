@@ -78,7 +78,7 @@ API: `register(leaf)`, `unregister(type)`, `get(type)`,
 extension.
 
 `LeafDescriptor` fields: `type`, `name`, optional `icon`, `extensions`,
-`component: ComponentType<LeafProps>` where `LeafProps = { tab: LeafTabInfo }`.
+`component: ComponentType<LeafProps>` where `LeafProps = { tab: LeafTabInfo; paneId: string }`.
 
 `LeafTabInfo` is the minimal structural tab info passed to a leaf
 (`id`, `path`, `title`, optional `viewMode`, transient `line` and

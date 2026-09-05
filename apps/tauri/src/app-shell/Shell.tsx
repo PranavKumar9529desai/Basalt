@@ -140,7 +140,7 @@ function WorkspaceShell({
                   </div>
                 }
               >
-                <LeafComponent tab={tab} />
+                <LeafComponent tab={tab} paneId={ctx.paneId} />
               </Suspense>
             </LeafServicesProvider>
           </div>

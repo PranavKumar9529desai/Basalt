@@ -23,6 +23,9 @@ export interface LeafTabInfo {
 
 export interface LeafProps {
   tab: LeafTabInfo;
+  /** Id of the leaf's pane — lets leaves register per-pane singletons
+   * (e.g. an editor controller) against this pane's lifecycle. */
+  paneId: string;
 }
 
 /** Result of a leaf-initiated note rename (inline title commit). */
