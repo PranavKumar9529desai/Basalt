@@ -17,7 +17,7 @@ import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
-import { useTabsStore, TabsBar, PaneRenderer, type LeafRenderContext } from "../features/tabs";
+import { useTabsStore, TabsBar, PaneRenderer, TabDragGhost, type LeafRenderContext } from "../features/tabs";
 import { parseFrontmatter } from "../features/editor";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
@@ -137,7 +137,11 @@ function WorkspaceShell({
             vaultPath={ws.vaultPath}
             canRename={leaf.type === "markdown"}
           />
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div
+            className="relative flex min-h-0 flex-1 flex-col"
+            data-basalt-pane-body=""
+            data-pane-id={ctx.paneId}
+          >
             <LeafServicesProvider services={leafServices}>
               <Suspense
                 fallback={
@@ -214,6 +218,8 @@ function WorkspaceShell({
         onSearchOpen={ws.openNote}
         previewDeps={previewDeps}
       />
+
+      <TabDragGhost />
     </div>
   );
 }

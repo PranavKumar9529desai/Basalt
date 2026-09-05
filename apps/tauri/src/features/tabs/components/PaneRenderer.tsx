@@ -73,6 +73,8 @@ function LeafPane({
   return (
     <section
       className="relative flex flex-1 min-h-0 min-w-0 flex-col"
+      data-basalt-pane-body=""
+      data-pane-id={node.id}
       // Focus anywhere inside a leaf (its tab bar, header, or editor) — or a
       // plain mousedown on blank pane space — focuses that pane, the only way
       // `activePaneId` tracks user intent.

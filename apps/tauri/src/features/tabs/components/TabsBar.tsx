@@ -1,5 +1,5 @@
 import { TabsBar as UITabsBar } from "@workspace/ui/components/tabs";
-import { type DragEvent, useCallback, useMemo } from "react";
+import { type DragEvent, type PointerEvent, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
@@ -31,16 +31,20 @@ export function TabsBar({
   // per selector call, defeating useSyncExternalStore's snapshot caching and
   // causing an infinite render loop ("Maximum depth reached"). The tab
   // reference list is derived below in a useMemo instead.
-  const { tabIds, tabsRef, activeTabId } = useTabsStore(
+  const { tabIds, tabsRef, activeTabId, storeActivePaneId } = useTabsStore(
     useShallow((s) => {
       const leaf = findLeaf(s.root, paneId ?? s.activePaneId);
       return {
         tabIds: leaf?.tabGroup.tabIds ?? [],
         tabsRef: s.tabs,
         activeTabId: leaf?.tabGroup.activeTabId ?? null,
+        storeActivePaneId: s.activePaneId,
       };
     }),
   );
+  const resolvedPaneId = paneId ?? storeActivePaneId;
+  const tabDnD = useTabDnD();
+  const hoverTarget = tabDnD.dragState?.hoverTarget ?? null;
   const tabRefs = useMemo(
     () =>
       tabIds
@@ -58,10 +62,20 @@ export function TabsBar({
         isPinned: tab.isPinned,
         isPreview: tab.isPreview,
         canClose: true,
+        dropEdge:
+          hoverTarget?.kind === "tab" &&
+          hoverTarget.paneId === resolvedPaneId &&
+          hoverTarget.tabId === tab.id
+            ? hoverTarget.edge
+            : undefined,
       })),
-    [tabRefs, activeTabId],
+    [tabRefs, activeTabId, hoverTarget, resolvedPaneId],
   );
-  const tabDnD = useTabDnD();
+  const onTabPointerDown = useCallback(
+    (tabId: string, event: PointerEvent<HTMLElement>) =>
+      tabDnD.handleTabPointerDown(tabId, event),
+    [tabDnD],
+  );
 
   const onSelect = useCallback(
     (tabId: string) => onSelectTab(tabId),
@@ -107,6 +121,8 @@ export function TabsBar({
       onTabDragOver={onTabDragOver}
       onTabDrop={onTabDrop}
       onTabDragEnd={onTabDragEnd}
+      dataPaneId={resolvedPaneId}
+      onTabPointerDown={onTabPointerDown}
     />
   );
 }

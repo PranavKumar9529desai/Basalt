@@ -2,6 +2,7 @@ export { TabsBar } from "./components/TabsBar";
 export { PaneRenderer } from "./components/PaneRenderer";
 export type { LeafRenderContext } from "./components/PaneRenderer";
 export { SplitPane } from "./components/SplitPane";
+export { TabDragGhost } from "./components/TabDragGhost";
 export { useTabDnD } from "./hooks/useTabDnD";
 export { useTabPersistence } from "./hooks/useTabPersistence";
 export { getTabByPath } from "./selectors";

@@ -239,4 +239,7 @@ All validation items pass in the implementation (branch `feat/split-pane-layout`
 7. ✅ **Edge-drop split zones**: `EdgeDropZones` overlay on every leaf while a tab
    drags (shared module-level drag state in `useTabDnD`); left/right/top/bottom
    wedges call `moveTabToNewPane` with placement `before`/`after` so the fresh
-   pane lands on the hovered side
+   pane lands on the hovered side. The on-hover preview always advertises the
+   real result footprint (half of the leaf — `splitLeaf` creates equal 50/50
+   children, matching VS Code's `editorDropTarget` overlay and Obsidian's drop
+   zones), never the 25%/33% hit-test wedges that merely select the direction.

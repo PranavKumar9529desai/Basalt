@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@workspace/ui/components/ui/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
-import { memo, type DragEvent, type MouseEvent } from "react";
+import { memo, type DragEvent, type MouseEvent, type PointerEvent } from "react";
 import type { TabItemData } from "./types";
 
 export interface TabItemProps {
@@ -16,6 +16,9 @@ export interface TabItemProps {
   onClose?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
+  /** Which pane this pill belongs to, for pointer-drag hit-testing. */
+  dataPaneId?: string;
+  onPointerDown?: (tabId: string, event: PointerEvent<HTMLElement>) => void;
   onDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
@@ -31,6 +34,8 @@ export const TabItem = memo(function TabItem({
   onSelect,
   onClose,
   onContextMenu,
+  dataPaneId,
+  onPointerDown,
   onDragStart,
   onDragOver,
   onDrop,
@@ -48,6 +53,7 @@ export const TabItem = memo(function TabItem({
           <div
             ref={elementRef}
             data-tab-id={tab.id}
+            data-tab-pane-id={dataPaneId}
             role="tab"
             tabIndex={tab.disabled ? -1 : tab.isActive ? 0 : -1}
             aria-selected={tab.isActive}
@@ -65,7 +71,10 @@ export const TabItem = memo(function TabItem({
               className,
             )}
             onContextMenu={(event) => onContextMenu?.(tab.id, event)}
-            draggable={!tab.disabled}
+            onPointerDown={(event) => {
+              onPointerDown?.(tab.id, event);
+            }}
+            draggable={false}
             onDragStart={(event) => onDragStart?.(tab.id, event)}
             onDragEnter={(event) => {
               event.preventDefault();

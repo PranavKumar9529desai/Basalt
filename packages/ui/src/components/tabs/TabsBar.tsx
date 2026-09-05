@@ -7,7 +7,7 @@ import {
 } from "@workspace/ui/components/ui/command";
 import { Separator } from "@workspace/ui/components/ui/separator";
 import { cn } from "@workspace/ui/lib/utils";
-import type { DragEvent, MouseEvent, ReactNode } from "react";
+import type { DragEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
@@ -21,6 +21,9 @@ export interface TabsBarProps {
   onCloseTab?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onTabContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
+  /** Pane id stamped on every pill (`data-tab-pane-id`) for pointer drag hit-testing. */
+  dataPaneId?: string;
+  onTabPointerDown?: (tabId: string, event: PointerEvent<HTMLElement>) => void;
   onTabDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onTabDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onTabDrop?: (
@@ -44,6 +47,8 @@ interface TabItemCellProps {
   onClose?: (tabId: string) => void;
   onPinToggle?: (tabId: string) => void;
   onContextMenu?: (tabId: string, event: MouseEvent<HTMLDivElement>) => void;
+  dataPaneId?: string;
+  onPointerDown?: (tabId: string, event: PointerEvent<HTMLElement>) => void;
   onDragStart?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDragOver?: (tabId: string, event: DragEvent<HTMLElement>) => void;
   onDrop?: (tabId: string, event: DragEvent<HTMLElement>) => void;
@@ -59,6 +64,8 @@ const TabItemCell = memo(function TabItemCell({
   onClose,
   onPinToggle,
   onContextMenu,
+  dataPaneId,
+  onPointerDown,
   onDragStart,
   onDragOver,
   onDrop,
@@ -79,6 +86,8 @@ const TabItemCell = memo(function TabItemCell({
       onClose={onClose}
       onPinToggle={onPinToggle}
       onContextMenu={onContextMenu}
+      dataPaneId={dataPaneId}
+      onPointerDown={onPointerDown}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
@@ -95,6 +104,8 @@ export function TabsBar({
   onCloseTab,
   onPinToggle,
   onTabContextMenu,
+  dataPaneId,
+  onTabPointerDown,
   onTabDragStart,
   onTabDragOver,
   onTabDrop,
@@ -231,12 +242,15 @@ export function TabsBar({
               onClose={onCloseTab}
               onPinToggle={onPinToggle}
               onContextMenu={onTabContextMenu}
+              dataPaneId={dataPaneId}
+              onPointerDown={onTabPointerDown}
               onDragStart={onTabDragStart}
               onDragOver={handleInternalDragOver}
               onDrop={handleInternalDrop}
               onDragEnd={handleInternalDragEnd}
               showDropIndicator={
-                dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined
+                tab.dropEdge ??
+                (dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined)
               }
               hidden={
                 index < visibleTabStart ||
