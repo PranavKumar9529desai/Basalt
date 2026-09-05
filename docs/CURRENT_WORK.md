@@ -52,6 +52,41 @@ tests 275/275, `cargo test --workspace`, oxlint + tsc clean, clippy clean.
 
 ---
 
+## `packages/editor` code-review workstream — DONE (per-phase commits)
+
+**Branch:** `feat/adr34-embed-rendering` (on top of ADR-034)
+**Status:** All five phases committed; editor suite green (191/191 excluding the
+3 pre-existing `table-widget.test.ts` embed failures owned by the concurrent
+session), oxlint + `tsc --noEmit` clean in both `packages/editor` and `apps/tauri`.
+
+### Commits (newest first)
+
+- `00ec6e9` fix(editor): drop stale DQL paints when the widget was replaced
+  mid-query — `toDOM` async `.then/.catch` bail when the element is detached or
+  the query text no longer matches; query still cached for later renders.
+- `1c1f8a2` test(editor): drive live-preview update paths + idle scheduler
+  through a real EditorView — lazy-map path (widgetModels preserved by
+  reference), >48KB threshold rebuilds, `PreviewScheduler` deferred convergence
+  (polling, not wall-clock).
+- `ec856d3` feat(editor): route external links through injected opener
+  (`openExternalLinkFacet`, Tauri `openUrl`) — never `window.open`.
+- `2d88c9b` perf(editor): cap huge-doc parse budget at ~1 frame; scheduler loop
+  re-arms while `complete:false` (fixed a latent convergence gap).
+- `6c48f6c` perf(editor): region-slice frontmatter parse to the block span, not
+  full-doc `toString()`.
+
+### Notes
+
+- `docs/packages-code-review.md` §2/§3/§6/§12 statuses updated for these fixes.
+- **Known red on this branch (NOT mine):** `tests/block-widgets/table-widget.test.ts`
+  has 3 failing embed tests from the concurrent ADR-034 table-embeds work —
+  exclude when running the suite (`vitest run --exclude
+  tests/block-widgets/table-widget.test.ts`).
+- Concurrent session's untracked files remain: `crates/README.md`,
+  `crates/basalt-tables/tests/complex_queries.rs`, `docs/plan/`.
+
+---
+
 ## Split Pane Layout Tree (ADR-032) — COMPLETE
 
 **Branch:** `feat/split-pane-layout`

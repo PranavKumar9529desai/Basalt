@@ -83,7 +83,7 @@ System B commands carry a dead `hotkeys` field silently dropped (not in `Command
 | **Medium** | `ContextMenu.tsx` memoizes commands with `[]` deps — format/editor commands stale if editor mounts after context menu | `apps/tauri/.../ContextMenu.tsx:38` |
 | **Medium** | `resolveRefs()` returns entire original string when a `{ref}` doesn't resolve, corrupting the whole line | `packages/theme/build.ts` |
 | **Medium** | `CommandProvider` / `useCommandService` hook is dead — never consumed, wraps tree for nothing | `packages/commands/src/react.tsx` |
-| **Low** | `FrontmatterWidget.eq()` uses `JSON.stringify()` for comparison — O(n) + temp string per CM6 update | `packages/editor/src/frontmatter-widget.ts:127` |
+| **Low** | `FrontmatterWidget.eq()` uses `JSON.stringify()` for comparison — O(n) + temp string per CM6 update | `packages/editor/src/frontmatter-widget.ts:127` — ✅ FIXED (ADR-030 Phase 2: field-wise compare via `frontmatterValuesEqual`) |
 | **Low** | Phantom `./create-extensions` export in `packages/editor/package.json` (file does not exist) | `packages/editor/package.json:9` |
 | **Low** | `@uiw/react-codemirror` listed as dependency but never imported in `packages/editor` | `packages/editor/package.json:27` |
 | **Low** | README references nonexistent `matchesHotkey` function | `packages/keybindings/README.md:28,41` |
@@ -96,16 +96,16 @@ System B commands carry a dead `hotkeys` field silently dropped (not in `Command
 
 ### High Priority
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| `ensureSyntaxTree(state, doc.length, 300)` blocks main thread up to 300ms on first render of huge docs | `packages/editor/src/preview/live-preview.ts:206` | Jank spike on 25k+ note open |
-| Frontmatter `parse()` calls `state.doc.toString()` — full 100KB+ string alloc for top-of-file YAML | `packages/editor/src/block-widgets/frontmatter.ts:267` | Should use `state.doc.sliceString(0, closingFenceEnd)` |
+| Issue | Location | Impact | Status |
+|-------|----------|--------|--------|
+| `ensureSyntaxTree(state, doc.length, 300)` blocks main thread up to 300ms on first render of huge docs | `packages/editor/src/preview/live-preview.ts:206` | Jank spike on 25k+ note open | ✅ FIXED (2026-09-05, `2d88c9b`): doc-size-adaptive budget — small docs keep 300ms, huge docs cap at ~1 frame (16ms) and converge via the idle `PreviewScheduler` loop |
+| Frontmatter `parse()` calls `state.doc.toString()` — full 100KB+ string alloc for top-of-file YAML | `packages/editor/src/block-widgets/frontmatter.ts:267` | Should use `state.doc.sliceString(0, closingFenceEnd)` | ✅ FIXED (2026-09-05, `6c48f6c`): region-slices `sliceString(node.from, node.to)` — `YAMLFrontMatter` is always top-of-file so spans are identical to full-parse |
 
 ### Medium Priority
 
 | Issue | Location |
 |-------|----------|
-| `TAG_RE` regex created per line per visible update (should be module-scoped) | `packages/editor/src/preview/inline-marks.ts:122` |
+| `TAG_RE` regex created per line per visible update (should be module-scoped) | `packages/editor/src/preview/inline-marks.ts:122` — ✅ FIXED: module-scoped `TAG_RE` |
 | `commandService.getCommands()` allocates + filters array on every keydown in keybinding service | `packages/keybindings/src/keybinding-service.ts:84` |
 | `keybinding-service.ts` re-sorts bindings + re-parses hotkey strings on every keystroke | `packages/keybindings/src/keybinding-service.ts:64-93` |
 | Hover flag fill O(n) per mousemove using `Array.includes` instead of Set | `packages/graph` consumer `Graph.tsx:866` |
@@ -193,14 +193,15 @@ System B commands carry a dead `hotkeys` field silently dropped (not in `Command
 
 ### Other
 
-| Issue | Severity |
-|-------|----------|
-| Phantom `./create-extensions` export in `package.json` | Low |
-| Stale `@uiw/react-codemirror` dependency (unused in package) | Low |
-| `FrontmatterWidget.eq()` uses `JSON.stringify()` comparison | Medium |
-| `syntaxHighlighting()` called redundantly 3x — should be module-scoped | Low |
-| `FrontmatterWidget.toDOM()` uses `querySelectorAll` + `Array.from` on every ArrowUp/Down | Low |
-| `defaultHighlightStyleOverride` exported in public barrel but only used internally | Low |
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Phantom `./create-extensions` export in `package.json` | Low | Some fixed — see §2 |
+| Stale `@uiw/react-codemirror` dependency (unused in package) | Low | Some fixed — see §2 |
+| Reading-mode external links opened with `window.open` — wrong inside a Tauri WebView (no host-browser routing) | Medium | ✅ FIXED (2026-09-05, `ec856d3`): `openExternalLinkFacet` injected via `EditorConfig.openExternalLink` (feature layer supplies `@tauri-apps/plugin-opener` `openUrl`); no-op default |
+| `FrontmatterWidget.eq()` uses `JSON.stringify()` comparison | Medium | ✅ FIXED (ADR-030 Phase 2): field-wise compare |
+| `syntaxHighlighting()` called redundantly 3x — should be module-scoped | Low | 🔄 still open |
+| `FrontmatterWidget.toDOM()` uses `querySelectorAll` + `Array.from` on every ArrowUp/Down | Low | 🔄 still open |
+| `defaultHighlightStyleOverride` exported in public barrel but only used internally | Low | 🔄 still open |
 
 ---
 
@@ -274,17 +275,23 @@ System B commands carry a dead `hotkeys` field silently dropped (not in `Command
 | # | Action | Impact | Effort |
 |---|--------|--------|--------|
 | 1 | Delete theme dual-write — keep sole output in `globals.css`, remove `tokens.css` and dead exports | Eliminates active drift | Small |
-| 2 | Extract editor shared utilities — `escapeHtml`, `isFrontmatterObject`, `getVariantKey`, wikilink scan helper | Removes 6 duplications | Medium |
+| 2 | Extract editor shared utilities — `escapeHtml`, `isFrontmatterObject`, `getVariantKey`, wikilink scan helper | Removes 6 duplications | Medium | ✅ Done: `escapeHtml` centralized in `block-widgets/utils.ts`; `isFrontmatterObject`/`getVariantKey` removed by ADR-030 Phase 2 (value-type unification); embed classification unified in `input/embed-utils.ts`; block-widget registration deduped via `commonBlockWidgetExtensions()` |
 | 3 | Fix `ContextMenu.tsx` stale memoization (functional bug) | Correctness | Small |
 | 4 | Fix `resolveRefs` bug in theme build | Correctness | Small |
 | 5 | Decompose `TabsBar.tsx` — extract overflow, DnD, and dropdown into sub-modules or hooks | Maintainability | Large |
 | 6 | Add `--sat-*` Button variants to `button.tsx` | Stops 4+ inline override pattern | Medium |
 | 7 | Extract Dialog chrome wrapper from InputDialog/ConfirmDialog | Removes class duplication | Small |
-| 8 | Hoist `TAG_RE` regex and `codeSyntaxHighlightingExtension` to module scope | Low-hanging perf | Small |
+| 8 | Hoist `TAG_RE` regex and `codeSyntaxHighlightingExtension` to module scope | Low-hanging perf | Small | ✅ `TAG_RE` hoisted (remains: `codeSyntaxHighlightingExtension`) |
 | 9 | Gate `performance.mark/measure` behind `__DEV__` | Production cleanliness | Small |
 | 10 | Create `ContextMenuItemIcon` wrapper | Removes 11x repetition | Small |
 | 11 | Unify file-extension classification for embed plugins | Removes divergence risk | Small |
 | 12 | Add `hasCommand(id)` to `CommandService` for O(1) lookup | Hot-path perf | Small |
 | 13 | Pre-parse + cache sorted bindings in `KeybindingService` | Hot-path perf | Small |
 | 14 | Use Set for hover neighbors in Graph | Hot-path perf | Small |
-| 15 | Replace `JSON.stringify` in `FrontmatterWidget.eq()` | Per-update perf | Small |
+| 15 | Replace `JSON.stringify` in `FrontmatterWidget.eq()` | Per-update perf | Small | ✅ Done (ADR-030 Phase 2) |
+
+> **Session 2026-09-05 additions:** the two §3 High items plus §6's
+> `window.open`→`openExternalLinkFacet` routing are committed; the 
+> `PreviewScheduler` convergence loop, DQL stale-paint guard, and the new
+> live-preview orchestration tests (`tests/integration/live-preview-orchestration.test.ts`)
+> shipped alongside them.
