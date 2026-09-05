@@ -11,15 +11,15 @@ import { buildEmbedWidget } from "../input/embed-media";
 import { resolveAssetFacet } from "../types";
 
 /**
- * Live-preview embed handling — `![[target]]` off the caret's line renders as
- * real `<img>/<video>/<audio>` media (ADR-034 part C), revealing the raw
- * syntax for editing when the caret is ON it (WYSIWYM reveal, same contract
- * as list bullets/HR). Unresolvable targets keep a compact fallback chip —
- * never a broken media element. Reading mode is left untouched: the
- * reading-mode media plugin (`embed-media.ts`) owns that surface.
+ * Live-preview embed handling — `![[target]]` renders as real
+ * `<img>/<video>/<audio>` media in every caret state (ADR-034 part C; Obsidian
+ * parity — live preview is read-mostly for embeds, raw syntax is edited in
+ * source mode). Unresolvable targets keep a compact fallback chip — never a
+ * broken media element. Reading mode is left untouched: the reading-mode media
+ * plugin (`embed-media.ts`) owns that surface.
  *
- * Fused into live-preview's single tree walk so it lives on the same
- * `activeLine` as every other cursor-gated decoration.
+ * Fused into live-preview's single tree walk, so it happens in the same
+ * decoration pass as every other surface.
  */
 
 /** Class applied to the embed chip element. */
@@ -100,12 +100,15 @@ class EmbedChipWidget extends WidgetType {
 
 /**
  * Handles a `WikiLink` node that is an embed (`![[target]]`): replaces the
- * whole span with real media off the caret's line; unresolved targets fall
- * back to a chip. Raw syntax stays visible while the caret is on the embed's
- * line (mark-hiding mutes the brackets). Reading mode returns without
- * emitting anything — the reading-mode media plugin owns that span. Returns
- * true when a replace was emitted (or the node was an embed that was
- * intentionally left raw so children aren't double-handled).
+ * whole span with real media in every caret state (ADR-034 part C — live
+ * preview is read-mostly for embeds; the raw syntax is edited in source mode,
+ * so unlike bullets/HR there is no WYSIWYM reveal for valid media). Unresolved
+ * targets keep the chip fallback, and — because a broken embed still needs
+ * fixing — the caret reveal remains for them: raw source under the caret,
+ * chip off it. Reading mode returns without emitting anything — the
+ * reading-mode media plugin owns that span. Returns true when a replace was
+ * emitted (or the node was an embed that was intentionally left raw so
+ * children aren't double-handled).
  */
 export function handleEmbedNode(
   node: SyntaxNodeRef,
@@ -119,17 +122,18 @@ export function handleEmbedNode(
 
   if (ctx.state.facet(renderModeFacet) === "reading") return true;
 
+  const resolveAsset = ctx.state.facet(resolveAssetFacet);
+  const url = resolveAsset?.(embed.target);
+  if (url) {
+    collector.addReplace(embed.from, embed.to, buildEmbedWidget(url, embed.target));
+    return true;
+  }
+
   const onActiveLine = ctx.activeLine
     ? embed.from >= ctx.activeLine.from && embed.to <= ctx.activeLine.to
     : false;
   if (onActiveLine) return true;
 
-  const resolveAsset = ctx.state.facet(resolveAssetFacet);
-  const url = resolveAsset?.(embed.target);
-  if (url) {
-    collector.addReplace(embed.from, embed.to, buildEmbedWidget(url, embed.target));
-  } else {
-    collector.addReplace(embed.from, embed.to, new EmbedChipWidget(embed.target));
-  }
+  collector.addReplace(embed.from, embed.to, new EmbedChipWidget(embed.target));
   return true;
 }

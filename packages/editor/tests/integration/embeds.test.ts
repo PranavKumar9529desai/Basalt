@@ -99,13 +99,31 @@ describe("live-preview real media (ADR-034 part C)", () => {
     assertDecorations(report).toHaveReplace(11, 25, "EmbedChipWidget");
   });
 
-  it("reveals the raw syntax on the active line even when the target resolves", () => {
+  it("renders media even with the caret on the embed's active line (ADR-034)", () => {
     const doc = "![[attachments/photo.png]]";
     const { report } = testMarkdownFixture(doc, {
-      selection: 20,
+      selection: 20, // inside the embed span
       extensions: [resolvable],
     });
-    expect(report.replaces.some((r) => r.widget === "EmbedMediaWidget")).toBe(false);
-    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(false);
+    assertDecorations(report).toHaveReplace(0, 26, "EmbedMediaWidget");
+  });
+
+  it("keeps the raw source visible under the caret for broken embeds, chip off it", () => {
+    const never = resolveAssetFacet.of(() => null);
+    const doc = "![[ghost.png]]";
+    const onLine = testMarkdownFixture(doc, {
+      selection: 5,
+      extensions: [never],
+    });
+    expect(
+      onLine.report.replaces.some(
+        (r) => r.widget === "EmbedChipWidget" || r.widget === "EmbedMediaWidget",
+      ),
+    ).toBe(false);
+    const offLine = testMarkdownFixture("line above\n![[ghost.png]]", {
+      selection: 0,
+      extensions: [never],
+    });
+    assertDecorations(offLine.report).toHaveReplace(11, 25, "EmbedChipWidget");
   });
 });
