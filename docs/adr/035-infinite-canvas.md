@@ -1,6 +1,6 @@
 # ADR-035: Infinite Canvas — Spatial Note Layout
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-09-05
 **Extends:** ADR-018 (registry-driven workbench), ADR-020 (desktop-tier performance), ADR-029 (single renderer), ADR-032 (split pane layout tree), ADR-034 (embed rendering)
 

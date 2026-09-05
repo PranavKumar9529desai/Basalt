@@ -7,6 +7,31 @@
 
 ---
 
+## Infinite Canvas (ADR-035) — IN PROGRESS
+
+**Branch:** `feat/adr35-canvas-parse`
+**Status:** Phases 1–6 complete; ADR-035 moved Proposed → Accepted.
+
+### Commits
+
+- `4e43365` Phase 1 — `feat(canvas): add crates/basalt-canvas`. JSON Canvas
+  parse/serialize crate implementing the v1.0 spec. Types: CanvasDocument,
+  CanvasNode (text/file/link/group), CanvasEdge, CanvasColor (hex + presets),
+  Side, EndShape, BackgroundStyle. API: `parse()`, `serialize()`, `validate()`.
+  11 tests, clippy clean.
+- `6247b0a` Phase 2 — `feat(canvas): add packages/canvas-viewport`. WebGL2 rect
+  renderer: instanced quads (nodes/groups), instanced edge line-quads,
+  arrowheads. Premultiplied-alpha compositing, DPR-aware edge width, buffer
+  orphaning, context-loss tracking via events.
+- `cd3142b` Phase 3 — `feat(canvas): wire parse + viewport`. Tauri command
+  `parse_canvas`, `CanvasView.tsx` React leaf with rAF loop, pan/zoom, mock
+  canvas document, `.canvas` leaf registration.
+- `0ba9936` Phase 4–6 — `feat(canvas): interaction, content overlay, file I/O`.
+  Hover/select/drag interaction, DOM text overlay (titles, group labels),
+  `open_canvas`/`save_canvas` Tauri commands, file load on mount, debounced
+  save on drag end.
+
+
 ## Embed Rendering (ADR-034) — COMPLETE
 
 **Branch:** `feat/adr34-embed-rendering`
