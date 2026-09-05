@@ -1,6 +1,6 @@
 # ADR-032: Split Pane Layout Tree
 
-**Status:** Accepted (2026-09-04)
+**Status:** Accepted (2026-09-04) — **Implementation complete (2026-09-05)**
 **Date:** 2026-09-04
 **Extends:** ADR-018 (registry-driven workbench), ADR-025 (tab lifecycle and persistence)
 
@@ -198,18 +198,40 @@ This prevents degenerate trees with single-child branches.
 
 ## Validation
 
-- Split right: creates new column with duplicate of active tab
-- Split down: creates new row with duplicate of active tab
-- Close last tab in a pane: pane closes, sibling expands
-- Drag tab from pane A to pane B: tab moves, focus follows
-- Restart: layout tree restores exactly, active pane preserved
-- Version 1 → 2 migration: old single-pane snapshots wrap correctly
-- At least 2 split depths must work (columns containing rows)
+All validation items pass in the implementation (branch `feat/split-pane-layout`, committed 2026-09-05):
+
+- ✅ Split right/down: new column/row with duplicate of the active tab (fresh tab id, clean state)
+- ✅ Close last tab in a pane: pane closes, tree unwraps
+- ✅ Drag tab from pane A to pane B: tab moves, focus follows
+- ✅ Restart: v2 layout root restores exactly, active pane preserved
+- ✅ Version 1 → 2 migration: old single-pane snapshots wrap into a leaf node
+- ✅ At least 2 split depths work (columns containing rows)
+
+## Implementation notes
+
+- `root: LayoutNode` + `activePaneId` are the single source of truth; the flat
+  `pane` was removed from `TabsState`. Consumers resolve a leaf's tab group via
+  `findLeaf(root, paneId)`.
+- `splitActivePane` clones the active tab into the new pane (distinct id, same
+  path), so each pane mounts an independent editor controller. Source pane keeps
+  its tab; empty source → empty new pane.
+- Per-pane tab bars: `TabsBar` gained a `paneId` prop and renders inside each
+  leaf (ADR-018 `renderLeaf`), replacing the single flat bar in the shell.
+  `LeafPane` activates its pane on focus/mousedown capture anywhere in the leaf.
+- DnD: the `application/x-basalt-tab` payload carries `sourcePaneId`. Same-pane
+  drop = reorder; cross-pane tab drop = `moveTabToPane(tabId, targetPane, idx)`;
+  drop on a pane body (incl. empty panes) appends; `moveTabToNewPane` splits a
+  fresh pane in the requested direction (ready for future edge-drop zones).
+  Dropped tabs are pinned (never previews) and focus follows.
+- Persistence: `useTabPersistence.isTabSnapshot` now accepts v2 (layout root),
+  so split layouts restore on boot; v1 still wraps into a leaf.
 
 ## Implementation phases
 
-1. **Data model**: Define `LayoutNode`, `TabGroup` types; migrate store; backward-compat hydration
-2. **Pane renderer**: Recursive `PaneRenderer` + sash dividers; wire to current tab rendering
-3. **Split actions**: `splitPane()`, `closePane()`, context menu entries
-4. **Drag & drop**: Move tabs between panes
-5. **Persistence**: Serialize/deserialize tree; workspace.json v2 format
+1. ✅ **Data model**: Define `LayoutNode`, `TabGroup` types; migrate store; backward-compat hydration
+2. ✅ **Pane renderer**: Recursive `PaneRenderer` + per-leave tab bars; wire to current tab rendering
+3. ✅ **Split actions**: `splitActivePane()`, `closePane()`, activate-on-click; palette + commands
+4. ✅ **Drag & drop**: Move tabs between panes (tab-drop, pane-body drop, `moveTabToPane`/`moveTabToNewPane`)
+5. ✅ **Persistence**: Serialize/deserialize tree; workspace.json v2 format; boot restore
+6. ⏳ **Resize sashes**: Proportional sizing (`size` ratios) on drag — deferred from v1
+7. ⏳ **Edge-drop split zones**: Visual drop targets at pane edges for `moveTabToNewPane` — deferred

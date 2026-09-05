@@ -7,6 +7,34 @@
 
 ---
 
+## Split Pane Layout Tree (ADR-032) — COMPLETE
+
+**Branch:** `feat/split-pane-layout`
+**Status:** All phases implemented and committed; ADR-032 marked complete. Full
+suite: 240 tests passing, oxlint + tsc clean.
+
+### Commits
+
+- `43ac869` docs: ADR-032
+- `71a0b4c` Phase 1 — layout tree data model (`LayoutNode`, `TabGroup`, `splitLeaf`/`removeLeaf` helpers)
+- `af80bd7` Phase 2 — `PaneRenderer` + `SplitPane` components
+- `a2bb6cd` / `6ddad1d` Phase 3 — split/close/activate actions + tests
+- `63180c0` shell integration; `211c9b3` palette commands + keybindings
+- `54e4fd1` housekeeping — `commands.json` pane entries + v2 guard test
+- `a9dd3bb` Phase A — `root` + `activePaneId` are the single source of truth (flat `pane` removed)
+- `74f6e89` Phase B — split duplicates active tab (distinct id, independent editors); Bug-1 regression test
+- `7113b28` Phase C — per-pane tab bars + activate-on-focus
+- `af0eed2` Phase D — DnD between panes (`moveTabToPane`, `moveTabToNewPane`, pane-body drop)
+- `8d0c923` Phase E — v2 snapshot restores on boot
+- `bd6df84` Phase F — `CmdOrCtrl+Alt+W` → `pane:close`
+
+### Deferred (noted in ADR-032)
+
+- Resize sashes (proportional `size` ratios)
+- Edge-drop split zones (visual drop targets for `moveTabToNewPane`)
+
+---
+
 ## Rust Quality-Hardening — ACTIVE
 
 **Branch:** `fix/code-block-height` (user-confirmed working branch for ALL Rust work)
