@@ -7,16 +7,19 @@ import {
   embedTargetFromWikiLink,
   extensionOf,
 } from "../input/embed-utils";
+import { buildEmbedWidget } from "../input/embed-media";
+import { resolveAssetFacet } from "../types";
 
 /**
- * Live-preview embed handling — `![[target]]` rendered as a compact chip when
- * the caret is OFF the embed's line, revealing the raw syntax for editing when
- * the caret is ON it (WYSIWYM reveal, same contract as list bullets/HR).
+ * Live-preview embed handling — `![[target]]` off the caret's line renders as
+ * real `<img>/<video>/<audio>` media (ADR-034 part C), revealing the raw
+ * syntax for editing when the caret is ON it (WYSIWYM reveal, same contract
+ * as list bullets/HR). Unresolvable targets keep a compact fallback chip —
+ * never a broken media element. Reading mode is left untouched: the
+ * reading-mode media plugin (`embed-media.ts`) owns that surface.
  *
  * Fused into live-preview's single tree walk so it lives on the same
- * `activeLine` as every other cursor-gated decoration. Reading mode never
- * emits a chip here — the reading-mode media plugin (`embed-media.ts`) owns
- * that surface and replaces the same span with real `<img>/<video>/…`.
+ * `activeLine` as every other cursor-gated decoration.
  */
 
 /** Class applied to the embed chip element. */
@@ -97,11 +100,12 @@ class EmbedChipWidget extends WidgetType {
 
 /**
  * Handles a `WikiLink` node that is an embed (`![[target]]`): replaces the
- * whole span with a chip when the caret is off the embed's line; leaves the
- * raw syntax visible when the caret is on it (mark-hiding mutes the brackets).
- * Reading mode returns without a chip — the reading-mode media plugin owns
- * that span. Returns true when a replace was emitted (or the node was an
- * embed that was intentionally left raw so children aren't double-handled).
+ * whole span with real media off the caret's line; unresolved targets fall
+ * back to a chip. Raw syntax stays visible while the caret is on the embed's
+ * line (mark-hiding mutes the brackets). Reading mode returns without
+ * emitting anything — the reading-mode media plugin owns that span. Returns
+ * true when a replace was emitted (or the node was an embed that was
+ * intentionally left raw so children aren't double-handled).
  */
 export function handleEmbedNode(
   node: SyntaxNodeRef,
@@ -120,6 +124,12 @@ export function handleEmbedNode(
     : false;
   if (onActiveLine) return true;
 
-  collector.addReplace(embed.from, embed.to, new EmbedChipWidget(embed.target));
+  const resolveAsset = ctx.state.facet(resolveAssetFacet);
+  const url = resolveAsset?.(embed.target);
+  if (url) {
+    collector.addReplace(embed.from, embed.to, buildEmbedWidget(url, embed.target));
+  } else {
+    collector.addReplace(embed.from, embed.to, new EmbedChipWidget(embed.target));
+  }
   return true;
 }

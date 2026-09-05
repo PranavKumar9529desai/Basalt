@@ -7,6 +7,7 @@
  * a chip — the reading-mode media plugin owns that span.
  */
 import { describe, expect, it } from "vitest";
+import { resolveAssetFacet } from "../../src";
 import { assertDecorations, testMarkdownFixture } from "../_helpers";
 
 describe("embed chip reveal — live mode", () => {
@@ -59,5 +60,52 @@ describe("embed chip — reading mode (never raw, no chip)", () => {
         `selection=${selection}`,
       ).toBe(false);
     }
+  });
+});
+
+describe("live-preview real media (ADR-034 part C)", () => {
+  const resolvable = resolveAssetFacet.of((target: string) =>
+    target.endsWith(".png") || target.endsWith(".mp4") || target.endsWith(".mp3")
+      ? `asset:///vault/${target}`
+      : null,
+  );
+
+  it("renders a real media widget off the active line when the target resolves", () => {
+    const doc = "line above\n![[attachments/photo.png]]";
+    const { report } = testMarkdownFixture(doc, {
+      selection: 0,
+      extensions: [resolvable],
+    });
+    assertDecorations(report).toHaveReplace(11, 37, "EmbedMediaWidget");
+  });
+
+  it("renders video and audio embeds as real media too", () => {
+    const doc = "![[clip.mp4]]\n\n![[sound.mp3]]";
+    const { report } = testMarkdownFixture(doc, {
+      selection: 14, // empty middle line — neither embed is active
+      extensions: [resolvable],
+    });
+    assertDecorations(report)
+      .toHaveReplace(0, 13, "EmbedMediaWidget")
+      .toHaveReplace(15, 29, "EmbedMediaWidget");
+  });
+
+  it("keeps the fallback chip for unresolved targets — never a broken <img>", () => {
+    const doc = "line above\n![[ghost.png]]";
+    const { report } = testMarkdownFixture(doc, {
+      selection: 0,
+      extensions: [resolveAssetFacet.of(() => null)],
+    });
+    assertDecorations(report).toHaveReplace(11, 25, "EmbedChipWidget");
+  });
+
+  it("reveals the raw syntax on the active line even when the target resolves", () => {
+    const doc = "![[attachments/photo.png]]";
+    const { report } = testMarkdownFixture(doc, {
+      selection: 20,
+      extensions: [resolvable],
+    });
+    expect(report.replaces.some((r) => r.widget === "EmbedMediaWidget")).toBe(false);
+    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(false);
   });
 });

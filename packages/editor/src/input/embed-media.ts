@@ -120,6 +120,15 @@ export class EmbedMediaWidget extends WidgetType {
   }
 }
 
+/**
+ * Build the real-media widget for a resolved embed. Shared by the reading-mode
+ * plugin (below) and the live-preview walk (`preview/embeds.ts`) so both
+ * surfaces render the same media element for the same `![[target]]` (ADR-034).
+ */
+export function buildEmbedWidget(url: string, target: string): WidgetType {
+  return new EmbedMediaWidget(url, target);
+}
+
 class EmbedMediaPlugin implements PluginValue {
   decorations: DecorationSet = Decoration.none;
 
