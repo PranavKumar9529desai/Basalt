@@ -14,6 +14,10 @@ export function useShellCommands(ws: AppContextValue) {
       ws.controller.createNoteInstant,
     );
     commandService.registerCommand(
+      "app:new-canvas",
+      ws.controller.createCanvasInstant,
+    );
+    commandService.registerCommand(
       "app:delete-file",
       ws.controller.handleDeleteFromCommands,
     );
@@ -23,11 +27,13 @@ export function useShellCommands(ws: AppContextValue) {
     );
     return () => {
       commandService.unregister("app:new-file");
+      commandService.unregister("app:new-canvas");
       commandService.unregister("app:delete-file");
       commandService.unregister("vault:pick-and-set");
     };
   }, [
     ws.controller.createNoteInstant,
+    ws.controller.createCanvasInstant,
     ws.controller.handleDeleteFromCommands,
     ws.mutations.pickAndSetVault,
   ]);

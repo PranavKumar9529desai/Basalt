@@ -6,6 +6,12 @@
     "icon": "IconFilePlus"
   },
   {
+    "id": "app:new-canvas",
+    "name": "Create New Canvas",
+    "category": "File",
+    "icon": "IconLayoutBoardSplit"
+  },
+  {
     "id": "app:delete-file",
     "name": "Delete Current Note",
     "category": "File",

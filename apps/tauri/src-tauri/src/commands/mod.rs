@@ -29,7 +29,7 @@ pub use folders::{create_folder, delete_file, delete_paths, move_paths, rename_p
 pub use assets::{cleanup_assets, get_asset_audit, get_assets, reorganize_assets, save_attachment};
 pub use media::media_server_url;
 
-pub use canvas::{open_canvas, parse_canvas, save_canvas};
+pub use canvas::{create_untitled_canvas, open_canvas, parse_canvas, save_canvas};
 pub use frontmatter::parse_frontmatter;
 pub use search::{search_content, search_files};
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};

@@ -253,6 +253,7 @@ export interface UseVaultControllerOptions {
 
 export interface UseVaultControllerReturn {
   createNoteInstant: () => Promise<void>;
+  createCanvasInstant: () => Promise<void>;
   startFolderInline: () => void;
   cutIds: Set<string>;
   canPasteToMenuTarget: boolean;
@@ -346,6 +347,20 @@ export function useVaultController(
     const ctx = deriveParentContext();
     if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
     const result = await mutations.createUntitledNote(
+      ctx.parentRelPath || undefined,
+    );
+    if (!result) return;
+    void editor.loadNote({
+      name: result.name,
+      path: result.path,
+      renameOnOpen: true,
+    });
+    await refreshTree();
+  }, [deriveParentContext, editor, mutations, openFolder, refreshTree]);
+  const createCanvasInstant = useCallback(async () => {
+    const ctx = deriveParentContext();
+    if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+    const result = await mutations.createUntitledCanvas(
       ctx.parentRelPath || undefined,
     );
     if (!result) return;
@@ -702,6 +717,7 @@ export function useVaultController(
 
   return {
     createNoteInstant,
+    createCanvasInstant,
     startFolderInline,
     cutIds,
     canPasteToMenuTarget,
