@@ -1,4 +1,6 @@
 import { syntaxTree } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
+import type { SyntaxNodeRef } from "@lezer/common";
 import type { EditorView } from "@codemirror/view";
 
 export interface EmbedScanResult {
@@ -8,32 +10,48 @@ export interface EmbedScanResult {
 }
 
 /**
+ * Uniformly derive the embed span + normalized target for a `WikiLink` node
+ * when it is an embed (`![[target]]`). Returns null when the node isn't an
+ * embed (plain `[[Note]]` or no leading `!`). The `!` prefix character is
+ * included in `from` so a caller can replace the whole construct. Shared by
+ * the live-preview walk (embed chips) and the reading-mode media plugin so
+ * their embeds never drift apart.
+ */
+export function embedTargetFromWikiLink(
+  state: EditorState,
+  node: SyntaxNodeRef,
+): EmbedScanResult | null {
+  if (node.name !== "WikiLink") return null;
+
+  const from = node.from;
+  const to = node.to;
+  if (from < 1 || to < from + 4) return null;
+  if (state.doc.sliceString(from - 1, from) !== "!") return null;
+
+  const target = state.doc
+    .sliceString(from + 2, to - 2)
+    .split("|")[0]
+    .split("#")[0]
+    .trim();
+
+  if (!target) return null;
+  return { from: from - 1, to, target };
+}
+
+/**
  * Scan a view's syntax tree for wikilink embeds (`![[target]]`) and yield
  * each as a `{ from, to, target }`. The `!` prefix character is included in
  * the `from` offset so a caller can replace the whole construct.
  */
 export function scanEmbedWikiLinks(view: EditorView): EmbedScanResult[] {
   const out: EmbedScanResult[] = [];
-  const tree = syntaxTree(view.state);
-  const doc = view.state.doc;
+  const state = view.state;
 
+  const tree = syntaxTree(state);
   tree.iterate({
     enter(node) {
-      if (node.name !== "WikiLink") return;
-
-      const from = node.from;
-      const to = node.to;
-      if (from < 1) return;
-      if (doc.sliceString(from - 1, from) !== "!") return;
-
-      const target = doc
-        .sliceString(from + 2, to - 2)
-        .split("|")[0]
-        .split("#")[0]
-        .trim();
-
-      if (!target) return;
-      out.push({ from: from - 1, to, target });
+      const embed = embedTargetFromWikiLink(state, node);
+      if (embed) out.push(embed);
     },
   });
 

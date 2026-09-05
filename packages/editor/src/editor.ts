@@ -5,7 +5,6 @@ import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { pasteImageExtension } from "./input/paste-image";
-import { embedPreviewPlugin, EMBED_PREVIEW_THEME } from "./input/embed-preview";
 import { embedMediaPlugin, EMBED_MEDIA_THEME } from "./input/embed-media";
 import {
   createSuggestionsPlugin,
@@ -142,8 +141,6 @@ export function createEditorExtensionGroups(
     livePreview: [
       LIVE_PREVIEW_THEME,
       livePreviewPlugin,
-      EMBED_PREVIEW_THEME,
-      embedPreviewPlugin,
     ],
     suggestions: [
       SUGGESTIONS_THEME,

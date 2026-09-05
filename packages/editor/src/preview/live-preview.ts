@@ -87,6 +87,7 @@ import {
 } from "./inline-marks";
 import { handleListNode, LISTS_THEME } from "./lists";
 import { handleMarkHidingNode, MARK_HIDING_THEME } from "./mark-hiding";
+import { EMBED_PREVIEW_THEME, handleEmbedNode } from "./embeds";
 import { handleTableNode, TABLES_THEME } from "./tables";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { isInCodeBlock, sortCodeBlockRanges } from "./types";
@@ -100,6 +101,7 @@ export const LIVE_PREVIEW_THEME = [
   LISTS_THEME,
   TABLES_THEME,
   FRONTMATTER_THEME,
+  EMBED_PREVIEW_THEME,
   HR_THEME,
 ];
 
@@ -297,6 +299,8 @@ function buildPreviewState(
       // pre-scan; fused here per ADR-019 rule 2.
       handleInlineNode(node, collector);
       handleMarkHidingNode(node, ctx, collector);
+      // ![[embed]] -> compact chip off the active line; raw syntax revealed on it.
+      handleEmbedNode(node, ctx, collector);
     },
   });
 

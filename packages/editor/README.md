@@ -180,6 +180,7 @@ src/
 │   ├── blockquotes.ts
 │   ├── callouts.ts
 │   ├── code-blocks.ts
+│   ├── embeds.ts        # ![[embed]] chips (active-line reveal, WYSIWYM)
 │   ├── frontmatter.ts
 │   ├── headings.ts
 │   ├── inline-marks.ts
