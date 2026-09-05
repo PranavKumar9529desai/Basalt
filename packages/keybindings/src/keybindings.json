@@ -23,5 +23,8 @@
   { "key": "Escape", "action": "closeTopModal", "when": "modalOpen" },
   { "key": "CmdOrCtrl+\\", "command": "pane:split-right" },
   { "key": "CmdOrCtrl+Shift+\\", "command": "pane:split-down" },
-  { "key": "CmdOrCtrl+Alt+W", "command": "pane:close" }
+  { "key": "CmdOrCtrl+Alt+W", "command": "pane:close" },
+  { "key": "Delete", "command": "canvas:delete-selection", "when": "canvasFocused" },
+  { "key": "Backspace", "command": "canvas:delete-selection", "when": "canvasFocused" },
+  { "key": "CmdOrCtrl+Shift+G", "command": "canvas:group-selection", "when": "canvasFocused" }
 ]

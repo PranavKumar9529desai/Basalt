@@ -54,7 +54,10 @@ export function EditorView({ tab, paneId }: LeafProps) {
     titleSlotRef.current = slot;
     titleRootRef.current = root;
     return () => {
-      root.unmount();
+      // Defer root.unmount() to avoid racing with React's current render
+      // cycle (observed when switching from editor to non-editor leaves).
+      const r = root;
+      queueMicrotask(() => r.unmount());
       cleanup();
       titleSlotRef.current = null;
       titleRootRef.current = null;

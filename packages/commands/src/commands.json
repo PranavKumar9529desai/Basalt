@@ -136,5 +136,17 @@
     "name": "Close Pane",
     "category": "Pane",
     "icon": "IconX"
+  },
+  {
+    "id": "canvas:delete-selection",
+    "name": "Delete Selected Items",
+    "category": "Canvas",
+    "icon": "IconTrash"
+  },
+  {
+    "id": "canvas:group-selection",
+    "name": "Group Selected Items",
+    "category": "Canvas",
+    "icon": "IconLayoutGrid"
   }
 ]
