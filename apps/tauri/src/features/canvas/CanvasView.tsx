@@ -29,6 +29,7 @@ import type { LeafProps } from "@workspace/views";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
 import { NotePickerModal } from "./components/NotePickerModal";
+import { AssetPickerModal } from "./components/AssetPickerModal";
 import { mapToXYFlow, mapToCanvasDocument, type CanvasXYNode } from "./lib/mapper";
 import { useLeafServices } from "@workspace/views";
 
@@ -59,6 +60,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [ctxMenu, setCtxMenu] = useState<{ target: ContextTarget; anchor: { x: number; y: number } } | null>(null);
   const [isNotePickerOpen, setIsNotePickerOpen] = useState(false);
+  const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [guidelines, setGuidelines] = useState<{ vertical: number | null; horizontal: number | null }>({
     vertical: null,
     horizontal: null,
@@ -521,6 +523,30 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     });
   }, [reactFlowInstance, saveCanvasNow]);
 
+  const handleSelectAsset = useCallback((asset: { rel_path: string; abs_path: string; file_type: string }) => {
+    const center = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    const isAudio = asset.file_type === "audio";
+    const isImage = asset.file_type === "image";
+    const width = isImage ? 360 : isAudio ? 320 : 380;
+    const height = isImage ? 280 : isAudio ? 120 : 260;
+    const newNode: CanvasXYNode = {
+      id: `file-${Date.now()}`,
+      type: "canvasFile",
+      position: { x: center.x - width / 2, y: center.y - height / 2 },
+      style: { width, height },
+      data: { file: asset.rel_path || asset.abs_path },
+    };
+    setNodes((nds) => {
+      const next = [...nds, newNode];
+      nodesRef.current = next;
+      saveCanvasNow();
+      return next;
+    });
+  }, [reactFlowInstance, saveCanvasNow]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
@@ -677,6 +703,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           <CanvasToolbar
             onAddTextCard={() => handleAddTextCard()}
             onAddNote={() => setIsNotePickerOpen(true)}
+            onAddMedia={() => setIsAssetPickerOpen(true)}
             onAddLink={handleAddLink}
             onAddGroup={handleAddGroup}
           />
@@ -692,6 +719,11 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
             isOpen={isNotePickerOpen}
             onClose={() => setIsNotePickerOpen(false)}
             onSelect={handleSelectNote}
+          />
+          <AssetPickerModal
+            isOpen={isAssetPickerOpen}
+            onClose={() => setIsAssetPickerOpen(false)}
+            onSelect={handleSelectAsset}
           />
         </div>
       </div>
