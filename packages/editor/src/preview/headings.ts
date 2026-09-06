@@ -45,26 +45,28 @@ export function handleHeading7Lines(
   collector: DecorationCollector,
 ): void {
   const { state, activeLine, codeBlockRanges } = ctx;
+  if (state.doc.length === 0) return;
   const startLine = state.doc.lineAt(rangeFrom);
-  const endLine = state.doc.lineAt(rangeTo);
+  const endLine = state.doc.lineAt(Math.min(rangeTo, state.doc.length));
 
-  for (
-    let lineNumber = startLine.number;
-    lineNumber <= endLine.number;
-    lineNumber += 1
-  ) {
-    const line = state.doc.line(lineNumber);
-    const match = HEADING_7_RE.exec(line.text);
-    if (!match || isInCodeBlock(line.from, codeBlockRanges)) {
-      continue;
+  let line = startLine;
+  while (line.number <= endLine.number) {
+    const text = line.text;
+    // Fast skip: 7-hash headings must contain at least 7 consecutive '#' characters
+    if (text.includes("#######")) {
+      const match = HEADING_7_RE.exec(text);
+      if (match && !isInCodeBlock(line.from, codeBlockRanges)) {
+        collector.addLineClass(line.from, "cm-live-heading-7");
+
+        if (!activeLine || line.number !== activeLine.number) {
+          const markerStart = line.from;
+          const markerEnd = markerStart + match[1].length;
+          collector.addMark(markerStart, markerEnd, "cm-live-hide");
+        }
+      }
     }
 
-    collector.addLineClass(line.from, "cm-live-heading-7");
-
-    if (!activeLine || lineNumber !== activeLine.number) {
-      const markerStart = line.from;
-      const markerEnd = markerStart + match[1].length;
-      collector.addMark(markerStart, markerEnd, "cm-live-hide");
-    }
+    if (line.number >= endLine.number || line.to >= state.doc.length) break;
+    line = state.doc.lineAt(line.to + 1);
   }
 }

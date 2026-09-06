@@ -78,7 +78,10 @@ function listDepth(node: SyntaxNodeRef): number {
   let depth = 0;
   let cur = node.node.parent;
   while (cur) {
-    if (cur.name === "BulletList" || cur.name === "OrderedList") depth++;
+    if (cur.name === "BulletList" || cur.name === "OrderedList") {
+      depth++;
+      if (depth >= 3) break;
+    }
     cur = cur.parent;
   }
   return depth;
@@ -98,9 +101,11 @@ export function handleListNode(
     const depthClass = `cm-live-list-depth-${Math.min(depth, 3)}`;
 
     const endLine = doc.lineAt(node.to);
-    for (let ln = itemLine.number; ln <= endLine.number; ln++) {
-      const line = doc.line(ln);
+    let line = itemLine;
+    while (line.number <= endLine.number) {
       collector.addLineClass(line.from, depthClass);
+      if (line.number >= endLine.number || line.to >= doc.length) break;
+      line = doc.lineAt(line.to + 1);
     }
 
     return false;

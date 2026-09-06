@@ -150,30 +150,41 @@ export function renderInlineCell(
   resolve: ResolveAssetFn | undefined,
 ): string {
   let result = escapeHtml(text);
+  if (!result.includes("[") && !result.includes("*") && !result.includes("`")) {
+    return result;
+  }
 
-  result = result.replace(/(!?)\[\[([^\]]+)\]\]/g, (_m, bang: string, inner: string) => {
-    const [target, alias] = inner.split("|");
-    const cleanTarget = target.split("#")[0].trim();
-    const display = alias?.trim() || cleanTarget;
+  if (result.includes("[[")) {
+    result = result.replace(/(!?)\[\[([^\]]+)\]\]/g, (_m, bang: string, inner: string) => {
+      const [target, alias] = inner.split("|");
+      const cleanTarget = target.split("#")[0].trim();
+      const display = alias?.trim() || cleanTarget;
 
-    if (bang && !alias && resolve) {
-      const url = resolve(htmlDecode(cleanTarget));
-      if (url) {
-        const kind = classifyMediaExtension(extensionOf(cleanTarget));
-        if (kind === "image" || kind === "video" || kind === "audio") {
-          return embedMediaHtml(kind, url, cleanTarget);
+      if (bang && !alias && resolve) {
+        const url = resolve(htmlDecode(cleanTarget));
+        if (url) {
+          const kind = classifyMediaExtension(extensionOf(cleanTarget));
+          if (kind === "image" || kind === "video" || kind === "audio") {
+            return embedMediaHtml(kind, url, cleanTarget);
+          }
         }
       }
-    }
-    return tableLinkHtml(cleanTarget, display);
-  });
+      return tableLinkHtml(cleanTarget, display);
+    });
+  }
 
   // **bold**
-  result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  if (result.includes("**")) {
+    result = result.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  }
   // *italic*
-  result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  if (result.includes("*")) {
+    result = result.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  }
   // `code`
-  result = result.replace(/`(.+?)`/g, "<code>$1</code>");
+  if (result.includes("`")) {
+    result = result.replace(/`([^`]+)`/g, "<code>$1</code>");
+  }
 
   return result;
 }

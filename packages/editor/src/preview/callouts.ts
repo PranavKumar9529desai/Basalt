@@ -216,7 +216,7 @@ export class CalloutHeaderWidget extends WidgetType {
     );
   }
 
-  toDOM() {
+  toDOM(view: EditorView) {
     const canonical = CALLOUT_ALIASES[this.type.toLowerCase()] ?? "note";
     const icon = CALLOUT_ICONS[canonical] ?? CALLOUT_ICONS.note;
     const colors = CALLOUT_COLORS[canonical] ?? CALLOUT_COLORS.note;
@@ -242,6 +242,29 @@ export class CalloutHeaderWidget extends WidgetType {
       const foldBtn = document.createElement("span");
       foldBtn.className = "cm-callout-fold";
       foldBtn.textContent = this.fold === "+" ? "▾" : "▸";
+      foldBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const pos = view.posAtDOM(header);
+          const line = view.state.doc.lineAt(pos);
+          const match = CALLOUT_RE.exec(line.text);
+          if (match) {
+            const newFold = this.fold === "+" ? "-" : "+";
+            const newHeader = line.text.replace(
+              CALLOUT_RE,
+              (_m: string, t: string, _f: string, title?: string) => {
+                return `> [!${t}]${newFold}${title ? ` ${title}` : ""}`;
+              },
+            );
+            view.dispatch({
+              changes: { from: line.from, to: line.to, insert: newHeader },
+            });
+          }
+        } catch {
+          // View position lookup fallback
+        }
+      });
       header.appendChild(foldBtn);
     }
 
@@ -275,14 +298,14 @@ export function handleCalloutNode(
     ctx.headPos >= firstLine.from && ctx.headPos <= firstLine.to;
   const endLine = doc.lineAt(node.to);
 
-  for (let ln = firstLine.number; ln <= endLine.number; ln++) {
-    // Skip adding a line class to the first line when it will be replaced by
-    // the header widget — CodeMirror cannot have both a Decoration.line and a
-    // block Decoration.replace on the same line position.
-    if (!hasCursor && ln === firstLine.number) continue;
-    const line = doc.line(ln);
-    collector.addLineClass(line.from, "cm-live-callout");
-    collector.addLineClass(line.from, `cm-live-callout-${canonical}`);
+  let line = firstLine;
+  while (line.number <= endLine.number) {
+    if (hasCursor || line.number !== firstLine.number) {
+      collector.addLineClass(line.from, "cm-live-callout");
+      collector.addLineClass(line.from, `cm-live-callout-${canonical}`);
+    }
+    if (line.number >= endLine.number || line.to >= doc.length) break;
+    line = doc.lineAt(line.to + 1);
   }
 
   if (!hasCursor) {

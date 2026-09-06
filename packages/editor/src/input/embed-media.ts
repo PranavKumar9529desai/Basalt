@@ -11,8 +11,7 @@ import { resolveAssetFacet } from "../types";
 import { classifyMediaExtension, extensionOf, scanEmbedWikiLinks } from "./embed-utils";
 import { notifyViewOfSizeChange } from "../block-widgets/utils";
 
-let _embedCreationCount = 0;
- const EMBED_MEDIA_CLASS = "cm-embed-media";
+const EMBED_MEDIA_CLASS = "cm-embed-media";
 
 const EMBED_MEDIA_THEME = EditorView.baseTheme({
   [`.${EMBED_MEDIA_CLASS}`]: {
@@ -76,8 +75,6 @@ export class EmbedMediaWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    _embedCreationCount++;
-    console.log(`[embed-media] toDOM #${_embedCreationCount} kind=${mediaKind(this.target)} target=${this.target}`);
     const wrapper = document.createElement("div");
     wrapper.className = EMBED_MEDIA_CLASS;
 
@@ -140,10 +137,8 @@ class EmbedMediaPlugin implements PluginValue {
   }
 
   update(update: ViewUpdate) {
-    if (update.docChanged || update.viewportChanged) {
-      const reason = update.docChanged ? "docChanged" : "viewportChanged";
+    if (update.docChanged) {
       this.decorations = this.buildDecorations(update.view);
-      console.log(`[embed-media] rebuild reason=${reason} decorations=${this.decorations.size}`);
     }
   }
 

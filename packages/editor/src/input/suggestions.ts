@@ -63,6 +63,8 @@ export function createSuggestionsPlugin(
   onFetchTags?: FetchTagsFn,
 ) {
   return autocompletion({
+    activateOnTypingDelay: 100,
+    maxRenderedOptions: 50,
     override: [
       async (context: CompletionContext): Promise<CompletionResult | null> => {
         // Link Completion [[...

@@ -1,6 +1,7 @@
+import { syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
 import { EditorView, WidgetType } from "@codemirror/view";
-import type { SyntaxNodeRef } from "@lezer/common";
+import type { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { renderModeFacet } from "./render-mode";
 
@@ -14,11 +15,7 @@ export class CodeHeaderWidget extends WidgetType {
   }
 
   eq(other: CodeHeaderWidget) {
-    return (
-      other.lang === this.lang &&
-      other.codeFrom === this.codeFrom &&
-      other.codeTo === this.codeTo
-    );
+    return other.lang === this.lang;
   }
 
   toDOM(view: EditorView) {
@@ -38,7 +35,25 @@ export class CodeHeaderWidget extends WidgetType {
       e.preventDefault();
       e.stopPropagation();
 
-      const fullText = view.state.doc.sliceString(this.codeFrom, this.codeTo);
+      let fullText = "";
+      try {
+        const pos = view.posAtDOM(container);
+        const tree = syntaxTree(view.state);
+        let node: SyntaxNode | null = tree.resolveInner(pos, 1);
+        while (node && node.name !== "FencedCode" && node.parent) {
+          node = node.parent;
+        }
+        if (node && node.name === "FencedCode") {
+          fullText = view.state.doc.sliceString(node.from, node.to);
+        }
+      } catch {
+        // Fallback for detached or mock environments
+      }
+
+      if (!fullText) {
+        fullText = view.state.doc.sliceString(this.codeFrom, this.codeTo);
+      }
+
       const lines = fullText.split("\n");
       if (lines.length >= 2) {
         const innerCode = lines.slice(1, -1).join("\n");
@@ -177,13 +192,10 @@ function addCodeLineClasses(
   doc: EditorState["doc"],
   collector: DecorationCollector,
 ): void {
-  for (
-    let lineNumber = startLineNumber;
-    lineNumber <= endLineNumber;
-    lineNumber += 1
-  ) {
-    const isFirst = lineNumber === startLineNumber;
-    const isLast = lineNumber === endLineNumber;
+  let line = doc.line(startLineNumber);
+  while (line.number <= endLineNumber) {
+    const isFirst = line.number === startLineNumber;
+    const isLast = line.number === endLineNumber;
     // Every line keeps the base `cm-live-code` class so syntax-highlighting
     // selectors (`.cm-line.cm-live-code …`) and the shared background keep
     // matching. The first/last lines additionally carry the begin/end modifier
@@ -195,8 +207,9 @@ function addCodeLineClasses(
         : isLast
           ? "cm-live-code cm-live-code-end"
           : "cm-live-code";
-    const line = doc.line(lineNumber);
     collector.addLineClass(line.from, className);
+    if (line.number >= endLineNumber || line.to >= doc.length) break;
+    line = doc.lineAt(line.to + 1);
   }
 }
 

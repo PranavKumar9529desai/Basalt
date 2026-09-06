@@ -34,7 +34,11 @@ export class TaskCheckboxWidget extends WidgetType {
   }
 
   eq(other: TaskCheckboxWidget) {
-    return other.checked === this.checked;
+    return (
+      other.checked === this.checked &&
+      other.from === this.from &&
+      other.to === this.to
+    );
   }
 
   toDOM(view: EditorView) {

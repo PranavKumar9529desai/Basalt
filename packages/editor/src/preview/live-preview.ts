@@ -36,7 +36,7 @@
  */
 
 import { ensureSyntaxTree } from "@codemirror/language";
-import type { EditorState } from "@codemirror/state";
+import type { EditorState, Range } from "@codemirror/state";
 import { StateEffect, StateField } from "@codemirror/state";
 import {
   Decoration,
@@ -127,46 +127,39 @@ export const LIVE_PREVIEW_THEME = [
 ];
 
 function makeCollector() {
-  const widgets: { from: number; to: number; deco: Decoration }[] = [];
+  const widgets: Range<Decoration>[] = [];
   // Multi-line block-widget replaces (HTML, frontmatter) are re-exposed as
   // atomic ranges so arrow motion skips a collapsed span in one step. Single-
   // line widgets (HR, callout/code headers) stay non-atomic so the caret can
   // still land on them to reveal + edit.
-  const replaces: { from: number; to: number; deco: Decoration }[] = [];
+  const replaces: Range<Decoration>[] = [];
 
   const collector: DecorationCollector = {
     addLineClass(pos, className) {
-      widgets.push({
-        from: pos,
-        to: pos,
-        deco: Decoration.line({ class: className }),
-      });
+      widgets.push(Decoration.line({ class: className }).range(pos, pos));
     },
     addMark(from, to, className) {
-      widgets.push({ from, to, deco: Decoration.mark({ class: className }) });
+      widgets.push(Decoration.mark({ class: className }).range(from, to));
     },
     addReplace(from, to, widget, block = false, atomic = false) {
       const deco = Decoration.replace({ widget, block });
-      widgets.push({ from, to, deco });
-      if (atomic) replaces.push({ from, to, deco });
+      const range = deco.range(from, to);
+      widgets.push(range);
+      if (atomic) replaces.push(range);
     },
     addPoint(pos, widget) {
-      widgets.push({ from: pos, to: pos, deco: Decoration.widget({ widget, side: 1 }) });
+      widgets.push(
+        Decoration.widget({ widget, side: 1 }).range(pos, pos),
+      );
     },
   };
 
   function finish(): DecorationSet {
-    return Decoration.set(
-      widgets.map((w) => w.deco.range(w.from, w.to)),
-      true,
-    );
+    return Decoration.set(widgets, true);
   }
 
   function finishAtomic(): DecorationSet {
-    return Decoration.set(
-      replaces.map((w) => w.deco.range(w.from, w.to)),
-      true,
-    );
+    return Decoration.set(replaces, true);
   }
 
   return { collector, finish, finishAtomic };
@@ -238,7 +231,9 @@ function buildPreviewState(
     doc.length <= LAZY_DOC_THRESHOLD ? FULL_PARSE_BUDGET_MS : PARSE_BUDGET_MS;
   const tree = ensureSyntaxTree(state, doc.length, budget);
   if (!tree) {
-    console.log(`[live-preview] incomplete tree — no decorations (budget hit) docLen=${doc.length}`);
+    if (import.meta.env.DEV && editorBenchmarkState.debug) {
+      console.log(`[live-preview] incomplete tree — no decorations (budget hit) docLen=${doc.length}`);
+    }
     return {
       decorations: Decoration.none,
       atomicRanges: Decoration.none,
@@ -350,10 +345,12 @@ function buildPreviewState(
   // contract of isInCodeBlock deserves a cheap defensive sort.
   sortCodeBlockRanges(ctx.codeBlockRanges);
 
-  const elapsed = performance.now() - t0;
-  console.log(
-    `[live-preview] walk docLen=${doc.length} mode=${state.facet(renderModeFacet)} elapsed=${elapsed.toFixed(1)}ms`,
-  );
+  if (import.meta.env.DEV && editorBenchmarkState.debug) {
+    const elapsed = performance.now() - t0;
+    console.log(
+      `[live-preview] walk docLen=${doc.length} mode=${state.facet(renderModeFacet)} elapsed=${elapsed.toFixed(1)}ms`,
+    );
+  }
 
   return {
     decorations: finish(),
@@ -415,10 +412,11 @@ export const livePreviewField = StateField.define<PreviewState>({
         ? "lazy-map"
         : "no-op"
       : "full-rebuild";
-    if (path !== "no-op")
+    if (path !== "no-op" && import.meta.env.DEV && editorBenchmarkState.debug) {
       console.log(
         `[live-preview] field.update path=${path} docChanged=${tr.docChanged} selection=${!!tr.selection} forced=${forced} focusChanged=${focusChanged}`,
       );
+    }
 
     if (!lazy) {
       // Full rebuild: small docs, idle-tick catch-up, focus flips, or an
@@ -568,9 +566,13 @@ function buildTagMarks(view: EditorView): DecorationSet {
   for (const range of view.visibleRanges) {
     const startLine = view.state.doc.lineAt(range.from);
     const endLine = view.state.doc.lineAt(range.to);
-    for (let ln = startLine.number; ln <= endLine.number; ln++) {
-      const line = view.state.doc.line(ln);
-      handleTagsInLine(line.from, line.text, ranges, collector);
+    let line = startLine;
+    while (line.number <= endLine.number) {
+      if (line.text.includes("#")) {
+        handleTagsInLine(line.from, line.text, ranges, collector);
+      }
+      if (line.number >= endLine.number || line.to >= view.state.doc.length) break;
+      line = view.state.doc.lineAt(line.to + 1);
     }
   }
   if (import.meta.env.DEV) {

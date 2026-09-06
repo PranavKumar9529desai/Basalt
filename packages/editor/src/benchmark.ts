@@ -1,7 +1,7 @@
 import { EditorState, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
-export const editorBenchmarkState = { active: false };
+export const editorBenchmarkState = { active: false, debug: false };
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
