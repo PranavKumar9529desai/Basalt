@@ -14,8 +14,13 @@
  */
 import { describe, expect, it } from "vitest";
 import type { EditorState } from "@codemirror/state";
-import type { DecorationSet } from "@codemirror/view";
-import { registerBlockWidget, tableBlockSpec, setTableRawMode } from "../../src";
+import { EditorView, type DecorationSet } from "@codemirror/view";
+import {
+  registerBlockWidget,
+  tableBlockSpec,
+  setTableRawMode,
+  tableRawModeField,
+} from "../../src";
 import { livePreviewField } from "../../src/preview/live-preview";
 import { resolveAssetFacet } from "../../src/types";
 import { testMarkdownFixture } from "../_helpers/test-fixture";
@@ -197,6 +202,7 @@ describe("table block widget embeds (ADR-034 part B)", () => {
       renderMode: "live",
       extensions: [registerBlockWidget(tableBlockSpec), mediaResolve],
     });
+    const view = new EditorView({ state: fixture.state });
     const preview = fixture.state.field(livePreviewField) as { decorations: DecorationSet };
     let widgetObj: { toDOM: (view?: any) => HTMLElement } | null = null;
     preview.decorations.between(0, fixture.state.doc.length, (_from, _to, deco) => {
@@ -204,7 +210,7 @@ describe("table block widget embeds (ADR-034 part B)", () => {
       if (w?.constructor?.name === "TableBlockWidget") widgetObj = w;
     });
     expect(widgetObj).not.toBeNull();
-    const dom = widgetObj!.toDOM(fixture.view);
+    const dom = widgetObj!.toDOM(view);
 
     const container = dom.querySelector(".cm-table-container")!;
     const codeBtn = container.querySelector(".cm-table-btn-code")!;
@@ -213,10 +219,11 @@ describe("table block widget embeds (ADR-034 part B)", () => {
 
     // Clicking code toggle dispatches setTableRawMode
     codeBtn.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-    const rawRange = fixture.view.state.field(tableBlockSpec.theme[1] as any, false);
+    const rawRange = view.state.field(tableRawModeField, false);
     expect(rawRange).not.toBeNull();
-    expect(rawRange.from).toBe(0);
-    expect(rawRange.to).toBe(doc.length);
+    expect(rawRange!.from).toBe(0);
+    expect(rawRange!.to).toBe(doc.length);
+    view.destroy();
   });
 
   it("activates column and row hover zones independently (never showing both)", () => {
