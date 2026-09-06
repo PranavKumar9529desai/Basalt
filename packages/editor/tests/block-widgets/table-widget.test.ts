@@ -154,4 +154,40 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     }).state;
     expect(tableWidgetHtml(state)).not.toBeNull();
   });
+
+  it("renders ghost cells and reveals tooltip text ONLY when hovering the + buttons", () => {
+    const doc = "| Product | Price |\n|---|---|\n| Laptop | $1000 |";
+    const liveHtml = tableWidgetHtml(liveTableFixture(doc, 0));
+    expect(liveHtml).not.toBeNull();
+
+    // Ghost column and ghost row cells exist in grid
+    expect(liveHtml!.querySelector(".cm-table-ghost-col-th")).not.toBeNull();
+    expect(liveHtml!.querySelector(".cm-table-ghost-col-td")).not.toBeNull();
+    expect(liveHtml!.querySelector(".cm-table-ghost-row")).not.toBeNull();
+
+    const addColBtn = liveHtml!.querySelector(".cm-table-ghost-btn-col")!;
+    const colLabel = liveHtml!.querySelector(".cm-table-ghost-label-col")!;
+    const addRowBtn = liveHtml!.querySelector(".cm-table-ghost-btn-row")!;
+    const rowLabel = liveHtml!.querySelector(".cm-table-ghost-label-row")!;
+
+    expect(colLabel.textContent).toBe("Add column to the right");
+    expect(rowLabel.textContent).toBe("Add row below");
+
+    // Initially hidden (no visible class)
+    expect(colLabel.classList.contains("visible")).toBe(false);
+    expect(rowLabel.classList.contains("visible")).toBe(false);
+
+    // Hovering + button reveals the text
+    addColBtn.dispatchEvent(new MouseEvent("mouseenter"));
+    expect(colLabel.classList.contains("visible")).toBe(true);
+
+    addColBtn.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(colLabel.classList.contains("visible")).toBe(false);
+
+    addRowBtn.dispatchEvent(new MouseEvent("mouseenter"));
+    expect(rowLabel.classList.contains("visible")).toBe(true);
+
+    addRowBtn.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(rowLabel.classList.contains("visible")).toBe(false);
+  });
 });

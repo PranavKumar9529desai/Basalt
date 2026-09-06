@@ -475,22 +475,11 @@ export class TableBlockWidget extends WidgetType {
       headerTr.appendChild(th);
     }
 
-    // Trailing column header: + button (Live Preview only)
+    // Trailing ghost column header (Live Preview only)
     if (this.model.isLive) {
-      const addColTh = document.createElement("th");
-      addColTh.className = "cm-table-add-col-th";
-      const addColBtn = document.createElement("button");
-      addColBtn.className = "cm-table-add-col-btn";
-      addColBtn.type = "button";
-      addColBtn.title = "Add column to the right";
-      addColBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-      addColBtn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleAddColumn();
-      });
-      addColTh.appendChild(addColBtn);
-      headerTr.appendChild(addColTh);
+      const ghostColTh = document.createElement("th");
+      ghostColTh.className = "cm-table-ghost-col-cell cm-table-ghost-col-th cm-table-add-col-th";
+      headerTr.appendChild(ghostColTh);
     }
     thead.appendChild(headerTr);
     table.appendChild(thead);
@@ -527,38 +516,81 @@ export class TableBlockWidget extends WidgetType {
       }
 
       if (this.model.isLive) {
-        const emptyColTd = document.createElement("td");
-        emptyColTd.className = "cm-table-add-col-td";
-        bodyTr.appendChild(emptyColTd);
+        const ghostColTd = document.createElement("td");
+        ghostColTd.className = "cm-table-ghost-col-cell cm-table-ghost-col-td cm-table-add-col-td";
+        bodyTr.appendChild(ghostColTd);
       }
       tbody.appendChild(bodyTr);
     }
 
-    // Trailing row: + button (Live Preview only)
+    // Trailing ghost row with matching cell divisions (Live Preview only)
     if (this.model.isLive) {
-      const addRowTr = document.createElement("tr");
-      addRowTr.className = "cm-table-add-row-tr";
-      const addRowTd = document.createElement("td");
-      addRowTd.colSpan = headers.length + 1;
-      addRowTd.className = "cm-table-add-row-td";
+      const ghostRowTr = document.createElement("tr");
+      ghostRowTr.className = "cm-table-ghost-row cm-table-add-row-tr";
+      for (let c = 0; c < headers.length; c++) {
+        const ghostRowCell = document.createElement("td");
+        ghostRowCell.className = "cm-table-ghost-row-cell";
+        ghostRowTr.appendChild(ghostRowCell);
+      }
+      // Corner cell for intersection with ghost column
+      const ghostCornerCell = document.createElement("td");
+      ghostCornerCell.className = "cm-table-ghost-row-cell cm-table-ghost-corner-cell cm-table-add-row-td";
+      ghostRowTr.appendChild(ghostCornerCell);
+      tbody.appendChild(ghostRowTr);
+    }
 
+    table.appendChild(tbody);
+
+    const container = document.createElement("div");
+    container.className = "cm-table-container";
+    container.appendChild(table);
+
+    // Ghost column "+" button & hover label (Live Preview only)
+    if (this.model.isLive) {
+      const addColBtn = document.createElement("button");
+      addColBtn.className = "cm-table-ghost-btn-col cm-table-add-col-btn";
+      addColBtn.type = "button";
+      addColBtn.setAttribute("aria-label", "Add column to the right");
+      addColBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+
+      const colLabel = document.createElement("div");
+      colLabel.className = "cm-table-ghost-label-col";
+      colLabel.textContent = "Add column to the right";
+
+      addColBtn.addEventListener("mouseenter", () => colLabel.classList.add("visible"));
+      addColBtn.addEventListener("mouseleave", () => colLabel.classList.remove("visible"));
+      addColBtn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleAddColumn();
+      });
+
+      // Ghost row "+" button & hover label (Live Preview only)
       const addRowBtn = document.createElement("button");
-      addRowBtn.className = "cm-table-add-row-btn";
+      addRowBtn.className = "cm-table-ghost-btn-row cm-table-add-row-btn";
       addRowBtn.type = "button";
-      addRowBtn.title = "Add row below";
-      addRowBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Add row</span>`;
+      addRowBtn.setAttribute("aria-label", "Add row below");
+      addRowBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+
+      const rowLabel = document.createElement("div");
+      rowLabel.className = "cm-table-ghost-label-row";
+      rowLabel.textContent = "Add row below";
+
+      addRowBtn.addEventListener("mouseenter", () => rowLabel.classList.add("visible"));
+      addRowBtn.addEventListener("mouseleave", () => rowLabel.classList.remove("visible"));
       addRowBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.handleAddRow();
       });
-      addRowTd.appendChild(addRowBtn);
-      addRowTr.appendChild(addRowTd);
-      tbody.appendChild(addRowTr);
+
+      container.appendChild(addColBtn);
+      container.appendChild(colLabel);
+      container.appendChild(addRowBtn);
+      container.appendChild(rowLabel);
     }
 
-    table.appendChild(tbody);
-    wrapper.appendChild(table);
+    wrapper.appendChild(container);
 
     // Restore pending focus if any
     if (
@@ -697,73 +729,143 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     color: "var(--sat-text-primary, #f8fafc)",
     background: "var(--sat-surface-3, rgba(255, 255, 255, 0.12))",
   },
-  ".cm-table-add-col-th": {
-    width: "36px",
-    minWidth: "36px",
-    maxWidth: "36px",
-    padding: "0 4px",
-    textAlign: "center",
-    verticalAlign: "middle",
+  ".cm-table-container": {
+    position: "relative",
+    display: "inline-block",
+    minWidth: "100%",
+    paddingBottom: "22px",
+  },
+  ".cm-table-ghost-col-th": {
+    width: "28px",
+    minWidth: "28px",
+    maxWidth: "28px",
+    padding: "0",
+    borderLeft: "1px solid transparent",
+    borderBottom: "2px solid transparent",
+    transition: "border-color 150ms ease",
+  },
+  ".cm-table-interactive:hover .cm-table-ghost-col-th, .cm-table-interactive:focus-within .cm-table-ghost-col-th": {
+    borderLeft: "1px solid var(--sat-table-border, #334155)",
     borderBottom: "2px solid var(--sat-table-border, #334155)",
   },
-  ".cm-table-add-col-btn": {
+  ".cm-table-ghost-col-td": {
+    width: "28px",
+    minWidth: "28px",
+    maxWidth: "28px",
+    padding: "0",
+    borderLeft: "1px solid transparent",
+    borderBottom: "1px solid transparent",
+    transition: "border-color 150ms ease",
+  },
+  ".cm-table-interactive:hover .cm-table-ghost-col-td, .cm-table-interactive:focus-within .cm-table-ghost-col-td": {
+    borderLeft: "1px solid var(--sat-table-border, #334155)",
+    borderBottom: "1px solid var(--sat-layout-divider, rgba(255,255,255,0.06))",
+  },
+  ".cm-table-ghost-row td": {
+    height: "24px",
+    padding: "0",
+    borderBottom: "1px solid transparent",
+    borderRight: "1px solid transparent",
+    borderLeft: "1px solid transparent",
+    transition: "border-color 150ms ease",
+  },
+  ".cm-table-interactive:hover .cm-table-ghost-row td, .cm-table-interactive:focus-within .cm-table-ghost-row td": {
+    borderBottom: "1px solid var(--sat-table-border, #334155)",
+    borderRight: "1px solid var(--sat-table-border, #334155)",
+  },
+  ".cm-table-interactive:hover .cm-table-ghost-row td:first-child, .cm-table-interactive:focus-within .cm-table-ghost-row td:first-child": {
+    borderLeft: "1px solid var(--sat-table-border, #334155)",
+  },
+  ".cm-table-ghost-btn-col": {
+    position: "absolute",
+    right: "4px",
+    top: "calc(50% - 11px)",
+    transform: "translateY(-50%)",
+    width: "20px",
+    height: "20px",
+    borderRadius: "var(--sat-layout-radius-sm, 4px)",
+    border: "1px solid var(--sat-layout-border, rgba(255,255,255,0.15))",
+    background: "var(--sat-surface-2, rgba(255,255,255,0.06))",
+    color: "var(--sat-text-muted, #94a3b8)",
+    cursor: "pointer",
+    opacity: "0",
+    pointerEvents: "none",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "22px",
-    height: "22px",
-    margin: "0 auto",
-    borderRadius: "var(--sat-layout-radius-sm, 4px)",
-    background: "transparent",
-    border: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.15))",
-    color: "var(--sat-text-muted, #94a3b8)",
-    cursor: "pointer",
-    opacity: "0.25",
     transition: "opacity 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    zIndex: "4",
   },
-  ".cm-table-block:hover .cm-table-add-col-btn, .cm-table-block:focus-within .cm-table-add-col-btn": {
-    opacity: "0.85",
+  ".cm-table-interactive:hover .cm-table-ghost-btn-col, .cm-table-interactive:focus-within .cm-table-ghost-btn-col": {
+    opacity: "0.6",
+    pointerEvents: "auto",
   },
-  ".cm-table-add-col-btn:hover": {
+  ".cm-table-ghost-btn-col:hover": {
     opacity: "1",
     background: "var(--sat-accent-primary, #60a5fa)",
     color: "var(--sat-surface-1, #0f172a)",
     borderColor: "var(--sat-accent-primary, #60a5fa)",
-    borderStyle: "solid",
   },
-  ".cm-table-add-col-td": {
-    width: "36px",
-    padding: "0",
-    borderBottom: "1px solid var(--sat-layout-divider, rgba(255,255,255,0.06))",
-  },
-  ".cm-table-add-row-tr td.cm-table-add-row-td": {
-    padding: "4px 0",
-    borderBottom: "none",
-  },
-  ".cm-table-add-row-btn": {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "5px",
-    padding: "3px 8px",
+  ".cm-table-ghost-label-col": {
+    position: "absolute",
+    right: "0",
+    bottom: "2px",
     fontSize: "0.75rem",
+    color: "var(--sat-text-muted, #94a3b8)",
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    opacity: "0",
+    transition: "opacity 120ms ease",
+    textAlign: "right",
+  },
+  ".cm-table-ghost-label-col.visible": {
+    opacity: "1",
+  },
+  ".cm-table-ghost-btn-row": {
+    position: "absolute",
+    left: "50%",
+    bottom: "24px",
+    transform: "translateX(-50%)",
+    width: "20px",
+    height: "20px",
     borderRadius: "var(--sat-layout-radius-sm, 4px)",
-    background: "transparent",
-    border: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.15))",
+    border: "1px solid var(--sat-layout-border, rgba(255,255,255,0.15))",
+    background: "var(--sat-surface-2, rgba(255,255,255,0.06))",
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
-    opacity: "0.25",
-    marginTop: "4px",
+    opacity: "0",
+    pointerEvents: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     transition: "opacity 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    zIndex: "4",
   },
-  ".cm-table-block:hover .cm-table-add-row-btn, .cm-table-block:focus-within .cm-table-add-row-btn": {
-    opacity: "0.85",
+  ".cm-table-interactive:hover .cm-table-ghost-btn-row, .cm-table-interactive:focus-within .cm-table-ghost-btn-row": {
+    opacity: "0.6",
+    pointerEvents: "auto",
   },
-  ".cm-table-add-row-btn:hover": {
+  ".cm-table-ghost-btn-row:hover": {
     opacity: "1",
-    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.08))",
-    color: "var(--sat-text-primary, #f8fafc)",
+    background: "var(--sat-accent-primary, #60a5fa)",
+    color: "var(--sat-surface-1, #0f172a)",
     borderColor: "var(--sat-accent-primary, #60a5fa)",
-    borderStyle: "solid",
+  },
+  ".cm-table-ghost-label-row": {
+    position: "absolute",
+    left: "50%",
+    bottom: "2px",
+    transform: "translateX(-50%)",
+    fontSize: "0.75rem",
+    color: "var(--sat-text-muted, #94a3b8)",
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    opacity: "0",
+    transition: "opacity 120ms ease",
+    textAlign: "center",
+  },
+  ".cm-table-ghost-label-row.visible": {
+    opacity: "1",
   },
   ".cm-table-block th[contenteditable=\"plaintext-only\"]:focus, .cm-table-block td[contenteditable=\"plaintext-only\"]:focus, .cm-table-block th[contenteditable=\"true\"]:focus, .cm-table-block td[contenteditable=\"true\"]:focus": {
     outline: "2px solid var(--sat-accent-primary, #60a5fa)",
