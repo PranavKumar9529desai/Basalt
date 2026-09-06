@@ -265,11 +265,17 @@ export const frontmatterBlockWidget: BlockWidgetSpec<FrontmatterModel> = {
     const fn = state.facet(frontmatterParserFacet);
     if (!fn) return null;
     // Frontmatter is always top-of-file (`YAMLFrontMatter` starts at offset 0),
-    // so slicing 0..node.to passes the parser the exact same relative text the
+    // so slicing 0..n passes the parser the exact same relative text the
     // full document would — the returned spans are already absolute — but
     // avoids serializing a huge note body on the keystroke path (ADR-019).
-    // The parser only ever inspects this region anyway.
-    return fn(state.doc.sliceString(node.from, node.to));
+    //
+    // `node.to` is Lezer's `cx.prevLineEnd()` — the position OF the `\n`
+    // after the closing `---` (exclusive). CM6's `line.to` equals `node.to`
+    // here (the newline is a boundary, not included in the line range), so
+    // we slice to `node.to + 1` to include the trailing line terminator.
+    // Without it the Rust parser's `fm_bounds` loop (frontmatter.rs) can't
+    // find the closing fence because `find('\n')` returns None.
+    return fn(state.doc.sliceString(node.from, Math.min(node.to + 1, state.doc.length)));
   },
   render,
   span: spanFor,

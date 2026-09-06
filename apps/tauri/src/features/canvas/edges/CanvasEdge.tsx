@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
+import { resolveCanvasColor } from "../lib/colors";
 
 function CanvasEdge({
   sourceX,
@@ -11,6 +12,7 @@ function CanvasEdge({
   style = {},
   markerEnd,
   label,
+  data,
 }: EdgeProps) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -21,9 +23,13 @@ function CanvasEdge({
     targetPosition,
   });
 
+  const strokeColor =
+    (style?.stroke as string) ||
+    (data?.color ? resolveCanvasColor(data.color as string) : "var(--sat-accent-primary, #6366f1)");
+
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={{ ...style, strokeWidth: 2 }} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={{ stroke: strokeColor, strokeWidth: 2, ...style }} />
       {label && (
         <EdgeLabelRenderer>
           <div

@@ -2,14 +2,16 @@ import { memo } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
+import { useCanvas } from "../CanvasContext";
 
 function GroupNode({ data, selected }: NodeProps<CanvasXYNode>) {
+  const canvas = useCanvas();
   const borderColor = resolveCanvasColor(data.color as string | undefined, "var(--sat-layout-border)");
   const backgroundColor = `${borderColor}1A`; // 10% opacity tint
 
   return (
     <>
-      <NodeResizer minWidth={200} minHeight={200} isVisible={selected} />
+      <NodeResizer minWidth={200} minHeight={200} isVisible={selected} onResizeEnd={() => canvas.saveNow()} />
       
       <div 
         className="w-full h-full rounded-xl border-2 pointer-events-none"

@@ -38,4 +38,11 @@ export interface ViewDescriptor {
   component: ComponentType<Record<string, never>>;
   /** Optional actions rendered in the dock header while active. */
   headerActions?: ViewHeaderActionsType;
+  /**
+   * Mark as a stackable section (right-side dock only).
+   * When ALL views for a side are sections, SideDock renders them stacked
+   * vertically — each with its own header and collapse chevron — instead of
+   * the default one-at-a-time tab-switcher mode.
+   */
+  section?: boolean;
 }

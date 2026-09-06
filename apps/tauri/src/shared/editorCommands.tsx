@@ -73,7 +73,11 @@ function getActiveView(): EditorView | null {
 keybindingService.registerAction("saveActiveFile", () => {
   const controller = resolveActiveController();
   const tab = controller?.activeTab();
-  if (controller && tab) void controller.saveTab(tab.id);
+  if (controller && tab) {
+    void controller.saveTab(tab.id);
+  } else {
+    window.dispatchEvent(new CustomEvent("basalt:save-active"));
+  }
 });
 
 keybindingService.registerAction("renameActiveNote", () => {

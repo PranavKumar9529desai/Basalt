@@ -16,6 +16,7 @@ import {
   createLeaf,
   mapLeaves,
   collectLeaves,
+  pruneEmptyLeaves,
 } from "../lib/layoutTree";
 
 export interface PersistenceSlice {
@@ -90,10 +91,13 @@ export const createPersistenceSlice: StateCreator<
     if (snapshot.version === 2) {
       // V2: deserialize the layout tree, sanitize each leaf's tab group
       // against the tabs map, and restore focus to the recorded pane.
-      const root = mapLeaves(deserializeNode(snapshot.root), (leaf) => ({
+      // Prune empty panes first (accidental split-with-no-tab persisted
+      // across sessions), then sanitize tab groups against the tabs map.
+      const sanitized = mapLeaves(deserializeNode(snapshot.root), (leaf) => ({
         ...leaf,
         tabGroup: sanitizeTabGroup(leaf.tabGroup, tabs),
       }));
+      const root = pruneEmptyLeaves(sanitized);
 
       // Prune tabs orphaned in the tree. A tab in `tabs` that no leaf's
       // tabGroup references is invisible to every pane: openView finds it

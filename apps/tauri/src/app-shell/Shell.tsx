@@ -16,9 +16,26 @@ import { leafRegistry, LeafServicesProvider } from "@workspace/views";
 import { HeaderBandRule } from "@workspace/ui/components/header-band";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import {
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
+} from "@tabler/icons-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Suspense,
+} from "react";
 
-import { useTabsStore, TabsBar, PaneRenderer, TabDragGhost, type LeafRenderContext } from "../features/tabs";
+import {
+  useTabsStore,
+  TabsBar,
+  PaneRenderer,
+  TabDragGhost,
+  type LeafRenderContext,
+} from "../features/tabs";
 import { parseFrontmatter } from "../features/editor";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
@@ -57,6 +74,9 @@ export function Shell({ boot }: ShellProps) {
     <AppProvider vaultPath={boot.vault_path} initialTree={boot.tree}>
       <WorkspaceShell
         defaultSidebarWidth={boot.workspace?.sidebarWidth as number | undefined}
+        defaultRightSidebarOpen={
+          boot.workspace?.rightSidebarOpen as boolean | undefined
+        }
       />
     </AppProvider>
   );
@@ -64,12 +84,23 @@ export function Shell({ boot }: ShellProps) {
 
 function WorkspaceShell({
   defaultSidebarWidth,
+  defaultRightSidebarOpen,
 }: {
   defaultSidebarWidth?: number;
+  defaultRightSidebarOpen?: boolean;
 }) {
   const ws = useAppContext();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(
+    defaultRightSidebarOpen ?? false,
+  );
+  // Persist right sidebar open/close (Tier 3 vault-local workspace.json).
+  useEffect(() => {
+    void invoke("set_workspace_key", {
+      key: "rightSidebarOpen",
+      value: rightSidebarOpen,
+    });
+  }, [rightSidebarOpen]);
 
   const activateTab = useTabsStore((s) => s.activateTab);
   const closeTab = useTabsStore((s) => s.closeTab);
@@ -135,6 +166,26 @@ function WorkspaceShell({
             onSelectTab={handleTabSelect}
             onCloseTab={handleTabClose}
             onPinToggle={handleTabPinToggle}
+            rightSlot={
+              <button
+                type="button"
+                onClick={() => setRightSidebarOpen((v) => !v)}
+                title={
+                  rightSidebarOpen
+                    ? "Collapse right sidebar"
+                    : "Expand right sidebar"
+                }
+                aria-label="Toggle right sidebar"
+                aria-pressed={rightSidebarOpen}
+                className="flex h-full w-8 items-center justify-center text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
+              >
+                {rightSidebarOpen ? (
+                  <IconLayoutSidebarRightCollapse size={16} stroke={1.5} />
+                ) : (
+                  <IconLayoutSidebarRightExpand size={16} stroke={1.5} />
+                )}
+              </button>
+            }
           />
           <ViewHeader
             tab={tab}
@@ -167,6 +218,7 @@ function WorkspaceShell({
       handleTabSelect,
       handleTabClose,
       handleTabPinToggle,
+      rightSidebarOpen,
     ],
   );
 
@@ -209,7 +261,6 @@ function WorkspaceShell({
         <SideDock
           side="right"
           collapsed={!rightSidebarOpen}
-          onCollapse={() => setRightSidebarOpen(false)}
           className="col-start-4 row-span-full"
         />
       </div>

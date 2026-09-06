@@ -1,4 +1,5 @@
 import {
+  IconBook,
   IconFilePlus,
   IconFolderOpen,
   IconGauge,
@@ -19,6 +20,7 @@ import {
 import type { ComponentType } from "react";
 
 const ICONS: Record<string, ComponentType<{ size?: number }>> = {
+  IconBook,
   IconFilePlus,
   IconFolderOpen,
   IconGauge,

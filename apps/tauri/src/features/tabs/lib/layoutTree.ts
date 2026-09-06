@@ -105,6 +105,25 @@ export function mapLeaves(
   return changed ? { ...root, children } : root;
 }
 
+/**
+ * Recursively remove leaves whose tabGroup has zero tabIds. After removal,
+ * any split with a single child is unwrapped to that child. Used at v2
+ * hydration to heal persisted snapshots containing empty splits (e.g. an
+ * accidental split with no active tab that persisted across sessions).
+ */
+export function pruneEmptyLeaves(root: LayoutNode): LayoutNode {
+  if (root.type === "leaf") return root;
+  const pruned = root.children
+    .map((child) => pruneEmptyLeaves(child))
+    .filter(
+      (child): child is LayoutNode =>
+        child.type !== "leaf" || child.tabGroup.tabIds.length > 0,
+    );
+  if (pruned.length === 0) return root; // degenerate — keep as-is
+  if (pruned.length === 1) return pruned[0];
+  return { ...root, children: pruned };
+}
+
 /** Find the parent split of a leaf. */
 export function findParent(
   root: LayoutNode,

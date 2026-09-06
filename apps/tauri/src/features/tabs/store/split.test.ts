@@ -46,6 +46,7 @@ describe("split pane actions", () => {
   });
 
   it("splitActivePane creates two leaves in a split node", () => {
+    store.getState().openPinned({ path: "a.md" });
     const before = store.getState().root;
     expect(before.type).toBe("leaf");
 
@@ -62,6 +63,7 @@ describe("split pane actions", () => {
   });
 
   it("splitActivePane activates the new leaf", () => {
+    store.getState().openPinned({ path: "a.md" });
     const beforeId = store.getState().activePaneId;
     store.getState().splitActivePane("horizontal");
     const afterId = store.getState().activePaneId;
@@ -90,11 +92,11 @@ describe("split pane actions", () => {
     });
   });
 
-  it("creates an empty new pane when there is no active tab", () => {
+  it("splitActivePane is a no-op when there is no active tab (Obsidian parity)", () => {
+    const before = store.getState().root;
     store.getState().splitActivePane("vertical");
-    const leaves = collectLeaves(store.getState().root);
-    expect(leaves).toHaveLength(2);
-    expect(leaves[1].tabGroup.tabIds).toEqual([]);
+    // Root must remain a single leaf — no empty split created.
+    expect(store.getState().root).toBe(before);
   });
 
   it("tab activation in one pane does not leak into another pane (Bug 1)", () => {
@@ -136,6 +138,7 @@ describe("split pane actions", () => {
   });
 
   it("closePane removes a leaf and unwraps single-child split", () => {
+    store.getState().openPinned({ path: "a.md" });
     store.getState().splitActivePane("vertical");
     const root = store.getState().root;
     expect(root.type).toBe("split");
@@ -161,6 +164,7 @@ describe("split pane actions", () => {
   });
 
   it("activatePane changes active pane", () => {
+    store.getState().openPinned({ path: "a.md" });
     store.getState().splitActivePane("vertical");
     const leaves = collectLeaves(store.getState().root);
     expect(leaves).toHaveLength(2);
@@ -179,6 +183,7 @@ describe("split pane actions", () => {
   });
 
   it("deep splits: split twice creates nested tree", () => {
+    store.getState().openPinned({ path: "a.md" });
     store.getState().splitActivePane("vertical");
     const leaves1 = collectLeaves(store.getState().root);
     expect(leaves1).toHaveLength(2);

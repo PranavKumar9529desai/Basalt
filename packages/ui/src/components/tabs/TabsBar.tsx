@@ -5,7 +5,6 @@ import {
   CommandItem,
   CommandList,
 } from "@workspace/ui/components/ui/command";
-import { Separator } from "@workspace/ui/components/ui/separator";
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -145,12 +144,7 @@ export function TabsBar({
     handleInternalDragOver,
     handleInternalDrop,
     handleInternalDragEnd,
-  } = useTabDragDrop(
-    tabRefs,
-    onTabDragOver,
-    onTabDrop,
-    onTabDragEnd,
-  );
+  } = useTabDragDrop(tabRefs, onTabDragOver, onTabDrop, onTabDragEnd);
 
   // Close dropdown on Escape
   useEffect(() => {
@@ -250,7 +244,9 @@ export function TabsBar({
               onDragEnd={handleInternalDragEnd}
               showDropIndicator={
                 tab.dropEdge ??
-                (dropIndicator?.tabId === tab.id ? dropIndicator.edge : undefined)
+                (dropIndicator?.tabId === tab.id
+                  ? dropIndicator.edge
+                  : undefined)
               }
               hidden={
                 index < visibleTabStart ||
@@ -349,15 +345,16 @@ export function TabsBar({
         </div>
       </div>
 
+      {/* End controls: overflow dropdown trigger + rightSlot in one
+          container, grouped at the right edge of the tab bar. */}
       <div
         ref={dropdownWrapperRef}
         // No opaque background: it would chop the HeaderBandRule hairline
         // short of the right edge.
-        className="shrink-0 flex items-stretch"
+        // self-stretch overrides the root's items-end so buttons center
+        // vertically in the h-10 bar (tabs stay bottom-aligned).
+        className="shrink-0 self-stretch flex items-center"
       >
-        {tabs.length > 0 && (
-          <div className="w-px h-5 self-center bg-[var(--sat-layout-divider,var(--sat-layout-border))]" />
-        )}
         <button
           ref={dropdownTriggerRef}
           type="button"
@@ -381,14 +378,13 @@ export function TabsBar({
               : tabs.length}
           </span>
         </button>
+        {rightSlot ? (
+          <>
+            <div className="w-px h-5 self-center bg-[var(--sat-layout-divider,var(--sat-layout-border))]" />
+            <div className="shrink-0">{rightSlot}</div>
+          </>
+        ) : null}
       </div>
-
-      {rightSlot ? (
-        <>
-          <Separator className="h-5 bg-[var(--sat-layout-divider)]" />
-          <div className="shrink-0">{rightSlot}</div>
-        </>
-      ) : null}
 
       {dropdownOpen && dropdownPosition ? (
         <>

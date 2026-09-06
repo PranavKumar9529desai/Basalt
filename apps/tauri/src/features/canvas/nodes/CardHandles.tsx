@@ -14,6 +14,11 @@ const SIDES = [
 ] as const;
 
 function CardHandles({ borderColor, selected }: CardHandlesProps) {
+  const highlightColor =
+    borderColor && borderColor !== "var(--sat-layout-border)"
+      ? borderColor
+      : "var(--sat-accent-primary, #6366f1)";
+
   return (
     <>
       {SIDES.map(({ id, pos }) => (
@@ -22,10 +27,15 @@ function CardHandles({ borderColor, selected }: CardHandlesProps) {
           type="source"
           position={pos}
           id={id}
-          className={`!w-3 !h-3 !rounded-full !border-2 !bg-[var(--sat-surface-1)] transition-all duration-150 cursor-crosshair hover:!scale-125 hover:!bg-[var(--sat-accent-primary)] hover:!border-[var(--sat-accent-primary)] ${
+          className={`!w-3.5 !h-3.5 !rounded-full !border-2 transition-all duration-150 cursor-crosshair hover:!scale-125 hover:!brightness-110 shadow-sm ${
             selected ? "!opacity-100" : "!opacity-0 group-hover:!opacity-100"
           }`}
-          style={{ borderColor, zIndex: 10 }}
+          style={{
+            backgroundColor: highlightColor,
+            borderColor: "var(--sat-surface-1)",
+            boxShadow: `0 0 0 1px ${highlightColor}, 0 2px 4px rgba(0,0,0,0.25)`,
+            zIndex: 10,
+          }}
         />
       ))}
     </>

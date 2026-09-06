@@ -1,5 +1,5 @@
 import { TabsBar as UITabsBar } from "@workspace/ui/components/tabs";
-import { type DragEvent, type PointerEvent, useCallback, useMemo } from "react";
+import { type DragEvent, type PointerEvent, type ReactNode, useCallback, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";
@@ -12,6 +12,8 @@ export interface TabsBarProps {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onPinToggle: (tabId: string) => void;
+  /** Extra content rendered at the far right of the tab bar (overflow + this). */
+  rightSlot?: ReactNode;
 }
 
 // TabsBar — store→view wiring for a single pane's tab bar. Rendered
@@ -22,6 +24,7 @@ export function TabsBar({
   onSelectTab,
   onCloseTab,
   onPinToggle,
+  rightSlot,
 }: TabsBarProps) {
   // Project only the data each pill needs. The selector picks STABLE
   // references — the pane's `tabIds` array, the `tabs` map, and its
@@ -123,6 +126,7 @@ export function TabsBar({
       onTabDragEnd={onTabDragEnd}
       dataPaneId={resolvedPaneId}
       onTabPointerDown={onTabPointerDown}
+      rightSlot={rightSlot}
     />
   );
 }

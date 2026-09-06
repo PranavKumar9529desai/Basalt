@@ -43,6 +43,7 @@ export function mapToXYFlow(doc: CanvasDocument): { nodes: CanvasXYNode[]; edges
 
   const xyEdges: Edge[] = (doc.edges ?? []).map((edge) => {
     const toEnd = edge.toEnd ?? "arrow";
+    const strokeColor = resolveCanvasColor(edge.color, "var(--sat-accent-primary, #6366f1)");
     return {
       id: edge.id,
       source: edge.fromNode,
@@ -53,10 +54,10 @@ export function mapToXYFlow(doc: CanvasDocument): { nodes: CanvasXYNode[]; edges
       type: "bezier",
       markerEnd: toEnd === "arrow" ? {
         type: MarkerType.ArrowClosed,
-        color: edge.color ? resolveCanvasColor(edge.color) : undefined,
+        color: strokeColor,
       } : undefined,
       data: { color: edge.color },
-      style: edge.color ? { stroke: resolveCanvasColor(edge.color) } : undefined,
+      style: { stroke: strokeColor, strokeWidth: 2 },
     };
   });
 
@@ -64,13 +65,19 @@ export function mapToXYFlow(doc: CanvasDocument): { nodes: CanvasXYNode[]; edges
 }
 
 export function mapToCanvasDocument(nodes: CanvasXYNode[], edges: Edge[]): CanvasDocument {
-  const canvasNodes: CanvasNode[] = nodes.map((n) => {
+  const realNodes = nodes.filter((n) => n.type !== ("canvasGhost" as any) && !n.id.startsWith("ghost-"));
+  const realEdges = edges.filter((e) => !e.id.startsWith("ghost-") && realNodes.some(n => n.id === e.source) && realNodes.some(n => n.id === e.target));
+
+  const canvasNodes: CanvasNode[] = realNodes.map((n) => {
     const { id, position, style, data } = n;
-    const width = typeof style?.width === "number" ? style.width : parseInt(style?.width as string) || 200;
-    const height = typeof style?.height === "number" ? style.height : parseInt(style?.height as string) || 100;
+    const measured = (n as any).measured;
+    const rawW = typeof style?.width === "number" ? style.width : parseInt(style?.width as string);
+    const rawH = typeof style?.height === "number" ? style.height : parseInt(style?.height as string);
+    const width = Math.round(rawW || (typeof measured?.width === "number" ? measured.width : undefined) || (typeof (n as any).width === "number" ? (n as any).width : undefined) || 250);
+    const height = Math.round(rawH || (typeof measured?.height === "number" ? measured.height : undefined) || (typeof (n as any).height === "number" ? (n as any).height : undefined) || 140);
     const color = data.color as string | undefined;
     
-    const base = { id, x: position.x, y: position.y, width, height, color };
+    const base = { id, x: Math.round(position.x), y: Math.round(position.y), width, height, color };
 
     switch (n.type) {
       case "canvasText":
@@ -93,7 +100,7 @@ export function mapToCanvasDocument(nodes: CanvasXYNode[], edges: Edge[]): Canva
     }
   });
 
-  const canvasEdges: CanvasEdge[] = edges.map((e) => {
+  const canvasEdges: CanvasEdge[] = realEdges.map((e) => {
     return {
       id: e.id,
       fromNode: e.source,

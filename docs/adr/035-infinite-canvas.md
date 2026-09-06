@@ -143,6 +143,14 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
   - Context menu on right-click (canvas background vs. node).
   - Auto-save: Debounced write back to `.canvas` file via `save_canvas` on node drag end, resize end, text edit commit, or connection creation.
 
+### E. Smart Alignment Guidelines (`features/canvas/lib/guidelines.ts`)
+- **Magnetic Snapping (Figma/Canva-Style):** During card drag (`onNodeDrag`), inspect bounding boxes of neighboring cards along 6 reference axes:
+  - Vertical alignments: `Left`, `CenterX`, `Right`.
+  - Horizontal alignments: `Top`, `CenterY`, `Bottom`.
+- **Threshold & Snapping:** Within a 5px proximity threshold, the dragged card coordinate magnetically snaps to match the aligned reference card.
+- **Visual Reference Lines:** Renders dynamic accent-colored dashed reference lines across the canvas connecting the aligned cards.
+- **Auto-Dismiss:** Reference lines disappear immediately on `onNodeDragStop`.
+
 ---
 
 ## 6. Deprecation & Cleanup

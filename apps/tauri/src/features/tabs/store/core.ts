@@ -781,6 +781,12 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
     const sourceTabId = sourceLeaf?.tabGroup.activeTabId;
     const sourceTab = sourceTabId ? get().tabs[sourceTabId] : undefined;
 
+    // Match Obsidian: split commands are no-ops when no tab is active.
+    // Splitting an empty pane produces a meaningless empty sibling that
+    // persists across sessions — the source of the "two splits on boot"
+    // regression.
+    if (!sourceTab) return;
+
     set((state) => {
       let tabs = state.tabs;
       let newTabIds: TabId[] = [];
