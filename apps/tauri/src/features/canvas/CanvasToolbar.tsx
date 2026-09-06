@@ -8,6 +8,7 @@ import {
   IconPhoto,
   IconLink,
   IconBorderCornerRounded,
+  IconFocus2,
 } from "@tabler/icons-react";
 
 export interface CanvasToolbarProps {
@@ -16,6 +17,7 @@ export interface CanvasToolbarProps {
   onAddMedia: () => void;
   onAddLink: () => void;
   onAddGroup: () => void;
+  onZoomToFit?: () => void;
 }
 
 function ToolButton({
@@ -47,6 +49,7 @@ export function CanvasToolbar({
   onAddMedia,
   onAddLink,
   onAddGroup,
+  onZoomToFit,
 }: CanvasToolbarProps) {
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-2xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]/90 px-2 py-1.5 shadow-xl backdrop-blur-md">
@@ -76,6 +79,16 @@ export function CanvasToolbar({
         label="Add group"
         onClick={onAddGroup}
       />
+      {onZoomToFit && (
+        <>
+          <div className="mx-1 h-5 w-px bg-[var(--sat-layout-border)]" />
+          <ToolButton
+            icon={IconFocus2}
+            label="Zoom to fit"
+            onClick={onZoomToFit}
+          />
+        </>
+      )}
     </div>
   );
 }

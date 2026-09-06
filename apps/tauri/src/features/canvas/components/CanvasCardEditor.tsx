@@ -32,11 +32,13 @@ const CANVAS_CARD_THEME = EditorView.theme({
     fontFamily: "var(--sat-font-sans, system-ui, sans-serif)",
     overflowY: "auto",
     overflowX: "hidden",
+    cursor: "inherit",
   },
   ".cm-content": {
     padding: "0",
     maxWidth: "none",
     marginInline: "0",
+    userSelect: "inherit",
   },
   ".cm-line": {
     maxWidth: "none",
@@ -260,7 +262,7 @@ export function CanvasCardEditor({
   return (
     <div
       ref={containerRef}
-      className={`nodrag nopan nowheel w-full h-full min-h-0 overflow-hidden ${className}`}
+      className={`${isEditing ? "nodrag nopan cursor-text" : "select-none cursor-grab active:cursor-grabbing"} nowheel w-full h-full min-h-0 overflow-hidden ${className}`}
       onBlur={handleBlur}
       onKeyDownCapture={handleKeyDownCapture}
       onPointerDownCapture={isEditing ? (e) => e.stopPropagation() : undefined}

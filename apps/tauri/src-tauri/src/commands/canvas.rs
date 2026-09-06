@@ -22,24 +22,64 @@ pub fn parse_canvas(json: String) -> Result<String, String> {
     serde_json::to_string(&doc).map_err(|e| e.to_string())
 }
 
+fn resolve_canvas_path(path: &str, state: &AppState) -> AppResult<PathBuf> {
+    let p = Path::new(path);
+    if p.extension().and_then(|e| e.to_str()) != Some("canvas") {
+        return Err(AppError::Validation(
+            "only .canvas files are supported".to_string(),
+        ));
+    }
+    if p.is_absolute() && p.exists() {
+        return p
+            .canonicalize()
+            .map_err(|e| AppError::Io(format!("failed to resolve path: {e}")));
+    }
+
+    if let Ok(guard) = state.vault_path.read() {
+        if let Some(vault_path_str) = guard.as_ref() {
+            if let Ok(vault_root) = Path::new(vault_path_str).canonicalize() {
+                let candidate = vault_root.join(path);
+                if candidate.exists() {
+                    let canonical = candidate
+                        .canonicalize()
+                        .map_err(|e| AppError::Io(format!("failed to resolve path: {e}")))?;
+                    ensure_inside_vault(&canonical, &vault_root)?;
+                    return Ok(canonical);
+                }
+                if !p.is_absolute() {
+                    ensure_inside_vault(&candidate, &vault_root)?;
+                    return Ok(candidate);
+                }
+            }
+        }
+    }
+
+    p.canonicalize()
+        .map_err(|e| AppError::Io(format!("failed to resolve path: {e}")))
+}
+
 /// Read a .canvas file from disk.
 #[tauri::command]
-pub fn open_canvas(path: String) -> Result<String, String> {
-    let abs = PathBuf::from(&path)
-        .canonicalize()
-        .map_err(|e| format!("failed to resolve path: {e}"))?;
-    std::fs::read_to_string(abs).map_err(|e| format!("failed to read file: {e}"))
+pub fn open_canvas(path: String, state: State<AppState>) -> AppResult<String> {
+    let abs = resolve_canvas_path(&path, &state)?;
+    std::fs::read_to_string(abs).map_err(|e| AppError::Io(format!("failed to read file: {e}")))
 }
 
 /// Write validated canvas JSON to disk.
 #[tauri::command]
-pub fn save_canvas(path: String, content: String) -> Result<(), String> {
-    let doc: CanvasDocument = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-    basalt_canvas::validate(&doc).map_err(|e| e.to_string())?;
-    let abs = PathBuf::from(&path)
-        .canonicalize()
-        .map_err(|e| format!("failed to resolve path: {e}"))?;
-    std::fs::write(abs, content).map_err(|e| format!("failed to write file: {e}"))
+pub fn save_canvas(path: String, content: String, state: State<AppState>) -> AppResult<()> {
+    let doc: CanvasDocument = serde_json::from_str(&content).map_err(|e| AppError::Validation(e.to_string()))?;
+    basalt_canvas::validate(&doc).map_err(|e| AppError::Validation(e.to_string()))?;
+    let abs = resolve_canvas_path(&path, &state)?;
+
+    register_self_writes(&state, std::slice::from_ref(&abs));
+    if let Err(e) = std::fs::write(&abs, content) {
+        if let Ok(mut guard) = state.self_writes.lock() {
+            guard.remove(&abs);
+        }
+        return Err(AppError::Io(format!("failed to write file: {e}")));
+    }
+    Ok(())
 }
 
 /// Create a new untitled .canvas file under the given parent directory.

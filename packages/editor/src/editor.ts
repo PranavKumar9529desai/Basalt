@@ -42,6 +42,7 @@ import {
   tableBlockSpec,
   TABLE_BLOCK_THEME,
 } from "./block-widgets/table-widget";
+import { tableRawModeField } from "./block-widgets/table-state";
 import {
   blockWidgetSpecsFacet,
   type BlockWidgetSpec,
@@ -94,6 +95,7 @@ function commonBlockWidgetExtensions(config?: {
     // Table block widget — renders markdown tables as rich <table> HTML.
     blockWidgetSpecsFacet.of(tableBlockSpec as BlockWidgetSpec),
     TABLE_BLOCK_THEME,
+    tableRawModeField,
   ];
   if (config?.runQuery || config?.onOpenLink) {
     // DQL query block widget — renders ```dql code blocks as live table/list/task views.

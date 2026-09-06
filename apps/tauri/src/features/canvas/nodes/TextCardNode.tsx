@@ -36,7 +36,7 @@ function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
       <CardHandles borderColor={borderColor} selected={selected} />
 
       <div 
-        className="w-full h-full rounded-md border-2 bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] shadow-sm overflow-hidden flex flex-col cursor-grab active:cursor-grabbing"
+        className={`w-full h-full rounded-md border-2 bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] shadow-sm overflow-hidden flex flex-col ${isEditing ? "cursor-text" : "cursor-grab active:cursor-grabbing"}`}
         style={{ borderColor, contain: "layout style paint" }}
         onDoubleClick={!isEditing ? handleDoubleClick : undefined}
       >

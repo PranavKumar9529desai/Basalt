@@ -61,9 +61,16 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   const [ctxMenu, setCtxMenu] = useState<{ target: ContextTarget; anchor: { x: number; y: number } } | null>(null);
   const [isNotePickerOpen, setIsNotePickerOpen] = useState(false);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
-  const [guidelines, setGuidelines] = useState<{ vertical: number | null; horizontal: number | null }>({
+  const [guidelines, setGuidelines] = useState<{
+    vertical: number | null;
+    horizontal: number | null;
+    verticalLines?: number[];
+    horizontalLines?: number[];
+  }>({
     vertical: null,
     horizontal: null,
+    verticalLines: [],
+    horizontalLines: [],
   });
   const reactFlowInstance = useReactFlow();
   const connectingNodeRef = useRef<{ nodeId: string; handleId: string | null } | null>(null);
@@ -74,6 +81,8 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   } catch {
     // Leaf services may be omitted in isolated unit tests
   }
+  const servicesRef = useRef(services);
+  servicesRef.current = services;
 
   const nodesRef = useRef<CanvasXYNode[]>([]);
   const edgesRef = useRef<Edge[]>([]);
@@ -96,16 +105,16 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
       await invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) });
       isDirtyRef.current = false;
-      services?.markTabDirty(tab.id, false);
+      servicesRef.current?.markTabDirty(tab.id, false);
     } catch (e) {
       console.error("Failed to save canvas", e);
     }
-  }, [tab.path, tab.id, services]);
+  }, [tab.path, tab.id]);
 
   const triggerSave = useCallback(() => {
     if (!isLoadedRef.current) return;
     isDirtyRef.current = true;
-    services?.markTabDirty(tab.id, true);
+    servicesRef.current?.markTabDirty(tab.id, true);
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -114,7 +123,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       saveTimeoutRef.current = null;
       saveCanvasNow();
     }, 500);
-  }, [saveCanvasNow, tab.id, services]);
+  }, [saveCanvasNow, tab.id]);
 
   const loadCanvas = useCallback(async () => {
     if (!tab.path.endsWith(".canvas")) return;
@@ -128,11 +137,17 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       setEdges(xyEdges);
       isLoadedRef.current = true;
       isDirtyRef.current = false;
-      services?.markTabDirty(tab.id, false);
+      servicesRef.current?.markTabDirty(tab.id, false);
+
+      if (xyNodes.length > 0) {
+        requestAnimationFrame(() => {
+          reactFlowInstance.fitView({ padding: 0.2, duration: 200 });
+        });
+      }
     } catch (e) {
       console.error("Failed to load canvas", e);
     }
-  }, [tab.path, tab.id, services]);
+  }, [tab.path, tab.id, reactFlowInstance]);
 
   useEffect(() => {
     loadCanvas();
@@ -149,10 +164,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       if (isLoadedRef.current && isDirtyRef.current) {
         const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
         invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) }).catch(console.error);
-        services?.markTabDirty(tab.id, false);
+        servicesRef.current?.markTabDirty(tab.id, false);
       }
     };
-  }, [tab.path, tab.id, services]);
+  }, [tab.path, tab.id]);
 
   // Handle Ctrl+S / Cmd+S and global save actions
   useEffect(() => {
@@ -209,7 +224,12 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
               const tempNode: CanvasXYNode = { ...node, position: change.position };
               const alignment = getSmartGuidelines(tempNode, nds);
               hasSnapChange = true;
-              setGuidelines({ vertical: alignment.verticalLine, horizontal: alignment.horizontalLine });
+              setGuidelines({
+                vertical: alignment.verticalLine,
+                horizontal: alignment.horizontalLine,
+                verticalLines: alignment.verticalLines,
+                horizontalLines: alignment.horizontalLines,
+              });
               return {
                 ...change,
                 position: { x: alignment.x, y: alignment.y },
@@ -220,7 +240,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
         });
 
         if (!hasSnapChange && changes.some((c) => c.type === "position" && !(c as any).dragging)) {
-          setGuidelines({ vertical: null, horizontal: null });
+          setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
         }
 
         const nextNodes = applyNodeChanges(nextChanges, nds) as CanvasXYNode[];
@@ -250,8 +270,9 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
         const isDragging = changes.some((c) => c.type === "position" && (c as any).dragging);
         const isResizing = changes.some((c) => c.type === "dimensions" && (c as any).resizing === true);
         const isPureSelect = changes.every((c) => c.type === "select");
+        const isInitialDimensions = changes.every((c) => c.type === "dimensions" && !(c as any).resizing);
 
-        if (!isDragging && !isResizing && !isPureSelect) {
+        if (!isDragging && !isResizing && !isPureSelect && !isInitialDimensions) {
           triggerSave();
         }
 
@@ -434,7 +455,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
 
   const onNodeDragStop = useCallback(
     (_event: MouseEvent | TouchEvent, _node: CanvasXYNode) => {
-      setGuidelines({ vertical: null, horizontal: null });
+      setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
       saveCanvasNow();
     },
     [saveCanvasNow]
@@ -669,7 +690,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           onNodeDragStop={onNodeDragStop}
           onPaneClick={() => {
             dismissGhost();
-            setGuidelines({ vertical: null, horizontal: null });
+            setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
           }}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
@@ -690,13 +711,17 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           snapToGrid={true}
           snapGrid={[12, 12]}
           deleteKeyCode={["Backspace", "Delete"]}
-          onlyRenderVisibleElements={true}
           fitView
           minZoom={0.1}
           maxZoom={4}
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
-          <GuidelineLines verticalLine={guidelines.vertical} horizontalLine={guidelines.horizontal} />
+          <GuidelineLines
+            verticalLine={guidelines.vertical}
+            horizontalLine={guidelines.horizontal}
+            verticalLines={guidelines.verticalLines}
+            horizontalLines={guidelines.horizontalLines}
+          />
         </ReactFlow>
 
         <div className="pointer-events-auto">
@@ -706,6 +731,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
             onAddMedia={() => setIsAssetPickerOpen(true)}
             onAddLink={handleAddLink}
             onAddGroup={handleAddGroup}
+            onZoomToFit={() => reactFlowInstance.fitView({ padding: 0.2, duration: 200 })}
           />
           <CanvasContextMenu
             target={ctxMenu?.target ?? null}

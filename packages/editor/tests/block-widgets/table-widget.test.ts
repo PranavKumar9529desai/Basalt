@@ -190,4 +190,66 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     addRowBtn.dispatchEvent(new MouseEvent("mouseleave"));
     expect(rowLabel.classList.contains("visible")).toBe(false);
   });
+
+  it("anchors code button inside .cm-table-container and dispatches raw mode on click", () => {
+    const doc = "| Product | Price |\n|---|---|\n| Laptop | $1000 |";
+    const fixture = testMarkdownFixture(doc, {
+      renderMode: "live",
+      extensions: [registerBlockWidget(tableBlockSpec), mediaResolve],
+    });
+    const preview = fixture.state.field(livePreviewField) as { decorations: DecorationSet };
+    let widgetObj: { toDOM: (view?: any) => HTMLElement } | null = null;
+    preview.decorations.between(0, fixture.state.doc.length, (_from, _to, deco) => {
+      const w = (deco as any).widget;
+      if (w?.constructor?.name === "TableBlockWidget") widgetObj = w;
+    });
+    expect(widgetObj).not.toBeNull();
+    const dom = widgetObj!.toDOM(fixture.view);
+
+    const container = dom.querySelector(".cm-table-container")!;
+    const codeBtn = container.querySelector(".cm-table-btn-code")!;
+    expect(codeBtn).not.toBeNull();
+    expect(codeBtn.parentElement).toBe(container);
+
+    // Clicking code toggle dispatches setTableRawMode
+    codeBtn.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    const rawRange = fixture.view.state.field(tableBlockSpec.theme[1] as any, false);
+    expect(rawRange).not.toBeNull();
+    expect(rawRange.from).toBe(0);
+    expect(rawRange.to).toBe(doc.length);
+  });
+
+  it("activates column and row hover zones independently (never showing both)", () => {
+    const doc = "| A | B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |";
+    const liveHtml = tableWidgetHtml(liveTableFixture(doc, 0));
+    expect(liveHtml).not.toBeNull();
+
+    const container = liveHtml!.querySelector(".cm-table-container")!;
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+
+    // Hover over an interior cell (Row 1, Col 1) -> neither zone active
+    const interiorCell = liveHtml!.querySelector('td[data-row="1"][data-col="1"]')!;
+    container.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    interiorCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+
+    // Hover over last column cell (Row 1, Col 2) -> only col zone active
+    const lastColCell = liveHtml!.querySelector('td[data-row="1"][data-col="2"]')!;
+    lastColCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(true);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+
+    // Hover over last row cell (Row 2, Col 0) -> only row zone active
+    const lastRowCell = liveHtml!.querySelector('td[data-row="2"][data-col="0"]')!;
+    lastRowCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(true);
+
+    // Mouse leaves container -> both zones deactivated
+    container.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+  });
 });

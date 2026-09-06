@@ -325,10 +325,11 @@ export class TableBlockWidget extends WidgetType {
     }
 
     // 1. Top-Right Code Toggle Button (Live Preview only)
+    let codeBtn: HTMLElement | undefined;
     if (this.model.isLive) {
-      const codeBtn = document.createElement("button");
+      codeBtn = document.createElement("button");
       codeBtn.className = "cm-table-btn-code";
-      codeBtn.type = "button";
+      codeBtn.setAttribute("type", "button");
       codeBtn.title = "Edit as raw Markdown";
       codeBtn.setAttribute("aria-label", "Edit as raw Markdown");
       codeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
@@ -336,13 +337,14 @@ export class TableBlockWidget extends WidgetType {
         e.preventDefault();
         e.stopPropagation();
         if (!this.view) return;
+        const lineFrom = this.view.state.doc.lineAt(this.model.from).from;
+        const lineTo = this.view.state.doc.lineAt(this.model.to).to;
         this.view.dispatch({
-          effects: setTableRawMode.of({ from: this.model.from, to: this.model.to }),
+          effects: setTableRawMode.of({ from: lineFrom, to: lineTo }),
           selection: { anchor: this.model.from },
         });
         this.view.focus();
       });
-      wrapper.appendChild(codeBtn);
     }
 
     // 2. Build <table> DOM
@@ -458,6 +460,13 @@ export class TableBlockWidget extends WidgetType {
       else if (a === "center") th.style.textAlign = "center";
       else if (a === "right") th.style.textAlign = "right";
 
+      if (c === headers.length - 1) {
+        th.classList.add("cm-table-col-last");
+      }
+      if (body.length === 0) {
+        th.classList.add("cm-table-row-last");
+      }
+
       th.innerHTML = renderInlineCell(headers[c], this.resolve);
 
       if (this.model.isLive) {
@@ -496,6 +505,13 @@ export class TableBlockWidget extends WidgetType {
         if (a === "left") td.style.textAlign = "left";
         else if (a === "center") td.style.textAlign = "center";
         else if (a === "right") td.style.textAlign = "right";
+
+        if (c === headers.length - 1) {
+          td.classList.add("cm-table-col-last");
+        }
+        if (r === body.length - 1) {
+          td.classList.add("cm-table-row-last");
+        }
 
         const cellText = body[r]?.[c] ?? "";
         td.innerHTML = renderInlineCell(cellText, this.resolve);
@@ -545,8 +561,13 @@ export class TableBlockWidget extends WidgetType {
     container.className = "cm-table-container";
     container.appendChild(table);
 
-    // Ghost column "+" button & hover label (Live Preview only)
+    // Live Preview interactive chrome
     if (this.model.isLive) {
+      if (codeBtn) {
+        container.appendChild(codeBtn);
+      }
+
+      // Ghost column "+" button & hover label
       const addColBtn = document.createElement("button");
       addColBtn.className = "cm-table-ghost-btn-col cm-table-add-col-btn";
       addColBtn.type = "button";
@@ -565,7 +586,7 @@ export class TableBlockWidget extends WidgetType {
         this.handleAddColumn();
       });
 
-      // Ghost row "+" button & hover label (Live Preview only)
+      // Ghost row "+" button & hover label
       const addRowBtn = document.createElement("button");
       addRowBtn.className = "cm-table-ghost-btn-row cm-table-add-row-btn";
       addRowBtn.type = "button";
@@ -588,6 +609,89 @@ export class TableBlockWidget extends WidgetType {
       container.appendChild(colLabel);
       container.appendChild(addRowBtn);
       container.appendChild(rowLabel);
+
+      // Zone tracking: "none" | "col" | "row" (mutually exclusive)
+      let currentZone: "none" | "col" | "row" = "none";
+
+      const setZone = (zone: "none" | "col" | "row") => {
+        if (currentZone === zone) return;
+        currentZone = zone;
+        if (zone === "col") {
+          container.classList.add("cm-zone-col-active");
+          container.classList.remove("cm-zone-row-active");
+        } else if (zone === "row") {
+          container.classList.add("cm-zone-row-active");
+          container.classList.remove("cm-zone-col-active");
+        } else {
+          container.classList.remove("cm-zone-col-active");
+          container.classList.remove("cm-zone-row-active");
+        }
+      };
+
+      container.addEventListener("mousemove", (e) => {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+
+        // 1. Directly over or inside col button / label / ghost col cell
+        if (target.closest(".cm-table-ghost-btn-col, .cm-table-ghost-label-col, .cm-table-ghost-col-cell")) {
+          setZone("col");
+          return;
+        }
+
+        // 2. Directly over or inside row button / label / ghost row
+        if (target.closest(".cm-table-ghost-btn-row, .cm-table-ghost-label-row, .cm-table-ghost-row, .cm-table-ghost-row-cell")) {
+          setZone("row");
+          return;
+        }
+
+        // 3. Over a cell in the table
+        const cell = target.closest("th, td") as HTMLElement | null;
+        if (cell && table.contains(cell)) {
+          const isLastCol = cell.classList.contains("cm-table-col-last");
+          const isLastRow = cell.classList.contains("cm-table-row-last");
+
+          if (isLastCol && isLastRow) {
+            const rect = cell.getBoundingClientRect();
+            const distToRight = rect.right - e.clientX;
+            const distToBottom = rect.bottom - e.clientY;
+            setZone(distToRight < distToBottom ? "col" : "row");
+            return;
+          } else if (isLastCol) {
+            setZone("col");
+            return;
+          } else if (isLastRow) {
+            setZone("row");
+            return;
+          } else {
+            setZone("none");
+            return;
+          }
+        }
+
+        // 4. In padding/outer zone of container
+        const tableRect = table.getBoundingClientRect();
+        if (
+          e.clientX >= tableRect.right - 4 &&
+          e.clientY >= tableRect.top &&
+          e.clientY <= tableRect.bottom + 24
+        ) {
+          setZone("col");
+        } else if (
+          e.clientY >= tableRect.bottom - 4 &&
+          e.clientX >= tableRect.left &&
+          e.clientX <= tableRect.right + 24
+        ) {
+          setZone("row");
+        } else {
+          setZone("none");
+        }
+      });
+
+      container.addEventListener("mouseleave", () => {
+        setZone("none");
+        colLabel.classList.remove("visible");
+        rowLabel.classList.remove("visible");
+      });
     }
 
     wrapper.appendChild(container);
@@ -706,102 +810,100 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   },
   ".cm-table-btn-code": {
     position: "absolute",
-    top: "0.25rem",
-    right: "0.25rem",
+    top: "6px",
+    right: "8px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "26px",
-    height: "26px",
+    width: "24px",
+    height: "24px",
     borderRadius: "var(--sat-layout-radius-md, 6px)",
-    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.05))",
-    border: "1px solid var(--sat-layout-border, rgba(255, 255, 255, 0.1))",
+    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.08))",
+    border: "1px solid var(--sat-layout-border, rgba(255, 255, 255, 0.12))",
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
     opacity: "0",
-    transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease",
-    zIndex: "5",
+    transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease, right 150ms ease",
+    zIndex: "10",
   },
-  ".cm-table-block:hover .cm-table-btn-code, .cm-table-block:focus-within .cm-table-btn-code": {
+  ".cm-table-container:hover .cm-table-btn-code, .cm-table-container:focus-within .cm-table-btn-code": {
     opacity: "1",
+  },
+  ".cm-table-container.cm-zone-col-active .cm-table-btn-code": {
+    right: "36px",
   },
   ".cm-table-btn-code:hover": {
     color: "var(--sat-text-primary, #f8fafc)",
-    background: "var(--sat-surface-3, rgba(255, 255, 255, 0.12))",
+    background: "var(--sat-surface-3, rgba(255, 255, 255, 0.16))",
   },
   ".cm-table-container": {
     position: "relative",
     display: "inline-block",
     minWidth: "100%",
-    paddingBottom: "22px",
+    paddingBottom: "0",
+    transition: "padding-bottom 120ms ease",
   },
-  ".cm-table-ghost-col-th": {
+  ".cm-table-container.cm-zone-row-active, .cm-table-container.cm-zone-col-active": {
+    paddingBottom: "24px",
+  },
+  ".cm-table-ghost-col-cell": {
+    display: "none",
     width: "28px",
     minWidth: "28px",
     maxWidth: "28px",
     padding: "0",
-    borderLeft: "1px solid transparent",
-    borderBottom: "2px solid transparent",
-    transition: "border-color 150ms ease",
+    boxSizing: "border-box",
   },
-  ".cm-table-interactive:hover .cm-table-ghost-col-th, .cm-table-interactive:focus-within .cm-table-ghost-col-th": {
+  ".cm-zone-col-active .cm-table-ghost-col-cell": {
+    display: "table-cell",
+  },
+  ".cm-zone-col-active .cm-table-ghost-col-th": {
     borderLeft: "1px solid var(--sat-table-border, #334155)",
     borderBottom: "2px solid var(--sat-table-border, #334155)",
+    borderRight: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    borderTop: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
   },
-  ".cm-table-ghost-col-td": {
-    width: "28px",
-    minWidth: "28px",
-    maxWidth: "28px",
-    padding: "0",
-    borderLeft: "1px solid transparent",
-    borderBottom: "1px solid transparent",
-    transition: "border-color 150ms ease",
-  },
-  ".cm-table-interactive:hover .cm-table-ghost-col-td, .cm-table-interactive:focus-within .cm-table-ghost-col-td": {
+  ".cm-zone-col-active .cm-table-ghost-col-td": {
     borderLeft: "1px solid var(--sat-table-border, #334155)",
-    borderBottom: "1px solid var(--sat-layout-divider, rgba(255,255,255,0.06))",
+    borderBottom: "1px solid var(--sat-layout-divider, rgba(255, 255, 255, 0.06))",
+    borderRight: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
   },
-  ".cm-table-ghost-row td": {
-    height: "24px",
+  ".cm-table-ghost-row": {
+    display: "none",
+  },
+  ".cm-zone-row-active .cm-table-ghost-row": {
+    display: "table-row",
+  },
+  ".cm-zone-row-active .cm-table-ghost-row td": {
+    height: "26px",
     padding: "0",
-    borderBottom: "1px solid transparent",
-    borderRight: "1px solid transparent",
-    borderLeft: "1px solid transparent",
-    transition: "border-color 150ms ease",
-  },
-  ".cm-table-interactive:hover .cm-table-ghost-row td, .cm-table-interactive:focus-within .cm-table-ghost-row td": {
-    borderBottom: "1px solid var(--sat-table-border, #334155)",
+    borderBottom: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
     borderRight: "1px solid var(--sat-table-border, #334155)",
-  },
-  ".cm-table-interactive:hover .cm-table-ghost-row td:first-child, .cm-table-interactive:focus-within .cm-table-ghost-row td:first-child": {
     borderLeft: "1px solid var(--sat-table-border, #334155)",
+    boxSizing: "border-box",
   },
   ".cm-table-ghost-btn-col": {
     position: "absolute",
     right: "4px",
-    top: "calc(50% - 11px)",
+    top: "50%",
     transform: "translateY(-50%)",
     width: "20px",
     height: "20px",
     borderRadius: "var(--sat-layout-radius-sm, 4px)",
-    border: "1px solid var(--sat-layout-border, rgba(255,255,255,0.15))",
-    background: "var(--sat-surface-2, rgba(255,255,255,0.06))",
+    border: "1px solid var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.08))",
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
-    opacity: "0",
-    pointerEvents: "none",
-    display: "flex",
+    display: "none",
     alignItems: "center",
     justifyContent: "center",
-    transition: "opacity 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease",
-    zIndex: "4",
+    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    zIndex: "10",
   },
-  ".cm-table-interactive:hover .cm-table-ghost-btn-col, .cm-table-interactive:focus-within .cm-table-ghost-btn-col": {
-    opacity: "0.6",
-    pointerEvents: "auto",
+  ".cm-zone-col-active .cm-table-ghost-btn-col": {
+    display: "flex",
   },
   ".cm-table-ghost-btn-col:hover": {
-    opacity: "1",
     background: "var(--sat-accent-primary, #60a5fa)",
     color: "var(--sat-surface-1, #0f172a)",
     borderColor: "var(--sat-accent-primary, #60a5fa)",
@@ -809,44 +911,39 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-table-ghost-label-col": {
     position: "absolute",
     right: "0",
-    bottom: "2px",
+    bottom: "4px",
     fontSize: "0.75rem",
     color: "var(--sat-text-muted, #94a3b8)",
     whiteSpace: "nowrap",
     pointerEvents: "none",
-    opacity: "0",
-    transition: "opacity 120ms ease",
+    display: "none",
     textAlign: "right",
   },
   ".cm-table-ghost-label-col.visible": {
-    opacity: "1",
+    display: "block",
   },
   ".cm-table-ghost-btn-row": {
     position: "absolute",
     left: "50%",
-    bottom: "24px",
+    bottom: "27px",
     transform: "translateX(-50%)",
     width: "20px",
     height: "20px",
     borderRadius: "var(--sat-layout-radius-sm, 4px)",
-    border: "1px solid var(--sat-layout-border, rgba(255,255,255,0.15))",
-    background: "var(--sat-surface-2, rgba(255,255,255,0.06))",
+    border: "1px solid var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.08))",
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
-    opacity: "0",
-    pointerEvents: "none",
-    display: "flex",
+    display: "none",
     alignItems: "center",
     justifyContent: "center",
-    transition: "opacity 150ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease",
-    zIndex: "4",
+    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    zIndex: "10",
   },
-  ".cm-table-interactive:hover .cm-table-ghost-btn-row, .cm-table-interactive:focus-within .cm-table-ghost-btn-row": {
-    opacity: "0.6",
-    pointerEvents: "auto",
+  ".cm-zone-row-active .cm-table-ghost-btn-row": {
+    display: "flex",
   },
   ".cm-table-ghost-btn-row:hover": {
-    opacity: "1",
     background: "var(--sat-accent-primary, #60a5fa)",
     color: "var(--sat-surface-1, #0f172a)",
     borderColor: "var(--sat-accent-primary, #60a5fa)",
@@ -854,18 +951,17 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-table-ghost-label-row": {
     position: "absolute",
     left: "50%",
-    bottom: "2px",
     transform: "translateX(-50%)",
+    bottom: "4px",
     fontSize: "0.75rem",
     color: "var(--sat-text-muted, #94a3b8)",
     whiteSpace: "nowrap",
     pointerEvents: "none",
-    opacity: "0",
-    transition: "opacity 120ms ease",
+    display: "none",
     textAlign: "center",
   },
   ".cm-table-ghost-label-row.visible": {
-    opacity: "1",
+    display: "block",
   },
   ".cm-table-block th[contenteditable=\"plaintext-only\"]:focus, .cm-table-block td[contenteditable=\"plaintext-only\"]:focus, .cm-table-block th[contenteditable=\"true\"]:focus, .cm-table-block td[contenteditable=\"true\"]:focus": {
     outline: "2px solid var(--sat-accent-primary, #60a5fa)",
