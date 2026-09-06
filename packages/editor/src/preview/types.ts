@@ -28,6 +28,7 @@ export interface DecorationCollector {
     block?: boolean,
     atomic?: boolean,
   ): void;
+  addPoint?(pos: number, widget: WidgetType): void;
 }
 
 /**

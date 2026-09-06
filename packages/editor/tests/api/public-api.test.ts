@@ -16,7 +16,9 @@ const EXPECTED_VALUE_EXPORTS = [
   "FRONTMATTER_WIDGET_THEME",
   "HTML_SANITIZE_CONFIG",
   "HTML_TYPOGRAPHY_CSS",
+  "RawTableToggleWidget",
   "TABLE_BLOCK_THEME",
+  "TableBlockWidget",
   "applyTableMutation",
   "attachScrollHeader",
   "blockWidgetModeFacet",
@@ -43,6 +45,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "insertColumnRight",
   "insertRowAbove",
   "insertRowBelow",
+  "isTableInRawMode",
   "moveRowDown",
   "moveRowUp",
   "openExternalLinkFacet",
@@ -61,12 +64,15 @@ const EXPECTED_VALUE_EXPORTS = [
   "runTypingBenchmark",
   "sanitizeHtml",
   "setAlignment",
+  "setTableRawMode",
   "startWatchdog",
   "stopWatchdog",
   "tableBlockSpec",
   "tableCursorExtension",
   "tablePositionAtCursor",
+  "tableRawModeField",
   "tokenizeCode",
+  "updateCellText",
 ].sort();
 
 describe("@workspace/editor public API snapshot", () => {

@@ -17,6 +17,7 @@ export interface RecordingCollector {
     block?: boolean;
     atomic?: boolean;
   }[];
+  points: { pos: number; widget: unknown }[];
   addLineClass(pos: number, className: string): void;
   addMark(from: number, to: number, className: string): void;
   addReplace(
@@ -26,6 +27,7 @@ export interface RecordingCollector {
     block?: boolean,
     atomic?: boolean,
   ): void;
+  addPoint(pos: number, widget: unknown): void;
   /** True if any calls were recorded. */
   get empty(): boolean;
   /** Reset all recorded entries (e.g. between phases of one test). */
@@ -41,11 +43,13 @@ export function makeCollector(): RecordingCollector {
   const lines: RecordingCollector["lines"] = [];
   const marks: RecordingCollector["marks"] = [];
   const replaces: RecordingCollector["replaces"] = [];
+  const points: RecordingCollector["points"] = [];
 
   return {
     lines,
     marks,
     replaces,
+    points,
     addLineClass(pos, className) {
       lines.push({ pos, className });
     },
@@ -55,13 +59,22 @@ export function makeCollector(): RecordingCollector {
     addReplace(from, to, widget, block = false, atomic = false) {
       replaces.push({ from, to, widget, block, atomic });
     },
+    addPoint(pos, widget) {
+      points.push({ pos, widget });
+    },
     get empty() {
-      return lines.length === 0 && marks.length === 0 && replaces.length === 0;
+      return (
+        lines.length === 0 &&
+        marks.length === 0 &&
+        replaces.length === 0 &&
+        points.length === 0
+      );
     },
     reset() {
       lines.length = 0;
       marks.length = 0;
       replaces.length = 0;
+      points.length = 0;
     },
   };
 }

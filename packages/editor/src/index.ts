@@ -42,6 +42,7 @@ export {
   setAlignment,
   moveRowUp,
   moveRowDown,
+  updateCellText,
 } from "./input/table-mutations";
 export {
   tableCursorExtension,
@@ -99,7 +100,15 @@ export {
 export {
   tableBlockSpec,
   TABLE_BLOCK_THEME,
+  TableBlockWidget,
 } from "./block-widgets/table-widget";
+export {
+  setTableRawMode,
+  tableRawModeField,
+  isTableInRawMode,
+  type TableRawRange,
+} from "./block-widgets/table-state";
+export { RawTableToggleWidget } from "./preview/tables";
 export { attachScrollHeader } from "./scroll-header";
 export type { CodeToken } from "./syntax/code-highlighting";
 export { tokenizeCode } from "./syntax/code-highlighting";

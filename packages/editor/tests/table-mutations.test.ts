@@ -13,10 +13,31 @@ import {
   deleteColumn,
   moveRowUp,
   moveRowDown,
+  updateCellText,
 } from "../src/input/table-mutations";
 
 // Serializer normalizes delimiter row to "| --- | --- |" format.
 const TABLE = "| A | B |\n|---|---|\n| 1 | 2 |";
+
+describe("updateCellText", () => {
+  it("updates header cell", () => {
+    const result = updateCellText(TABLE, 0, 0, "Updated");
+    expect(result).not.toBeNull();
+    expect(result!.text).toBe("| Updated | B |\n| --- | --- |\n| 1 | 2 |");
+  });
+
+  it("updates body cell", () => {
+    const result = updateCellText(TABLE, 1, 1, "99");
+    expect(result).not.toBeNull();
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| 1 | 99 |");
+  });
+
+  it("escapes pipes and handles newlines in cell content", () => {
+    const result = updateCellText(TABLE, 1, 0, "line1\nline2|extra");
+    expect(result).not.toBeNull();
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| line1 line2\\|extra | 2 |");
+  });
+});
 
 describe("parseTableSource", () => {
   it("parses a 2-column table", () => {

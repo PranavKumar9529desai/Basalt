@@ -15,7 +15,7 @@
 import { describe, expect, it } from "vitest";
 import type { EditorState } from "@codemirror/state";
 import type { DecorationSet } from "@codemirror/view";
-import { registerBlockWidget, tableBlockSpec } from "../../src";
+import { registerBlockWidget, tableBlockSpec, setTableRawMode } from "../../src";
 import { livePreviewField } from "../../src/preview/live-preview";
 import { resolveAssetFacet } from "../../src/types";
 import { testMarkdownFixture } from "../_helpers/test-fixture";
@@ -112,10 +112,46 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     expect(html!.querySelector("img, video, audio")).toBeNull();
   });
 
-  it("shows the rich table outside the caret but raw source inside (live preview)", () => {
+  it("keeps the rich table rendered inside the caret with interactive controls (live preview)", () => {
     const doc = "| Asset |\n|---|\n| ![[photo.png]] |\n\nplain";
-    const outside = doc.indexOf("plain"); // caret in trailing paragraph
-    expect(tableWidgetHtml(liveTableFixture(doc, outside))).not.toBeNull();
-    expect(tableWidgetHtml(liveTableFixture(doc, 6))).toBeNull();
+    const liveHtml = tableWidgetHtml(liveTableFixture(doc, 6)); // caret inside table
+    expect(liveHtml).not.toBeNull();
+    // Live preview includes code toggle button and add col/row buttons
+    expect(liveHtml!.querySelector(".cm-table-btn-code")).not.toBeNull();
+    expect(liveHtml!.querySelector(".cm-table-add-col-btn")).not.toBeNull();
+    expect(liveHtml!.querySelector(".cm-table-add-row-btn")).not.toBeNull();
+    // Cells in live preview have contenteditable enabled
+    const th = liveHtml!.querySelector("th")!;
+    expect(th.getAttribute("contenteditable")).toBe("plaintext-only");
+  });
+
+  it("renders clean read-only table without edit chrome in reading mode", () => {
+    const doc = "| Asset |\n|---|\n| ![[photo.png]] |";
+    const readingHtml = tableWidgetHtml(tableFixture(doc));
+    expect(readingHtml).not.toBeNull();
+    expect(readingHtml!.querySelector(".cm-table-btn-code")).toBeNull();
+    expect(readingHtml!.querySelector(".cm-table-add-col-btn")).toBeNull();
+    expect(readingHtml!.querySelector(".cm-table-add-row-btn")).toBeNull();
+    const th = readingHtml!.querySelector("th")!;
+    expect(th.getAttribute("contenteditable")).toBeNull();
+  });
+
+  it("collapses to raw source when setTableRawMode is dispatched, and restores when cursor moves outside", () => {
+    const doc = "| Asset |\n|---|\n| ![[photo.png]] |\n\nplain";
+    let state = liveTableFixture(doc, 6);
+    expect(tableWidgetHtml(state)).not.toBeNull();
+
+    // Toggle raw mode for table spanning [0, 27]
+    state = state.update({
+      effects: setTableRawMode.of({ from: 0, to: 27 }),
+    }).state;
+    expect(tableWidgetHtml(state)).toBeNull();
+
+    // Move selection outside the table
+    const outside = doc.indexOf("plain");
+    state = state.update({
+      selection: { anchor: outside },
+    }).state;
+    expect(tableWidgetHtml(state)).not.toBeNull();
   });
 });

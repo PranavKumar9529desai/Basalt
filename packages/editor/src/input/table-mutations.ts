@@ -110,6 +110,34 @@ function emptyRow(colCount: number): string[] {
 }
 
 
+// --- Update cell text ---
+
+/** Update a cell's text content. rowIdx: 0 is header row, 1+ is body row. */
+export function updateCellText(
+  raw: string,
+  rowIdx: number,
+  colIdx: number,
+  newText: string,
+): MutationResult | null {
+  const model = parseTableSource(raw);
+  if (!model) return null;
+  if (rowIdx < 0 || rowIdx >= model.rows.length) return null;
+  if (colIdx < 0 || colIdx >= model.colCount) return null;
+
+  // Sanitize any newlines or unescaped pipes inside table cell text to preserve table integrity
+  const clean = newText.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
+  const newRows = model.rows.map((r, ri) => {
+    if (ri !== rowIdx) return [...r];
+    const copy = padCells(r, model.colCount);
+    copy[colIdx] = clean.trim();
+    return copy;
+  });
+
+  const newModel: TableSource = { ...model, rows: newRows };
+  const text = serializeTableSource(newModel);
+  return { text, cursor: 0 };
+}
+
 // --- Insert row ---
 
 function insertRow(

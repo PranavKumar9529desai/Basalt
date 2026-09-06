@@ -15,9 +15,10 @@ import {
   livePreviewPlugin,
 } from "../src/preview/live-preview";
 import { renderModeReading } from "../src/preview/render-mode";
-import { blockWidgetSpecsFacet } from "../src/block-widgets/registry";
+import { registerBlockWidget } from "../src/block-widgets/registry";
 import { tableBlockSpec } from "../src/block-widgets/table-widget";
 import { dqlBlockSpec } from "../src/block-widgets/dql-widget";
+import { setTableRawMode } from "../src/block-widgets/table-state";
 import { wikiLinkExtension } from "../src/syntax/wiki-links";
 
 function stateFor(
@@ -30,8 +31,8 @@ function stateFor(
       extensions: [wikiLinkExtension, Table],
     }),
     livePreviewPlugin,
-    blockWidgetSpecsFacet.of(tableBlockSpec),
-    blockWidgetSpecsFacet.of(dqlBlockSpec),
+    registerBlockWidget(tableBlockSpec),
+    registerBlockWidget(dqlBlockSpec),
   ];
   if (mode) extensions.push(mode);
   const state = EditorState.create({
@@ -98,11 +99,17 @@ describe("live preview keeps cursor-reveal (renderMode 'live')", () => {
     expect(classes).not.toContain("cm-live-hide");
   });
 
-  it("keeps the table raw with the caret inside it (live preview)", () => {
+  it("keeps the table rendered with the caret inside it until raw mode is toggled (live preview)", () => {
     const table = "| A | B |\n|---|---|\n| 1 | 2 |";
     const { state } = stateFor(table);
-    // Caret inside → raw source, no rich widget.
-    expect(widgetNames(state)).not.toContain("TableBlockWidget");
+    // Caret inside → table stays rendered in live preview
+    expect(widgetNames(state)).toContain("TableBlockWidget");
+
+    // Toggling raw mode collapses to raw source
+    const rawState = state.update({
+      effects: setTableRawMode.of({ from: 0, to: table.length }),
+    }).state;
+    expect(widgetNames(rawState)).not.toContain("TableBlockWidget");
   });
 
   it("keeps the DQL block raw with the caret inside it (live preview)", () => {

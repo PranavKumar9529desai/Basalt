@@ -65,7 +65,12 @@ export const blockWidgetModeFacet = Facet.define<
 });
 
 export function registerBlockWidget<M>(spec: BlockWidgetSpec<M>): Extension {
-  return blockWidgetSpecsFacet.of(spec);
+  const themeExt = spec.theme
+    ? Array.isArray(spec.theme)
+      ? spec.theme
+      : [spec.theme]
+    : [];
+  return [blockWidgetSpecsFacet.of(spec), ...themeExt];
 }
 
 export function blockWidgetsFor(

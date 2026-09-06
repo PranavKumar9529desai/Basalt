@@ -150,6 +150,9 @@ function makeCollector() {
       widgets.push({ from, to, deco });
       if (atomic) replaces.push({ from, to, deco });
     },
+    addPoint(pos, widget) {
+      widgets.push({ from: pos, to: pos, deco: Decoration.widget({ widget, side: 1 }) });
+    },
   };
 
   function finish(): DecorationSet {
