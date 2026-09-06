@@ -259,4 +259,24 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     expect(container.classList.contains("cm-zone-col-active")).toBe(false);
     expect(container.classList.contains("cm-zone-row-active")).toBe(false);
   });
+
+  it("never triggers ghost column or ghost row when hovering over code toggle button or header cells", () => {
+    const doc = "| Name | Price |\n|---|---|\n| Laptop | $1000 |";
+    const liveHtml = tableWidgetHtml(liveTableFixture(doc, 0));
+    expect(liveHtml).not.toBeNull();
+
+    const container = liveHtml!.querySelector(".cm-table-container")!;
+    const codeBtn = liveHtml!.querySelector(".cm-table-btn-code")!;
+    const headerTh = liveHtml!.querySelector("th")!;
+
+    // Hover over code toggle button
+    codeBtn.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+
+    // Hover over header cell
+    headerTh.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    expect(container.classList.contains("cm-zone-col-active")).toBe(false);
+    expect(container.classList.contains("cm-zone-row-active")).toBe(false);
+  });
 });

@@ -471,12 +471,7 @@ export class TableBlockWidget extends WidgetType {
       else if (a === "center") th.style.textAlign = "center";
       else if (a === "right") th.style.textAlign = "right";
 
-      if (c === headers.length - 1) {
-        th.classList.add("cm-table-col-last");
-      }
-      if (body.length === 0) {
-        th.classList.add("cm-table-row-last");
-      }
+
 
       th.innerHTML = renderInlineCell(headers[c], this.resolve);
 
@@ -643,6 +638,12 @@ export class TableBlockWidget extends WidgetType {
         const target = e.target as HTMLElement | null;
         if (!target) return;
 
+        // 0. Source code button — hovering code toggle must never activate ghost col/row
+        if (target.closest(".cm-table-btn-code")) {
+          setZone("none");
+          return;
+        }
+
         // 1. Directly over or inside col button / label / ghost col cell
         if (target.closest(".cm-table-ghost-btn-col, .cm-table-ghost-label-col, .cm-table-ghost-col-cell")) {
           setZone("col");
@@ -658,6 +659,12 @@ export class TableBlockWidget extends WidgetType {
         // 3. Over a cell in the table
         const cell = target.closest("th, td") as HTMLElement | null;
         if (cell && table.contains(cell)) {
+          // Never trigger ghost row/col from the header row — keeps header stable and clean
+          if (cell.tagName.toLowerCase() === "th") {
+            setZone("none");
+            return;
+          }
+
           const isLastCol = cell.classList.contains("cm-table-col-last");
           const isLastRow = cell.classList.contains("cm-table-row-last");
 
@@ -681,10 +688,13 @@ export class TableBlockWidget extends WidgetType {
 
         // 4. In padding/outer zone of container
         const tableRect = table.getBoundingClientRect();
+        const theadEl = thead.getBoundingClientRect();
+
+        // Right-side zone: only below the header row (never in the header band where codeBtn is)
         if (
-          e.clientX >= tableRect.right - 4 &&
-          e.clientY >= tableRect.top &&
-          e.clientY <= tableRect.bottom + 24
+          e.clientY > theadEl.bottom &&
+          e.clientY <= tableRect.bottom + 24 &&
+          e.clientX >= tableRect.right - 28
         ) {
           setZone("col");
         } else if (
@@ -834,14 +844,11 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
     opacity: "0",
-    transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease, right 150ms ease",
+    transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease",
     zIndex: "10",
   },
   ".cm-table-container:hover .cm-table-btn-code, .cm-table-container:focus-within .cm-table-btn-code": {
     opacity: "1",
-  },
-  ".cm-table-container.cm-zone-col-active .cm-table-btn-code": {
-    right: "36px",
   },
   ".cm-table-btn-code:hover": {
     color: "var(--sat-text-primary, #f8fafc)",
