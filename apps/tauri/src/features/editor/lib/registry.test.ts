@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { editorControllerRegistry } from "./registry";
-import type { EditorController } from "./controller/EditorController";
+import type { EditorController } from "../controller/EditorController";
 
 function fakeController(): EditorController {
   // The registry only stores and hands back controllers — no behavior is

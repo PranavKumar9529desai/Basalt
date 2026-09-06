@@ -10,7 +10,7 @@
  * Keyed delete makes ownership safe: a pane unregisters only its own entry
  * on unmount, so closing one pane can never clear another's registration.
  */
-import type { EditorController } from "./controller/EditorController";
+import type { EditorController } from "../controller/EditorController";
 
 type Listener = () => void;
 

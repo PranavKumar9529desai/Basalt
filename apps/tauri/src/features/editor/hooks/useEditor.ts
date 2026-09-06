@@ -17,7 +17,7 @@ import {
   type EditorControllerOptions,
 } from "../controller/EditorController";
 import { decideReconcileAction } from "../lib/reconcile";
-import { editorControllerRegistry } from "../registry";
+import { editorControllerRegistry } from "../lib/registry";
 import { useActiveNoteStore } from "../store/activeNote";
 
 /**

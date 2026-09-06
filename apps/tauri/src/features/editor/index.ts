@@ -1,7 +1,7 @@
 export { CommandPalette } from "./components/CommandPalette";
 export { EditorView } from "./components/EditorView";
 export { useActiveNoteStore, useRenameSignalStore, useTableCursorStore } from "./store";
-export { editorControllerRegistry } from "./registry";
+export { editorControllerRegistry } from "./lib/registry";
 export type { EditorController } from "./controller/EditorController";
 
 export {
