@@ -99,6 +99,47 @@ function FileIcon() {
   );
 }
 
+function CanvasIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <rect
+        x="1.5"
+        y="1.5"
+        width="5"
+        height="5"
+        rx="1"
+        stroke="var(--sat-accent-primary, #6366f1)"
+        strokeWidth="1.2"
+      />
+      <rect
+        x="9.5"
+        y="1.5"
+        width="5"
+        height="5"
+        rx="1"
+        stroke="var(--sat-accent-primary, #6366f1)"
+        strokeWidth="1.2"
+      />
+      <rect
+        x="5.5"
+        y="9.5"
+        width="5"
+        height="5"
+        rx="1"
+        stroke="var(--sat-accent-primary, #6366f1)"
+        strokeWidth="1.2"
+      />
+    </svg>
+  );
+}
+
 interface InlineEditInputProps {
   node: FileNode;
   onCommitEdit?: (node: FileNode, newName: string) => void;
@@ -197,10 +238,13 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
     const isEditing = node.isEditing ?? false;
     const paddingLeft = node.depth * INDENT_PX + 6;
 
+    const isCanvas = !node.isFolder && node.name.endsWith(".canvas");
     const displayName =
       !node.isFolder && node.name.endsWith(".md")
         ? node.name.slice(0, -3)
-        : node.name;
+        : isCanvas
+          ? node.name.slice(0, -7)
+          : node.name;
 
     const handleClick = (e: React.UIEvent) => {
       if (isEditing) return; // Don't navigate while editing
@@ -286,7 +330,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
 
           {/* Icon */}
           <span className="mr-1.5 flex items-center shrink-0">
-            {isFolder ? <FolderIcon /> : <FileIcon />}
+            {isFolder ? <FolderIcon /> : isCanvas ? <CanvasIcon /> : <FileIcon />}
           </span>
 
           {/* Label or inline edit input */}

@@ -34,7 +34,11 @@ function makeCloneTabId(source: TabModel): TabId {
 function titleFromPath(path: string) {
   const normalized = path.replace(/\\/g, "/");
   const file = normalized.split("/").pop() ?? path;
-  return file.endsWith(".md") ? file.slice(0, -3) : file;
+  return file.endsWith(".canvas")
+    ? file.slice(0, -7)
+    : file.endsWith(".md")
+      ? file.slice(0, -3)
+      : file;
 }
 
 /**

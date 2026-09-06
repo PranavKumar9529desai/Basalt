@@ -5,6 +5,7 @@
 import {
   IconFileText,
   IconNote,
+  IconPhoto,
   IconLink,
   IconBorderCornerRounded,
 } from "@tabler/icons-react";
@@ -12,6 +13,7 @@ import {
 export interface CanvasToolbarProps {
   onAddTextCard: () => void;
   onAddNote: () => void;
+  onAddMedia: () => void;
   onAddLink: () => void;
   onAddGroup: () => void;
 }
@@ -42,6 +44,7 @@ function ToolButton({
 export function CanvasToolbar({
   onAddTextCard,
   onAddNote,
+  onAddMedia,
   onAddLink,
   onAddGroup,
 }: CanvasToolbarProps) {
@@ -56,6 +59,11 @@ export function CanvasToolbar({
         icon={IconNote}
         label="Add note from vault"
         onClick={onAddNote}
+      />
+      <ToolButton
+        icon={IconPhoto}
+        label="Add media / asset from vault"
+        onClick={onAddMedia}
       />
       <ToolButton
         icon={IconLink}

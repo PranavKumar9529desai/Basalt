@@ -78,7 +78,7 @@ export function FileTree({
         isEditing: true,
         name: isFolder
           ? renamingNode.name
-          : renamingNode.name.replace(/\.md$/i, ""),
+          : renamingNode.name.replace(/\.(md|canvas)$/i, ""),
       };
     }
   }

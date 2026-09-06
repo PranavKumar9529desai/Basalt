@@ -102,15 +102,20 @@ pub fn incremental_reindex(
         let cached_mtime = cached_mtimes.get(&path_str).copied().unwrap_or(0);
         new_mtimes.insert(path_str.clone(), current_mtime);
 
-        if path.extension().and_then(|e| e.to_str()) == Some("md") {
-            // Markdown: re-parse if modified
+        let ext = path.extension().and_then(|e| e.to_str());
+        if ext == Some("md") || ext == Some("canvas") {
+            // Markdown / Canvas: update document in vault
             if current_mtime > cached_mtime {
-                if let Ok(content) = std::fs::read_to_string(path) {
-                    vault.add_document(&path_str, &content);
+                if ext == Some("md") {
+                    if let Ok(content) = std::fs::read_to_string(path) {
+                        vault.add_document(&path_str, &content);
+                    }
+                } else {
+                    vault.add_document(&path_str, "");
                 }
             }
         } else if current_mtime > cached_mtime {
-            // Non-markdown: register/update in asset index if modified
+            // Non-markdown/non-canvas: register/update in asset index if modified
             if let Some(info) = build_asset_info(path, vault_path) {
                 vault.asset_index.upsert(info);
             }
@@ -121,7 +126,8 @@ pub fn incremental_reindex(
     for cached_path in cached_mtimes.keys() {
         if !new_mtimes.contains_key(cached_path) {
             let p = Path::new(cached_path);
-            if p.extension().and_then(|e| e.to_str()) == Some("md") {
+            let ext = p.extension().and_then(|e| e.to_str());
+            if ext == Some("md") || ext == Some("canvas") {
                 vault.remove_document(cached_path);
             } else {
                 vault.asset_index.remove(cached_path);
@@ -129,12 +135,12 @@ pub fn incremental_reindex(
         }
     }
 
-    // Defensive cleanup: if graph/arena contains any markdown path not present
+    // Defensive cleanup: if graph/arena contains any document path not present
     // on disk, remove it even when it's missing from cached_mtimes.
     let stale_paths: Vec<String> = vault
         .arena
         .all_strings()
-        .filter(|p| p.ends_with(".md"))
+        .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
         .filter(|p| !new_mtimes.contains_key(*p))
         .cloned()
         .collect();

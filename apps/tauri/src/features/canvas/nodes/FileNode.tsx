@@ -17,6 +17,7 @@ import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
 import { useCanvas } from "../CanvasContext";
+import { CanvasCardEditor } from "../components/CanvasCardEditor";
 
 function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
@@ -136,7 +137,7 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
         </div>
 
         {/* Card Body */}
-        <div className="flex-1 overflow-auto p-3 w-full h-full flex flex-col">
+        <div className={`flex-1 overflow-auto w-full h-full flex flex-col ${isMarkdown ? "p-0" : "p-3"}`}>
           {isMarkdown ? (
             loadError ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-xs text-[var(--sat-text-muted)] p-2">
@@ -149,8 +150,8 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
                 Loading...
               </div>
             ) : (
-              <div className="whitespace-pre-wrap text-xs text-[var(--sat-text-secondary)] leading-relaxed select-text font-sans">
-                {noteContent}
+              <div className="flex-1 w-full h-full min-h-0 overflow-hidden">
+                <CanvasCardEditor text={noteContent} isEditing={false} />
               </div>
             )
           ) : mediaUrl ? (

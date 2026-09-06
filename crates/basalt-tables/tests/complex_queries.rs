@@ -18,7 +18,7 @@ fn row_str(v: &TypedValue) -> String {
     }
 }
 
-fn print_result(label: &str, dql: &str, result: &QueryResult) {
+fn print_result(_label: &str, dql: &str, result: &QueryResult) {
     let cols: Vec<&str> = result.columns.iter().map(|c| c.name.as_str()).collect();
     println!("  Q: {}", dql);
     println!("  cols: {:?}", cols);

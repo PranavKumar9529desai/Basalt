@@ -51,11 +51,11 @@ impl SearchState {
     ) -> Result<Self> {
         let mut tantivy = TantivyIndex::open_or_create(index_dir)?;
 
-        // Collect all .md paths from the vault arena.
+        // Collect all .md and .canvas paths from the vault arena.
         let paths: Vec<String> = vault
             .arena
             .all_strings()
-            .filter(|p| p.ends_with(".md"))
+            .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
             .cloned()
             .collect();
 
@@ -81,12 +81,18 @@ impl SearchState {
             };
 
             if needs_index {
-                if let Ok(content) = std::fs::read_to_string(path) {
-                    let title = Path::new(path)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or(path.as_str())
-                        .to_string();
+                let title = Path::new(path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(path.as_str())
+                    .to_string();
+
+                if path.ends_with(".canvas") {
+                    if let Err(e) = tantivy.update_document(path, &title, "", "") {
+                        eprintln!("[search] failed to index canvas {path}: {e}");
+                    }
+                    any_indexed = true;
+                } else if let Ok(content) = std::fs::read_to_string(path) {
                     let tags: String = content
                         .split_whitespace()
                         .filter(|w| w.starts_with('#') && w.len() > 1)

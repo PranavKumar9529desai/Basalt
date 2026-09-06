@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 
 export interface CanvasContextValue {
   updateText: (id: string, text: string) => void;
+  updateUrl: (id: string, url: string) => void;
   saveNow: () => void;
 }
 

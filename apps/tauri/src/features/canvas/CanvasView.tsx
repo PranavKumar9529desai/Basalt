@@ -30,6 +30,7 @@ import { CanvasToolbar } from "./CanvasToolbar";
 import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
 import { NotePickerModal } from "./components/NotePickerModal";
 import { mapToXYFlow, mapToCanvasDocument, type CanvasXYNode } from "./lib/mapper";
+import { useLeafServices } from "@workspace/views";
 
 import TextCardNode from "./nodes/TextCardNode";
 import FileNode from "./nodes/FileNode";
@@ -65,14 +66,26 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   const reactFlowInstance = useReactFlow();
   const connectingNodeRef = useRef<{ nodeId: string; handleId: string | null } | null>(null);
 
+  let services: ReturnType<typeof useLeafServices> | null = null;
+  try {
+    services = useLeafServices();
+  } catch {
+    // Leaf services may be omitted in isolated unit tests
+  }
+
   const nodesRef = useRef<CanvasXYNode[]>([]);
   const edgesRef = useRef<Edge[]>([]);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadedRef = useRef(false);
+  const isDirtyRef = useRef(false);
 
   nodesRef.current = nodes;
   edgesRef.current = edges;
 
   const saveCanvasNow = useCallback(async () => {
+    // Guard 1: Never save if the canvas has not finished initial loading
+    if (!isLoadedRef.current) return;
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -80,20 +93,26 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     try {
       const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
       await invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) });
+      isDirtyRef.current = false;
+      services?.markTabDirty(tab.id, false);
     } catch (e) {
       console.error("Failed to save canvas", e);
     }
-  }, [tab.path]);
+  }, [tab.path, tab.id, services]);
 
   const triggerSave = useCallback(() => {
+    if (!isLoadedRef.current) return;
+    isDirtyRef.current = true;
+    services?.markTabDirty(tab.id, true);
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
       saveTimeoutRef.current = null;
       saveCanvasNow();
-    }, 150);
-  }, [saveCanvasNow]);
+    }, 500);
+  }, [saveCanvasNow, tab.id, services]);
 
   const loadCanvas = useCallback(async () => {
     if (!tab.path.endsWith(".canvas")) return;
@@ -105,26 +124,33 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       edgesRef.current = xyEdges;
       setNodes(xyNodes);
       setEdges(xyEdges);
+      isLoadedRef.current = true;
+      isDirtyRef.current = false;
+      services?.markTabDirty(tab.id, false);
     } catch (e) {
       console.error("Failed to load canvas", e);
     }
-  }, [tab.path]);
+  }, [tab.path, tab.id, services]);
 
   useEffect(() => {
     loadCanvas();
   }, [loadCanvas]);
 
-  // Flush pending save on unmount / tab close
+  // Flush pending save on unmount / tab close ONLY if loaded AND dirty
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
       }
-      const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
-      invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) }).catch(console.error);
+      // Guard 2: Never flush on unmount unless canvas was loaded AND has unsaved edits
+      if (isLoadedRef.current && isDirtyRef.current) {
+        const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
+        invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) }).catch(console.error);
+        services?.markTabDirty(tab.id, false);
+      }
     };
-  }, [tab.path]);
+  }, [tab.path, tab.id, services]);
 
   // Handle Ctrl+S / Cmd+S and global save actions
   useEffect(() => {
@@ -151,11 +177,23 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       setNodes((nds) => {
         const next = nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n));
         nodesRef.current = next;
-        saveCanvasNow();
+        triggerSave();
         return next;
       });
     },
-    [saveCanvasNow]
+    [triggerSave]
+  );
+
+  const updateUrl = useCallback(
+    (id: string, url: string) => {
+      setNodes((nds) => {
+        const next = nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, url } } : n));
+        nodesRef.current = next;
+        triggerSave();
+        return next;
+      });
+    },
+    [triggerSave]
   );
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -587,7 +625,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   }, [reactFlowInstance]);
 
   return (
-    <CanvasContext.Provider value={{ updateText, saveNow: saveCanvasNow }}>
+    <CanvasContext.Provider value={{ updateText, updateUrl, saveNow: saveCanvasNow }}>
       <div
         className="relative h-full w-full bg-[var(--sat-surface-0)]"
         onContextMenu={handleContextMenu}
@@ -626,6 +664,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           snapToGrid={true}
           snapGrid={[12, 12]}
           deleteKeyCode={["Backspace", "Delete"]}
+          onlyRenderVisibleElements={true}
           fitView
           minZoom={0.1}
           maxZoom={4}

@@ -22,8 +22,12 @@ function ResultRow({
   optionId: string;
 }) {
   const parts = result.path.split("/");
-  const name = parts.pop() ?? result.path;
+  const rawName = parts.pop() ?? result.path;
   const dir = parts.join("/");
+  const isCanvas = result.path.endsWith(".canvas");
+  const displayName = isCanvas
+    ? rawName.replace(/\.canvas$/i, "")
+    : rawName.replace(/\.md$/i, "");
 
   return (
     <Button
@@ -35,14 +39,19 @@ function ResultRow({
       variant="ghost"
       tabIndex={-1}
       className={[
-        "w-full justify-start gap-3 px-4 py-2 h-auto rounded-md",
+        "w-full justify-start gap-2.5 px-4 py-2 h-auto rounded-md",
         isSelected
           ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
           : "",
       ].join(" ")}
       onClick={onClick}
     >
-      <span className="text-sm font-medium truncate">{name}</span>
+      <span className="text-sm font-medium truncate">{displayName}</span>
+      {isCanvas && (
+        <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[var(--sat-accent-primary)]/20 text-[var(--sat-accent-primary)] shrink-0">
+          Canvas
+        </span>
+      )}
       {dir && (
         <span className="text-xs text-muted-foreground truncate ml-auto shrink-0 max-w-[40%]">
           {dir}
