@@ -213,7 +213,7 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     const dom = widgetObj!.toDOM(view);
 
     const container = dom.querySelector(".cm-table-container")!;
-    const codeBtn = container.querySelector(".cm-table-btn-code")!;
+    const codeBtn = container.querySelector(".cm-code-btn-toggle")!;
     expect(codeBtn).not.toBeNull();
     expect(codeBtn.parentElement).toBe(container);
 

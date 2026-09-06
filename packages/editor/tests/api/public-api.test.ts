@@ -12,6 +12,7 @@ import * as editor from "../../src/index";
 
 /** Runtime (value) exports MUST match this sorted list exactly. */
 const EXPECTED_VALUE_EXPORTS = [
+  "CODE_TOGGLE_BUTTON_THEME",
   "DQL_WIDGET_THEME",
   "FRONTMATTER_WIDGET_THEME",
   "HTML_SANITIZE_CONFIG",
@@ -25,6 +26,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "classifyMediaExtension",
   "clearQueryCache",
   "contextMenuExtension",
+  "createCodeToggleButton",
   "createEditorExtensionGroups",
   "createEditorExtensions",
   "deleteColumn",

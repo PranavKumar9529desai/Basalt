@@ -9,6 +9,7 @@ import {
 } from "@codemirror/view";
 import { resolveAssetFacet } from "../types";
 import { classifyMediaExtension, extensionOf, scanEmbedWikiLinks } from "./embed-utils";
+import { createCodeToggleButton } from "../block-widgets/code-toggle-button";
 import { isEmbedInRawMode, setEmbedRawMode } from "./embed-state";
 import { notifyViewOfSizeChange } from "../block-widgets/utils";
 
@@ -56,31 +57,6 @@ const EMBED_MEDIA_THEME = EditorView.baseTheme({
     color: "var(--sat-text-muted)",
     fontSize: "0.85em",
   },
-  ".cm-embed-btn-code": {
-    position: "absolute",
-    top: "6px",
-    right: "6px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "24px",
-    height: "24px",
-    borderRadius: "var(--sat-layout-radius-sm, 4px)",
-    background: "var(--sat-surface-2, rgba(0, 0, 0, 0.4))",
-    border: "1px solid var(--sat-layout-border, rgba(255, 255, 255, 0.1))",
-    color: "var(--sat-text-muted, #94a3b8)",
-    cursor: "pointer",
-    opacity: "0.6",
-    transition: "opacity 0.15s ease, background 0.15s ease, color 0.15s ease",
-    zIndex: "10",
-  },
-  [`.${EMBED_MEDIA_CLASS}:hover .cm-embed-btn-code`]: {
-    opacity: "1",
-  },
-  ".cm-embed-btn-code:hover": {
-    background: "var(--sat-surface-3, rgba(255, 255, 255, 0.15))",
-    color: "var(--sat-text-primary, #ffffff)",
-  },
 });
 
 function mediaKind(target: string): "image" | "audio" | "video" | "pdf" {
@@ -113,22 +89,13 @@ export class EmbedMediaWidget extends WidgetType {
     wrapper.className = EMBED_MEDIA_CLASS;
 
     if (this.from !== undefined && this.to !== undefined) {
-      const codeBtn = document.createElement("button");
-      codeBtn.className = "cm-embed-btn-code";
-      codeBtn.setAttribute("type", "button");
-      codeBtn.title = "Edit as raw Markdown";
-      codeBtn.setAttribute("aria-label", "Edit as raw Markdown");
-      codeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
-      codeBtn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      const codeBtn = createCodeToggleButton(view, (v) => {
         const from = this.from!;
         const to = this.to!;
-        view.dispatch({
+        v.dispatch({
           effects: setEmbedRawMode.of({ from, to }),
           selection: { anchor: from },
         });
-        view.focus();
       });
       wrapper.appendChild(codeBtn);
     }

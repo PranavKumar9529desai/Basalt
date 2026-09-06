@@ -8,6 +8,7 @@ import {
   extensionOf,
 } from "../input/embed-utils";
 import { resolveAssetFacet } from "../types";
+import { createCodeToggleButton } from "./code-toggle-button";
 import { escapeHtml } from "./utils";
 import {
   isTableInRawMode,
@@ -337,24 +338,14 @@ export class TableBlockWidget extends WidgetType {
 
     // 1. Top-Right Code Toggle Button (Live Preview only)
     let codeBtn: HTMLElement | undefined;
-    if (this.model.isLive) {
-      codeBtn = document.createElement("button");
-      codeBtn.className = "cm-table-btn-code";
-      codeBtn.setAttribute("type", "button");
-      codeBtn.title = "Edit as raw Markdown";
-      codeBtn.setAttribute("aria-label", "Edit as raw Markdown");
-      codeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
-      codeBtn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!this.view) return;
-        const lineFrom = this.view.state.doc.lineAt(this.model.from).from;
-        const lineTo = this.view.state.doc.lineAt(this.model.to).to;
-        this.view.dispatch({
+    if (this.model.isLive && this.view) {
+      codeBtn = createCodeToggleButton(this.view, (view) => {
+        const lineFrom = view.state.doc.lineAt(this.model.from).from;
+        const lineTo = view.state.doc.lineAt(this.model.to).to;
+        view.dispatch({
           effects: setTableRawMode.of({ from: lineFrom, to: lineTo }),
           selection: { anchor: this.model.from },
         });
-        this.view.focus();
       });
     }
 

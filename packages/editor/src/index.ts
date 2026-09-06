@@ -98,6 +98,10 @@ export {
 } from "./block-widgets/frontmatter";
 
 export {
+  createCodeToggleButton,
+  CODE_TOGGLE_BUTTON_THEME,
+} from "./block-widgets/code-toggle-button";
+export {
   tableBlockSpec,
   TABLE_BLOCK_THEME,
   TableBlockWidget,

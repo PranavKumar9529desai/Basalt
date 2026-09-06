@@ -43,6 +43,7 @@ import {
   TABLE_BLOCK_THEME,
 } from "./block-widgets/table-widget";
 import { tableRawModeField } from "./block-widgets/table-state";
+import { CODE_TOGGLE_BUTTON_THEME } from "./block-widgets/code-toggle-button";
 import { embedRawModeField } from "./input/embed-state";
 import {
   blockWidgetSpecsFacet,
@@ -98,6 +99,7 @@ function commonBlockWidgetExtensions(config?: {
     TABLE_BLOCK_THEME,
     tableRawModeField,
     embedRawModeField,
+    CODE_TOGGLE_BUTTON_THEME,
   ];
   if (config?.runQuery || config?.onOpenLink) {
     // DQL query block widget — renders ```dql code blocks as live table/list/task views.

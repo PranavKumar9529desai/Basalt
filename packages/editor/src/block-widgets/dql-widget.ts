@@ -3,6 +3,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
+import { createCodeToggleButton } from "./code-toggle-button";
 import { escapeHtml, notifyViewOfSizeChange } from "./utils";
 
 // ---------------------------------------------------------------------------
@@ -161,12 +162,18 @@ export class DqlResultWidget extends WidgetType {
     private readonly queryText: string,
     private readonly runQuery: RunQueryFn | undefined,
     private readonly onOpenLink: OpenLinkFn | undefined,
+    private readonly from?: number,
+    private readonly to?: number,
   ) {
     super();
   }
 
   eq(other: DqlResultWidget): boolean {
-    return this.queryText === other.queryText;
+    return (
+      this.queryText === other.queryText &&
+      this.from === other.from &&
+      this.to === other.to
+    );
   }
   /** Attach a delegated click handler so result links open notes via onOpenLink. */
   private bindLinks(div: HTMLElement): void {
@@ -186,16 +193,29 @@ export class DqlResultWidget extends WidgetType {
     const div = document.createElement("div");
     div.className = "cm-dql-result";
 
+    if (this.from !== undefined) {
+      const codeBtn = createCodeToggleButton(view, (v) => {
+        v.dispatch({
+          selection: { anchor: this.from! },
+        });
+      });
+      div.appendChild(codeBtn);
+    }
+
     // Synchronous fast path: render from cache
     const cached = queryCache.get(this.queryText);
     if (cached) {
-      div.innerHTML = renderDqlResult(cached);
+      const content = document.createElement("div");
+      content.innerHTML = renderDqlResult(cached);
+      div.appendChild(content);
       this.bindLinks(div);
       return div;
     }
 
     // Async path: show loading, fetch in background
-    div.innerHTML = '<div class="cm-dql-loading">Loading query…</div>';
+    const content = document.createElement("div");
+    content.innerHTML = '<div class="cm-dql-loading">Loading query…</div>';
+    div.appendChild(content);
     this.bindLinks(div);
 
     if (this.runQuery) {
@@ -203,23 +223,18 @@ export class DqlResultWidget extends WidgetType {
       this.runQuery(queryText)
         .then((result) => {
           queryCache.set(queryText, result);
-          // The user may have typed/closed this block — or the view may have
-          // been destroyed — while the query was in flight. CM detaches the
-          // replaced widget's element, so painting into it would target a dead
-          // node and the size measurement would read a detached layout. Skip
-          // both when the widget no longer renders this exact query.
           if (!div.isConnected || this.queryText !== queryText) return;
-          div.innerHTML = renderDqlResult(result);
+          content.innerHTML = renderDqlResult(result);
           this.bindLinks(div);
           notifyViewOfSizeChange(div, view);
         })
         .catch((err) => {
           if (!div.isConnected || this.queryText !== queryText) return;
-          div.innerHTML = `<div class="cm-dql-error">Query error: ${escapeHtml(String(err))}</div>`;
+          content.innerHTML = `<div class="cm-dql-error">Query error: ${escapeHtml(String(err))}</div>`;
           notifyViewOfSizeChange(div, view);
         });
     } else {
-      div.innerHTML =
+      content.innerHTML =
         '<div class="cm-dql-error">Query engine not available</div>';
     }
 
@@ -261,6 +276,7 @@ export const DQL_WIDGET_THEME = EditorView.baseTheme({
     padding: "0.5em 0",
     fontSize: "0.9em",
     fontFamily: "inherit",
+    position: "relative",
   },
   ".cm-dql-loading": {
     color: "var(--sat-text-secondary, #94a3b8)",
@@ -434,6 +450,8 @@ const renderWidget = (
     model.queryText,
     state.facet(runQueryFacet),
     state.facet(openLinkFacet),
+    model.from,
+    model.to,
   );
 };
 
