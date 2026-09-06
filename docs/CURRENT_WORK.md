@@ -7,29 +7,27 @@
 
 ---
 
-## Infinite Canvas (ADR-035) — IN PROGRESS
+## Infinite Canvas (ADR-035) — ARCHITECTURE REVISED (HANDOFF READY)
 
 **Branch:** `feat/adr35-canvas-parse`
-**Status:** Phases 1–6 complete; ADR-035 moved Proposed → Accepted.
+**Status:** ADR-035 amended. Initial custom WebGL2 rect viewport + imperative DOM overlay superseded by `@xyflow/react` + Rust backend (`crates/basalt-canvas`) architecture. Detailed technical spec documented in `docs/adr/035-infinite-canvas.md`.
 
-### Commits
-
-- `4e43365` Phase 1 — `feat(canvas): add crates/basalt-canvas`. JSON Canvas
-  parse/serialize crate implementing the v1.0 spec. Types: CanvasDocument,
-  CanvasNode (text/file/link/group), CanvasEdge, CanvasColor (hex + presets),
-  Side, EndShape, BackgroundStyle. API: `parse()`, `serialize()`, `validate()`.
-  11 tests, clippy clean.
-- `6247b0a` Phase 2 — `feat(canvas): add packages/canvas-viewport`. WebGL2 rect
-  renderer: instanced quads (nodes/groups), instanced edge line-quads,
-  arrowheads. Premultiplied-alpha compositing, DPR-aware edge width, buffer
-  orphaning, context-loss tracking via events.
-- `cd3142b` Phase 3 — `feat(canvas): wire parse + viewport`. Tauri command
-  `parse_canvas`, `CanvasView.tsx` React leaf with rAF loop, pan/zoom, mock
-  canvas document, `.canvas` leaf registration.
-- `0ba9936` Phase 4–6 — `feat(canvas): interaction, content overlay, file I/O`.
-  Hover/select/drag interaction, DOM text overlay (titles, group labels),
-  `open_canvas`/`save_canvas` Tauri commands, file load on mount, debounced
-  save on drag end.
+### Handoff Plan: Migration to `@xyflow/react`
+- **Dependencies:** Add `@xyflow/react` to `apps/tauri/package.json`.
+- **Rust Backend:** Keep `crates/basalt-canvas` for JSON Canvas v1.0 parse/serialize, validation, and file I/O via Tauri (`open_canvas`, `save_canvas`).
+- **Data Mapper:** Implement `features/canvas/lib/mapper.ts` (lossless bidirectional conversion between `CanvasDocument` and XYFlow `Node[]`/`Edge[]`).
+- **Custom Nodes (`features/canvas/nodes/`):**
+  - `TextCardNode.tsx`: Markdown preview + inline edit on double-click, 4-way handles (Top/Right/Bottom/Left), `<NodeResizer />`.
+  - `FileNode.tsx`: Note embed card referencing `.md` vault files with title, excerpt, and icon.
+  - `GroupNode.tsx`: Translucent container with editable top-left title label, background z-index.
+  - `LinkNode.tsx`: Web link bookmark card.
+- **Custom Edges (`features/canvas/edges/`):**
+  - `CanvasEdge.tsx`: Smooth cubic Bezier curve (`type: "bezier"`) connecting flush to card handles with closed arrowheads (`MarkerType.ArrowClosed`) and midpoint label pill.
+- **View & Chrome (`features/canvas/`):**
+  - `CanvasView.tsx`: Replace raw canvas rAF loop with `<ReactFlow>` and `<Background variant={BackgroundVariant.Dots} />`.
+  - `CanvasToolbar.tsx`: Add card, note, group, and zoom controls.
+  - Debounced auto-save back to `.canvas` file via `save_canvas`.
+- **Deprecate/Cleanup:** Deprecate `packages/canvas-viewport` and remove obsolete imperative geometry files (`lib/scene.ts`, `lib/interaction.ts`, `lib/spatial.ts`, `lib/overlay.ts`).
 
 
 ## Embed Rendering (ADR-034) — COMPLETE

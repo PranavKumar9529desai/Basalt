@@ -1,179 +1,226 @@
-// CanvasView — thin composition shell. All state, GPU, and interaction live
-// in useCanvasController.ts; pure helpers in lib/; DOM sync in lib/overlay.ts.
-
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  ReactFlow,
+  ReactFlowProvider,
+  Background,
+  BackgroundVariant,
+  useReactFlow,
+  addEdge,
+  applyNodeChanges,
+  applyEdgeChanges,
+  ConnectionMode,
+  ConnectionLineType,
+  type Connection,
+  type Edge,
+  type NodeChange,
+  type EdgeChange,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type OnConnect,
+  MarkerType
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import type { LeafProps } from "@workspace/views";
-import { CanvasViewportRenderer } from "@workspace/canvas-viewport";
-import type { Scene, SceneEdge, SceneGroup, SceneNode } from "./lib/scene";
-import type { Side } from "./lib/scene";
-import { MOCK_SCENE } from "./lib/scene";
-import { setActiveCanvas } from "./commands";
-import { useCanvasController } from "./useCanvasController";
 
-export function CanvasView({ tab }: LeafProps) {
-  const c = useCanvasController();
+import { CanvasToolbar } from "./CanvasToolbar";
+import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
+import { mapToXYFlow, mapToCanvasDocument, type CanvasXYNode } from "./lib/mapper";
 
-  // ─── Command handle (palette commands read this) ──────────────────────────
+import TextCardNode from "./nodes/TextCardNode";
+import FileNode from "./nodes/FileNode";
+import GroupNode from "./nodes/GroupNode";
+import LinkNode from "./nodes/LinkNode";
+import CanvasEdge from "./edges/CanvasEdge";
 
-  useEffect(() => {
-    setActiveCanvas({
-      groupSelection: c.groupSelection,
-      deleteSelection: c.deleteSelection,
-      selectionCount: () => c.selectedRef.current.size,
-    });
-    return () => setActiveCanvas(null);
-  }, [c.groupSelection, c.deleteSelection, c.selectedRef]);
+const nodeTypes = {
+  canvasText: TextCardNode,
+  canvasFile: FileNode,
+  canvasGroup: GroupNode,
+  canvasLink: LinkNode,
+};
 
-  // ─── Boot: load canvas file, init renderer, start rAF ─────────────────────
+const edgeTypes = {
+  bezier: CanvasEdge, // We can override the default bezier to add label pill
+};
 
-  useEffect(() => {
-    const canvas = c.canvasRef.current;
-    if (!canvas) return;
-    const renderer = new CanvasViewportRenderer(canvas);
-    c.rendererRef.current = renderer;
-    let active = true;
+function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
+  const [nodes, setNodes] = useState<CanvasXYNode[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [ctxMenu, setCtxMenu] = useState<{ target: ContextTarget; anchor: { x: number; y: number } } | null>(null);
+  const reactFlowInstance = useReactFlow();
 
-    const boot = async () => {
-      let scene: Scene = MOCK_SCENE;
-      if (tab.path.endsWith(".canvas")) {
-        try {
-          const json: string = await invoke("open_canvas", { path: tab.path });
-          const doc = JSON.parse(json);
-          const groups: SceneGroup[] = [];
-          const nodes: SceneNode[] = [];
-          let maxId = 0;
-          for (const n of doc.nodes ?? []) {
-            const base = { id: n.id, x: n.x, y: n.y, width: n.width, height: n.height, color: n.color ?? "" };
-            const numId = parseInt(n.id, 10);
-            if (!isNaN(numId) && numId > maxId) maxId = numId;
-            if (n.type === "group") groups.push({ ...base, label: n.label });
-            else nodes.push({ ...base, type: n.type, text: n.text });
-          }
-          const edges: SceneEdge[] = (doc.edges ?? []).map((e: Record<string, string>) => ({
-            id: e.id, from: e.fromNode, to: e.toNode,
-            fromSide: e.fromSide as Side | undefined,
-            toSide: e.toSide as Side | undefined,
-            label: e.label,
-          }));
-          scene = { nodes, groups, edges, nextNodeId: maxId };
-          c.savePathRef.current = tab.path;
-        } catch { /* fall through to mock */ }
-      }
-      if (!active) return;
-      c.sceneRef.current = scene;
-      c.rebuildIndex();
-      renderer.resize(canvas.clientWidth, canvas.clientHeight, devicePixelRatio);
-      c.pushGPU();
-      renderer.setView(c.viewRef.current);
-      c.syncOverlay();
-    };
-    void boot();
-
-    const frame = () => {
-      if (c.gpuDirtyRef.current) {
-        renderer.render();
-        c.gpuDirtyRef.current = false;
-      }
-      c.rafRef.current = requestAnimationFrame(frame);
-    };
-    c.rafRef.current = requestAnimationFrame(frame);
-
-    // Capture refs at effect-time for cleanup.
-    const rafId = c.rafRef.current;
-    const overlayNodesMap = c.overlayNodesRef.current;
-    const rendererSnap = c.rendererRef.current;
-
-    return () => {
-      active = false;
-      cancelAnimationFrame(rafId);
-      rendererSnap?.dispose();
-      // oxlint-disable-next-line react-hooks/exhaustive-deps
-      c.rendererRef.current = null;
-      for (const [, el] of overlayNodesMap) el.remove();
-      overlayNodesMap.clear();
-      // oxlint-disable-next-line react-hooks/exhaustive-deps
-      c.sceneRef.current = MOCK_SCENE;
-      // oxlint-disable-next-line react-hooks/exhaustive-deps
-      c.savePathRef.current = null;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- boot runs once per tab
+  const loadCanvas = useCallback(async () => {
+    if (!tab.path.endsWith(".canvas")) return;
+    try {
+      const json: string = await invoke("open_canvas", { path: tab.path });
+      const doc = JSON.parse(json);
+      const { nodes: xyNodes, edges: xyEdges } = mapToXYFlow(doc);
+      setNodes(xyNodes);
+      setEdges(xyEdges);
+    } catch (e) {
+      console.error("Failed to load canvas", e);
+    }
   }, [tab.path]);
 
-  // ─── Resize observer ──────────────────────────────────────────────────────
-
   useEffect(() => {
-    const canvas = c.canvasRef.current;
-    if (!canvas) return;
-    const obs = new ResizeObserver(() => {
-      const r = c.rendererRef.current;
-      if (r && canvas.clientWidth > 0) {
-        r.resize(canvas.clientWidth, canvas.clientHeight, devicePixelRatio);
-        c.gpuDirtyRef.current = true;
-        c.pushGPU();
-        c.syncOverlay();
-      }
+    loadCanvas();
+  }, [loadCanvas]);
+
+  const saveCanvas = useCallback(async (currentNodes: CanvasXYNode[], currentEdges: Edge[]) => {
+    try {
+      const doc = mapToCanvasDocument(currentNodes, currentEdges);
+      await invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) });
+    } catch (e) {
+      console.error("Failed to save canvas", e);
+    }
+  }, [tab.path]);
+
+  const onNodesChange: OnNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => {
+        const nextNodes = applyNodeChanges(changes, nds) as CanvasXYNode[];
+        // Debounce or save immediately on meaningful changes. 
+        // For simplicity, any change (drag, resize, remove) triggers save.
+        // A robust impl would debounce this.
+        if (changes.some(c => c.type !== "select" && c.type !== "dimensions")) {
+          // Fire and forget save
+          requestAnimationFrame(() => saveCanvas(nextNodes, edges));
+        }
+        return nextNodes;
+      });
+    },
+    [edges, saveCanvas]
+  );
+
+  const onEdgesChange: OnEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges((eds) => {
+        const nextEdges = applyEdgeChanges(changes, eds);
+        if (changes.some(c => c.type !== "select")) {
+          requestAnimationFrame(() => saveCanvas(nodes, nextEdges));
+        }
+        return nextEdges;
+      });
+    },
+    [nodes, saveCanvas]
+  );
+
+  const onConnect: OnConnect = useCallback(
+    (connection: Connection) => {
+      setEdges((eds) => {
+        const newEdge: Edge = {
+          ...connection,
+          id: `edge-${Date.now()}`,
+          type: "bezier",
+          markerEnd: { type: MarkerType.ArrowClosed, color: "var(--sat-accent-primary, #6366f1)" },
+          style: { stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2 },
+        };
+        const nextEdges = addEdge(newEdge, eds);
+        requestAnimationFrame(() => saveCanvas(nodes, nextEdges));
+        return nextEdges;
+      });
+    },
+    [nodes, saveCanvas]
+  );
+
+  // Toolbar Actions
+  const handleAddTextCard = useCallback((wx?: number, wy?: number) => {
+    const center = reactFlowInstance.screenToFlowPosition({ 
+      x: window.innerWidth / 2, 
+      y: window.innerHeight / 2 
     });
-    obs.observe(canvas);
-    return () => obs.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    const newNode: CanvasXYNode = {
+      id: `text-${Date.now()}`,
+      type: "canvasText",
+      position: { x: wx ?? center.x, y: wy ?? center.y },
+      style: { width: 250, height: 150 },
+      data: { text: "New Note" },
+    };
+    
+    setNodes(nds => {
+      const next = [...nds, newNode];
+      requestAnimationFrame(() => saveCanvas(next, edges));
+      return next;
+    });
+  }, [reactFlowInstance, edges, saveCanvas]);
+
+  const handleDeleteSelection = useCallback(() => {
+    setNodes(nds => {
+      const nextNds = nds.filter(n => !n.selected);
+      setEdges(eds => {
+        const nextEds = eds.filter(e => !e.selected && nextNds.some(n => n.id === e.source) && nextNds.some(n => n.id === e.target));
+        requestAnimationFrame(() => saveCanvas(nextNds, nextEds));
+        return nextEds;
+      });
+      return nextNds;
+    });
+  }, [saveCanvas]);
+
+  const handleGroupSelection = useCallback(() => {
+    // Basic grouping logic
+    console.log("Group selection not fully implemented");
   }, []);
 
-  // ─── Create overlay elements (SVG line, marquee, handles container) ───────
-
-  useEffect(() => {
-    const container = c.containerRef.current;
-    if (!container) return;
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;";
-    const line = document.createElementNS(svgNS, "line");
-    line.setAttribute("stroke", "var(--sat-accent-primary)");
-    line.setAttribute("stroke-width", "2");
-    line.setAttribute("stroke-dasharray", "6,4");
-    line.style.display = "none";
-    svg.appendChild(line);
-    container.appendChild(svg);
-    c.edgeLineRef.current = line;
-
-    const marquee = document.createElement("div");
-    marquee.style.cssText = "position:absolute;border:1px dashed var(--sat-accent-primary);background:color-mix(in srgb,var(--sat-accent-primary) 10%,transparent);pointer-events:none;display:none;z-index:6;";
-    container.appendChild(marquee);
-    c.marqueeRef.current = marquee;
-
-    const handles = document.createElement("div");
-    handles.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:7;";
-    container.appendChild(handles);
-    c.handleContainerRef.current = handles;
-
-    return () => { svg.remove(); marquee.remove(); handles.remove(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const pos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setCtxMenu({ target: { kind: "background", wx: pos.x, wy: pos.y }, anchor: { x: e.clientX, y: e.clientY } });
+  }, [reactFlowInstance]);
 
   return (
-    <>
-    <style>{`.canvas-overlay-node.hovered{box-shadow:0 0 0 2px var(--sat-accent-primary);}.canvas-overlay-node.selected{box-shadow:0 0 0 2px var(--sat-accent-primary),0 0 0 4px color-mix(in srgb,var(--sat-accent-primary) 40%,transparent);}`}</style>
-    <div
-      ref={c.containerRef}
-      className="relative h-full w-full overflow-hidden"
-    >
-      <canvas
-        ref={c.canvasRef}
-        className="absolute inset-0 h-full w-full"
-        tabIndex={0}
-        onFocus={c.onContainerFocus}
-        onBlur={c.onContainerBlur}
-        onPointerDown={c.onPointerDown}
-        onPointerMove={c.onPointerMove}
-        onPointerUp={c.onPointerUp}
-        onWheel={c.onWheel}
-        onDoubleClick={c.onDoubleClick}
-        onKeyDown={c.onKeyDown}
-      />
-      <div ref={c.overlayRef} id="canvas-overlay" className="pointer-events-none absolute inset-0 overflow-hidden" />
+    <div className="relative h-full w-full bg-[var(--sat-surface-0)]" onContextMenu={handleContextMenu}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionMode={ConnectionMode.Loose}
+        connectionLineType={ConnectionLineType.Bezier}
+        connectionLineStyle={{ stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2 }}
+        defaultEdgeOptions={{
+          type: "bezier",
+          markerEnd: { type: MarkerType.ArrowClosed, color: "var(--sat-accent-primary, #6366f1)" },
+          style: { stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2 },
+        }}
+        fitView
+        minZoom={0.1}
+        maxZoom={4}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
+      </ReactFlow>
+
+      <div className="pointer-events-auto">
+        <CanvasToolbar
+          onAddTextCard={() => handleAddTextCard()}
+          onAddNote={() => console.log("Add note")}
+          onDeleteSelection={handleDeleteSelection}
+          onGroupSelection={handleGroupSelection}
+          onZoomToFit={() => reactFlowInstance.fitView()}
+          onZoomIn={() => reactFlowInstance.zoomIn()}
+          onZoomOut={() => reactFlowInstance.zoomOut()}
+        />
+        <CanvasContextMenu
+          target={ctxMenu?.target ?? null}
+          anchor={ctxMenu?.anchor ?? null}
+          onClose={() => setCtxMenu(null)}
+          onAddTextCard={(wx, wy) => handleAddTextCard(wx, wy)}
+          onDeleteSelection={handleDeleteSelection}
+          onGroupSelection={handleGroupSelection}
+        />
+      </div>
     </div>
-    </>
+  );
+}
+
+export function CanvasView({ tab }: LeafProps) {
+  return (
+    <ReactFlowProvider>
+      <CanvasFlow tab={tab} />
+    </ReactFlowProvider>
   );
 }
