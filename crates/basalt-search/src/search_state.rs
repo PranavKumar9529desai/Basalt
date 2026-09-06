@@ -93,12 +93,17 @@ impl SearchState {
                     }
                     any_indexed = true;
                 } else if let Ok(content) = std::fs::read_to_string(path) {
-                    let tags: String = content
-                        .split_whitespace()
-                        .filter(|w| w.starts_with('#') && w.len() > 1)
-                        .map(|w| w.trim_start_matches('#'))
-                        .collect::<Vec<_>>()
-                        .join(" ");
+                    let tags = vault
+                        .metadata(path)
+                        .map(|meta| meta.tags.join(" "))
+                        .unwrap_or_else(|| {
+                            content
+                                .split_whitespace()
+                                .filter(|w| w.starts_with('#') && w.len() > 1)
+                                .map(|w| w.trim_start_matches('#'))
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        });
                     if let Err(e) = tantivy.update_document(path, &title, &content, &tags) {
                         eprintln!("[search] failed to index {path}: {e}");
                     }

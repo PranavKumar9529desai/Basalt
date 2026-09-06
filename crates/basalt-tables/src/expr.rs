@@ -36,28 +36,13 @@ pub fn eval_expr(expr: &Expr, ctx: &EvalCtx) -> bool {
                 CompareOp::Gt => compare_typed(&lv, &rv) == Ordering::Greater,
                 CompareOp::Le => compare_typed(&lv, &rv) != Ordering::Greater,
                 CompareOp::Ge => compare_typed(&lv, &rv) != Ordering::Less,
-                CompareOp::Contains => match (&lv, &rv) {
-                    (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
-                        hay.contains(needle.as_str())
-                    }
-                    _ => false,
-                },
+                CompareOp::Contains => eval_contains_values(&lv, &rv),
             }
         }
         Expr::Not(inner) => !eval_expr(inner, ctx),
         Expr::Func { name, args } => {
-            if name == "contains" && args.len() == 2 {
-                let lv = eval_to_typed(&args[0], ctx);
-                let rv = eval_to_typed(&args[1], ctx);
-                match (&lv, &rv) {
-                    (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
-                        hay.contains(needle.as_str())
-                    }
-                    (TypedValue::List { items }, needle) => items
-                        .iter()
-                        .any(|item| compare_typed(item, needle) == Ordering::Equal),
-                    _ => false,
-                }
+            if name == "contains" {
+                eval_func_contains(args, ctx)
             } else if name == "length" && args.len() == 1 {
                 // length(x) is truthy when x is non-empty.
                 is_truthy(&eval_to_typed(expr, ctx))
@@ -70,6 +55,46 @@ pub fn eval_expr(expr: &Expr, ctx: &EvalCtx) -> bool {
                 false
             }
         }
+    }
+}
+
+/// Checks if `needle` is contained in `haystack` (string substring or list membership).
+fn eval_contains_values(haystack: &TypedValue, needle: &TypedValue) -> bool {
+    match (haystack, needle) {
+        (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
+            hay.contains(needle.as_str())
+        }
+        (TypedValue::List { items }, needle) => items
+            .iter()
+            .any(|item| compare_typed(item, needle) == Ordering::Equal),
+        _ => false,
+    }
+}
+
+/// Evaluates the `contains(haystack, needle)` function call.
+fn eval_func_contains(args: &[Expr], ctx: &EvalCtx) -> bool {
+    if args.len() != 2 {
+        return false;
+    }
+    let lv = eval_to_typed(&args[0], ctx);
+    let rv = eval_to_typed(&args[1], ctx);
+    eval_contains_values(&lv, &rv)
+}
+
+/// Evaluates the `length(x)` function call to a TypedValue.
+fn eval_func_length(args: &[Expr], ctx: &EvalCtx) -> TypedValue {
+    if args.len() != 1 {
+        return TypedValue::Null;
+    }
+    match eval_to_typed(&args[0], ctx) {
+        TypedValue::List { items } => TypedValue::Number {
+            value: items.len() as f64,
+        },
+        TypedValue::Text { value } => TypedValue::Number {
+            value: value.chars().count() as f64,
+        },
+        TypedValue::Number { value } => TypedValue::Number { value },
+        _ => TypedValue::Null,
     }
 }
 
@@ -91,32 +116,13 @@ pub fn eval_to_typed(expr: &Expr, ctx: &EvalCtx) -> TypedValue {
             if matches!(ctx, EvalCtx::Group { .. }) && is_aggregate(name) {
                 return eval_aggregate(name, args, ctx);
             }
-            if name == "contains" && args.len() == 2 {
-                let lv = eval_to_typed(&args[0], ctx);
-                let rv = eval_to_typed(&args[1], ctx);
+            if name == "contains" {
                 return TypedValue::Checkbox {
-                    value: match (&lv, &rv) {
-                        (TypedValue::Text { value: hay }, TypedValue::Text { value: needle }) => {
-                            hay.contains(needle.as_str())
-                        }
-                        (TypedValue::List { items }, needle) => items
-                            .iter()
-                            .any(|item| compare_typed(item, needle) == Ordering::Equal),
-                        _ => false,
-                    },
+                    value: eval_func_contains(args, ctx),
                 };
             }
-            if name == "length" && args.len() == 1 {
-                return match eval_to_typed(&args[0], ctx) {
-                    TypedValue::List { items } => TypedValue::Number {
-                        value: items.len() as f64,
-                    },
-                    TypedValue::Text { value } => TypedValue::Number {
-                        value: value.chars().count() as f64,
-                    },
-                    TypedValue::Number { value } => TypedValue::Number { value },
-                    _ => TypedValue::Null,
-                };
+            if name == "length" {
+                return eval_func_length(args, ctx);
             }
             // An aggregate outside a GROUP BY context is deferred (Dataview
             // rejects it too); unknown functions are Null.

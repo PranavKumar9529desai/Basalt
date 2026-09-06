@@ -1,6 +1,6 @@
 pub mod assets;
-pub mod canvas;
 pub mod boot;
+pub mod canvas;
 pub mod common;
 pub mod dev;
 pub mod files;

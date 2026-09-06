@@ -3,10 +3,10 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use tauri::State;
 
-use basalt_canvas::CanvasDocument;
+use super::common::{ensure_inside_vault, index_upsert, register_self_writes};
 use crate::app_state::AppState;
 use crate::error::{AppError, AppResult};
-use super::common::{ensure_inside_vault, register_self_writes, index_upsert};
+use basalt_canvas::CanvasDocument;
 
 #[derive(Serialize)]
 pub struct CreateCanvasResult {
@@ -68,7 +68,8 @@ pub fn open_canvas(path: String, state: State<AppState>) -> AppResult<String> {
 /// Write validated canvas JSON to disk.
 #[tauri::command]
 pub fn save_canvas(path: String, content: String, state: State<AppState>) -> AppResult<()> {
-    let doc: CanvasDocument = serde_json::from_str(&content).map_err(|e| AppError::Validation(e.to_string()))?;
+    let doc: CanvasDocument =
+        serde_json::from_str(&content).map_err(|e| AppError::Validation(e.to_string()))?;
     basalt_canvas::validate(&doc).map_err(|e| AppError::Validation(e.to_string()))?;
     let abs = resolve_canvas_path(&path, &state)?;
 

@@ -7,6 +7,19 @@ use ignore::WalkBuilder;
 use std::collections::HashMap;
 use std::path::Path;
 
+/// Maximum file size (100 MiB) to compute MD5 content hash for during indexing.
+const MAX_HASH_FILE_SIZE: u64 = 100 * 1024 * 1024;
+
+#[inline]
+fn is_md_path(path: &Path) -> bool {
+    path.extension().and_then(|ext| ext.to_str()) == Some("md")
+}
+
+#[inline]
+fn is_canvas_path(path: &Path) -> bool {
+    path.extension().and_then(|ext| ext.to_str()) == Some("canvas")
+}
+
 /// Build an `AssetInfo` from a filesystem entry.
 fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
     let meta = abs_path.metadata().ok()?;
@@ -18,7 +31,7 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
     let file_name = abs_path.file_name().and_then(|n| n.to_str())?.to_string();
 
     // Compute MD5 content hash (skip for very large files to avoid stalling).
-    let content_hash = if meta.len() <= 100 * 1024 * 1024 {
+    let content_hash = if meta.len() <= MAX_HASH_FILE_SIZE {
         // ≤100 MiB: read and hash
         match std::fs::read(abs_path) {
             Ok(data) => compute_md5(&data),
@@ -58,12 +71,12 @@ pub fn index_directory(path: &Path) -> Vault {
         if entry.file_type().is_some_and(|ft| ft.is_file()) {
             let entry_path = entry.path();
             if let Some(path_str) = entry_path.to_str() {
-                if entry_path.extension().and_then(|ext| ext.to_str()) == Some("md") {
+                if is_md_path(entry_path) {
                     // Markdown: parse into graph
                     if let Ok(text) = std::fs::read_to_string(entry_path) {
                         vault.add_document(path_str, &text);
                     }
-                } else if entry_path.extension().and_then(|ext| ext.to_str()) == Some("canvas") {
+                } else if is_canvas_path(entry_path) {
                     // Canvas: track path in metadata cache (no markdown parsing)
                     vault.add_document(path_str, "");
                 } else if let Some(info) = build_asset_info(entry_path, path) {
@@ -102,11 +115,10 @@ pub fn incremental_reindex(
         let cached_mtime = cached_mtimes.get(&path_str).copied().unwrap_or(0);
         new_mtimes.insert(path_str.clone(), current_mtime);
 
-        let ext = path.extension().and_then(|e| e.to_str());
-        if ext == Some("md") || ext == Some("canvas") {
+        if is_md_path(path) || is_canvas_path(path) {
             // Markdown / Canvas: update document in vault
             if current_mtime > cached_mtime {
-                if ext == Some("md") {
+                if is_md_path(path) {
                     if let Ok(content) = std::fs::read_to_string(path) {
                         vault.add_document(&path_str, &content);
                     }
@@ -126,8 +138,7 @@ pub fn incremental_reindex(
     for cached_path in cached_mtimes.keys() {
         if !new_mtimes.contains_key(cached_path) {
             let p = Path::new(cached_path);
-            let ext = p.extension().and_then(|e| e.to_str());
-            if ext == Some("md") || ext == Some("canvas") {
+            if is_md_path(p) || is_canvas_path(p) {
                 vault.remove_document(cached_path);
             } else {
                 vault.asset_index.remove(cached_path);

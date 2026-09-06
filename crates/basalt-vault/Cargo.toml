@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.101"
 basalt-types = { path = "../basalt-types" }
 basalt-parser = { path = "../basalt-parser" }
 basalt-graph = { path = "../basalt-graph" }

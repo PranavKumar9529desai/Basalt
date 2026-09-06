@@ -5,38 +5,26 @@ use basalt_types::MarkdownNode;
 pub fn parse_inline_text(mut input: &str) -> Vec<MarkdownNode> {
     let mut nodes = Vec::new();
 
+    enum TokenKind {
+        Embed,
+        Link,
+        Tag,
+    }
+
     while !input.is_empty() {
-        let embed_idx = input.find("![[");
-        let link_idx = input.find("[[");
-        let tag_idx = input.find('#');
+        let tokens = [
+            input.find("![[").map(|idx| (idx, TokenKind::Embed)),
+            input.find("[[").map(|idx| (idx, TokenKind::Link)),
+            input.find('#').map(|idx| (idx, TokenKind::Tag)),
+        ];
 
-        let mut min_idx = input.len();
-        let mut token = None;
+        let next_token = tokens.into_iter().flatten().min_by_key(|&(idx, _)| idx);
 
-        if let Some(e) = embed_idx {
-            if e < min_idx {
-                min_idx = e;
-                token = Some("embed");
-            }
-        }
-        if let Some(l) = link_idx {
-            if l < min_idx {
-                min_idx = l;
-                token = Some("link");
-            }
-        }
-        if let Some(t) = tag_idx {
-            if t < min_idx {
-                min_idx = t;
-                token = Some("tag");
-            }
-        }
-
-        match token {
-            Some("embed") => input = handle_embed(input, min_idx, &mut nodes),
-            Some("link") => input = handle_link(input, min_idx, &mut nodes),
-            Some("tag") => input = handle_tag(input, min_idx, &mut nodes),
-            _ => {
+        match next_token {
+            Some((idx, TokenKind::Embed)) => input = handle_embed(input, idx, &mut nodes),
+            Some((idx, TokenKind::Link)) => input = handle_link(input, idx, &mut nodes),
+            Some((idx, TokenKind::Tag)) => input = handle_tag(input, idx, &mut nodes),
+            None => {
                 nodes.push(MarkdownNode::Text(input.to_string()));
                 break;
             }

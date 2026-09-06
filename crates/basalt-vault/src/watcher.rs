@@ -1,4 +1,3 @@
-use anyhow::Result;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -20,7 +19,7 @@ impl VaultWatcher {
     /// When a markdown file changes, it will be read and parsed, updating the Vault.
     /// `on_change` is called with the absolute path of every file that was added,
     /// modified, or removed — after the vault has already been updated.
-    pub fn watch<P, F>(path: P, vault_arc: Arc<RwLock<Vault>>, on_change: F) -> Result<Self>
+    pub fn watch<P, F>(path: P, vault_arc: Arc<RwLock<Vault>>, on_change: F) -> notify::Result<Self>
     where
         P: AsRef<Path>,
         F: Fn(PathBuf, bool) + Send + 'static,

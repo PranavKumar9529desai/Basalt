@@ -115,7 +115,6 @@ pub enum BackgroundStyle {
     Repeat,
 }
 
-
 /// A connection between two nodes.
 ///
 /// `toEnd` defaults to `arrow` per the spec; `fromEnd` defaults to `none`.
@@ -186,9 +185,7 @@ impl CanvasColor {
     /// True when the color is a `#RRGGBB`/`#RGB` hex string.
     pub fn is_hex(&self) -> bool {
         let s = self.0.as_str();
-        s.starts_with('#')
-            && s.len() == 7
-            && s[1..].chars().all(|c| c.is_ascii_hexdigit())
+        s.starts_with('#') && s.len() == 7 && s[1..].chars().all(|c| c.is_ascii_hexdigit())
     }
 }
 
@@ -368,9 +365,10 @@ mod tests {
             "edges": [{"id":"e1","fromNode":"a","toNode":"ghost"}]
         }"#;
         let err = parse(json).unwrap_err();
-        assert!(matches!(err, CanvasError::UnknownNode(edge, node) if edge == "e1" && node == "ghost"));
+        assert!(
+            matches!(err, CanvasError::UnknownNode(edge, node) if edge == "e1" && node == "ghost")
+        );
     }
-
 
     #[test]
     fn parses_all_node_kinds() {

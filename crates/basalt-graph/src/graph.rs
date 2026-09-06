@@ -132,32 +132,27 @@ impl NoteGraph {
     /// docs/tag-graph-connections.md ("What to avoid").
     fn prune_orphan_tags(&mut self) {
         // Live = has a direct note reference (a back_link that is not a tag node).
-        let mut live: HashSet<NodeId> = self
-            .tag_nodes
-            .iter()
-            .copied()
-            .filter(|t| {
-                self.back_links
-                    .get(t)
-                    .is_some_and(|srcs| srcs.iter().any(|s| !self.tag_nodes.contains(s)))
-            })
-            .collect();
+        let mut live: HashSet<NodeId> = HashSet::new();
+        let mut worklist: Vec<NodeId> = Vec::new();
 
-        // Propagate liveness upward: a parent is live if a child is live.
-        let mut changed = true;
-        while changed {
-            changed = false;
-            for &t in &self.tag_nodes {
-                if live.contains(&t) {
-                    continue;
-                }
-                let anchored_by_child = self
-                    .forward_links
-                    .get(&t)
-                    .is_some_and(|kids| kids.iter().any(|c| live.contains(c)));
-                if anchored_by_child {
-                    live.insert(t);
-                    changed = true;
+        for &t in &self.tag_nodes {
+            let has_direct_note_ref = self
+                .back_links
+                .get(&t)
+                .is_some_and(|srcs| srcs.iter().any(|s| !self.tag_nodes.contains(s)));
+            if has_direct_note_ref {
+                live.insert(t);
+                worklist.push(t);
+            }
+        }
+
+        // Propagate liveness upward through parent tag nodes in O(K) worklist traversal.
+        while let Some(child_id) = worklist.pop() {
+            if let Some(parents) = self.back_links.get(&child_id) {
+                for &parent_id in parents {
+                    if self.tag_nodes.contains(&parent_id) && live.insert(parent_id) {
+                        worklist.push(parent_id);
+                    }
                 }
             }
         }

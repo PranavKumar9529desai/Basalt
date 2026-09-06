@@ -294,4 +294,30 @@ mod tests {
             assert_eq!(actual, expected, "mismatch for {value:?}");
         }
     }
+
+    #[test]
+    fn helper_date_and_link_boundary_cases() {
+        assert!(is_iso_date_string("2026-12-31"));
+        assert!(!is_iso_date_string("2026-1-31"));
+        assert!(!is_iso_date_string("2026-12-3"));
+        assert!(!is_iso_date_string("2026/12/31"));
+        assert!(!is_iso_date_string(""));
+
+        assert!(is_iso_datetime_string("2026-12-31T23:59:59"));
+        assert!(is_iso_datetime_string("2026-12-31T23:59:59Z"));
+        assert!(!is_iso_datetime_string("2026-12-31 23:59:59"));
+        assert!(!is_iso_datetime_string("short"));
+
+        assert_eq!(
+            first_wikilink_target("[[Target]]"),
+            Some("Target".to_string())
+        );
+        assert_eq!(
+            first_wikilink_target("text [[Target|Alias]] more"),
+            Some("Target".to_string())
+        );
+        assert_eq!(first_wikilink_target("[[]]"), None);
+        assert_eq!(first_wikilink_target("[[   ]]"), None);
+        assert_eq!(first_wikilink_target("no link here"), None);
+    }
 }

@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -9,6 +8,16 @@ use crate::vault::Vault;
 /// Current cache format version. Bump this whenever the serialized layout
 /// changes in a breaking way so old caches are automatically discarded.
 pub const CACHE_VERSION: u32 = 1;
+
+#[derive(Debug, thiserror::Error)]
+pub enum CacheError {
+    #[error("failed to create cache directory: {0}")]
+    CreateDir(std::io::Error),
+    #[error("failed to serialize vault cache: {0}")]
+    Serialize(serde_json::Error),
+    #[error("failed to write cache file: {0}")]
+    WriteFile(std::io::Error),
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct VaultCache {
@@ -34,7 +43,7 @@ impl VaultCache {
         let file_mtimes = vault
             .arena
             .all_strings()
-            .filter(|p| p.ends_with(".md"))
+            .filter(|p| !p.starts_with('#') && (p.ends_with(".md") || p.ends_with(".canvas")))
             .filter_map(|p| {
                 let mtime = mtime_secs(Path::new(p))?;
                 Some((p.clone(), mtime))
@@ -50,14 +59,12 @@ impl VaultCache {
     }
 
     /// Serialize and write the cache to `cache_path`.
-    pub fn save(&self, cache_path: &Path) -> Result<()> {
+    pub fn save(&self, cache_path: &Path) -> Result<(), CacheError> {
         if let Some(parent) = cache_path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("creating cache directory {}", parent.display()))?;
+            std::fs::create_dir_all(parent).map_err(CacheError::CreateDir)?;
         }
-        let json = serde_json::to_string(self).context("serialising vault cache")?;
-        std::fs::write(cache_path, json)
-            .with_context(|| format!("writing cache to {}", cache_path.display()))?;
+        let json = serde_json::to_string(self).map_err(CacheError::Serialize)?;
+        std::fs::write(cache_path, json).map_err(CacheError::WriteFile)?;
         Ok(())
     }
 
