@@ -192,6 +192,7 @@ function WorkspaceShell({
             tab={tab}
             vaultPath={ws.vaultPath}
             canRename={leaf.type === "markdown"}
+            canToggleMode={leaf.type === "markdown"}
           />
           <div
             className="relative flex min-h-0 flex-1 flex-col"

@@ -123,9 +123,9 @@ pub fn create_untitled_canvas(
 
     for i in 0u32..=99 {
         let name = if i == 0 {
-            "Untitled Canvas".to_string()
+            "Untitled".to_string()
         } else {
-            format!("Untitled Canvas {i}")
+            format!("Untitled {i}")
         };
 
         let file_path = parent_dir.join(format!("{name}.canvas"));
@@ -173,3 +173,22 @@ pub fn create_untitled_canvas(
         "too many untitled canvases (all 100 slots taken)".to_string(),
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_untitled_canvas_name_sequence() {
+        let name_for = |i: u32| -> String {
+            if i == 0 {
+                "Untitled".to_string()
+            } else {
+                format!("Untitled {i}")
+            }
+        };
+
+        assert_eq!(name_for(0), "Untitled");
+        assert_eq!(name_for(1), "Untitled 1");
+        assert_eq!(name_for(99), "Untitled 99");
+    }
+}
+

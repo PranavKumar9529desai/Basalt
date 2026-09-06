@@ -35,4 +35,25 @@ describe("ViewHeader", () => {
     expect(screen.getByText("DSA / Binary Search")).toBeInTheDocument();
     expect(screen.queryByText("Source mode")).not.toBeInTheDocument();
   });
+
+  it("hides reading view button when canToggleMode is false", () => {
+    const canvasTab: LeafTabInfo = {
+      id: "tab:/vault/Untitled.canvas",
+      path: "/vault/Untitled.canvas",
+      title: "Untitled",
+    };
+    render(
+      <ViewHeader
+        tab={canvasTab}
+        vaultPath="/vault"
+        canRename={false}
+        canToggleMode={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Reading view" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
+  });
 });

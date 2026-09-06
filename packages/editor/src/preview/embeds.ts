@@ -8,6 +8,7 @@ import {
   extensionOf,
 } from "../input/embed-utils";
 import { buildEmbedWidget } from "../input/embed-media";
+import { isEmbedInRawMode } from "../input/embed-state";
 import { resolveAssetFacet } from "../types";
 
 /**
@@ -122,10 +123,17 @@ export function handleEmbedNode(
 
   if (ctx.state.facet(renderModeFacet) === "reading") return true;
 
+  const inRawMode = isEmbedInRawMode(ctx.state, embed.from, embed.to);
+  if (inRawMode) return true;
+
   const resolveAsset = ctx.state.facet(resolveAssetFacet);
   const url = resolveAsset?.(embed.target);
   if (url) {
-    collector.addReplace(embed.from, embed.to, buildEmbedWidget(url, embed.target));
+    collector.addReplace(
+      embed.from,
+      embed.to,
+      buildEmbedWidget(url, embed.target, embed.from, embed.to),
+    );
     return true;
   }
 

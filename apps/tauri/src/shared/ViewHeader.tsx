@@ -40,10 +40,12 @@ export function ViewHeader({
   tab,
   vaultPath,
   canRename,
+  canToggleMode = true,
 }: {
   tab: LeafTabInfo;
   vaultPath: string | null;
   canRename: boolean;
+  canToggleMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -59,7 +61,7 @@ export function ViewHeader({
       vaultPath && tab.path.startsWith(`${vaultPath}/`)
         ? tab.path.slice(vaultPath.length + 1)
         : tab.path;
-    const parts = relative.replace(/\.md$/i, "").split("/").filter(Boolean);
+    const parts = relative.replace(/\.(md|canvas)$/i, "").split("/").filter(Boolean);
     return parts.length >= 2
       ? `${parts[parts.length - 2]} / ${parts[parts.length - 1]}`
       : (parts[0] ?? "");
@@ -112,25 +114,27 @@ export function ViewHeader({
       </div>
 
       <div className="ml-auto flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
-          title={
-            viewMode === "reading"
-              ? "Edit note (Ctrl/Cmd+E)"
-              : "Reading view (Ctrl/Cmd+E)"
-          }
-          onClick={handleModeClick}
-          className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-        >
-          {viewMode === "reading" ? (
-            <PenLineIcon size={14} />
-          ) : (
-            <BookOpenIcon size={14} />
-          )}
-        </Button>
+        {canToggleMode && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={viewMode === "reading" ? "Edit note" : "Reading view"}
+            title={
+              viewMode === "reading"
+                ? "Edit note (Ctrl/Cmd+E)"
+                : "Reading view (Ctrl/Cmd+E)"
+            }
+            onClick={handleModeClick}
+            className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+          >
+            {viewMode === "reading" ? (
+              <PenLineIcon size={14} />
+            ) : (
+              <BookOpenIcon size={14} />
+            )}
+          </Button>
+        )}
 
         <ContextMenu open={open} onOpenChange={setOpen}>
           <button

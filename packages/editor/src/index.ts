@@ -108,7 +108,12 @@ export {
   isTableInRawMode,
   type TableRawRange,
 } from "./block-widgets/table-state";
-export { RawTableToggleWidget } from "./preview/tables";
+export {
+  setEmbedRawMode,
+  embedRawModeField,
+  isEmbedInRawMode,
+  type EmbedRawRange,
+} from "./input/embed-state";
 export { attachScrollHeader } from "./scroll-header";
 export type { CodeToken } from "./syntax/code-highlighting";
 export { tokenizeCode } from "./syntax/code-highlighting";
