@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { Boot } from "../app-shell";
-import { ensureMediaServerUrl } from "../app-shell/mediaServer";
+import { ensureMediaServerUrl, ttiMark } from "../shared";
+import { Boot } from "../shared/Boot";
 import type { BootResult } from "../features/vault";
-import { ttiMark } from "../app-shell/tti";
 
 interface LoaderData {
   boot: BootResult;

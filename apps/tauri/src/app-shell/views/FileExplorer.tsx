@@ -1,7 +1,7 @@
 import { SidebarActionButtons } from "@workspace/ui/components/sidebar";
 import { IconFilePlus, IconFolderPlus } from "@tabler/icons-react";
 import { FileTree } from "../../features/vault";
-import { useAppContext } from "../AppProvider";
+import { useAppContext } from "../../shared";
 
 /**
  * File explorer view — the left dock's registered view.

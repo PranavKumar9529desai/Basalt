@@ -5,7 +5,7 @@ import {
   useVaultTree,
   type FlatTreeNode,
 } from "../features/vault";
-import { useWorkspace } from "../shared/useWorkspace";
+import { useWorkspace } from "./useWorkspace";
 import { type ReactNode, createContext, useCallback, useContext } from "react";
 
 function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {

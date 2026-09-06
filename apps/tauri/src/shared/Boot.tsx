@@ -25,7 +25,7 @@ import type { BootResult } from "../features/vault";
 import { initSettings } from "../features/settings";
 import { useTabPersistence } from "../features/tabs";
 import { ttiMark, writeTtiReport } from "./tti";
-import { Shell } from "./Shell";
+import { Shell } from "../app-shell/Shell";
 
 interface BootProps {
   boot: BootResult;

@@ -1,5 +1,5 @@
 import { BacklinksSidebar } from "../../features/vault";
-import { useAppContext } from "../AppProvider";
+import { useAppContext } from "../../shared";
 
 /**
  * Backlinks view — the right dock's registered view.

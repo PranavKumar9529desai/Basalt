@@ -40,18 +40,19 @@ import { parseFrontmatter } from "../features/editor";
 import type { BootResult } from "../features/vault";
 import { useVaultMutations, VaultSplash } from "../features/vault";
 import type { PreviewDeps } from "../features/search";
-import "../shared/tabCommands";
-import "../shared/editorCommands";
-import { startEditorContextSync } from "../shared/activeEditor";
+import {
+  AppProvider,
+  useAppContext,
+  useLeafServices,
+  useShellCommands,
+  ViewHeader,
+  startEditorContextSync,
+} from "../shared";
 import "../features/export/commands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
-import { ViewHeader } from "./ViewHeader";
 import "./registrations";
-import { AppProvider, useAppContext } from "./AppProvider";
 import { Overlays } from "./Overlays";
-import { useLeafServices } from "./useLeafServices";
-import { useShellCommands } from "./useShellCommands";
 
 interface ShellProps {
   boot: BootResult;
