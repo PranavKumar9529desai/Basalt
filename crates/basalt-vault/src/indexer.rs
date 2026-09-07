@@ -66,16 +66,14 @@ pub fn index_directory(path: &Path) -> Vault {
     let mut vault = Vault::new();
 
     let walker = WalkBuilder::new(path).build();
+    let mut md_files: Vec<String> = Vec::new();
 
     for entry in walker.flatten() {
         if entry.file_type().is_some_and(|ft| ft.is_file()) {
             let entry_path = entry.path();
             if let Some(path_str) = entry_path.to_str() {
                 if is_md_path(entry_path) {
-                    // Markdown: parse into graph
-                    if let Ok(text) = std::fs::read_to_string(entry_path) {
-                        vault.add_document(path_str, &text);
-                    }
+                    md_files.push(path_str.to_string());
                 } else if is_canvas_path(entry_path) {
                     // Canvas: track path in metadata cache (no markdown parsing)
                     vault.add_document(path_str, "");
@@ -84,6 +82,15 @@ pub fn index_directory(path: &Path) -> Vault {
                     vault.asset_index.upsert(info);
                 }
             }
+        }
+    }
+
+    // Index markdown documents after all non-markdown assets are populated in
+    // asset_index so that embed/link targets resolve deterministically regardless
+    // of filesystem iteration order.
+    for md_path in md_files {
+        if let Ok(text) = std::fs::read_to_string(&md_path) {
+            vault.add_document(&md_path, &text);
         }
     }
 
@@ -100,6 +107,7 @@ pub fn incremental_reindex(
 ) -> HashMap<String, u64> {
     let mut new_mtimes: HashMap<String, u64> = HashMap::new();
 
+    let mut md_to_reindex: Vec<(String, bool)> = Vec::new();
     let walker = WalkBuilder::new(vault_path).build();
     for entry in walker.flatten() {
         if !entry.file_type().is_some_and(|ft| ft.is_file()) {
@@ -116,21 +124,25 @@ pub fn incremental_reindex(
         new_mtimes.insert(path_str.clone(), current_mtime);
 
         if is_md_path(path) || is_canvas_path(path) {
-            // Markdown / Canvas: update document in vault
+            // Markdown / Canvas: buffer for update after assets are upserted
             if current_mtime > cached_mtime {
-                if is_md_path(path) {
-                    if let Ok(content) = std::fs::read_to_string(path) {
-                        vault.add_document(&path_str, &content);
-                    }
-                } else {
-                    vault.add_document(&path_str, "");
-                }
+                md_to_reindex.push((path_str, is_md_path(path)));
             }
         } else if current_mtime > cached_mtime {
             // Non-markdown/non-canvas: register/update in asset index if modified
             if let Some(info) = build_asset_info(path, vault_path) {
                 vault.asset_index.upsert(info);
             }
+        }
+    }
+
+    for (path_str, is_md) in md_to_reindex {
+        if is_md {
+            if let Ok(content) = std::fs::read_to_string(&path_str) {
+                vault.add_document(&path_str, &content);
+            }
+        } else {
+            vault.add_document(&path_str, "");
         }
     }
 
