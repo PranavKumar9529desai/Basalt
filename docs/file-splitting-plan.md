@@ -2,10 +2,10 @@
 
 > Execution checklist for [ADR-038](adr/038-file-decomposition-structural-clarity.md).
 > One commit per phase (§ phases below). Verification invariant per ADR §5.
-> Status banner: last updated 2026-09-08.
+> Status banner: last updated 2026-09-08 — ALL PHASES COMPLETE (`3e8036b` · `3147787` · `d40231b` · `1c6d21c` · phase-5).
 
 ## Phase 1 — Zero-risk relocations ✅
-> Status banner: last updated 2026-09-08 — Phase 1 `3e8036b`, Phase 2 `3147787`, Phase 3 in progress.
+> Status banner: all phases complete — commits in the rows below.
 | Item | Files | Status |
 |---|---|---|
 | dql-widget split | `packages/editor/src/block-widgets/` → `dql-types.ts` `dql-html.ts` `dql-theme.ts` | ✅ `3e8036b` |
@@ -44,18 +44,19 @@
 | lite: useVaultMutations | `features/vault/hooks/useVaultMutations.ts` → `lib/deleteFlow.ts` | ✅ `d40231b` |
 | lite: search store | `features/search/store.ts` → `lib/searchApi.ts` | ✅ `d40231b` |
 | lite: TabsBar | `packages/ui/src/components/tabs/TabsBar.tsx` → `OverflowMenu.tsx` `DropIndicator.tsx` (rendered by TabItem, TabsBar passes `showDropIndicator`) | ✅ `d40231b` |
-## Phase 4 — Test-file splits
+## Phase 4 — Test-file splits ✅
 
 | Item | Files | Status |
 |---|---|---|
-| complex_queries | `crates/basalt-tables/tests/complex_queries.rs` → per-scenario (aggregation/group_by/flatten/edge_cases/pipeline) | ⬜ |
-| query tests | `query/tests.rs` (392) per clause | ⬜ |
-| mirror splits | `useTabDnD.test.ts` (576) mirrors hooks/lib; `split.test.ts` (526) + `useVaultController.test.ts` (490) per extracted module | ⬜ |
+| complex_queries | `crates/basalt-tables/tests/complex_queries.rs` → per-scenario (aggregation/group_by/flatten/edge_cases/pipeline) | ✅ `1c6d21c` (56 tests) |
+| query tests | `query/tests.rs` (392) per clause → `tests/` submodules | ✅ `1c6d21c` (38 tests) |
+| mirror splits | `useTabDnD.test.ts` (576) mirrors hooks/lib; `split.test.ts` (526) + `useVaultController.test.ts` (490) per extracted module | ✅ `1c6d21c` (tests verbatim) |
+| basalt-canvas lib tests | `lib.rs` inline `#[cfg(test)] mod tests` → `#[path]` `lib_tests.rs` | ✅ `1c6d21c` (11 tests) |
 
-## Phase 5 — Full gate
+## Phase 5 — Full gate ✅
 
-- [ ] `bun run lint` + `bunx tsc --noEmit` (apps/tauri)
-- [ ] `cargo test --workspace` + `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] typing-latency harness if `packages/editor` moved (it did — Phase 1)
-- [ ] Flip ADR-038 status → implemented; ✓/✗ tier tables
-- [ ] Update AGENTS.md status table + CURRENT_WORK.md
+- [x] `bun run lint` + `bunx tsc --noEmit` (apps/tauri) — clean except pre-existing settings WIP
+- [x] `cargo test --workspace` + `cargo clippy --workspace --all-targets -- -D warnings` — green
+- [x] typing-latency harness — full-stack p95 = 3.10 ms @ 100 KB (gate ≤ 4 ms)
+- [x] Flip ADR-038 status → implemented; ✓ tier disposition tables
+- [x] Update AGENTS.md status table + CURRENT_WORK.md

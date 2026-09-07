@@ -7,6 +7,54 @@
 
 ---
 
+## File decomposition (ADR-038) — COMPLETE
+
+**Branch:** `feat/adr38-file-decomposition` (from `main` @ `4aa5b2f`)
+**Status:** All five phases done, one commit per phase, zero behavior/API change —
+import surfaces frozen (entry barrels re-export identical symbols; outside consumers
+untouched). User's ADR-037 settings WIP (`src/features/settings/**`, `docs/adr/037*`,
+`docs/specs/`) was never staged into these commits.
+
+- **Phase 1** `3e8036b` — zero-risk relocations: `table-widget.ts` → `table-parse/html/theme`,
+  `dql-widget.ts` → `dql-types/html/theme`, `live-preview.ts` → `collector/scheduler/tag-marks`
+  (engine 615→196; `previewScheduler(field)`/`tagMarksPlugin(field)` factories break the
+  module cycle), both WebGL renderers → `shaders.ts`+`programs.ts`, `useVaultController`
+  sub-hooks, `useTabDnD` internals, Rust test-blob extraction (`reorganize/rename/move_rename`
+  + shared `temp_vault` → `commands/common_tests.rs` — clears the old command-refactor
+  backlog item below).
+- **Phase 2** `3147787` — Rust crate seams: `force_graph.rs` → `quadtree.rs`+sim,
+  `basalt-canvas/lib.rs` → `types.rs`+`ser.rs` (450→188), `basalt-tables/engine.rs` →
+  `grouping.rs`+`output.rs`, `basalt-types/query.rs` → `value.rs`+`convert.rs`, vault
+  `graph.rs` → `cc.rs`, `assets/save.rs` → `infer.rs`, `media.rs` → `media/{mod,server,http}.rs`
+  (LazyLock per repo rule), parser `query/parse.rs` → `source/expr/plan` + `frontmatter.rs`
+  → `walk.rs`.
+- **Phase 3** `d40231b` — feature-layer hooks: `CanvasView.tsx` 907→242 (6 `lib/useCanvas*`
+  hooks; persistence owns `nodesRef/edgesRef` breaking the state↔persistence cycle),
+  `Graph.tsx` 1359→340 (`lib/` engine/worker/geometry/theme/excerpt/filters/localGraph/
+  interactions/persistedState + justified `useGraphEngine.ts` — worker entry must stay
+  isolated), tabs `core.ts` 900→36 (`core/{openClose,panes,pin,persistenceSync}` + `lib/ids.ts`),
+  `shared/editorCommands.tsx` 470→9 (`commands/` split), editor links → `links.ts`,
+  `EditorController` → `lib/{linkFetch,viewEvents}`, vault `deleteFlow.ts`, search
+  `searchApi.ts`, `TabsBar.tsx` 449→345 (`OverflowMenu.tsx` + `DropIndicator.tsx`).
+  Lint debt introduced by extraction fixed (stable refs/setters added to dep arrays;
+  per-render `colorContext` read through a ref in the mount effect).
+- **Phase 4** `1c6d21c` — test-file splits, zero assertions changed: tables
+  `complex_queries.rs` → 5 per-scenario files + `tests/common/` (56 tests), parser
+  `query/tests.rs` → per-clause `tests/` submodules (38), canvas lib tests → `#[path]`
+  `lib_tests.rs` (11), tabs/vault TS mirrors + `testUtils` helpers (verbatim).
+- **Phase 5** — full gate (below) + docs (ADR-038 status → implemented, tier disposition
+  tables; AGENTS.md; this file; `docs/file-splitting-plan.md`).
+
+**Gate evidence:** `cargo test --workspace` green (parser 82, tables 56, tauri 53, canvas
+33, graph 8, types 8, plus doc/ser suites), `cargo clippy --workspace --all-targets
+-- -D warnings` clean, `bunx tsc --noEmit` + `bun run lint` clean except the pre-existing
+in-flight settings WIP (untouched), apps/tauri vitest 319/319, packages/editor 34/36
+(2 pre-existing `codeBtn` failures, proven identical on clean HEAD), typing-latency
+full-stack p95 = 3.10 ms @ 100 KB (gate ≤ 4 ms, ADR-019).
+
+---
+
+
 ## Core plugins: Templates + Daily notes — COMPLETE
 
 **Status:** First two core plugins per new [ADR-036](adr/036-core-plugin-architecture.md).
@@ -43,8 +91,9 @@ submodules):
 - `folders.rs` (785L) → `folders/{mod,move_rename}.rs`
 
 All `#[tauri::command]` exports and `commands/mod.rs` re-exports unchanged;
-workspace clippy `-D warnings` clean, 287 tests pass. Still backlogged:
-extract shared `temp_vault()` test helpers into a `common::tests` module.
+workspace clippy `-D warnings` clean, 287 tests pass. The `temp_vault()`
+helper-extraction backlog item below was completed 2026-09-08 in ADR-038 phase 1
+(`commands/common_tests.rs`).
 
 ---
 
