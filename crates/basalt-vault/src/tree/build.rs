@@ -9,39 +9,15 @@ use super::types::{FlatTreeNode, NodeKind};
 /// `BTreeMap` for children gives us alphabetical ordering for free.
 struct DirEntry {
     name: String,
-    /// Absolute path on disk.
-    abs_path: String,
-    /// Path relative to the vault root (no leading slash).
-    rel_path: String,
     is_file: bool,
     children: BTreeMap<String, DirEntry>,
 }
 
 impl DirEntry {
-    fn new_folder(
-        name: impl Into<String>,
-        abs_path: impl Into<String>,
-        rel_path: impl Into<String>,
-    ) -> Self {
+    fn new_folder(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            abs_path: abs_path.into(),
-            rel_path: rel_path.into(),
             is_file: false,
-            children: BTreeMap::new(),
-        }
-    }
-
-    fn new_file(
-        name: impl Into<String>,
-        abs_path: impl Into<String>,
-        rel_path: impl Into<String>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            abs_path: abs_path.into(),
-            rel_path: rel_path.into(),
-            is_file: true,
             children: BTreeMap::new(),
         }
     }
@@ -67,7 +43,7 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         .unwrap_or("")
         .to_string();
 
-    let mut root = DirEntry::new_folder(root_name, root_abs.as_ref(), "");
+    let mut root = DirEntry::new_folder(root_name);
 
     // Source of truth for "real files" is metadata_cache, not the arena, which
     // may hold unresolved link targets or historical interned paths.
@@ -91,21 +67,21 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         }
 
         let parts: Vec<&str> = rel.split('/').collect();
-        insert_path(&mut root, &parts, abs_path, &root_prefix);
+        insert_path(&mut root, &parts);
     }
 
     // Include on-disk directories too, so empty folders are visible.
     if vault_root.is_dir() {
-        insert_disk_dirs(&mut root, vault_root, &root_prefix);
+        insert_disk_dirs(&mut root, vault_root);
     }
 
     let mut out = Vec::new();
-    flatten_children(&root, 0, &mut out);
+    flatten_children(&root, "", &root_prefix, 0, &mut out);
     out
 }
 
 /// Recursively insert `parts` (the segments of a relative path) under `node`.
-fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix: &str) {
+fn insert_path(node: &mut DirEntry, parts: &[&str]) {
     if parts.is_empty() {
         return;
     }
@@ -113,30 +89,24 @@ fn insert_path(node: &mut DirEntry, parts: &[&str], abs_path: &str, root_prefix:
     let name = parts[0];
     let is_last = parts.len() == 1;
 
-    let child_rel = if node.rel_path.is_empty() {
-        name.to_string()
-    } else {
-        format!("{}/{}", node.rel_path, name)
-    };
+    let entry = node
+        .children
+        .entry(name.to_string())
+        .or_insert_with(|| DirEntry {
+            name: name.to_string(),
+            is_file: is_last,
+            children: BTreeMap::new(),
+        });
 
-    if is_last {
-        node.children
-            .entry(name.to_string())
-            .or_insert_with(|| DirEntry::new_file(name, abs_path, &child_rel));
-    } else {
-        let child_abs = format!("{}{}", root_prefix, child_rel);
-        let entry = node
-            .children
-            .entry(name.to_string())
-            .or_insert_with(|| DirEntry::new_folder(name, &child_abs, &child_rel));
-        insert_path(entry, &parts[1..], abs_path, root_prefix);
+    if !is_last {
+        insert_path(entry, &parts[1..]);
     }
 }
 
 /// Walk on-disk subdirectories of `disk_path` and merge any that are missing
 /// from `node` into the tree. This ensures empty folders show up. Skips hidden
 /// directories (names starting with `.`) so `.basalt`, `.git`, etc. stay hidden.
-fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
+fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path) {
     let Ok(entries) = std::fs::read_dir(disk_path) else {
         return;
     };
@@ -146,54 +116,70 @@ fn insert_disk_dirs(node: &mut DirEntry, disk_path: &Path, root_prefix: &str) {
         if !ft.is_dir() {
             continue;
         }
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
 
+        let file_name = entry.file_name();
+        let name_str = file_name.to_string_lossy();
         if name_str.starts_with('.') {
             continue;
         }
 
-        let child_rel = if node.rel_path.is_empty() {
-            name_str.to_string()
-        } else {
-            format!("{}/{}", node.rel_path, name_str)
-        };
-
-        let child_abs = format!("{}{}", root_prefix, child_rel);
-
         let child = node
             .children
             .entry(name_str.to_string())
-            .or_insert_with(|| DirEntry::new_folder(&*name_str, &child_abs, &child_rel));
+            .or_insert_with(|| DirEntry {
+                name: name_str.to_string(),
+                is_file: false,
+                children: BTreeMap::new(),
+            });
 
-        insert_disk_dirs(child, &entry.path(), root_prefix);
+        insert_disk_dirs(child, &entry.path());
     }
 }
 
 /// Emit the children of `node` into `out` using pre-order DFS.
 /// Folders are emitted before files at every level; within each group the
 /// ordering is already alphabetical thanks to `BTreeMap`.
-fn flatten_children(node: &DirEntry, depth: u32, out: &mut Vec<FlatTreeNode>) {
+fn flatten_children(
+    node: &DirEntry,
+    parent_rel: &str,
+    root_prefix: &str,
+    depth: u32,
+    out: &mut Vec<FlatTreeNode>,
+) {
     let (folders, files): (Vec<&DirEntry>, Vec<&DirEntry>) =
         node.children.values().partition(|c| !c.is_file);
 
     for folder in folders {
+        let rel_path = if parent_rel.is_empty() {
+            folder.name.clone()
+        } else {
+            format!("{}/{}", parent_rel, folder.name)
+        };
+        let abs_path = format!("{}{}", root_prefix, rel_path);
+
         out.push(FlatTreeNode {
             name: folder.name.clone(),
-            path: folder.abs_path.clone(),
-            rel_path: folder.rel_path.clone(),
+            path: abs_path,
+            rel_path: rel_path.clone(),
             kind: NodeKind::Folder,
             depth,
             child_count: folder.children.len() as u32,
         });
-        flatten_children(folder, depth + 1, out);
+        flatten_children(folder, &rel_path, root_prefix, depth + 1, out);
     }
 
     for file in files {
+        let rel_path = if parent_rel.is_empty() {
+            file.name.clone()
+        } else {
+            format!("{}/{}", parent_rel, file.name)
+        };
+        let abs_path = format!("{}{}", root_prefix, rel_path);
+
         out.push(FlatTreeNode {
             name: file.name.clone(),
-            path: file.abs_path.clone(),
-            rel_path: file.rel_path.clone(),
+            path: abs_path,
+            rel_path,
             kind: NodeKind::File,
             depth,
             child_count: 0,
