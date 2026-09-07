@@ -30,21 +30,20 @@
 | lite: save.rs infer | `commands/assets/save.rs` → `infer.rs` | ✅ `3147787` |
 | media server/http | `commands/media.rs` → `media/server.rs` + `media/http.rs` | ✅ `3147787` |
 
-## Phase 3 — Feature-layer hooks
+## Phase 3 — Feature-layer hooks ✅
 
 | Item | Files | Status |
 |---|---|---|
-| CanvasView | `features/canvas/CanvasView.tsx` → `lib/useCanvasState.ts` `useCanvasPersistence.ts` `useCanvasKeyboard.ts` `useCanvasSelection.ts` `useCanvasGuidelines.ts` `useCanvasModals.ts` | ⬜ |
-| Graph lib | `features/graph/components/Graph.tsx` → `lib/` `graphWorker.ts` `geometry.ts` `themeColors.ts` `excerpt.ts` `persistedState.ts` `filters.ts` `localGraph.ts` `interactions.ts` `useGraphEngine.ts` | ⬜ |
-| tabs core slices | `features/tabs/store/core.ts` → `core/` `openClose.ts` `panes.ts` `pin.ts` `persistenceSync.ts` + `lib/ids.ts`; `createCoreSlice` composes | ⬜ |
-| editorCommands | `shared/editorCommands.tsx` → `commands/editorCommands.ts` `tableCommands.ts` `devBenchmarks.ts` | ⬜ |
-| lite: EditorController | `controller/EditorController.ts` → `lib/linkFetch.ts` `lib/viewEvents.ts` | ⬜ |
-| lite: frontmatter-widget | `packages/editor/src/frontmatter-widget.ts` → `frontmatter-utils.ts` | ⬜ (utils already extracted pre-ADR) |
-| lite: editor links | `packages/editor/src/editor.ts` → `links.ts` | ⬜ |
-| lite: useVaultMutations | `features/vault/hooks/useVaultMutations.ts` → `lib/deleteFlow.ts` | ⬜ |
-| lite: search store | `features/search/store.ts` → `lib/searchApi.ts` | ⬜ |
-| lite: TabsBar | `packages/ui/src/components/tabs/TabsBar.tsx` → `OverflowMenu.tsx` `DropIndicator.tsx` (rendered by TabItem, TabsBar passes `showDropIndicator`) | ⬜ |
-
+| CanvasView | `features/canvas/CanvasView.tsx` → `lib/useCanvasState.ts` `useCanvasPersistence.ts` `useCanvasKeyboard.ts` `useCanvasSelection.ts` `useCanvasGuidelines.ts` `useCanvasModals.ts` | ✅ `d40231b` |
+| Graph lib | `features/graph/components/Graph.tsx` → `lib/` `graphWorker.ts` `geometry.ts` `themeColors.ts` `excerpt.ts` `persistedState.ts` `filters.ts` `localGraph.ts` `interactions.ts` `useGraphEngine.ts` | ✅ `d40231b` |
+| tabs core slices | `features/tabs/store/core.ts` → `core/` `openClose.ts` `panes.ts` `pin.ts` `persistenceSync.ts` + `lib/ids.ts`; `createCoreSlice` composes | ✅ `d40231b` |
+| editorCommands | `shared/editorCommands.tsx` → `commands/editorCommands.ts` `tableCommands.ts` `devBenchmarks.ts` | ✅ `d40231b` |
+| lite: EditorController | `controller/EditorController.ts` → `lib/linkFetch.ts` `lib/viewEvents.ts` | ✅ `d40231b` |
+| lite: frontmatter-widget | `packages/editor/src/frontmatter-widget.ts` → `frontmatter-utils.ts` | ✅ `04bf72c` (pre-ADR) |
+| lite: editor links | `packages/editor/src/editor.ts` → `links.ts` | ✅ `d40231b` |
+| lite: useVaultMutations | `features/vault/hooks/useVaultMutations.ts` → `lib/deleteFlow.ts` | ✅ `d40231b` |
+| lite: search store | `features/search/store.ts` → `lib/searchApi.ts` | ✅ `d40231b` |
+| lite: TabsBar | `packages/ui/src/components/tabs/TabsBar.tsx` → `OverflowMenu.tsx` `DropIndicator.tsx` (rendered by TabItem, TabsBar passes `showDropIndicator`) | ✅ `d40231b` |
 ## Phase 4 — Test-file splits
 
 | Item | Files | Status |

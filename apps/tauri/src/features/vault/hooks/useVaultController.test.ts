@@ -1,72 +1,10 @@
 import { renderHook, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MouseEvent as ReactMouseEvent } from "react";
-import type { FlatTreeNode } from "../types";
 import type { FileNode } from "@workspace/ui/components/file-tree";
-import type { UseVaultMutationsReturn } from "./useVaultMutations";
 
 import { useVaultController } from "./useVaultController";
 import type { UseVaultControllerOptions } from "./useVaultController";
-
-function mouse(
-  overrides: Partial<{
-    clientX: number;
-    clientY: number;
-    metaKey: boolean;
-    ctrlKey: boolean;
-    shiftKey: boolean;
-  }> = {},
-): ReactMouseEvent {
-  return {
-    clientX: 0,
-    clientY: 0,
-    metaKey: false,
-    ctrlKey: false,
-    shiftKey: false,
-    ...overrides,
-  } as unknown as ReactMouseEvent;
-}
-
-function node(
-  path: string,
-  kind: "file" | "folder",
-  depth = 0,
-  name = path.split("/").pop() ?? path,
-): FlatTreeNode {
-  return { path, name, relPath: path, kind, depth, childCount: 0 };
-}
-
-function makeMutations(
-  overrides: Partial<UseVaultMutationsReturn> = {},
-): UseVaultMutationsReturn {
-  return {
-    ghostNode: null,
-    createNoteInline: vi.fn(),
-    createFolderInline: vi.fn(),
-    clearGhost: vi.fn(),
-    createNote: vi.fn().mockResolvedValue(null),
-    createUntitledNote: vi.fn().mockResolvedValue(null),
-    createFolder: vi.fn().mockResolvedValue(null),
-    movePaths: vi.fn().mockResolvedValue(false),
-    isDeleteConfirmOpen: false,
-    setDeleteConfirmOpen: vi.fn(),
-    pendingDeletePaths: [],
-    pendingDeletePath: null,
-    pendingDeleteNames: [],
-    pendingDeleteName: "",
-    requestDelete: vi.fn(),
-    requestDeleteMany: vi.fn(),
-    confirmDelete: vi.fn().mockResolvedValue(false),
-    isIndexing: false,
-    status: null,
-    setStatus: vi.fn(),
-    pickAndSetVault: vi.fn(),
-    reindexVault: vi.fn(),
-    error: null,
-    isLoading: false,
-    ...overrides,
-  } as UseVaultMutationsReturn;
-}
+import { mouse, node, makeMutations } from "./testUtils";
 
 function setup(opts: Partial<UseVaultControllerOptions> = {}) {
   const mutations = opts.mutations ?? makeMutations();
@@ -109,7 +47,6 @@ function setup(opts: Partial<UseVaultControllerOptions> = {}) {
 
 const A = node("a.md", "file", 0);
 const B = node("b.md", "file", 1);
-const C = node("c.md", "file", 2);
 const FOLDER = node("dir", "folder", 0);
 
 describe("useVaultController", () => {
@@ -118,35 +55,6 @@ describe("useVaultController", () => {
   });
 
   describe("selection (via onTreeFileClick)", () => {
-    it("selects a single node on a plain click and sets anchor + focus", () => {
-      const { result } = setup({ visibleNodes: [A, B, C] });
-      act(() => result.current.onTreeFileClick(A, mouse()));
-      expect(result.current.selection.selectedIds.has("a.md")).toBe(true);
-      expect(result.current.selection.selectedIds.size).toBe(1);
-      expect(result.current.selection.anchorId).toBe("a.md");
-      expect(result.current.selection.focusedId).toBe("a.md");
-    });
-
-    it("toggles membership on a meta/ctrl click", () => {
-      const { result } = setup({ visibleNodes: [A, B, C] });
-      act(() => result.current.onTreeFileClick(A, mouse()));
-      act(() => result.current.onTreeFileClick(B, mouse({ metaKey: true })));
-      expect(result.current.selection.selectedIds.has("a.md")).toBe(true);
-      expect(result.current.selection.selectedIds.has("b.md")).toBe(true);
-      act(() => result.current.onTreeFileClick(A, mouse({ ctrlKey: true })));
-      expect(result.current.selection.selectedIds.has("a.md")).toBe(false);
-      expect(result.current.selection.selectedIds.has("b.md")).toBe(true);
-    });
-
-    it("range-selects from the anchor on a shift click", () => {
-      const { result } = setup({ visibleNodes: [A, B, C] });
-      act(() => result.current.onTreeFileClick(A, mouse()));
-      act(() => result.current.onTreeFileClick(C, mouse({ shiftKey: true })));
-      expect(result.current.selection.selectedIds.has("a.md")).toBe(true);
-      expect(result.current.selection.selectedIds.has("b.md")).toBe(true);
-      expect(result.current.selection.selectedIds.has("c.md")).toBe(true);
-    });
-
     it("opens in preview on a single click, pinned on a double click", () => {
       const { result, onFileOpen } = setup({ visibleNodes: [A] });
       act(() => result.current.onTreeFileClick(A, mouse()));
@@ -168,29 +76,8 @@ describe("useVaultController", () => {
     });
   });
 
-  describe("context menu", () => {
-    it("openForNode records the anchor, target, and multi-select flag", () => {
-      const { result } = setup();
-      act(() =>
-        result.current.contextMenu.openForNode(
-          B,
-          mouse({ clientX: 9, clientY: 11 }),
-          false,
-        ),
-      );
-      const ms = result.current.contextMenu.menuState;
-      expect(ms.anchor).toEqual({ x: 9, y: 11 });
-      expect(ms.target?.kind).toBe("file");
-      expect(ms.target?.node?.path).toBe("b.md");
-      expect(result.current.contextMenu.isOpen).toBe(true);
-    });
 
-    it("openForRoot targets the root with no node", () => {
-      const { result } = setup();
-      act(() => result.current.contextMenu.openForRoot(mouse()));
-      expect(result.current.contextMenu.menuState.target?.kind).toBe("root");
-      expect(result.current.contextMenu.menuState.target?.node).toBe(null);
-    });
+  describe("context menu", () => {
 
     it("onTreeContextMenu selects the node and opens its menu", () => {
       const { result } = setup({ visibleNodes: [B] });

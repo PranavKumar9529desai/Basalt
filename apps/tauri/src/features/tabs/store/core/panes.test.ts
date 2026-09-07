@@ -1,45 +1,14 @@
-import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createCoreSlice } from "./core";
-import { createPersistenceSlice } from "./persistence";
-import type {
-  TabId,
-  TabModel,
-  LayoutNode,
-  SerializedTab,
-  TabsWorkspaceSnapshotV2,
-} from "../types";
-import type { TabsState } from "./types";
-import {
-  createLeaf,
-  collectLeaves,
-  findLeaf,
-  findLeafByTab,
-} from "../lib/layoutTree";
-
-type TestStore = UseBoundStore<StoreApi<TabsState>>;
+import type { TabId } from "../../types";
+import { collectLeaves } from "../../lib/layoutTree";
+import { createTestStore, type TestStore } from "./testUtils";
 
 vi.mock("@workspace/views", () => ({
   leafRegistry: { leafTypeForPath: () => "markdown" },
 }));
 
-function createTestStore(): TestStore {
-  const initialLeaf = createLeaf();
-  return create<TabsState>()(
-    (set, get, api) =>
-      ({
-        tabs: {} as Record<TabId, TabModel>,
-        root: initialLeaf as LayoutNode,
-        activePaneId: initialLeaf.id,
-        persistVersion: 0,
-        ...createCoreSlice(set, get, api),
-        ...createPersistenceSlice(set, get, api),
-      }) as unknown as TabsState,
-  );
-}
-
-describe("split pane actions", () => {
+describe("panes slice", () => {
   let store: TestStore;
   beforeEach(() => {
     store = createTestStore();
@@ -121,20 +90,6 @@ describe("split pane actions", () => {
     expect(after.find((l) => l.id === right.id)?.tabGroup.activeTabId).toBe(
       rightActiveId,
     );
-  });
-
-  it("closing the last tab of a pane closes the pane itself", () => {
-    const a = store.getState().openPinned({ path: "a.md" });
-    store.getState().splitActivePane("vertical");
-    const leaves = collectLeaves(store.getState().root);
-    expect(leaves).toHaveLength(2);
-
-    // Left pane holds [a], right pane holds the clone. Close the only tab
-    // of the left pane -> the pane itself closes and the tree unwraps.
-    store.getState().activatePane(leaves[0].id);
-    store.getState().closeTab(a);
-
-    expect(store.getState().root.type).toBe("leaf");
   });
 
   it("closePane removes a leaf and unwraps single-child split", () => {
@@ -256,183 +211,6 @@ describe("split pane actions", () => {
     });
   });
 
-  it("openView attaches a view tab to the active leaf and activates it", () => {
-    store.getState().openPinned({ path: "a.md" });
-    const graphId = store.getState().openView("graph", { title: "Graph" });
-
-    expect(graphId).toBe("tab:view://graph");
-    expect(store.getState().tabs["tab:view://graph"]).toMatchObject({
-      id: "tab:view://graph",
-      path: "view://graph",
-      title: "Graph",
-      leafType: "graph",
-      isPinned: true,
-      isPreview: false,
-    });
-
-    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
-    expect(leaf?.tabGroup.tabIds).toContain("tab:view://graph");
-    expect(leaf?.tabGroup.activeTabId).toBe("tab:view://graph");
-  });
-
-  it("openView is idempotent: reopening activates the existing tab, no duplicate", () => {
-    store.getState().openPinned({ path: "a.md" });
-    store.getState().openView("graph", { title: "Graph" });
-
-    const count = (ids: TabId[]) =>
-      ids.filter((id) => id === "tab:view://graph").length;
-
-    const first = findLeaf(
-      store.getState().root,
-      store.getState().activePaneId,
-    );
-    expect(count(first?.tabGroup.tabIds ?? [])).toBe(1);
-
-    // Switch back to the note, then reopen the graph — must not duplicate.
-    store.getState().activateTab("tab:a.md");
-    store.getState().openView("graph", { title: "Graph" });
-
-    const second = findLeaf(
-      store.getState().root,
-      store.getState().activePaneId,
-    );
-    expect(count(second?.tabGroup.tabIds ?? [])).toBe(1);
-    expect(second?.tabGroup.activeTabId).toBe("tab:view://graph");
-  });
-
-  it("openView lands in the ACTIVE pane after a split (deep leaf)", () => {
-    store.getState().openPinned({ path: "a.md" });
-    store.getState().splitActivePane("vertical");
-    collectLeaves(store.getState().root); // [clone pane] is active now
-
-    store.getState().openView("graph", { title: "Graph" });
-
-    const target = findLeaf(
-      store.getState().root,
-      store.getState().activePaneId,
-    );
-    expect(target?.tabGroup.tabIds).toContain("tab:view://graph");
-    expect(target?.tabGroup.activeTabId).toBe("tab:view://graph");
-  });
-
-  it("hydration prunes tabs not referenced by any pane (graph-open regression)", () => {
-    // A V2 snapshot whose `tabs` map has MORE tabs than the tree references —
-    // the exact corrupt state that stranded "view://graph" in the wild: tabs
-    // exist in `tabs` but belong to no leaf's tabGroup, so openView finds them
-    // and activateTab silently no-ops → "nothing appears".
-    const note: SerializedTab = {
-      id: "tab:a.md",
-      path: "a.md",
-      title: "a",
-      leafType: "markdown",
-      viewMode: "edit",
-      isPinned: true,
-      isPreview: false,
-      isDirty: false,
-      createdAt: 0,
-      lastAccessedAt: 0,
-    };
-    const orphanGraph: SerializedTab = {
-      id: "tab:view://graph",
-      path: "view://graph",
-      title: "Graph",
-      leafType: "graph",
-      viewMode: "edit",
-      isPinned: true,
-      isPreview: false,
-      isDirty: false,
-      createdAt: 0,
-      lastAccessedAt: 0,
-    };
-    const snap: TabsWorkspaceSnapshotV2 = {
-      version: 2,
-      activePaneId: "pane-1",
-      root: {
-        id: "pane-1",
-        type: "leaf",
-        tabGroup: {
-          id: "group-1",
-          tabIds: [note.id],
-          activeTabId: note.id,
-          previewTabId: null,
-        },
-      },
-      tabs: [note, orphanGraph],
-    };
-
-    store.getState().reset();
-    store.getState().hydrateFromWorkspaceSnapshot(snap);
-
-    expect(store.getState().tabs).toHaveProperty("tab:a.md");
-    expect(store.getState().tabs).not.toHaveProperty("tab:view://graph");
-  });
-
-  it("openView self-heals a mid-session orphaned graph tab (in tabs, no pane)", () => {
-    store.getState().openPinned({ path: "a.md" });
-
-    // Simulate corruption at runtime: graph tab lives in `tabs` but refers to
-    // no leaf. Before the fix openView found it and activateTab no-oped.
-    store.setState((s) => ({
-      tabs: {
-        ...s.tabs,
-        "tab:view://graph": {
-          id: "tab:view://graph",
-          path: "view://graph",
-          title: "Graph",
-          leafType: "graph",
-          viewMode: "edit",
-          isPinned: true,
-          isPreview: false,
-          isDirty: false,
-          createdAt: 1,
-          lastAccessedAt: 1,
-        },
-      },
-    }));
-    expect(findLeafByTab(store.getState().root, "tab:view://graph")).toBeNull();
-
-    store.getState().openView("graph", { title: "Graph" });
-
-    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
-    expect(leaf?.tabGroup.tabIds).toContain("tab:view://graph");
-    expect(leaf?.tabGroup.activeTabId).toBe("tab:view://graph");
-  });
-
-  it("open actions fall back to the first leaf and repair a stale activePaneId", () => {
-    store.getState().openPinned({ path: "a.md" });
-
-    // Corrupt activePaneId to a pane that doesn't exist in the tree.
-    store.setState({ activePaneId: "pane-ghost" });
-
-    const id = store.getState().openPinned({ path: "b.md" });
-
-    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
-    expect(leaf).not.toBeNull();
-    expect(store.getState().activePaneId).toBe(leaf?.id);
-    expect(leaf?.tabGroup.tabIds).toContain(id);
-    expect(leaf?.tabGroup.activeTabId).toBe(id);
-  });
-
-  it("v2 round-trip preserves split layout", () => {
-    store.getState().openPinned({ path: "a.md" });
-    store.getState().splitActivePane("vertical");
-    store.getState().openPinned({ path: "b.md" });
-
-    const snap = store.getState().toWorkspaceSnapshot();
-    expect(snap.version).toBe(2);
-    if (snap.version === 2) {
-      expect(snap.root.type).toBe("split");
-    }
-
-    store.getState().reset();
-    store.getState().hydrateFromWorkspaceSnapshot(snap);
-
-    const root = store.getState().root;
-    expect(root.type).toBe("split");
-    const leaves = collectLeaves(root);
-    expect(leaves).toHaveLength(2);
-  });
-
   describe("resize sashes (ADR-032 Phase 6)", () => {
     it("split children start with equal 0.5 sizes", () => {
       store.getState().openPinned({ path: "a.md" });
@@ -477,25 +255,6 @@ describe("split pane actions", () => {
       if (root.type === "split") {
         store.getState().resizeSplit(root.id, [0.9]); // only 1 of 2 sizes
         expect(store.getState().root).toBe(before);
-      }
-    });
-
-    it("split sizes survive the v2 persistence round-trip", () => {
-      store.getState().openPinned({ path: "a.md" });
-      store.getState().splitActivePane("vertical");
-      const firstRoot = store.getState().root;
-      if (firstRoot.type !== "split") throw new Error("expected split");
-      store.getState().resizeSplit(firstRoot.id, [0.7, 0.3]);
-
-      const snap = store.getState().toWorkspaceSnapshot();
-      store.getState().reset();
-      store.getState().hydrateFromWorkspaceSnapshot(snap);
-
-      const root = store.getState().root;
-      expect(root.type).toBe("split");
-      if (root.type === "split") {
-        expect(root.children[0].size).toBeCloseTo(0.7, 5);
-        expect(root.children[1].size).toBeCloseTo(0.3, 5);
       }
     });
 
