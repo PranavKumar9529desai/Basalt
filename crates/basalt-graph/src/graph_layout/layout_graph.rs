@@ -12,7 +12,7 @@ pub struct LayoutGraph {
     pub degree: Vec<u32>,
     /// Per-node kind: `0` = note, `1` = tag. Parallel to the dense node order.
     /// Lets the renderer style/filter tags and the local graph traverse through
-    /// them (see docs/tag-graph-connections.md).
+    /// them.
     pub node_types: Vec<u8>,
 }
 

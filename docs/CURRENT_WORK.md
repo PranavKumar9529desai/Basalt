@@ -7,6 +7,16 @@
 
 ---
 
+## Backlog (planned, not started)
+
+- **Refactor:** split oversized `src-tauri/src/commands/` files into module
+  directories — `assets.rs` (1122L), `notes.rs` (896L), `folders.rs` (785L),
+  `vault.rs` (511L); extract shared `temp_vault()` test helpers into a
+  `common::tests` module. Plan was authored then deleted as stale; the code is
+  still monolithic.
+
+---
+
 ## Infinite Canvas (ADR-035) — ARCHITECTURE REVISED (HANDOFF READY)
 
 **Branch:** `feat/adr35-canvas-parse`
@@ -70,8 +80,8 @@ caret on their line`. ADR decided media renders in EVERY caret state
   `editor.ts` (livePreview group) + `EditorController.ts` (`resolveAsset`
   passes) — content identical to intent, no redo needed.
 - User's concurrent WIP (dql-widget.ts, dql-layout.test.ts, AGENTS.md,
-  `crates/README.md`, `crates/basalt-tables/tests/complex_queries.rs`,
-  `docs/plan/`) is NOT part of these commits.
+  `crates/README.md`, `crates/basalt-tables/tests/complex_queries.rs`) is NOT
+  part of these commits.
 - `9f2845f` — debug: instrumented live-preview walk + embed toDOM for scroll
   lag diagnosis (console logs for `toDOM` count, field dispatch path, walk
   timing; removable after diagnosis).
@@ -103,13 +113,12 @@ session), oxlint + `tsc --noEmit` clean in both `packages/editor` and `apps/taur
 
 ### Notes
 
-- `docs/packages-code-review.md` §2/§3/§6/§12 statuses updated for these fixes.
 - **Known red on this branch (NOT mine):** `tests/block-widgets/table-widget.test.ts`
   has 3 failing embed tests from the concurrent ADR-034 table-embeds work —
   exclude when running the suite (`vitest run --exclude
 tests/block-widgets/table-widget.test.ts`).
 - Concurrent session's untracked files remain: `crates/README.md`,
-  `crates/basalt-tables/tests/complex_queries.rs`, `docs/plan/`.
+  `crates/basalt-tables/tests/complex_queries.rs`.
 
 ---
 
@@ -242,8 +251,8 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
 - **Phase 2** `86d9417` — structure: moved `src-tauri/src/{app_state,cache,
 config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
   deleted dead `crates/basalt-wasm` (superseded by `graph-wasm` +
-  `frontmatter-wasm`); fixed stale `basalt-wasm` refs in ADR-009/020/021/022 +
-  `docs/webview-costs.md`; fixed `EditorController.test.ts` mock path
+  `frontmatter-wasm`); fixed stale `basalt-wasm` refs in ADR-009/020/021/022;
+  fixed `EditorController.test.ts` mock path
   `../logic/` → `../lib/`.
 - **Phase 3** `ecdcd7f` — docs: added CONVENTIONS.md §11 "Rust Backend
   Conventions" (thiserror-where, error-variant granularity, wire contract,

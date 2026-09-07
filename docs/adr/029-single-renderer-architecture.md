@@ -17,8 +17,7 @@ Basalt has two independent markdown rendering pipelines:
 Every markdown feature (tables, embeds, DQL, callouts, frontmatter, code
 highlighting) needs **two implementations**. Bug fixes must be applied twice.
 Reading mode commits thousands of React nodes with no virtualization — a
-5,000-line note renders every block as a React element at once
-(`docs/webview-costs.md:98-103`).
+5,000-line note renders every block as a React element at once.
 
 The CM6 block-widget system (ADR-022) already handles tables, HTML blocks,
 frontmatter, DQL queries, callouts, and inline formatting as decorations that

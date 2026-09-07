@@ -56,7 +56,7 @@ impl NoteGraph {
 
         // Tags become first-class nodes, connected to this note. Nested tags
         // also get parent->child chain edges so the graph forms a tag *tree*
-        // (not a flat set of disconnected nodes). See docs/tag-graph-connections.md.
+        // (not a flat set of disconnected nodes).
         let mut seen = HashSet::new();
         for tag in &metadata.tags {
             if !seen.insert(tag.clone()) {
@@ -128,8 +128,7 @@ impl NoteGraph {
     ///
     /// A tag node is anchored if a note exactly carries it, or any of its
     /// descendant tag nodes is anchored (so the tag tree stays intact as long
-    /// as at least one note uses some tag under it). See
-    /// docs/tag-graph-connections.md ("What to avoid").
+    /// as at least one note uses some tag under it).
     fn prune_orphan_tags(&mut self) {
         // Live = has a direct note reference (a back_link that is not a tag node).
         let mut live: HashSet<NodeId> = HashSet::new();

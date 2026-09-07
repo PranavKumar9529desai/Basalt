@@ -79,7 +79,7 @@ pub struct GraphNodeMeta {
     /// True for non-`.md` files (images, PDFs, …) shown/toggled as attachments.
     pub is_attachment: bool,
     /// True for tag-tree nodes (e.g. `project/alpha`); styled/filtered
-    /// separately from notes. See docs/tag-graph-connections.md.
+    /// separately from notes.
     pub is_tag: bool,
     /// Connected-component id (union-find over the snapshot graph); lets the
     /// frontend auto-color clusters without re-deriving topology on the client.
@@ -110,9 +110,8 @@ pub struct GraphSnapshot {
 /// Build the graph snapshot (nodes + dense edges) from an in-memory `Vault`.
 ///
 /// Pure with respect to Tauri state so it can be unit-tested directly; the
-/// `get_graph` command is a thin wrapper over this. Tag-tree semantics live in
-/// `docs/tag-graph-connections.md` (notes link to exact tags; nested tags
-/// parent->child).
+/// `get_graph` command is a thin wrapper over this. Tag-tree semantics:
+/// notes link to their exact tags; nested tags chain parent->child.
 /// Union-find root lookup with path compression.
 fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     while parent[x as usize] != x {
@@ -176,8 +175,7 @@ pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResul
     }
 
     // Tag-tree nodes become graph nodes too, so co-tagged notes connect through
-    // shared tag hubs (and the hierarchy renders as a tree). See
-    // docs/tag-graph-connections.md.
+    // shared tag hubs (and the hierarchy renders as a tree).
     for tag_id in &vault.graph.tag_nodes {
         if let Some(tag_str) = vault.arena.get_string(*tag_id) {
             let idx = nodes.len() as u32;

@@ -52,4 +52,4 @@ are re-exported from `basalt-types`.
 ## Documentation
 
 - ADR-008: [Native Search Architecture — Tantivy + Nucleo](../../docs/adr/008-native-search-architecture.md)
-- [Search backend benchmarks](../../docs/benchmarks.md)
+- ADR-017: [Benchmark Infrastructure](../../docs/adr/017-benchmark-infrastructure.md)

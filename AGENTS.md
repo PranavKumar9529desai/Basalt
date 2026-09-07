@@ -22,7 +22,6 @@ decisions.
 | [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md)                   | Working inside `apps/tauri/` (app-layer rules)                                   | ⚠️ auto via nesting |
 | [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md)                 | Starting a session — the active workstream handoff                               | ✅ every session    |
 | [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine)                    | ⚠️ on demand        |
-| [`docs/webview-costs.md`](./docs/webview-costs.md)               | Remaining WebView / Obsidian-class costs (keystroke DOM, reading mode, JSON IPC) | ⚠️ on demand        |
 
 Rules for keeping this lean:
 

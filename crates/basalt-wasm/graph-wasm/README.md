@@ -45,4 +45,3 @@ bun run verify:wasm   # drive the C-ABI surface via crates/basalt-wasm/graph-was
 ## Documentation
 
 - ADR-021: [Graph View Architecture](../../../docs/adr/021-graph-view-architecture.md)
-- [Graph view notes](../../../docs/graph-view/) (proposal, research)

@@ -34,4 +34,3 @@ compiled to wasm when consumed through the `graph-wasm` bridge. Backs the
 ## Documentation
 
 - ADR-021: [Graph View Architecture](../../docs/adr/021-graph-view-architecture.md)
-- [Graph view notes](../../docs/graph-view/) (proposal, research)
