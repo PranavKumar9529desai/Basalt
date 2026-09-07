@@ -78,11 +78,11 @@ commandService.registerCommand(
 );
 
 commandService.registerCommand("pane:split-right", () => {
-  useTabsStore.getState().splitActivePane("vertical");
+  useTabsStore.getState().splitActivePane("horizontal");
 });
 
 commandService.registerCommand("pane:split-down", () => {
-  useTabsStore.getState().splitActivePane("horizontal");
+  useTabsStore.getState().splitActivePane("vertical");
 });
 
 commandService.registerCommand("pane:close", () => {
