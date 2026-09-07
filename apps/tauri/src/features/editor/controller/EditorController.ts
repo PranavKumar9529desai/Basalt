@@ -6,11 +6,9 @@ import {
   type QueryResult,
   contextMenuExtension,
   createEditorExtensionGroups,
-  editorBenchmarkState,
   readingModeExtras,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
 import { pruneClosedTabCaches, evictLruStates } from "../lib/pruneCache";
@@ -18,6 +16,8 @@ import { editFrontmatter, initFrontmatterWasm } from "../lib/frontmatter";
 import { useActiveNoteStore } from "../store/activeNote";
 import { AUTOSAVE_DEBOUNCE_MS } from "../lib/saveManager";
 import { computeStats } from "../lib/stats";
+import { openExternalUrl, openLinkedNote } from "./lib/linkFetch";
+import { createDocChangedListener } from "./lib/viewEvents";
 
 /** Debounce for word/char stats — computed from the CM doc, never per keystroke. */
 const STATS_DEBOUNCE_MS = 500;
@@ -104,22 +104,19 @@ export class EditorController {
     this.currentTab = options.currentTab;
     this.onDocumentReady = options.onDocumentReady;
 
-    const updateListener = EditorView.updateListener.of((u) => {
-      if (!u.docChanged) return;
-      // Benchmark dispatches must not mark tabs dirty, schedule saves,
-      // or pollute stats — the benchmark restores the doc itself.
-      if (editorBenchmarkState.active) return;
-      const t = this.currentTab;
-      if (!t) return;
-      // Sync the per-tab cache with the edited state. Saves and stats read
-      // from the cache — without this they'd write/compute against the
-      // pre-edit doc (save "succeeds" but persists stale content).
-      this.statesRef.set(t.id, u.state);
-      this.dirtyRef.add(t.id);
-      this.services.markTabDirty(t.id, true);
-      this.io.setSaveStatus("unsaved");
-      this.scheduleSave();
-      this.scheduleStats();
+    const updateListener = createDocChangedListener({
+      getCurrentTab: () => this.currentTab,
+      onEdit: (tabId, state) => {
+        // Sync the per-tab cache with the edited state. Saves and stats read
+        // from the cache — without this they'd write/compute against the
+        // pre-edit doc (save "succeeds" but persists stale content).
+        this.statesRef.set(tabId, state);
+        this.dirtyRef.add(tabId);
+        this.services.markTabDirty(tabId, true);
+        this.io.setSaveStatus("unsaved");
+        this.scheduleSave();
+        this.scheduleStats();
+      },
     });
     const groups = createEditorExtensionGroups({
       onFetchLinks: options.io.onFetchLinks,
@@ -159,21 +156,16 @@ export class EditorController {
   }
 
   handleOpenLink = (linkName: string) => {
-    const target =
-      this.services.findNote(linkName) ??
-      this.services.findNote(`${linkName}.md`);
-    if (target) {
-      this.services.openNote(target.path);
-    } else {
-      this.io.setStatus(`Could not find linked note: "${linkName}"`);
-    }
+    openLinkedNote(linkName, this.services, (status) =>
+      this.io.setStatus(status),
+    );
   };
 
   /** Open an external http(s) link in the system browser (Tauri opener plugin),
    * injected into the reading-mode link handler — never `window.open` in the
    * WebView. */
   openExternalLink = (url: string) => {
-    void openUrl(url);
+    openExternalUrl(url);
   };
 
   /** Set the live view (called once Host reports its EditorView). */

@@ -12,6 +12,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react";
+import { DropIndicator } from "./DropIndicator";
 import type { TabItemData } from "./types";
 
 export interface TabItemProps {
@@ -105,18 +106,7 @@ export const TabItem = memo(function TabItem({
               }
             }}
           >
-            {showDropIndicator === "left" && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute left-0 top-1 bottom-1 z-30 w-0.5 rounded-full bg-[var(--sat-accent-primary)]"
-              />
-            )}
-            {showDropIndicator === "right" && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute right-0 top-1 bottom-1 z-30 w-0.5 rounded-full bg-[var(--sat-accent-primary)]"
-              />
-            )}
+            {showDropIndicator ? <DropIndicator edge={showDropIndicator} /> : null}
 
             <div
               data-disabled={tab.disabled ? "true" : undefined}

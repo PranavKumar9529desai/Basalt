@@ -1,18 +1,12 @@
-import { IconChevronDown } from "@tabler/icons-react";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@workspace/ui/components/ui/command";
 import { cn } from "@workspace/ui/lib/utils";
 import type { DragEvent, MouseEvent, PointerEvent, ReactNode } from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useRef } from "react";
 import { TabItem } from "./TabItem";
 import type { TabItemData } from "./types";
 import { useTabChrome } from "./useTabChrome";
 import { useTabDragDrop } from "./useTabDragDrop";
 import { useTabOverflow } from "./useTabOverflow";
+import { OverflowMenu } from "./OverflowMenu";
 
 export interface TabsBarProps {
   tabs: TabItemData[];
@@ -113,13 +107,7 @@ export function TabsBar({
   rightSlot,
   className,
 }: TabsBarProps) {
-  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const dropdownWrapperRef = useRef<HTMLDivElement>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{
-    top: number;
-    right: number;
-  } | null>(null);
 
   // Extract overflow computation so the visible window is known before
   // computing chrome (which only draws for visible tabs). Also owns the
@@ -145,21 +133,6 @@ export function TabsBar({
     handleInternalDrop,
     handleInternalDragEnd,
   } = useTabDragDrop(tabRefs, onTabDragOver, onTabDrop, onTabDragEnd);
-
-  // Close dropdown on Escape
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDropdownOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [dropdownOpen]);
-
-  const closeDropdown = useCallback(() => {
-    setDropdownOpen(false);
-    setDropdownPosition(null);
-  }, []);
 
   return (
     <div
@@ -355,29 +328,11 @@ export function TabsBar({
         // vertically in the h-10 bar (tabs stay bottom-aligned).
         className="shrink-0 self-stretch flex items-center"
       >
-        <button
-          ref={dropdownTriggerRef}
-          type="button"
-          aria-label="Show all tabs"
-          onClick={() => {
-            setDropdownOpen(true);
-            const rect = dropdownTriggerRef.current?.getBoundingClientRect();
-            if (rect) {
-              setDropdownPosition({
-                top: rect.bottom,
-                right: window.innerWidth - rect.right,
-              });
-            }
-          }}
-          className="flex items-center gap-1 px-2 text-xs font-medium h-full transition-colors hover:bg-[var(--sat-surface-3)] text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)]"
-        >
-          <IconChevronDown size={16} stroke={2} />
-          <span className="tabular-nums">
-            {tabs.length - visibleTabCount > 0
-              ? tabs.length - visibleTabCount
-              : tabs.length}
-          </span>
-        </button>
+        <OverflowMenu
+          tabs={tabs}
+          visibleTabCount={visibleTabCount}
+          onSelectTab={onSelectTab}
+        />
         {rightSlot ? (
           <>
             <div className="w-px h-5 self-center bg-[var(--sat-layout-divider,var(--sat-layout-border))]" />
@@ -385,65 +340,6 @@ export function TabsBar({
           </>
         ) : null}
       </div>
-
-      {dropdownOpen && dropdownPosition ? (
-        <>
-          {/* Backdrop — click to close */}
-          <button
-            type="button"
-            aria-label="Close tab list"
-            tabIndex={-1}
-            className="fixed inset-0 z-50 cursor-default"
-            onClick={closeDropdown}
-          />
-          {/* Dropdown menu anchored below the trigger button */}
-          <div
-            className="fixed z-50 mt-1 w-72 origin-top-right overflow-hidden rounded-lg border shadow-xl bg-[var(--sat-surface-2)] border-[var(--sat-layout-border)]"
-            style={{
-              top: dropdownPosition.top,
-              right: dropdownPosition.right,
-            }}
-          >
-            <Command className="bg-transparent">
-              <CommandList>
-                {tabs.length > 0 ? (
-                  <CommandGroup>
-                    {tabs.map((tab) => (
-                      <CommandItem
-                        key={tab.id}
-                        value={`${tab.title} ${tab.id}`}
-                        onSelect={() => {
-                          onSelectTab?.(tab.id);
-                          closeDropdown();
-                        }}
-                        className={cn(
-                          "cursor-pointer",
-                          tab.isActive &&
-                            "bg-[var(--sat-accent-primary)]/10 text-[var(--sat-accent-primary)]",
-                        )}
-                      >
-                        <span className="truncate flex-1 text-sm">
-                          {tab.title}
-                        </span>
-                        {tab.isDirty && (
-                          <span
-                            aria-hidden="true"
-                            className="ml-2 inline-block h-1.5 w-1.5 rounded-full shrink-0 bg-[var(--sat-accent-primary)]"
-                          />
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                ) : (
-                  <div className="px-3 py-4 text-xs text-[var(--sat-text-muted)] text-center">
-                    No open tabs
-                  </div>
-                )}
-              </CommandList>
-            </Command>
-          </div>
-        </>
-      ) : null}
     </div>
   );
 }

@@ -1,34 +1,19 @@
-import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 
-import type { FileMatch, FileResult, SearchContentResult } from "./types";
-
-// Guards against out-of-order responses (a slower earlier query returning after a
-// newer one) overwriting fresher results — the classic search-as-you-type flicker.
-let latestSearchSeq = 0;
-let latestSwitcherSeq = 0;
-let latestPreviewSeq = 0;
-/** Number of line matches in the bounded result window shown in the modal. */
-const countMatches = (results: FileMatch[]): number =>
-  results.reduce((n, f) => n + f.matches.length, 0);
-const SWITCHER_EXT_RE = /\.(?:md|markdown|canvas)$/i;
-const switcherBasename = (path: string): string =>
-  path.split("/").pop() ?? path;
-const switcherDisplayName = (path: string): string =>
-  switcherBasename(path).replace(SWITCHER_EXT_RE, "");
-
-/** Offer the "Create new note" row whenever the query names no existing file. */
-const canCreateSwitcher = (query: string, results: FileResult[]): boolean => {
-  const q = query.trim().toLowerCase();
-  if (!q) return false;
-  return !results.some((r) => {
-    const raw = switcherBasename(r.path);
-    return (
-      switcherDisplayName(r.path).toLowerCase() === q ||
-      raw.toLowerCase() === q
-    );
-  });
-};
+import {
+  canCreateSwitcher,
+  countMatches,
+  isPreviewSeqCurrent,
+  isSearchSeqCurrent,
+  isSwitcherSeqCurrent,
+  nextPreviewSeq,
+  nextSearchSeq,
+  nextSwitcherSeq,
+  openFileForPreview,
+  searchContent,
+  searchFiles,
+} from "./lib/searchApi";
+import type { FileMatch, FileResult } from "./types";
 
 interface SearchStore {
   isSearchOpen: boolean;
@@ -81,8 +66,8 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   previewError: null,
 
   openSearch: () => {
-    latestSearchSeq++;
-    latestPreviewSeq++;
+    nextSearchSeq();
+    nextPreviewSeq();
     set({
       isSearchOpen: true,
       searchQuery: "",
@@ -97,8 +82,8 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     });
   },
   closeSearch: () => {
-    latestSearchSeq++;
-    latestPreviewSeq++;
+    nextSearchSeq();
+    nextPreviewSeq();
     set({ isSearchOpen: false, isPreviewLoading: false });
   },
 
@@ -106,7 +91,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     set({ searchQuery: query, searchSelectedIndex: 0 }),
 
   runSearch: async (query) => {
-    const seq = ++latestSearchSeq;
+    const seq = nextSearchSeq();
     const q = query.trim();
     if (q.length < 2) {
       set({
@@ -120,11 +105,8 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     }
     set({ isSearchLoading: true });
     try {
-      const res = await invoke<SearchContentResult>("search_content", {
-        query: q,
-        limit: 20,
-      });
-      if (seq !== latestSearchSeq) return; // stale response, discard
+      const res = await searchContent(q, 20);
+      if (!isSearchSeqCurrent(seq)) return; // stale response, discard
       set({
         searchResults: res.files,
         searchTotalHits: res.totalHits,
@@ -133,7 +115,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         searchError: null,
       });
     } catch (err) {
-      if (seq !== latestSearchSeq) return;
+      if (!isSearchSeqCurrent(seq)) return;
       console.error("[search] search_content error:", err);
       set({ isSearchLoading: false, searchError: "Search failed. Try again." });
     }
@@ -155,7 +137,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   },
 
   loadPreview: async (path) => {
-    const seq = ++latestPreviewSeq;
+    const seq = nextPreviewSeq();
     set({
       previewPath: path,
       previewText: null,
@@ -163,11 +145,11 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
       previewError: null,
     });
     try {
-      const text = await invoke<string>("open_file", { path });
-      if (seq !== latestPreviewSeq) return;
+      const text = await openFileForPreview(path);
+      if (!isPreviewSeqCurrent(seq)) return;
       set({ previewPath: path, previewText: text, isPreviewLoading: false });
     } catch (err) {
-      if (seq !== latestPreviewSeq) return;
+      if (!isPreviewSeqCurrent(seq)) return;
       console.error("[search] preview open_file error:", err);
       set({ isPreviewLoading: false, previewError: "Preview unavailable." });
     }
@@ -182,7 +164,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   switcherCanCreate: false,
 
   openSwitcher: () => {
-    const seq = ++latestSwitcherSeq;
+    const seq = nextSwitcherSeq();
     set({
       isSwitcherOpen: true,
       switcherQuery: "",
@@ -193,20 +175,20 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
       switcherCanCreate: false,
     });
     // Pre-load all files immediately so the switcher isn't empty on open.
-    invoke<FileResult[]>("search_files", { query: "", limit: 20 })
+    searchFiles("", 20)
       .then((results) => {
-        if (seq === latestSwitcherSeq) {
+        if (isSwitcherSeqCurrent(seq)) {
           set({ switcherResults: results, isSwitcherLoading: false });
         }
       })
       .catch((err) => {
-        if (seq !== latestSwitcherSeq) return;
+        if (!isSwitcherSeqCurrent(seq)) return;
         console.error("[search] search_files error:", err);
         set({ isSwitcherLoading: false, switcherError: "File search failed." });
       });
   },
   closeSwitcher: () => {
-    latestSwitcherSeq++;
+    nextSwitcherSeq();
     set({ isSwitcherOpen: false, isSwitcherLoading: false });
   },
 
@@ -217,7 +199,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     })),
 
   runSwitcher: async (query) => {
-    const seq = ++latestSwitcherSeq;
+    const seq = nextSwitcherSeq();
     const q = query.trim();
     if (q.length < 2) {
       set({
@@ -231,11 +213,8 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     }
     set({ isSwitcherLoading: true, switcherError: null });
     try {
-      const results = await invoke<FileResult[]>("search_files", {
-        query: q,
-        limit: 20,
-      });
-      if (seq !== latestSwitcherSeq) return; // stale response, discard
+      const results = await searchFiles(q, 20);
+      if (!isSwitcherSeqCurrent(seq)) return; // stale response, discard
       set({
         switcherResults: results,
         switcherSelectedIndex: 0,
@@ -243,7 +222,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         switcherCanCreate: canCreateSwitcher(q, results),
       });
     } catch (err) {
-      if (seq !== latestSwitcherSeq) return;
+      if (!isSwitcherSeqCurrent(seq)) return;
       console.error("[search] search_files error:", err);
       set({ isSwitcherLoading: false, switcherError: "File search failed." });
     }

@@ -183,12 +183,14 @@ triangles if arrows are shown) and early-returns when `nodeCount === 0`.
 This package is the dumb drawing surface. Everything that decides _what_ to
 draw lives in `apps/tauri/src/features/graph/`:
 
-- **`GraphWorker.ts`** — a **Web Worker** running the WASM force simulation;
+- **`lib/graphWorker.ts`** — a **Web Worker** running the WASM force simulation;
   posts `Float32Array` positions to the main thread. The expensive node physics
   is already off the UI thread.
-- **`Graph.tsx`** — owns the sim worker, the Canvas2D label overlay, and
-  the per-frame orchestration: it calls `setPositions` / `setView` / `setFlags`
-  / `setArrows` then `render()`.
+- **`components/Graph.tsx`** — renders the graph leaf; the engine
+  (`lib/useGraphEngine.ts`) owns the sim worker, the Canvas2D label overlay,
+  and the per-frame orchestration: it calls `setPositions` / `setView` /
+  `setFlags` / `setArrows` then `render()`; interaction/rebuild logic lives in
+  `lib/` (`interactions.ts`, `geometry.ts`, `localGraph.ts`, `filters.ts`).
 - **`spatialGrid.ts`** — `SpatialGrid`, a screen-space uniform grid used for
   **O(local) hover hit-testing** (replacing an O(node-count) scan per
   `mousemove`). Built each render, reused while idle.

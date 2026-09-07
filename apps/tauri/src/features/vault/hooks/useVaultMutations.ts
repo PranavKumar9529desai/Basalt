@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useRouter } from "@tanstack/react-router";
 import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useState } from "react";
+import { useDeleteFlow } from "../lib/deleteFlow";
 import type { BootResult, CreateNoteResult } from "../types";
 
 const GHOST_ID = "__ghost__";
@@ -67,20 +68,21 @@ export function useVaultMutations(): UseVaultMutationsReturn {
   const [ghostNode, setGhostNode] = useState<GhostNode | null>(null);
   const [renamingNode, setRenamingNode] = useState<GhostNode | null>(null);
 
-  const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(
-    null,
-  );
-  const [pendingDeletePaths, setPendingDeletePaths] = useState<string[]>([]);
-  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(
-    null,
-  );
-  const [pendingDeleteNames, setPendingDeleteNames] = useState<string[]>([]);
-
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const {
+    isDeleteConfirmOpen,
+    setDeleteConfirmOpen,
+    pendingDeletePaths,
+    pendingDeletePath,
+    pendingDeleteNames,
+    pendingDeleteName,
+    requestDelete,
+    requestDeleteMany,
+    confirmDelete,
+  } = useDeleteFlow({ setIsLoading, setError });
 
   // Vault-level actions — pick a new vault folder / full re-index. Both
   // re-run the route loader so the fresh boot result (with new tree)
@@ -259,61 +261,6 @@ export function useVaultMutations(): UseVaultMutationsReturn {
     },
     [],
   );
-
-  const requestDelete = useCallback((path: string, name: string) => {
-    setPendingDeletePaths([path]);
-    setPendingDeleteNames([name]);
-    setPendingDeletePath(path);
-    setPendingDeleteName(name);
-    setDeleteConfirmOpen(true);
-    setError(null);
-  }, []);
-
-  const requestDeleteMany = useCallback(
-    (items: Array<{ path: string; name: string }>) => {
-      if (items.length === 0) return;
-      setPendingDeletePaths(items.map((item) => item.path));
-      setPendingDeleteNames(items.map((item) => item.name));
-      setPendingDeletePath(items[0]?.path ?? null);
-      setPendingDeleteName(
-        items.length === 1 ? items[0].name : `${items.length} items`,
-      );
-      setDeleteConfirmOpen(true);
-      setError(null);
-    },
-    [],
-  );
-
-  const confirmDelete = useCallback(async (): Promise<boolean> => {
-    const paths =
-      pendingDeletePaths.length > 0
-        ? pendingDeletePaths
-        : pendingDeletePath
-          ? [pendingDeletePath]
-          : [];
-    if (paths.length === 0) return false;
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      if (paths.length === 1) {
-        await invoke("delete_file", { path: paths[0] });
-      } else {
-        await invoke("delete_paths", { paths });
-      }
-      setDeleteConfirmOpen(false);
-      setPendingDeletePaths([]);
-      setPendingDeleteNames([]);
-      setPendingDeletePath(null);
-      setPendingDeleteName(null);
-      return true;
-    } catch (err) {
-      setError(String(err));
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [pendingDeletePath, pendingDeletePaths]);
 
   return {
     ghostNode,

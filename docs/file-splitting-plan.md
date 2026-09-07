@@ -5,7 +5,7 @@
 > Status banner: last updated 2026-09-08.
 
 ## Phase 1 — Zero-risk relocations ✅
-> Status banner: last updated 2026-09-08 — Phase 1 committed (`3e8036b`).
+> Status banner: last updated 2026-09-08 — Phase 1 `3e8036b`, Phase 2 `3147787`, Phase 3 in progress.
 | Item | Files | Status |
 |---|---|---|
 | dql-widget split | `packages/editor/src/block-widgets/` → `dql-types.ts` `dql-html.ts` `dql-theme.ts` | ✅ `3e8036b` |
@@ -17,34 +17,33 @@
 | table-widget split | `packages/editor/src/block-widgets/` → `table-parse.ts` `table-html.ts` `table-theme.ts` | ✅ `3e8036b` |
 | live-preview | `packages/editor/src/preview/` → `collector.ts` `scheduler.ts` `tag-marks.ts` | ✅ `3e8036b` |
 
-## Phase 2 — Rust crate seams
+## Phase 2 — Rust crate seams ✅
 
 | Item | Files | Status |
-|---|---|---|
-| force-graph quadtree | `crates/basalt-graph/src/graph_layout/force_graph.rs` → `quadtree.rs` + sim | ⬜ |
-| basalt-canvas types/ser | `crates/basalt-canvas/src/lib.rs` → `types.rs` + `ser.rs` | ⬜ |
-| tables engine | `crates/basalt-tables/src/engine.rs` → `grouping.rs` + `output.rs` | ⬜ |
-| basalt-types query | `crates/basalt-types/src/query.rs` → `value.rs` + `convert.rs` | ⬜ |
-| vault graph cc | `commands/vault/graph.rs` → `cc.rs` (union-find) | ⬜ |
-| lite: parse.rs | `crates/basalt-parser/src/query/parse.rs` → `source.rs` `expr.rs` `plan.rs` | ⬜ |
-| lite: frontmatter walk | `crates/basalt-parser/src/frontmatter.rs` → `walk.rs` | ⬜ |
-| lite: save.rs infer | `commands/assets/save.rs` → `infer.rs` | ⬜ |
-| media server/http | `commands/media.rs` → `media/server.rs` + `media/http.rs` | ⬜ |
+| force-graph quadtree | `crates/basalt-graph/src/graph_layout/force_graph.rs` → `quadtree.rs` + sim | ✅ `3147787` |
+| basalt-canvas types/ser | `crates/basalt-canvas/src/lib.rs` → `types.rs` + `ser.rs` | ✅ `3147787` |
+| tables engine | `crates/basalt-tables/src/engine.rs` → `grouping.rs` + `output.rs` | ✅ `3147787` |
+| basalt-types query | `crates/basalt-types/src/query.rs` → `value.rs` + `convert.rs` | ✅ `3147787` |
+| vault graph cc | `commands/vault/graph.rs` → `cc.rs` (union-find) | ✅ `3147787` |
+| lite: parse.rs | `crates/basalt-parser/src/query/parse.rs` → `source.rs` `expr.rs` `plan.rs` | ✅ `3147787` |
+| lite: frontmatter walk | `crates/basalt-parser/src/frontmatter.rs` → `walk.rs` | ✅ `3147787` |
+| lite: save.rs infer | `commands/assets/save.rs` → `infer.rs` | ✅ `3147787` |
+| media server/http | `commands/media.rs` → `media/server.rs` + `media/http.rs` | ✅ `3147787` |
 
 ## Phase 3 — Feature-layer hooks
 
 | Item | Files | Status |
 |---|---|---|
 | CanvasView | `features/canvas/CanvasView.tsx` → `lib/useCanvasState.ts` `useCanvasPersistence.ts` `useCanvasKeyboard.ts` `useCanvasSelection.ts` `useCanvasGuidelines.ts` `useCanvasModals.ts` | ⬜ |
-| Graph lib | `features/graph/components/Graph.tsx` → `lib/graphWorker.ts` `geometry.ts` `themeColors.ts` `excerpt.ts` `persistedState.ts` `filters.ts` `localGraph.ts` `interactions.ts` | ⬜ |
-| tabs core slices | `features/tabs/store/core.ts` → `core/openClose.ts` `panes.ts` `pin.ts` `persistenceSync.ts` + `lib/ids.ts`; `createCoreSlice` composes | ⬜ |
+| Graph lib | `features/graph/components/Graph.tsx` → `lib/` `graphWorker.ts` `geometry.ts` `themeColors.ts` `excerpt.ts` `persistedState.ts` `filters.ts` `localGraph.ts` `interactions.ts` `useGraphEngine.ts` | ⬜ |
+| tabs core slices | `features/tabs/store/core.ts` → `core/` `openClose.ts` `panes.ts` `pin.ts` `persistenceSync.ts` + `lib/ids.ts`; `createCoreSlice` composes | ⬜ |
 | editorCommands | `shared/editorCommands.tsx` → `commands/editorCommands.ts` `tableCommands.ts` `devBenchmarks.ts` | ⬜ |
 | lite: EditorController | `controller/EditorController.ts` → `lib/linkFetch.ts` `lib/viewEvents.ts` | ⬜ |
 | lite: frontmatter-widget | `packages/editor/src/frontmatter-widget.ts` → `frontmatter-utils.ts` | ⬜ (utils already extracted pre-ADR) |
 | lite: editor links | `packages/editor/src/editor.ts` → `links.ts` | ⬜ |
 | lite: useVaultMutations | `features/vault/hooks/useVaultMutations.ts` → `lib/deleteFlow.ts` | ⬜ |
 | lite: search store | `features/search/store.ts` → `lib/searchApi.ts` | ⬜ |
-| lite: TabsBar | `features/tabs/components/TabsBar.tsx` → `OverflowMenu.tsx` `DropIndicator.tsx` | ⬜ |
+| lite: TabsBar | `packages/ui/src/components/tabs/TabsBar.tsx` → `OverflowMenu.tsx` `DropIndicator.tsx` (rendered by TabItem, TabsBar passes `showDropIndicator`) | ⬜ |
 
 ## Phase 4 — Test-file splits
 

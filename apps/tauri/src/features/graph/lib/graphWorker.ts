@@ -1,12 +1,18 @@
 /// <reference lib="webworker" />
-// Loads the Rust->wasm force graph in a web worker, ticks it off the main
-// thread, and posts position buffers back for the canvas to draw.
+// The C-ABI WebAssembly force-graph worker (ADR-038 §3 graph split, moved
+// from components/GraphWorker.ts). Loads the Rust->wasm force graph in a web
+// worker, ticks it off the main thread, and posts position buffers back for
+// the canvas to draw.
 //
 // Obsidian-style cooling: the graph decays `alpha` each step; once it settles
-// (alpha < ~0.03) this worker STOPS ticking so the graph doesn't bounce forever.
-// Interactions (node drag / reheat) restart the loop via `graph_reheat` /
-// `graph_set_position`.
-import init from "./graph_sim.wasm?init";
+// (alpha < ~0.03) this worker STOPS ticking so the graph doesn't bounce
+// forever. Interactions (node drag / reheat) restart the loop via
+// `graph_reheat` / `graph_set_position`.
+//
+// This module is loaded ONLY as a worker entry (`new Worker(new URL(...))` in
+// lib/useGraphEngine.ts) — main-thread code imports its message types with
+// `import type`, which the compiler erases.
+import init from "../components/graph_sim.wasm?init";
 
 type GraphExports = {
   graph_alloc_edges(capacity: number): number;
@@ -24,6 +30,35 @@ type GraphExports = {
   graph_set_position(index: number, x: number, y: number): void;
   memory: WebAssembly.Memory;
 };
+
+// --- Worker protocol types (imported by the engine with `import type`) ------
+
+export interface GraphNodeMeta {
+  path: string;
+  tags: string[];
+  is_attachment: boolean;
+  is_tag: boolean;
+  cluster: number;
+}
+
+export interface GraphSnapshot {
+  node_count: number;
+  nodes: GraphNodeMeta[];
+  edges: number[];
+  edge_weights: number[];
+}
+
+export interface GraphFrame {
+  positions: Float32Array;
+  nodeCount: number;
+  alpha: number;
+}
+
+export type GraphWorkerMessage =
+  | GraphFrame
+  | { action: "error"; message: string };
+
+// --- Worker implementation ------------------------------------------------
 
 let instance: WebAssembly.Instance | null = null;
 let ex: GraphExports | null = null;
