@@ -11,6 +11,7 @@ use crate::error::{AppError, AppResult};
 use super::common::register_self_writes;
 
 mod reorganize;
+mod rewrite;
 mod save;
 pub use reorganize::reorganize_assets;
 pub use save::save_attachment;
@@ -180,31 +181,7 @@ fn cleanup_assets_impl(state: &AppState) -> AppResult<CleanupResult> {
 mod tests {
     use super::*;
 
-    fn temp_vault() -> (std::path::PathBuf, crate::app_state::AppState) {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let n = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let root = std::env::temp_dir().join(format!("basalt-rename-test-{n}"));
-        std::fs::create_dir_all(&root).unwrap();
-
-        let a = root.join("a.md");
-        let b = root.join("b.md");
-        let c = root.join("c.md");
-        std::fs::write(&a, "See [[b]] and [[b#Heading]].\n").unwrap();
-        std::fs::write(&b, "I am B.\n").unwrap();
-        std::fs::write(&c, "Unrelated.\n").unwrap();
-
-        let state = AppState::default();
-        for p in [&a, &b, &c] {
-            let str = p.to_string_lossy().to_string();
-            let content = std::fs::read_to_string(p).unwrap();
-            state.vault.write().unwrap().add_document(&str, &content);
-        }
-        *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
-        (root, state)
-    }
+    use crate::commands::common::tests::temp_vault;
 
     /// Cleanup must never delete a referenced asset (even a byte-identical
     /// duplicate), and must keep one copy per unreferenced duplicate group.

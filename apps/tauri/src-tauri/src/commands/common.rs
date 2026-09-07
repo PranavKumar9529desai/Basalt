@@ -213,3 +213,7 @@ pub(super) fn write_markdown_note(
     let clean_name = file_name.trim_end_matches(".md").to_string();
     Ok((PathBuf::from(abs_path), clean_name))
 }
+
+#[cfg(test)]
+#[path = "common_tests.rs"]
+pub(crate) mod tests;

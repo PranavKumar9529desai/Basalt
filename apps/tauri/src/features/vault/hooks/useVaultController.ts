@@ -2,208 +2,15 @@ import type { FileNode } from "@workspace/ui/components/file-tree";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { FlatTreeNode } from "../types";
 import type { UseVaultMutationsReturn } from "./useVaultMutations";
-
-interface VaultClipboardItem {
-  path: string;
-  isFolder: boolean;
-}
-
-interface VaultClipboardState {
-  operation: "cut" | null;
-  items: VaultClipboardItem[];
-  timestamp: number | null;
-}
-
-export interface VaultClipboardApi {
-  clipboard: VaultClipboardState;
-  hasItems: boolean;
-  setCutItems: (items: VaultClipboardItem[]) => void;
-  clearClipboard: () => void;
-  isCutPath: (path: string) => boolean;
-}
-
-function useVaultClipboardState(): VaultClipboardApi {
-  const [clipboard, setClipboard] = useState<VaultClipboardState>({
-    operation: null,
-    items: [],
-    timestamp: null,
-  });
-
-  const hasItems = clipboard.operation === "cut" && clipboard.items.length > 0;
-  const setCutItems = useCallback((items: VaultClipboardItem[]) => {
-    setClipboard({ operation: "cut", items, timestamp: Date.now() });
-  }, []);
-
-  const clearClipboard = useCallback(() => {
-    setClipboard({ operation: null, items: [], timestamp: null });
-  }, []);
-
-  const cutPaths = useMemo(
-    () => new Set(clipboard.items.map((item) => item.path)),
-    [clipboard.items],
-  );
-
-  const isCutPath = useCallback(
-    (path: string) => cutPaths.has(path),
-    [cutPaths],
-  );
-
-  return {
-    clipboard,
-    hasItems,
-    setCutItems,
-    clearClipboard,
-    isCutPath,
-  };
-}
-
-type VaultContextTargetKind = "file" | "folder" | "root";
-
-interface VaultContextTarget {
-  kind: VaultContextTargetKind;
-  node: FlatTreeNode | null;
-}
-
-interface VaultContextMenuState {
-  anchor: { x: number; y: number } | null;
-  target: VaultContextTarget | null;
-  isMultiSelect: boolean;
-}
-
-export interface VaultContextMenuApi {
-  menuState: VaultContextMenuState;
-  isOpen: boolean;
-  openForNode: (
-    node: FlatTreeNode,
-    e: React.MouseEvent,
-    isMultiSelect: boolean,
-  ) => void;
-  openForRoot: (e: React.MouseEvent) => void;
-  closeMenu: () => void;
-}
-
-function useVaultContextMenuState(): VaultContextMenuApi {
-  const [menuState, setMenuState] = useState<VaultContextMenuState>({
-    anchor: null,
-    target: null,
-    isMultiSelect: false,
-  });
-
-  const openForNode = useCallback(
-    (node: FlatTreeNode, e: React.MouseEvent, isMultiSelect: boolean) => {
-      setMenuState({
-        anchor: { x: e.clientX, y: e.clientY },
-        target: { kind: node.kind as VaultContextTargetKind, node },
-        isMultiSelect,
-      });
-    },
-    [],
-  );
-
-  const openForRoot = useCallback((e: React.MouseEvent) => {
-    setMenuState({
-      anchor: { x: e.clientX, y: e.clientY },
-      target: { kind: "root", node: null },
-      isMultiSelect: false,
-    });
-  }, []);
-
-  const closeMenu = useCallback(() => {
-    setMenuState({ anchor: null, target: null, isMultiSelect: false });
-  }, []);
-
-  return {
-    menuState,
-    isOpen: menuState.target !== null,
-    openForNode,
-    openForRoot,
-    closeMenu,
-  };
-}
-
-export interface VaultSelectionApi {
-  selectedIds: Set<string>;
-  anchorId: string | null;
-  focusedId: string | null;
-  handleSelect: (
-    node: FileNode,
-    modifiers: {
-      metaKey?: boolean;
-      ctrlKey?: boolean;
-      shiftKey?: boolean;
-    },
-    visibleNodes: FlatTreeNode[],
-  ) => void;
-  setSelection: (ids: Set<string>) => void;
-  clearSelection: () => void;
-  setFocusedId: (id: string) => void;
-}
-
-function useVaultSelectionState(): VaultSelectionApi {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [anchorId, setAnchorId] = useState<string | null>(null);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-
-  const clearSelection = useCallback(() => {
-    setSelectedIds(new Set());
-    setAnchorId(null);
-  }, []);
-
-  const setSelection = useCallback((ids: Set<string>) => {
-    setSelectedIds(new Set(ids));
-  }, []);
-
-  const handleSelect = useCallback(
-    (
-      node: FileNode,
-      modifiers: {
-        metaKey?: boolean;
-        ctrlKey?: boolean;
-        shiftKey?: boolean;
-      },
-      visibleNodes: FlatTreeNode[],
-    ) => {
-      const isMeta = Boolean(modifiers.metaKey || modifiers.ctrlKey);
-      const isShift = Boolean(modifiers.shiftKey);
-      const next = new Set(selectedIds);
-      const indexById = new Map<string, number>();
-      visibleNodes.forEach((n, idx) => {
-        indexById.set(n.path, idx);
-      });
-      const clickedId = node.id;
-
-      if (isShift && anchorId && indexById.has(anchorId)) {
-        const start = indexById.get(anchorId) ?? 0;
-        const end = indexById.get(clickedId) ?? start;
-        const [lo, hi] = start < end ? [start, end] : [end, start];
-        next.clear();
-        for (let i = lo; i <= hi; i++) next.add(visibleNodes[i].path);
-      } else if (isMeta) {
-        if (next.has(clickedId)) next.delete(clickedId);
-        else next.add(clickedId);
-      } else {
-        next.clear();
-        next.add(clickedId);
-        setAnchorId(clickedId);
-      }
-
-      setFocusedId(clickedId);
-      setSelectedIds(next);
-      if (!isShift && !isMeta) setAnchorId(clickedId);
-    },
-    [anchorId, selectedIds],
-  );
-
-  return {
-    selectedIds,
-    anchorId,
-    focusedId,
-    handleSelect,
-    setSelection,
-    clearSelection,
-    setFocusedId,
-  };
-}
+import { useVaultClipboardState } from "./useVaultClipboard";
+import {
+  useVaultContextMenuState,
+  type VaultContextMenuApi,
+} from "./useVaultContextMenu";
+import {
+  useVaultSelectionState,
+  type VaultSelectionApi,
+} from "./useVaultSelection";
 
 interface NoteSelection {
   name: string;
@@ -289,7 +96,7 @@ export interface UseVaultControllerReturn {
  * Single controller hook for the file tree: merges selection, clipboard,
  * context-menu, and file-operation logic. Kept cohesive (one responsibility —
  * file-tree interaction) rather than fragmented by line count; the three state
- * sub-hooks below are private to this controller.
+ * sub-hooks live in sibling hook files and are composed here.
  */
 export function useVaultController(
   options: UseVaultControllerOptions,

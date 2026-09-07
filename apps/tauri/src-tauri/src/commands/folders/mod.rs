@@ -15,8 +15,12 @@ use super::common::{
 };
 use basalt_vault::path_utils::resolve_creation_path;
 
-mod move_rename;
-pub use move_rename::{move_paths, rename_path};
+mod common;
+#[path = "move.rs"]
+mod mv;
+mod rename;
+pub use mv::move_paths;
+pub use rename::rename_path;
 
 /// Result of renaming a folder or attachment. The `.moved` pairs cover every
 /// document that relocated, so the frontend can repoint any open tab tracking

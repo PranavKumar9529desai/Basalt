@@ -1,0 +1,66 @@
+import { useCallback, useState } from "react";
+import type { FlatTreeNode } from "../types";
+
+type VaultContextTargetKind = "file" | "folder" | "root";
+
+interface VaultContextTarget {
+  kind: VaultContextTargetKind;
+  node: FlatTreeNode | null;
+}
+
+interface VaultContextMenuState {
+  anchor: { x: number; y: number } | null;
+  target: VaultContextTarget | null;
+  isMultiSelect: boolean;
+}
+
+export interface VaultContextMenuApi {
+  menuState: VaultContextMenuState;
+  isOpen: boolean;
+  openForNode: (
+    node: FlatTreeNode,
+    e: React.MouseEvent,
+    isMultiSelect: boolean,
+  ) => void;
+  openForRoot: (e: React.MouseEvent) => void;
+  closeMenu: () => void;
+}
+
+export function useVaultContextMenuState(): VaultContextMenuApi {
+  const [menuState, setMenuState] = useState<VaultContextMenuState>({
+    anchor: null,
+    target: null,
+    isMultiSelect: false,
+  });
+
+  const openForNode = useCallback(
+    (node: FlatTreeNode, e: React.MouseEvent, isMultiSelect: boolean) => {
+      setMenuState({
+        anchor: { x: e.clientX, y: e.clientY },
+        target: { kind: node.kind as VaultContextTargetKind, node },
+        isMultiSelect,
+      });
+    },
+    [],
+  );
+
+  const openForRoot = useCallback((e: React.MouseEvent) => {
+    setMenuState({
+      anchor: { x: e.clientX, y: e.clientY },
+      target: { kind: "root", node: null },
+      isMultiSelect: false,
+    });
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuState({ anchor: null, target: null, isMultiSelect: false });
+  }, []);
+
+  return {
+    menuState,
+    isOpen: menuState.target !== null,
+    openForNode,
+    openForRoot,
+    closeMenu,
+  };
+}

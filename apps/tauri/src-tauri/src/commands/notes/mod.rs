@@ -13,6 +13,7 @@ use super::common::{canonical_md_path, resolve_parent_dir, write_markdown_note};
 use basalt_vault::path_utils::resolve_creation_path;
 
 mod rename;
+mod rename_attachments;
 pub use rename::rename_note;
 
 /// Result of renaming a note.

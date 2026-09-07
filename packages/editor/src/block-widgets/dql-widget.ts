@@ -5,36 +5,21 @@ import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
 import { createCodeToggleButton } from "./code-toggle-button";
 import { escapeHtml, notifyViewOfSizeChange } from "./utils";
-
-// ---------------------------------------------------------------------------
-// Query result types — mirrors crates/basalt-types/src/query.rs exactly.
-// ---------------------------------------------------------------------------
-
-export type TypedValue =
-  | { type: "text"; value: string }
-  | { type: "number"; value: number }
-  | { type: "date"; value: string }
-  | { type: "checkbox"; value: boolean }
-  | { type: "link"; name: string; path: string }
-  | { type: "null" };
-
-export interface QueryColumn {
-  name: string;
-  type: "text" | "number" | "date" | "checkbox" | "link";
-}
-
-export interface QueryResult {
-  columns: QueryColumn[];
-  rows: TypedValue[][];
-  total: number;
-}
+import { renderDqlResult } from "./dql-html";
+export type {
+  TypedValue,
+  QueryColumn,
+  QueryResult,
+  RunQueryFn,
+  OpenLinkFn,
+} from "./dql-types";
+import type { QueryResult, RunQueryFn, OpenLinkFn } from "./dql-types";
+export { DQL_WIDGET_THEME } from "./dql-theme";
 
 // ---------------------------------------------------------------------------
 // Dependency facet — injected by the feature layer so this package stays pure
 // (ADR-022 rule 2 / ADR-007: no Tauri, no IPC in packages/ui).
 // ---------------------------------------------------------------------------
-
-export type RunQueryFn = (dql: string) => Promise<QueryResult>;
 
 export const runQueryFacet = Facet.define<
   RunQueryFn | undefined,
@@ -42,9 +27,6 @@ export const runQueryFacet = Facet.define<
 >({
   combine: (values) => values[0],
 });
-
-/** Open a note by name (resolved to a path by the feature layer). */
-export type OpenLinkFn = (name: string) => void;
 
 export const openLinkFacet = Facet.define<
   OpenLinkFn | undefined,
@@ -62,88 +44,6 @@ const queryCache = new Map<string, QueryResult>();
 
 export function clearQueryCache(): void {
   queryCache.clear();
-}
-
-// ---------------------------------------------------------------------------
-// HTML rendering helpers
-// ---------------------------------------------------------------------------
-
-function renderCellHtml(value: TypedValue): string {
-  switch (value.type) {
-    case "text":
-      return escapeHtml(value.value);
-    case "number":
-      return String(value.value);
-    case "date":
-      return `<span class="cm-dql-date">${escapeHtml(value.value)}</span>`;
-    case "checkbox":
-      return value.value
-        ? '<span class="cm-dql-check cm-dql-check--on">✓</span>'
-        : '<span class="cm-dql-check cm-dql-check--off">✗</span>';
-    case "link":
-      return `<a class="internal-link cm-dql-link" data-href="${escapeHtml(value.path)}" data-name="${escapeHtml(value.name)}">${escapeHtml(value.name)}</a>`;
-    case "null":
-      return '<span class="cm-dql-null">—</span>';
-  }
-}
-
-function renderTableHtml(result: QueryResult): string {
-  if (result.columns.length === 0 || result.rows.length === 0) {
-    return '<div class="cm-dql-empty">No results</div>';
-  }
-  const headerHtml = result.columns
-    .map((col) => `<th class="cm-dql-th">${escapeHtml(col.name)}</th>`)
-    .join("");
-  const rowsHtml = result.rows
-    .map(
-      (row) =>
-        `<tr>${row.map((cell) => `<td class="cm-dql-td">${renderCellHtml(cell)}</td>`).join("")}</tr>`,
-    )
-    .join("");
-  const footer =
-    result.total > result.rows.length
-      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-      : "";
-  return `<table class="cm-dql-table"><thead><tr>${headerHtml}</tr></thead><tbody>${rowsHtml}</tbody></table>${footer}`;
-}
-
-function renderListHtml(result: QueryResult): string {
-  if (result.rows.length === 0) {
-    return '<div class="cm-dql-empty">No results</div>';
-  }
-  const itemsHtml = result.rows
-    .map((row) => {
-      const cell = row[0];
-      return cell
-        ? `<li class="cm-dql-list-item">${renderCellHtml(cell)}</li>`
-        : "";
-    })
-    .join("");
-  const footer =
-    result.total > result.rows.length
-      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-      : "";
-  return `<ul class="cm-dql-list">${itemsHtml}</ul>${footer}`;
-}
-
-function renderTaskHtml(result: QueryResult): string {
-  if (result.rows.length === 0) {
-    return '<div class="cm-dql-empty">No results</div>';
-  }
-  const itemsHtml = result.rows
-    .map((row) => {
-      const linkCell = row[0];
-      const taskCell = row[1];
-      const linkHtml = linkCell ? renderCellHtml(linkCell) : "";
-      const taskText = taskCell?.type === "text" ? taskCell.value : "";
-      return `<li class="cm-dql-task-item"><span class="cm-dql-task-link">${linkHtml}</span> <span class="cm-dql-task-text">${escapeHtml(taskText)}</span></li>`;
-    })
-    .join("");
-  const footer =
-    result.total > result.rows.length
-      ? `<div class="cm-dql-footer">Showing ${result.rows.length} of ${result.total}</div>`
-      : "";
-  return `<ul class="cm-dql-task-list">${itemsHtml}</ul>${footer}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,137 +145,6 @@ export class DqlResultWidget extends WidgetType {
     return false; // allow clicks on links
   }
 }
-
-// ---------------------------------------------------------------------------
-// Result rendering — infers query type from column structure
-// ---------------------------------------------------------------------------
-
-function renderDqlResult(result: QueryResult): string {
-  // LIST: 1 column "File" with type "link"
-  const isList =
-    result.columns.length === 1 &&
-    result.columns[0].type === "link" &&
-    result.columns[0].name === "File";
-  // TASK: 2 columns "File" + "Task"
-  const isTask =
-    result.columns.length === 2 &&
-    result.columns[0].type === "link" &&
-    result.columns[1].name === "Task";
-
-  if (isList) return renderListHtml(result);
-  if (isTask) return renderTaskHtml(result);
-  return renderTableHtml(result);
-}
-
-// ---------------------------------------------------------------------------
-// Theme — uses --sat-* tokens only (ADR-002)
-// ---------------------------------------------------------------------------
-
-export const DQL_WIDGET_THEME = EditorView.baseTheme({
-  ".cm-dql-result": {
-    padding: "0.5em 0",
-    fontSize: "0.9em",
-    fontFamily: "inherit",
-    position: "relative",
-  },
-  ".cm-dql-loading": {
-    color: "var(--sat-text-secondary, #94a3b8)",
-    fontStyle: "italic",
-    padding: "0.25em 0",
-  },
-  ".cm-dql-error": {
-    color: "var(--sat-state-error, #ef4444)",
-    fontFamily: "var(--font-mono, monospace)",
-    fontSize: "0.85em",
-    padding: "0.5em",
-    backgroundColor: "var(--sat-surface-2, #1e1e2e)",
-    borderRadius: "4px",
-  },
-  ".cm-dql-empty": {
-    color: "var(--sat-text-secondary, #94a3b8)",
-    fontStyle: "italic",
-    padding: "0.25em 0",
-  },
-  ".cm-dql-table": {
-    width: "100%",
-    borderCollapse: "collapse",
-    fontSize: "inherit",
-  },
-  ".cm-dql-th": {
-    textAlign: "left",
-    padding: "0.4em 0.8em",
-    borderBottom: "2px solid var(--sat-layout-border, #334155)",
-    color: "var(--sat-text-primary, #e2e8f0)",
-    fontWeight: "600",
-    whiteSpace: "nowrap",
-  },
-  ".cm-dql-td": {
-    padding: "0.35em 0.8em",
-    borderBottom: "1px solid var(--sat-layout-border, #334155)",
-    color: "var(--sat-text-secondary, #cbd5e1)",
-    maxWidth: "300px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  ".cm-dql-td:hover": {
-    whiteSpace: "normal",
-    overflow: "visible",
-  },
-  ".cm-dql-link": {
-    color: "var(--sat-accent-primary, #60a5fa)",
-    textDecoration: "none",
-    cursor: "pointer",
-  },
-  ".cm-dql-link:hover": {
-    textDecoration: "underline",
-  },
-  ".cm-dql-list": {
-    listStyle: "disc",
-    paddingLeft: "1.5em",
-    margin: "0",
-  },
-  ".cm-dql-list-item": {
-    padding: "0.15em 0",
-    color: "var(--sat-text-secondary, #cbd5e1)",
-  },
-  ".cm-dql-task-list": {
-    listStyle: "none",
-    paddingLeft: "0",
-    margin: "0",
-  },
-  ".cm-dql-task-item": {
-    padding: "0.15em 0",
-    display: "flex",
-    gap: "0.4em",
-    color: "var(--sat-text-secondary, #cbd5e1)",
-  },
-  ".cm-dql-task-text": {
-    color: "var(--sat-text-primary, #e2e8f0)",
-  },
-  ".cm-dql-check": {
-    fontWeight: "bold",
-  },
-  ".cm-dql-check--on": {
-    color: "var(--sat-state-success, #22c55e)",
-  },
-  ".cm-dql-check--off": {
-    color: "var(--sat-text-muted, #64748b)",
-  },
-  ".cm-dql-date": {
-    color: "var(--sat-accent-secondary, #a78bfa)",
-    fontVariantNumeric: "tabular-nums",
-  },
-  ".cm-dql-null": {
-    color: "var(--sat-text-muted, #64748b)",
-    fontStyle: "italic",
-  },
-  ".cm-dql-footer": {
-    paddingTop: "0.35em",
-    fontSize: "0.8em",
-    color: "var(--sat-text-muted, #64748b)",
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Note on CM block-widget layout: multi-line block widgets must use
