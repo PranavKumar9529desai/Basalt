@@ -132,3 +132,84 @@ pub(super) fn validate_name(raw: &str) -> AppResult<String> {
     }
     Ok(name)
 }
+
+/// Canonicalize a creation-parent folder (or the vault root), rejecting
+/// traversal: `..` components in a not-yet-existing path, and any resolved
+/// path that escapes the vault.
+pub(super) fn resolve_parent_dir(vault_root: &Path, parent: Option<&str>) -> AppResult<PathBuf> {
+    match parent {
+        Some(rel) if !rel.is_empty() => {
+            let candidate = vault_root.join(rel);
+            if candidate.exists() {
+                let canonical = candidate
+                    .canonicalize()
+                    .map_err(|e| AppError::Io(format!("invalid parent path: {e}")))?;
+                ensure_inside_vault(&canonical, vault_root)?;
+                Ok(canonical)
+            } else {
+                if rel.split(['/', '\\']).any(|c| c == "..") {
+                    return Err(AppError::Validation(
+                        "parent path must not contain '..'".to_string(),
+                    ));
+                }
+                Ok(candidate)
+            }
+        }
+        _ => Ok(vault_root.to_path_buf()),
+    }
+}
+
+/// Write a new Markdown file and update every index (self-write marker, vault
+/// cache, search) in the canonical order all creation commands use.
+///
+/// `parent_dir` must already be resolved and inside the vault — use
+/// [`resolve_parent_dir`]. The `name` may contain `/` segments to create
+/// nested folders (e.g. a date format like `2026/March/2026-Mar-08`).
+/// Returns the canonical absolute path and the display name (stem).
+pub(super) fn write_markdown_note(
+    state: &AppState,
+    parent_dir: &Path,
+    name: &str,
+    content: &str,
+) -> AppResult<(PathBuf, String)> {
+    let (target_dir, file_path, file_name) =
+        basalt_vault::path_utils::resolve_creation_path(parent_dir, None, name, false)?;
+
+    if file_path.exists() {
+        return Err(AppError::Validation(format!("'{name}' already exists")));
+    }
+
+    if !target_dir.exists() {
+        std::fs::create_dir_all(&target_dir)
+            .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
+    }
+
+    // Choke point: marker BEFORE the write. `file_path` is built from the
+    // canonical vault root, so it matches the path the watcher reports.
+    register_self_writes(state, std::slice::from_ref(&file_path));
+
+    if let Err(e) = std::fs::write(&file_path, content) {
+        if let Ok(mut guard) = state.self_writes.lock() {
+            guard.remove(&file_path);
+        }
+        return Err(AppError::Io(format!("failed to write file: {e}")));
+    }
+
+    let abs_path = file_path
+        .canonicalize()
+        .map_err(|e| AppError::Io(format!("canonicalize failed: {e}")))?
+        .to_string_lossy()
+        .to_string();
+
+    {
+        let mut vault = state
+            .vault
+            .write()
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
+        vault.add_document(&abs_path, content);
+    }
+    index_upsert(state, &abs_path, content);
+
+    let clean_name = file_name.trim_end_matches(".md").to_string();
+    Ok((PathBuf::from(abs_path), clean_name))
+}

@@ -9,7 +9,7 @@ use tauri::State;
 use crate::app_state::AppState;
 use crate::error::{AppError, AppResult};
 
-use super::common::{canonical_md_path, ensure_inside_vault, index_upsert, register_self_writes};
+use super::common::{canonical_md_path, resolve_parent_dir, write_markdown_note};
 use basalt_vault::path_utils::resolve_creation_path;
 
 mod rename;
@@ -116,52 +116,15 @@ pub fn create_note(
         .clone()
         .ok_or(AppError::NoVault)?;
 
-    let vault_path = Path::new(&vault_path_str);
-
-    let (target_dir, file_path, file_name) =
-        resolve_creation_path(vault_path, parent.as_deref(), &name, false)?;
-
-    if file_path.exists() {
-        return Err(AppError::Validation(format!("'{name}' already exists")));
-    }
-
-    if !target_dir.exists() {
-        std::fs::create_dir_all(&target_dir)
-            .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
-    }
-
-    let content = String::new();
-
-    // Choke point: marker BEFORE the write. `file_path` is built from the
-    // canonical vault root, so it matches the path the watcher reports.
-    register_self_writes(&state, std::slice::from_ref(&file_path));
-
-    if let Err(e) = std::fs::write(&file_path, &content) {
-        if let Ok(mut guard) = state.self_writes.lock() {
-            guard.remove(&file_path);
-        }
-        return Err(AppError::Io(format!("failed to write file: {e}")));
-    }
-
-    let abs_path = file_path
+    let vault_root = Path::new(&vault_path_str)
         .canonicalize()
-        .map_err(|e| AppError::Io(format!("canonicalize failed: {e}")))?
-        .to_string_lossy()
-        .to_string();
+        .map_err(AppError::InvalidVaultPath)?;
 
-    {
-        let mut vault = state
-            .vault
-            .write()
-            .map_err(|_| AppError::LockPoisoned("vault"))?;
-        vault.add_document(&abs_path, &content);
-    }
-    index_upsert(&state, &abs_path, &content);
-
-    let clean_name = file_name.trim_end_matches(".md").to_string();
+    let parent_dir = resolve_parent_dir(&vault_root, parent.as_deref())?;
+    let (abs_path, clean_name) = write_markdown_note(&state, &parent_dir, &name, "")?;
 
     Ok(CreateNoteResult {
-        path: abs_path,
+        path: abs_path.to_string_lossy().to_string(),
         name: clean_name,
     })
 }
@@ -182,29 +145,7 @@ pub fn create_untitled_note(
         .canonicalize()
         .map_err(AppError::InvalidVaultPath)?;
 
-    let parent_dir = match parent.as_deref() {
-        Some(rel) if !rel.is_empty() => {
-            let candidate = vault_root.join(rel);
-            // Reject traversal attempts: canonicalize only if the dir exists,
-            // otherwise check that no component is "..".
-            if candidate.exists() {
-                let canonical = candidate
-                    .canonicalize()
-                    .map_err(|e| AppError::Io(format!("invalid parent path: {e}")))?;
-                ensure_inside_vault(&canonical, &vault_root)?;
-                canonical
-            } else {
-                // Dir doesn't exist yet (will be created). Reject ".." components.
-                if rel.split('/').any(|c| c == "..") {
-                    return Err(AppError::Validation(
-                        "parent path must not contain '..'".to_string(),
-                    ));
-                }
-                candidate
-            }
-        }
-        _ => vault_root.clone(),
-    };
+    let parent_dir = resolve_parent_dir(&vault_root, parent.as_deref())?;
 
     for i in 0u32..=99 {
         let name = if i == 0 {
@@ -213,45 +154,15 @@ pub fn create_untitled_note(
             format!("Untitled {i}")
         };
 
-        let file_path = parent_dir.join(format!("{name}.md"));
+        let (_, file_path, _) = resolve_creation_path(&parent_dir, None, &name, false)?;
         if file_path.exists() {
             continue;
         }
 
-        // Create parent directory if needed (e.g. the parent folder was just created).
-        if !parent_dir.exists() {
-            std::fs::create_dir_all(&parent_dir)
-                .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
-        }
-
-        let content = String::new();
-
-        register_self_writes(&state, std::slice::from_ref(&file_path));
-        if let Err(e) = std::fs::write(&file_path, &content) {
-            if let Ok(mut guard) = state.self_writes.lock() {
-                guard.remove(&file_path);
-            }
-            return Err(AppError::Io(format!("failed to write file: {e}")));
-        }
-
-        let abs_path = file_path
-            .canonicalize()
-            .map_err(|e| AppError::Io(format!("canonicalize failed: {e}")))?
-            .to_string_lossy()
-            .to_string();
-
-        {
-            let mut vault = state
-                .vault
-                .write()
-                .map_err(|_| AppError::LockPoisoned("vault"))?;
-            vault.add_document(&abs_path, &content);
-        }
-        index_upsert(&state, &abs_path, &content);
-
+        let (abs_path, clean_name) = write_markdown_note(&state, &parent_dir, &name, "")?;
         return Ok(CreateNoteResult {
-            path: abs_path,
-            name,
+            path: abs_path.to_string_lossy().to_string(),
+            name: clean_name,
         });
     }
 
