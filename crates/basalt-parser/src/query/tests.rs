@@ -1,5 +1,5 @@
 use super::ast::*;
-use super::parse::parse_query;
+use super::plan::parse_query;
 
 #[test]
 fn parse_simple_table() {

@@ -1,10 +1,12 @@
-use basalt_parser::query::{
-    CompareOp, DataCommand, Expr, FieldRef, Literal, QueryPlan, QueryType, SortDirection,
-};
-use basalt_types::{QueryColumn, QueryColumnType, QueryResult, TypedValue};
+use basalt_parser::query::{DataCommand, Expr, QueryType, SortDirection};
+use basalt_types::{QueryResult, TypedValue};
 use basalt_vault::Vault;
 
 use crate::expr::{compare_typed, eval_expr, eval_to_typed, EvalCtx};
+use crate::grouping::group_rows;
+use crate::output::{
+    execute_list_query, execute_table_query, execute_task_query, expr_text,
+};
 use crate::page_row::{build_page_rows, matches_source, PageRow};
 
 /// Runtime errors during DQL query execution.
@@ -20,7 +22,7 @@ pub enum DqlError {
 
 /// A row during query execution: a single page, or a group of pages produced
 /// by GROUP BY (a key plus its members).
-enum WorkRow {
+pub(crate) enum WorkRow {
     Page(PageRow),
     Group {
         key: TypedValue,
@@ -30,7 +32,7 @@ enum WorkRow {
 }
 
 impl WorkRow {
-    fn ctx(&self) -> EvalCtx<'_> {
+    pub(crate) fn ctx(&self) -> EvalCtx<'_> {
         match self {
             WorkRow::Page(page) => EvalCtx::Page(page),
             WorkRow::Group {
@@ -138,243 +140,5 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
         QueryType::Table => execute_table_query(&plan, &rows, total),
         QueryType::List => execute_list_query(&rows, total),
         QueryType::Task => execute_task_query(&rows, total),
-    }
-}
-
-/// Table query: render user-specified fields as columns.
-fn execute_table_query(
-    plan: &QueryPlan,
-    rows: &[WorkRow],
-    total: usize,
-) -> Result<QueryResult, DqlError> {
-    let columns = build_columns(plan, rows);
-    let data: Vec<Vec<TypedValue>> = rows
-        .iter()
-        .map(|r| {
-            plan.fields
-                .iter()
-                .map(|f| eval_to_typed(&f.expr, &r.ctx()))
-                .collect()
-        })
-        .collect();
-    Ok(QueryResult {
-        columns,
-        rows: data,
-        total,
-    })
-}
-
-/// List query: single "File" column with a link to each page.
-fn execute_list_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, DqlError> {
-    let columns = vec![QueryColumn {
-        name: "File".to_string(),
-        type_: QueryColumnType::Link,
-    }];
-    let data: Vec<Vec<TypedValue>> = rows
-        .iter()
-        .map(|r| {
-            let p =
-                first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
-            Ok::<_, DqlError>(link_row(&p.name, &p.path))
-        })
-        .collect::<Result<_, _>>()?;
-    Ok(QueryResult {
-        columns,
-        rows: data,
-        total,
-    })
-}
-
-/// Task query: file link + task text column.
-fn execute_task_query(rows: &[WorkRow], total: usize) -> Result<QueryResult, DqlError> {
-    let columns = vec![
-        QueryColumn {
-            name: "File".to_string(),
-            type_: QueryColumnType::Link,
-        },
-        QueryColumn {
-            name: "Task".to_string(),
-            type_: QueryColumnType::Text,
-        },
-    ];
-    let data: Vec<Vec<TypedValue>> = rows
-        .iter()
-        .map(|r| {
-            let p =
-                first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
-            Ok::<_, DqlError>(vec![
-                TypedValue::Link {
-                    name: p.name.clone(),
-                    path: p.path.clone(),
-                },
-                TypedValue::Text {
-                    value: "(tasks)".to_string(),
-                },
-            ])
-        })
-        .collect::<Result<_, _>>()?;
-    Ok(QueryResult {
-        columns,
-        rows: data,
-        total,
-    })
-}
-
-/// Construct a link-typed value for the given name and path.
-fn link_row(name: &str, path: &str) -> Vec<TypedValue> {
-    vec![TypedValue::Link {
-        name: name.to_string(),
-        path: path.to_string(),
-    }]
-}
-
-/// The representative page of a row (first member for a group).
-fn first_page(row: &WorkRow) -> Option<&PageRow> {
-    match row {
-        WorkRow::Page(page) => Some(page),
-        WorkRow::Group { members, .. } => members.first(),
-    }
-}
-
-/// Group page rows by the evaluated key expression, preserving first-seen
-/// group order. Rows that are already groups pass through unchanged (nested
-/// grouping is deferred).
-///
-/// Groups are indexed by a hashable [`GroupKey`] so this is O(N) rather than a
-/// per-row linear scan of existing groups (O(N·G)). Grouping uses strict
-/// type-and-value equality, so `Number(3)` and `Text("3")` are *not* the same
-/// group — matching Dataview semantics (the old `compare_typed == Equal` test
-/// conflated unrelated cross-type values, per ADR-030 §3).
-fn group_rows(rows: Vec<WorkRow>, expr: &Expr) -> Vec<WorkRow> {
-    // A simple-field GROUP BY lets that field resolve to the group key in the
-    // output (Dataview swizzling); computed GROUP BY exposes only `key`.
-    let group_by_path: Option<Vec<String>> = match expr {
-        Expr::Field(FieldRef(parts)) => Some(parts.clone()),
-        _ => None,
-    };
-    let mut groups: Vec<(GroupKey, TypedValue, Vec<PageRow>)> = Vec::new();
-    // Maps a group's identity to its position in `groups` (first-seen order).
-    let mut index: std::collections::HashMap<GroupKey, usize> = std::collections::HashMap::new();
-    let mut carried: Vec<WorkRow> = Vec::new();
-    for row in rows {
-        match row {
-            WorkRow::Page(page) => {
-                let key = eval_to_typed(expr, &EvalCtx::Page(&page));
-                let id = GroupKey::from_typed(&key);
-                match index.get(&id) {
-                    Some(&pos) => groups[pos].2.push(page),
-                    None => {
-                        let pos = groups.len();
-                        groups.push((id.clone(), key, vec![page]));
-                        index.insert(id, pos);
-                    }
-                }
-            }
-            other => carried.push(other),
-        }
-    }
-    let mut out: Vec<WorkRow> = groups
-        .into_iter()
-        .map(|(_id, key, members)| WorkRow::Group {
-            key,
-            members,
-            group_by_path: group_by_path.clone(),
-        })
-        .collect();
-    out.extend(carried);
-    out
-}
-
-/// Hashable identity of a group key value (strict type+value equality).
-/// Required because [`TypedValue`] holds an `f64` and is neither `Eq` nor
-/// `Hash`; `Number` is canonicalized so `-0.0` and `0.0` group together.
-#[derive(Clone, PartialEq, Eq, Hash)]
-enum GroupKey {
-    Text(String),
-    Number(u64),
-    Date(String),
-    Checkbox(bool),
-    Link(String, String),
-    List(Vec<GroupKey>),
-    Null,
-}
-
-impl GroupKey {
-    fn from_typed(v: &TypedValue) -> GroupKey {
-        match v {
-            TypedValue::Text { value } => GroupKey::Text(value.clone()),
-            TypedValue::Number { value } => GroupKey::Number(canonical_bits(*value)),
-            TypedValue::Date { value } => GroupKey::Date(value.clone()),
-            TypedValue::DateTime { value } => GroupKey::Date(value.clone()),
-            TypedValue::Checkbox { value } => GroupKey::Checkbox(*value),
-            TypedValue::Link { name, path } => GroupKey::Link(name.clone(), path.clone()),
-            TypedValue::List { items } => {
-                GroupKey::List(items.iter().map(GroupKey::from_typed).collect())
-            }
-            TypedValue::Null => GroupKey::Null,
-        }
-    }
-}
-
-/// Canonical f64 bits so `-0.0` and `0.0` hash/compare equal. NaNs keep their
-/// raw bits (two NaNs never group together), matching `f64`'s `PartialEq`.
-fn canonical_bits(value: f64) -> u64 {
-    if value == 0.0 {
-        0.0f64.to_bits()
-    } else {
-        value.to_bits()
-    }
-}
-
-fn build_columns(plan: &QueryPlan, rows: &[WorkRow]) -> Vec<QueryColumn> {
-    if plan.fields.is_empty() {
-        // Default: show file link
-        return vec![QueryColumn {
-            name: "File".to_string(),
-            type_: QueryColumnType::Link,
-        }];
-    }
-    plan.fields
-        .iter()
-        .map(|f| {
-            let name = f.alias.clone().unwrap_or_else(|| expr_text(&f.expr));
-            // Infer type from first non-null value
-            let type_ = rows
-                .iter()
-                .map(|r| QueryColumnType::from_typed(&eval_to_typed(&f.expr, &r.ctx())))
-                .next()
-                .unwrap_or(QueryColumnType::Text);
-            QueryColumn { name, type_ }
-        })
-        .collect()
-}
-
-/// Render an expression as its column name when no alias is given.
-fn expr_text(expr: &Expr) -> String {
-    match expr {
-        Expr::Field(f) => f.0.join("."),
-        Expr::Literal(Literal::Text(s)) => s.clone(),
-        Expr::Literal(Literal::Number(n)) => format!("{}", n),
-        Expr::Literal(Literal::Bool(b)) => b.to_string(),
-        Expr::Literal(Literal::Null) => "null".to_string(),
-        Expr::Func { name, args } => {
-            let args_s: Vec<String> = args.iter().map(expr_text).collect();
-            format!("{}({})", name, args_s.join(", "))
-        }
-        Expr::Not(inner) => format!("!{}", expr_text(inner)),
-        Expr::Comparison { left, op, right } => format!(
-            "{} {} {}",
-            expr_text(left),
-            match op {
-                CompareOp::Eq => "=",
-                CompareOp::Ne => "!=",
-                CompareOp::Lt => "<",
-                CompareOp::Gt => ">",
-                CompareOp::Le => "<=",
-                CompareOp::Ge => ">=",
-                CompareOp::Contains => "contains",
-            },
-            expr_text(right),
-        ),
     }
 }

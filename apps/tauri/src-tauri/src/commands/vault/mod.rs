@@ -8,6 +8,8 @@ use crate::app_state::AppState;
 use crate::cache::cache_path;
 use crate::error::{AppError, AppResult};
 
+mod cc;
+
 mod graph;
 pub(crate) use graph::{build_graph_snapshot, GraphSnapshot};
 

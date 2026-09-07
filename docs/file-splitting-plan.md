@@ -5,17 +5,17 @@
 > Status banner: last updated 2026-09-08.
 
 ## Phase 1 — Zero-risk relocations ✅
-
+> Status banner: last updated 2026-09-08 — Phase 1 committed (`3e8036b`).
 | Item | Files | Status |
 |---|---|---|
-| table-widget split | `packages/editor/src/block-widgets/` → `table-parse.ts` `table-html.ts` `table-theme.ts` | ✅ out |
-| dql-widget split | `packages/editor/src/block-widgets/` → `dql-types.ts` `dql-html.ts` `dql-theme.ts` | ✅ out |
-| useVaultController | `features/vault/hooks/` → `useVaultClipboard.ts` `useVaultContextMenu.ts` `useVaultSelection.ts` | ✅ out (no DnD code exists → `lib/vaultDnD.ts` skipped, verified) |
-| useTabDnD | `features/tabs/hooks/lib/` → `dragState.ts` `hitTest.ts` `dropExec.ts` | ✅ out |
-| graph renderer | `packages/graph/src/` → `shaders.ts` `programs.ts` | ✅ out |
-| canvas renderer | `packages/canvas/src/` → `shaders.ts` `programs.ts` | ✅ out |
-| Rust test extraction | `commands/assets/rewrite.rs` `reorganize_tests.rs`; `commands/notes/rename_attachments.rs` `rename_tests.rs`; `commands/folders/move.rs` `rename.rs` `common.rs` `move_rename_tests.rs` | ✅ out |
-| live-preview | `packages/editor/src/preview/` → `collector.ts` `scheduler.ts` `tag-marks.ts` | ✅ out |
+| dql-widget split | `packages/editor/src/block-widgets/` → `dql-types.ts` `dql-html.ts` `dql-theme.ts` | ✅ `3e8036b` |
+| useVaultController | `features/vault/hooks/` → `useVaultClipboard.ts` `useVaultContextMenu.ts` `useVaultSelection.ts` | ✅ `3e8036b` (no DnD code exists → `lib/vaultDnD.ts` skipped, verified) |
+| useTabDnD | `features/tabs/hooks/lib/` → `dragState.ts` `hitTest.ts` `dropExec.ts` | ✅ `3e8036b` |
+| graph renderer | `packages/graph/src/` → `shaders.ts` `programs.ts` | ✅ `3e8036b` |
+| canvas renderer | `packages/canvas/src/` → `shaders.ts` `programs.ts` | ✅ `3e8036b` |
+| Rust test extraction | `commands/assets/rewrite.rs` `reorganize_tests.rs`; `commands/notes/rename_attachments.rs` `rename_tests.rs`; `commands/folders/move.rs` `rename.rs` `common.rs` `move_rename_tests.rs` | ✅ `3e8036b` |
+| table-widget split | `packages/editor/src/block-widgets/` → `table-parse.ts` `table-html.ts` `table-theme.ts` | ✅ `3e8036b` |
+| live-preview | `packages/editor/src/preview/` → `collector.ts` `scheduler.ts` `tag-marks.ts` | ✅ `3e8036b` |
 
 ## Phase 2 — Rust crate seams
 

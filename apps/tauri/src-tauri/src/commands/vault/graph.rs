@@ -8,6 +8,7 @@ use basalt_vault::Vault;
 use serde::Serialize;
 
 use crate::error::{AppError, AppResult};
+use super::cc::cc_clusters;
 
 #[derive(Serialize)]
 pub struct GraphNodeMeta {
@@ -34,15 +35,6 @@ pub struct GraphSnapshot {
     /// Springs are treated as undirected; arrows render the `src -> dst` direction.
     pub edges: Vec<u32>,
     pub edge_weights: Vec<f32>,
-}
-
-/// Union-find root lookup with path compression.
-fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
-    while parent[x as usize] != x {
-        parent[x as usize] = parent[parent[x as usize] as usize];
-        x = parent[x as usize];
-    }
-    x
 }
 
 /// Build the graph snapshot (nodes + dense edges) from an in-memory `Vault`.
@@ -206,26 +198,9 @@ pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResul
         edge_weights.push(w as f32);
     }
     // Connected-component id per node so the frontend can auto-color clusters.
-    let mut parent: Vec<u32> = (0..nodes.len() as u32).collect();
-    for e in (0..edges.len()).step_by(2) {
-        let a = edges[e];
-        let b = edges[e + 1];
-        let ra = cc_find(&mut parent, a);
-        let rb = cc_find(&mut parent, b);
-        if ra != rb {
-            parent[ra as usize] = rb;
-        }
-    }
-    let mut root_to_id: HashMap<u32, u32> = HashMap::new();
-    let mut next_id = 0u32;
-    for i in 0..nodes.len() as u32 {
-        let r = cc_find(&mut parent, i);
-        let id = *root_to_id.entry(r).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-        nodes[i as usize].cluster = id;
+    let clusters = cc_clusters(nodes.len(), &edges);
+    for (i, node) in nodes.iter_mut().enumerate() {
+        node.cluster = clusters[i];
     }
 
     Ok(GraphSnapshot {

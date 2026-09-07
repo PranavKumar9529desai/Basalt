@@ -10,6 +10,7 @@ use crate::error::{AppError, AppResult};
 
 use super::common::register_self_writes;
 
+mod infer;
 mod reorganize;
 mod rewrite;
 mod save;

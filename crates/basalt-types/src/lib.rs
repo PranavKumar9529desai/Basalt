@@ -10,8 +10,8 @@ pub use frontmatter::{
 pub use metadata::{FileMetadata, Span};
 pub use node::{Document, MarkdownNode};
 pub use search::{ContextLine, FileMatch, FileResult, Highlight, LineMatch, SearchContentResult};
-pub mod query;
+pub mod convert;
+pub mod value;
 
-pub use query::{
-    yaml_to_typed, yaml_to_typed_pairs, QueryColumn, QueryColumnType, QueryResult, TypedValue,
-};
+pub use convert::{QueryColumn, QueryColumnType, QueryResult};
+pub use value::{yaml_to_typed, yaml_to_typed_pairs, TypedValue};

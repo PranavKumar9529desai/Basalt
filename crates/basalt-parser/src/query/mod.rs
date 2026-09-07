@@ -1,7 +1,9 @@
 mod ast;
-mod parse;
+mod expr;
+mod plan;
+mod source;
 #[cfg(test)]
 mod tests;
 
 pub use ast::*;
-pub use parse::parse_query;
+pub use plan::parse_query;

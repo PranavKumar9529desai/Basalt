@@ -20,6 +20,7 @@
 mod force_graph;
 mod layout_graph;
 mod params;
+mod quadtree;
 #[cfg(test)]
 mod tests;
 
