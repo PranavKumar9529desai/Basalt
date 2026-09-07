@@ -8,14 +8,40 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [TanStackRouterVite(), react(), wasm()],
+  plugins: [
+    TanStackRouterVite(),
+    react({
+      babel: {
+        plugins: [
+          [
+            "babel-plugin-react-compiler",
+            {
+              target: "19",
+              sources: (filename: string) => {
+                return (
+                  !filename.includes("node_modules") &&
+                  (filename.includes("/src/") || filename.includes("/packages/"))
+                );
+              },
+            },
+          ],
+        ],
+      },
+    }),
+    wasm(),
+  ],
   worker: { format: "es" },
+
+  esbuild: {
+    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+  },
 
   build: {
     // Desktop app: chunks load from local disk, no HTTP cache concerns.
     // Vendor separation = parallel parse of independent chunks at startup
     // and a smaller entry chunk (ADR-020 move 3).
     modulePreload: { polyfill: false },
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -43,6 +69,22 @@ export default defineConfig(async () => ({
           )
             return "codemirror-vendor";
           if (/[\\/]node_modules[\\/]@tabler[\\/]/.test(id)) return "icons";
+          // Canvas graph and layout dependencies — isolated from main note view
+          if (/[\\/]node_modules[\\/](@xyflow|d3-|internmap)[\\/]/.test(id))
+            return "xyflow-vendor";
+          // UI component primitives
+          if (
+            /[\\/]node_modules[\\/](@base-ui|@radix-ui|@floating-ui)[\\/]/.test(
+              id,
+            )
+          )
+            return "ui-vendor";
+          // TanStack Router & Virtualizer
+          if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id))
+            return "tanstack-vendor";
+          // Tauri IPC and plugins
+          if (/[\\/]node_modules[\\/]@tauri-apps[\\/]/.test(id))
+            return "tauri-vendor";
           return undefined; // let Rollup place the rest (app code stays in entry)
         },
       },
