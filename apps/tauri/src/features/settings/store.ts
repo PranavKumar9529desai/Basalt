@@ -50,6 +50,18 @@ const CORE_SECTIONS: SectionDef[] = [
     group: "options",
     component: lazy(() => import("./components/sections/HotkeysSection")),
   },
+  {
+    id: "templates",
+    label: "Templates",
+    group: "core-plugins",
+    component: lazy(() => import("./components/sections/TemplatesSection")),
+  },
+  {
+    id: "dailies",
+    label: "Daily notes",
+    group: "core-plugins",
+    component: lazy(() => import("./components/sections/DailyNotesSection")),
+  },
 ];
 
 export const useSettingsModalStore = create<SettingsModalStore>()(

@@ -4,6 +4,7 @@ export { SettingsModal } from "./components/SettingsModal";
 export type { SectionDef, SettingsGroup } from "./store";
 export { useSettingsModalStore } from "./store";
 export {
+  getSetting,
   initSettings,
   setSetting,
   useSetting,

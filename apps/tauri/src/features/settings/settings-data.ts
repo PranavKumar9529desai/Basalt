@@ -33,6 +33,14 @@ const DEFAULTS = {
     | "{date}-{original_name}",
   /** Auto-rename attachments when the parent note is renamed. */
   renameAttachmentsWithNote: true as boolean,
+  /** Relative folder containing template notes (Templates plugin). */
+  templateFolder: "Templates" as string,
+  /** Folder where new daily notes are created (Daily notes plugin). */
+  dailyNotesFolder: "Daily" as string,
+  /** Daily note file-name pattern (Moment-style tokens, may contain slashes). */
+  dailyNoteDateFormat: "YYYY-MM-DD" as string,
+  /** Template file to apply to new daily notes; empty = blank note. */
+  dailyNoteTemplate: "" as string,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;
@@ -72,6 +80,11 @@ export function useSetting<K extends SettingsKey>(key: K): SettingsValues[K] {
   return useSettingsStore((state) => state.values[key] as SettingsValues[K]);
 }
 
+/** Imperative read of a single setting — for module scope / command callbacks. */
+export function getSetting<K extends SettingsKey>(key: K): SettingsValues[K] {
+  return useSettingsStore.getState().values[key] as SettingsValues[K];
+}
+
 /**
  * Write a setting value. Updates the Zustand store immediately and
  * persists to the Rust backend (`config.json`) asynchronously.
@@ -92,6 +105,11 @@ export function setSetting<K extends SettingsKey>(
   });
 }
 
+/** Settings whose value is a plain string — the only kind the settings UI edits. */
+export type StringSettingKey = {
+  [K in SettingsKey]: SettingsValues[K] extends string ? K : never;
+}[SettingsKey];
+
 /**
  * One-time initialization from the Rust boot result.
  * Merges backend values over defaults — missing keys fall back to DEFAULTS.
@@ -107,3 +125,50 @@ export function initSettings(backend: Record<string, unknown> | undefined) {
   useSettingsStore.getState().set("__init__", undefined);
   useSettingsStore.setState({ values: merged });
 }
+
+/**
+ * Declarative settings-field metadata (ADR-036). The generic `SettingsFields`
+ * component renders one row per spec — plugins describe their settings here
+ * instead of hand-building forms.
+ */
+export interface SettingSpec {
+  key: SettingsKey;
+  label: string;
+  description: string;
+  placeholder?: string;
+}
+
+export const SETTING_SPECS: Record<string, SettingSpec[]> = {
+  templates: [
+    {
+      key: "templateFolder",
+      label: "Template folder",
+      description:
+        "Folder containing template notes, relative to the vault root. Any Markdown file in it becomes insertable.",
+      placeholder: "Templates",
+    },
+  ],
+  dailies: [
+    {
+      key: "dailyNotesFolder",
+      label: "Daily notes folder",
+      description:
+        "Where new daily notes are created. Use a nested path (e.g. Journal/2026) to organize by month or year.",
+      placeholder: "Daily",
+    },
+    {
+      key: "dailyNoteDateFormat",
+      label: "Date format",
+      description:
+        "File-name pattern for daily notes. Moment-style tokens (YYYY, MMM, DD); slashes create subfolders.",
+      placeholder: "YYYY-MM-DD",
+    },
+    {
+      key: "dailyNoteTemplate",
+      label: "Template",
+      description:
+        "Template file (in the template folder) applied when a new daily note is created. Leave empty for a blank note.",
+      placeholder: "Empty — start with a blank note",
+    },
+  ],
+};
