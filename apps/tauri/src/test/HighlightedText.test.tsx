@@ -48,4 +48,24 @@ describe("HighlightedText", () => {
     expect(hitSpans(container)).toEqual([]);
     expect(container.textContent).toBe("Daily note");
   });
+  it("uses nucleo-provided indices verbatim, superseding the query", () => {
+    const { container } = render(
+      <HighlightedText
+        text="borrow-checker"
+        query="zzz"
+        indices={[0, 1, 2, 3, 4, 5]}
+      />,
+    );
+    // "zzz" has no subsequence match — only the indices decide what pops.
+    expect(hitSpans(container)).toEqual(["borrow"]);
+  });
+
+  it("maps UTF-8 byte offsets across multi-byte characters", () => {
+    const { container } = render(
+      <HighlightedText text="café-notes" indices={[0, 1, 2, 3]} />,
+    );
+    // Byte 3 is the first byte of é (2-byte UTF-8); é must not be split.
+    expect(hitSpans(container)).toEqual(["café"]);
+    expect(container.textContent).toBe("café-notes");
+  });
 });

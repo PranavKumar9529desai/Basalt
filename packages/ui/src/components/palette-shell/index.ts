@@ -3,10 +3,14 @@ export {
   PaletteShellFooter,
   type PaletteShellFooterHint,
   type PaletteShellFooterProps,
-  PaletteShellInput,
-  type PaletteShellInputProps,
+  PaletteShellHeader,
+  type PaletteShellHeaderProps,
   type PaletteShellProps,
 } from "./PaletteShell";
+export {
+  PaletteCloseButton,
+  type PaletteCloseButtonProps,
+} from "./PaletteCloseButton";
 export {
   HighlightedText,
   type HighlightedTextProps,

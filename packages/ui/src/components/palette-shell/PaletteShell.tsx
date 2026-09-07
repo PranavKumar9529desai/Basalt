@@ -37,7 +37,7 @@ export function PaletteShell({
   );
 }
 
-export interface PaletteShellInputProps {
+export interface PaletteShellHeaderProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -45,9 +45,11 @@ export interface PaletteShellInputProps {
   isLoading?: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+  /** Trailing element after the loading spinner (e.g. PaletteCloseButton). */
+  rightAccessory?: React.ReactNode;
 }
 
-export function PaletteShellInput({
+export function PaletteShellHeader({
   value,
   onChange,
   onKeyDown,
@@ -55,7 +57,8 @@ export function PaletteShellInput({
   isLoading = false,
   inputRef,
   inputProps,
-}: PaletteShellInputProps) {
+  rightAccessory,
+}: PaletteShellHeaderProps) {
   return (
     <div className="flex items-center gap-2 px-4 py-3">
       <Input
@@ -70,6 +73,7 @@ export function PaletteShellInput({
       {isLoading && (
         <div className="w-3 h-3 border-2 border-muted-foreground border-t-primary rounded-full animate-spin" />
       )}
+      {rightAccessory}
     </div>
   );
 }

@@ -2,16 +2,15 @@ import {
   IconArrowDown,
   IconArrowUp,
   IconCornerDownLeft,
-  IconX,
 } from "@tabler/icons-react";
 import { useCommandState } from "cmdk";
 import React from "react";
 import {
+  HighlightedText as SharedHighlightedText,
+  PaletteCloseButton,
   PaletteShell,
   PaletteShellFooter,
-} from "../palette-shell/PaletteShell";
-import { HighlightedText as SharedHighlightedText } from "../palette-shell";
-import { Button } from "../ui/button";
+} from "../palette-shell";
 import {
   Command,
   CommandEmpty,
@@ -67,15 +66,7 @@ export function CommandPalette({
             // eslint-disable-next-line jsx-a11y/no-autofocus -- Intentional: focus palette input on open
             autoFocus
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            className="size-5 rounded-full bg-muted hover:bg-muted-foreground/40 transition-all flex items-center justify-center text-foreground/70 hover:text-foreground shrink-0"
-          >
-            <IconX size={10} strokeWidth={3} />
-          </Button>
+          <PaletteCloseButton onClick={() => onOpenChange(false)} />
         </div>
 
         <div className="h-px bg-border/20 mx-4" />

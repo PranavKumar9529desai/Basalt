@@ -40,6 +40,8 @@ export interface FileResult {
   path: string;
   title: string;
   score: number;
+  /** Optimal match positions as UTF-8 byte offsets into `title`. */
+  indices: number[];
 }
 
 /**

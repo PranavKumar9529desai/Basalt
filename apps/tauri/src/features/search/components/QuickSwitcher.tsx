@@ -1,8 +1,9 @@
 import {
   HighlightedText,
+  PaletteCloseButton,
   PaletteShell,
   PaletteShellFooter,
-  PaletteShellInput,
+  PaletteShellHeader,
 } from "@workspace/ui/components/palette-shell";
 import { Button } from "@workspace/ui/components/ui/button";
 import { IconFilePlus } from "@tabler/icons-react";
@@ -50,8 +51,16 @@ function ResultRow({
       ].join(" ")}
       onClick={onClick}
     >
-      <span className="text-sm font-medium truncate">
-        <HighlightedText text={displayName} query={query} />
+      <span className="text-sm font-medium text-foreground truncate">
+        <HighlightedText
+          text={displayName}
+          query={query}
+          indices={
+            result.indices && result.indices.length > 0
+              ? result.indices
+              : undefined
+          }
+        />
       </span>
       {isCanvas && (
         <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[var(--sat-accent-primary)]/20 text-[var(--sat-accent-primary)] shrink-0">
@@ -240,13 +249,14 @@ export function QuickSwitcher({ onOpen, onCreate }: QuickSwitcherProps) {
       }}
       maxWidth="sm:max-w-[650px]"
     >
-      <PaletteShellInput
+      <PaletteShellHeader
         inputRef={inputRef}
         value={switcherQuery}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Open file…"
         isLoading={isSwitcherLoading}
+        rightAccessory={<PaletteCloseButton onClick={closeSwitcher} />}
         inputProps={{
           // The palette input owns focus while the virtualized list owns the selection.
           role: "combobox",
@@ -321,20 +331,20 @@ export function QuickSwitcher({ onOpen, onCreate }: QuickSwitcherProps) {
             })}
           </div>
         )}
-      {switcherCanCreate && onCreate && (
-        <CreateNoteRow
-          query={switcherQuery.trim()}
-          isSelected={switcherSelectedIndex === switcherResults.length}
-          optionId="quick-switcher-create"
-          onClick={() => void handleCreate()}
-          disabled={isCreating}
-        />
-      )}
-      {createError && (
-        <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">
-          {createError}
-        </p>
-      )}
+        {switcherCanCreate && onCreate && (
+          <CreateNoteRow
+            query={switcherQuery.trim()}
+            isSelected={switcherSelectedIndex === switcherResults.length}
+            optionId="quick-switcher-create"
+            onClick={() => void handleCreate()}
+            disabled={isCreating}
+          />
+        )}
+        {createError && (
+          <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">
+            {createError}
+          </p>
+        )}
       </div>
 
       <PaletteShellFooter />

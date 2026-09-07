@@ -2,7 +2,7 @@ import {
   HighlightedText,
   PaletteShell,
   PaletteShellFooter,
-  PaletteShellInput,
+  PaletteShellHeader,
 } from "@workspace/ui/components/palette-shell";
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
@@ -110,7 +110,7 @@ export function TemplatePicker() {
       }}
       maxWidth="sm:max-w-[600px]"
     >
-      <PaletteShellInput
+      <PaletteShellHeader
         inputRef={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}

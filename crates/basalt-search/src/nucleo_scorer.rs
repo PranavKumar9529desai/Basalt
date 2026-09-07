@@ -57,21 +57,39 @@ impl NucleoScorer {
                     path: path.clone(),
                     title: title.clone(),
                     score: 0,
+                    indices: Vec::new(),
                 })
                 .collect();
         }
 
         let pattern = Pattern::parse(query, CaseMatching::Smart, Normalization::Smart);
         let mut char_buf: Vec<char> = Vec::new();
-        let mut scored: Vec<(u32, usize)> = Vec::new();
+        let mut scored: Vec<(u32, usize, Vec<u32>)> = Vec::new();
 
         for (idx, (_, title)) in self.items.iter().enumerate() {
             let haystack = Utf32Str::new(title.as_str(), &mut char_buf);
             // Score against the title stem (not the full path) — gives cleaner
             // fuzzy scores for short queries and matches user mental model of
             // "find file by name, not by directory". Directory context shown in UI.
-            if let Some(s) = pattern.score(haystack, &mut self.matcher) {
-                scored.push((s, idx));
+            let mut match_indices: Vec<u32> = Vec::new();
+            if let Some(score) =
+                pattern.indices(haystack, &mut self.matcher, &mut match_indices)
+            {
+                // Per-atom indices are appended unsorted (docs), may repeat.
+                match_indices.sort_unstable();
+                match_indices.dedup();
+                // Char positions -> UTF-8 byte offsets so the frontend can
+                // slice the same `title` string directly (UI works in JS
+                // strings, not char vectors).
+                let char_to_byte: Vec<u32> = title
+                    .char_indices()
+                    .map(|(byte, _)| byte as u32)
+                    .collect();
+                let byte_indices: Vec<u32> = match_indices
+                    .into_iter()
+                    .map(|i| char_to_byte[i as usize])
+                    .collect();
+                scored.push((score, idx, byte_indices));
             }
         }
 
@@ -80,12 +98,13 @@ impl NucleoScorer {
 
         scored
             .into_iter()
-            .map(|(score, idx)| {
+            .map(|(score, idx, indices)| {
                 let (path, title) = &self.items[idx];
                 FileResult {
                     path: path.clone(),
                     title: title.clone(),
                     score,
+                    indices,
                 }
             })
             .collect()
@@ -137,6 +156,7 @@ mod tests {
         let mut scorer = NucleoScorer::new(paths);
         let results = scorer.search("", 5);
         assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.indices.is_empty()));
     }
 
     #[test]
@@ -157,5 +177,38 @@ mod tests {
         scorer.add_item("/vault/my-note.md".to_string(), "Custom Title".to_string());
         let results = scorer.search("custom", 5);
         assert!(results.iter().any(|r| r.title == "Custom Title"));
+    }
+    #[test]
+    fn test_indices_reconstruct_query_chars() {
+        let paths = vec![
+            "/vault/rust-notes/borrow-checker.md".to_string(),
+            "/vault/daily/2026-04-01.md".to_string(),
+            "/vault/projects/basalt.md".to_string(),
+        ];
+        let mut scorer = NucleoScorer::new(paths);
+
+        // Consecutive prefix run — optimal alignment lands on chars 0..6.
+        let results = scorer.search("borrow", 5);
+        let first = &results[0];
+        assert_eq!(first.title, "borrow-checker");
+        assert!(first.indices.windows(2).all(|w| w[0] < w[1]));
+        let matched: String = first
+            .indices
+            .iter()
+            .map(|&b| first.title.as_bytes()[b as usize] as char)
+            .collect();
+        assert_eq!(matched, "borrow");
+
+        // Non-contiguous subsequences — byte offsets spell the query in order.
+        for q in ["owch", "rr", "bcr"] {
+            let results = scorer.search(q, 3);
+            let r = &results[0];
+            let matched: String = r
+                .indices
+                .iter()
+                .map(|&b| r.title.as_bytes()[b as usize] as char)
+                .collect();
+            assert_eq!(matched, q, "indices should spell '{q}'");
+        }
     }
 }

@@ -66,4 +66,44 @@ describe("QuickSwitcher create row", () => {
     expect(screen.getByText("Could not create note")).toBeInTheDocument();
     expect(useSearchStore.getState().isSwitcherOpen).toBe(true);
   });
+  it("the × close button dismisses the switcher", () => {
+    vi.mocked(invoke).mockResolvedValue([]);
+    act(() => {
+      useSearchStore.getState().openSwitcher();
+    });
+    render(<QuickSwitcher onOpen={vi.fn()} onCreate={vi.fn()} />);
+    const close = screen.getByRole("button", { name: "Close" });
+    act(() => {
+      fireEvent.click(close);
+    });
+    expect(useSearchStore.getState().isSwitcherOpen).toBe(false);
+  });
+
+  it("highlights result rows with the nucleo-provided indices", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(invoke).mockResolvedValue([
+        {
+          path: "/vault/borrow-checker.md",
+          title: "borrow-checker",
+          score: 100,
+          indices: [0, 1, 2, 3, 4, 5],
+        },
+      ]);
+      act(() => {
+        useSearchStore.getState().openSwitcher();
+      });
+      render(<QuickSwitcher onOpen={vi.fn()} onCreate={vi.fn()} />);
+      await act(async () => {
+        fireEvent.change(screen.getByRole("combobox"), {
+          target: { value: "borrow" },
+        });
+        vi.advanceTimersByTime(200);
+      });
+      const hit = screen.getByText("borrow");
+      expect(hit.className).toContain("underline");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

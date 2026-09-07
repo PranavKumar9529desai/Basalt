@@ -71,4 +71,9 @@ pub struct FileResult {
     pub title: String,
     /// Nucleo alignment score (higher = better match).
     pub score: u32,
+    /// Optimal Smith-Waterman alignment positions (nucleo `Pattern::indices`,
+    /// sorted + deduped) as UTF-8 byte offsets into `title`. Empty for empty
+    /// queries (unranked rows). Drives exact hit highlighting.
+    #[serde(default)]
+    pub indices: Vec<u32>,
 }

@@ -29,6 +29,7 @@ const file = (path: string, title: string): FileResult => ({
   path,
   title,
   score: 1,
+  indices: [],
 });
 
 const initial = {
