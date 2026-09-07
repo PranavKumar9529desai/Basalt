@@ -22,7 +22,9 @@ describe("embed chip reveal — live mode", () => {
     const doc = "![[attachments/photo.png]]";
     const { report } = testMarkdownFixture(doc, { selection: 20 });
     // No replace for the embed span — raw syntax stays editable.
-    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(false);
+    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(
+      false,
+    );
   });
 
   it("renders chips for non-image assets (video, pdf) too", () => {
@@ -43,7 +45,9 @@ describe("embed chip reveal — live mode", () => {
   it("does not chip plain wikilinks", () => {
     const doc = "word [[Note]] word";
     const { report } = testMarkdownFixture(doc, { selection: 0 });
-    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(false);
+    expect(report.replaces.some((r) => r.widget === "EmbedChipWidget")).toBe(
+      false,
+    );
   });
 });
 
@@ -65,7 +69,9 @@ describe("embed chip — reading mode (never raw, no chip)", () => {
 
 describe("live-preview real media (ADR-034 part C)", () => {
   const resolvable = resolveAssetFacet.of((target: string) =>
-    target.endsWith(".png") || target.endsWith(".mp4") || target.endsWith(".mp3")
+    target.endsWith(".png") ||
+    target.endsWith(".mp4") ||
+    target.endsWith(".mp3")
       ? `asset:///vault/${target}`
       : null,
   );
@@ -117,7 +123,8 @@ describe("live-preview real media (ADR-034 part C)", () => {
     });
     expect(
       onLine.report.replaces.some(
-        (r) => r.widget === "EmbedChipWidget" || r.widget === "EmbedMediaWidget",
+        (r) =>
+          r.widget === "EmbedChipWidget" || r.widget === "EmbedMediaWidget",
       ),
     ).toBe(false);
     const offLine = testMarkdownFixture("line above\n![[ghost.png]]", {

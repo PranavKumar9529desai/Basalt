@@ -11,11 +11,12 @@
  */
 
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { syntaxTree, ensureSyntaxTree } from "@codemirror/language";
 import {
-  syntaxTree,
-  ensureSyntaxTree,
-} from "@codemirror/language";
-import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
+  EditorState,
+  EditorSelection,
+  type Extension,
+} from "@codemirror/state";
 import type { Tree } from "@lezer/common";
 import { createBasaltGrammar } from "../../src/syntax/registry";
 
@@ -77,10 +78,7 @@ export function parseMarkdown(
   const cursors = stripped?.cursors ?? [];
 
   let selection: { anchor: number; head: number } | undefined;
-  if (
-    opts.selection !== undefined &&
-    typeof opts.selection !== "number"
-  ) {
+  if (opts.selection !== undefined && typeof opts.selection !== "number") {
     selection = opts.selection;
   } else if (opts.selection !== undefined) {
     selection = { anchor: opts.selection, head: opts.selection };

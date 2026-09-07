@@ -8,13 +8,13 @@
 
 All five parts shipped on `feat/adr34-embed-rendering` (base branch `main`):
 
-| Part | What shipped | Key files |
-| ---- | ------------ | --------- |
-| A | Loopback HTTP media server (random port, Range/206, path-traversal guard, 64 KiB streaming) + platform-aware `resolveAsset` | `apps/tauri/src-tauri/src/commands/media.rs`, `apps/tauri/src/app-shell/mediaServer.ts`, `apps/tauri/src/app-shell/useLeafServices.ts` |
-| B | Table cells render `![[…]]` as real `<img>/<video>/<audio>`; `.cm-table-link[data-name]` on links + media | `packages/editor/src/block-widgets/table-widget.ts` |
-| C | Live preview renders real media in every caret state (Obsidian parity) | `packages/editor/src/preview/embeds.ts`, `packages/editor/src/input/embed-media.ts` (`buildEmbedWidget`) |
-| D | Reading-mode link clicks slice `[[…]]` via syntax offsets; table links navigate | `packages/editor/src/editor.ts`, `packages/editor/src/syntax/wiki-links.ts` (`targetFromWikiLinkNode`) |
-| E | Extension-less stems resolve via unique case-insensitive filename match | `apps/tauri/src/app-shell/useLeafServices.ts` |
+| Part | What shipped                                                                                                                | Key files                                                                                                                              |
+| ---- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| A    | Loopback HTTP media server (random port, Range/206, path-traversal guard, 64 KiB streaming) + platform-aware `resolveAsset` | `apps/tauri/src-tauri/src/commands/media.rs`, `apps/tauri/src/app-shell/mediaServer.ts`, `apps/tauri/src/app-shell/useLeafServices.ts` |
+| B    | Table cells render `![[…]]` as real `<img>/<video>/<audio>`; `.cm-table-link[data-name]` on links + media                   | `packages/editor/src/block-widgets/table-widget.ts`                                                                                    |
+| C    | Live preview renders real media in every caret state (Obsidian parity)                                                      | `packages/editor/src/preview/embeds.ts`, `packages/editor/src/input/embed-media.ts` (`buildEmbedWidget`)                               |
+| D    | Reading-mode link clicks slice `[[…]]` via syntax offsets; table links navigate                                             | `packages/editor/src/editor.ts`, `packages/editor/src/syntax/wiki-links.ts` (`targetFromWikiLinkNode`)                                 |
+| E    | Extension-less stems resolve via unique case-insensitive filename match                                                     | `apps/tauri/src/app-shell/useLeafServices.ts`                                                                                          |
 
 Deliberate deviations from the plan above — documented for future readers:
 
@@ -94,11 +94,11 @@ codecs than WebKitGTK. Note: on macOS (WKWebView) and Windows (WebView2/Chromium
 
 Upstream mitigations:
 
-| Approach | Status | Notes |
-| -------- | ------ | ----- |
-| GStreamer plugin handling `asset://` | tauri PR #14402 (open), bundler PR #15965 | Not merged/released; needs `.so` in GStreamer search path + `WEBKIT_GST_ALLOWED_URI_PROTOCOLS="asset"` env |
-| Bundle Media Framework (`bundleMediaFramework`) | Exists in Tauri 2 bundler | Bundles GStreamer *plugins* into AppImage, does **not** teach GStreamer the `asset://` scheme — does not fix this bug |
-| Serve files over localhost HTTP | Docs-recommended workaround | GStreamer/WebKit plays `http://127.0.0.1:port/…` with correct Range/206 — this is the reliable fix |
+| Approach                                        | Status                                    | Notes                                                                                                                 |
+| ----------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| GStreamer plugin handling `asset://`            | tauri PR #14402 (open), bundler PR #15965 | Not merged/released; needs `.so` in GStreamer search path + `WEBKIT_GST_ALLOWED_URI_PROTOCOLS="asset"` env            |
+| Bundle Media Framework (`bundleMediaFramework`) | Exists in Tauri 2 bundler                 | Bundles GStreamer _plugins_ into AppImage, does **not** teach GStreamer the `asset://` scheme — does not fix this bug |
+| Serve files over localhost HTTP                 | Docs-recommended workaround               | GStreamer/WebKit plays `http://127.0.0.1:port/…` with correct Range/206 — this is the reliable fix                    |
 
 ### 2. Table embeds never render because the table block widget owns the whole range
 
@@ -230,7 +230,7 @@ Rework `readingLinkHandler` (`editor.ts:290`) to resolve the link target from
 - On click, compute `posAtCoords({x,y})`, `syntaxTree(state).resolveInner(pos)`,
   walk out to a `WikiLink` node, and slice `doc.sliceString(from + 2, to - 2)`
   (stripping `[[` `]]` and honoring `|alias`/`#anchor` via `.split("|")[0]
-  .split("#")[0]`).
+.split("#")[0]`).
 - Bind the same handler to `.cm-table-link` spans (using `data-name` from B) so
   table-internal links navigate.
 - Handle editor-alias `[[Note|Display]]` → navigate to `Note`.
@@ -301,7 +301,7 @@ against the vault tree (case-insensitive, extension-less stems):
    `EmbedMediaWidget` (media always, no caret gating for valid targets); chip
    only for `other`/unresolvable. Honor `resolveAssetFacet` returning `null`.
 5. `packages/editor/src/input/embed-media.ts`: export a `buildEmbedWidget(target,
-   url, view)` factory usable by the walk and the plugin (DRY); keep plugin.
+url, view)` factory usable by the walk and the plugin (DRY); keep plugin.
 6. `packages/editor/src/block-widgets/table-widget.ts`: `renderInlineCell`
    becomes `renderInlineCell(view, text)` with a `![[…]]` media branch
    (`resolveAssetFacet` read from `view.state`); `.cm-table-link` gets

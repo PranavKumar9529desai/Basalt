@@ -239,11 +239,9 @@ describe("split pane actions", () => {
     const a = store.getState().openPinned({ path: "a.md" });
     const b = store.getState().openPinned({ path: "b.md" });
 
-    store.getState().moveTabToNewPane(
-      a,
-      store.getState().activePaneId,
-      "vertical",
-    );
+    store
+      .getState()
+      .moveTabToNewPane(a, store.getState().activePaneId, "vertical");
 
     const leaves = collectLeaves(store.getState().root);
     expect(leaves).toHaveLength(2);
@@ -391,16 +389,11 @@ describe("split pane actions", () => {
         },
       },
     }));
-    expect(
-      findLeafByTab(store.getState().root, "tab:view://graph"),
-    ).toBeNull();
+    expect(findLeafByTab(store.getState().root, "tab:view://graph")).toBeNull();
 
     store.getState().openView("graph", { title: "Graph" });
 
-    const leaf = findLeaf(
-      store.getState().root,
-      store.getState().activePaneId,
-    );
+    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
     expect(leaf?.tabGroup.tabIds).toContain("tab:view://graph");
     expect(leaf?.tabGroup.activeTabId).toBe("tab:view://graph");
   });
@@ -413,10 +406,7 @@ describe("split pane actions", () => {
 
     const id = store.getState().openPinned({ path: "b.md" });
 
-    const leaf = findLeaf(
-      store.getState().root,
-      store.getState().activePaneId,
-    );
+    const leaf = findLeaf(store.getState().root, store.getState().activePaneId);
     expect(leaf).not.toBeNull();
     expect(store.getState().activePaneId).toBe(leaf?.id);
     expect(leaf?.tabGroup.tabIds).toContain(id);
@@ -513,12 +503,9 @@ describe("split pane actions", () => {
       store.getState().openPinned({ path: "a.md" });
       const paneId = store.getState().activePaneId;
 
-      store.getState().moveTabToNewPane(
-        "tab:a.md",
-        paneId,
-        "horizontal",
-        "before",
-      );
+      store
+        .getState()
+        .moveTabToNewPane("tab:a.md", paneId, "horizontal", "before");
 
       const root = store.getState().root;
       expect(root.type).toBe("split");
@@ -530,9 +517,9 @@ describe("split pane actions", () => {
           expect(first.tabGroup.tabIds).toEqual(["tab:a.md"]);
         }
         // The original (now empty) leaf trails behind.
-        expect(
-          collectLeaves(store.getState().root)[1].tabGroup.tabIds,
-        ).toEqual([]);
+        expect(collectLeaves(store.getState().root)[1].tabGroup.tabIds).toEqual(
+          [],
+        );
       }
     });
   });

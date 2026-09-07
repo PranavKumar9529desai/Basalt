@@ -318,7 +318,12 @@ export function useTabDnD() {
       )?.id;
       if (!sourcePaneId) return;
 
-      pendingPointer = { tabId, sourcePaneId, startX: event.clientX, startY: event.clientY };
+      pendingPointer = {
+        tabId,
+        sourcePaneId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
 
       const onPointerMove = (e: globalThis.PointerEvent) => {
         if (!pendingPointer) return;
@@ -428,7 +433,10 @@ export function useTabDnD() {
         clearDragState();
         return;
       }
-      const targetLeaf = findLeafByTab(useTabsStore.getState().root, targetTabId);
+      const targetLeaf = findLeafByTab(
+        useTabsStore.getState().root,
+        targetTabId,
+      );
       if (!targetLeaf) {
         clearDragState();
         return;

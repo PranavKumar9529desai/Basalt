@@ -3,7 +3,7 @@
 **Status:** Accepted (Amended 2026-09-06: Architecture revised from custom WebGL2 to `@xyflow/react` + Rust compute)  
 **Date:** 2026-09-05  
 **Amended:** 2026-09-06  
-**Extends:** ADR-018 (registry-driven workbench), ADR-020 (desktop-tier performance), ADR-029 (single renderer), ADR-032 (split pane layout tree), ADR-034 (embed rendering)  
+**Extends:** ADR-018 (registry-driven workbench), ADR-020 (desktop-tier performance), ADR-029 (single renderer), ADR-032 (split pane layout tree), ADR-034 (embed rendering)
 
 ---
 
@@ -12,7 +12,9 @@
 Obsidian Canvas (Dec 2022) is an infinite 2D spatial surface for laying out notes, text cards, and media, linked by directional connections and visual groups. It is built on the open **JSON Canvas v1.0 spec** (MIT, [jsoncanvas.org](https://jsoncanvas.org/)), making `.canvas` files fully interoperable across tools.
 
 ### Why Obsidian Canvas Stumbles at Scale
+
 Community profiling and stress testing demonstrate that Obsidian Canvas degrades rapidly on dense boards:
+
 1. **Unvirtualized DOM Mounting Churn:** Viewport observers continuously mount and unmount cards as they cross screen boundaries during pan/zoom, causing repeated React/DOM initialization and severe frame stutter.
 2. **Image Re-rasterization on Zoom:** Chromium re-rasterizes high-res images from source on every zoom animation frame (~1.2 GB decoded RGBA on a 100-image board).
 3. **Heavy Editor Overhead:** Obsidian mounts a full CodeMirror 6 `EditorView` inside every card simultaneously, consuming massive memory and event listener pools.
@@ -66,6 +68,7 @@ We adopt **`@xyflow/react` (React Flow)** for the Canvas UI layer, backed by our
 ```
 
 ### Division of Responsibilities
+
 1. **Rust Backend (`crates/basalt-canvas`):**
    - Implements JSON Canvas v1.0 schema (`CanvasDocument`, `CanvasNode`, `CanvasEdge`, `CanvasGroup`).
    - Fast native parse, validate, and serialize off the JS main thread.
@@ -102,15 +105,16 @@ To prevent the performance degradation seen in Obsidian Canvas, the implementati
 ## 5. Detailed Specification for Implementation
 
 ### A. Data Mapper (`features/canvas/lib/mapper.ts`)
+
 Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/react`:
 
-* **Nodes (`CanvasNode` / `CanvasGroup` $\leftrightarrow$ XYFlow `Node`):**
+- **Nodes (`CanvasNode` / `CanvasGroup` $\leftrightarrow$ XYFlow `Node`):**
   - `id`: string identifier preserved 1:1.
   - `type`: `"text"` $\rightarrow$ `"canvasText"`, `"file"` $\rightarrow$ `"canvasFile"`, `"link"` $\rightarrow$ `"canvasLink"`, `"group"` $\rightarrow$ `"canvasGroup"`.
   - `position`: `{ x: node.x, y: node.y }`.
   - `style`: `{ width: node.width, height: node.height, zIndex: type === "group" ? -1 : 1 }`.
   - `data`: `{ text, file, url, label, color }`.
-* **Edges (`CanvasEdge` $\leftrightarrow$ XYFlow `Edge`):**
+- **Edges (`CanvasEdge` $\leftrightarrow$ XYFlow `Edge`):**
   - `id`: string identifier.
   - `source`: `edge.fromNode`, `sourceHandle`: `edge.fromSide ?? "right"`.
   - `target`: `edge.toNode`, `targetHandle`: `edge.toSide ?? "left"`.
@@ -119,6 +123,7 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
   - `markerEnd`: `{ type: MarkerType.ArrowClosed, color: edgeColor }`.
 
 ### B. Node Components (`features/canvas/nodes/`)
+
 1. **`TextCardNode.tsx`**:
    - Resizer: `<NodeResizer minWidth={160} minHeight={80} isVisible={selected} />`.
    - Handles: 4 pairs of overlapping source/target handles on `Top`, `Right`, `Bottom`, `Left`. Revealed on card hover or selection.
@@ -132,11 +137,13 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
    - Web bookmark card with URL, title, and external link icon.
 
 ### C. Edge Component (`features/canvas/edges/CanvasEdge.tsx`)
+
 - Renders smooth cubic Bezier path using XYFlow's `getBezierPath`.
 - Includes a centered, clickable label pill for setting/editing edge text.
 - Connects flush to source/target handles with closed arrow markers.
 
 ### D. View & Chrome (`features/canvas/CanvasView.tsx`)
+
 - Wraps board in `<ReactFlowProvider>` and `<ReactFlow>`:
   - `<Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />` (Obsidian dot grid).
   - Floating `CanvasToolbar`: Add text card, add note, add group, zoom in, zoom out, zoom to fit.
@@ -144,6 +151,7 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
   - Auto-save: Debounced write back to `.canvas` file via `save_canvas` on node drag end, resize end, text edit commit, or connection creation.
 
 ### E. Smart Alignment Guidelines (`features/canvas/lib/guidelines.ts`)
+
 - **Magnetic Snapping (Figma/Canva-Style):** During card drag (`onNodeDrag`), inspect bounding boxes of neighboring cards along 6 reference axes:
   - Vertical alignments: `Left`, `CenterX`, `Right`.
   - Horizontal alignments: `Top`, `CenterY`, `Bottom`.
@@ -154,6 +162,7 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
 ---
 
 ## 6. Deprecation & Cleanup
+
 - Deprecate `packages/canvas-viewport` (remove from active rendering path).
 - Remove obsolete imperative geometry and overlay files:
   - `apps/tauri/src/features/canvas/lib/scene.ts`
@@ -166,12 +175,14 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
 ## 7. Verification Plan
 
 ### Automated Verification
+
 - Unit tests for `lib/mapper.ts` asserting lossless round-trip conversion:
   `JSON Canvas document -> XYFlow nodes/edges -> JSON Canvas document`.
 - Type check: `bunx tsc --noEmit` from `apps/tauri/`.
 - Lint: `bun run lint` clean across workspace.
 
 ### Manual UX Verification
+
 1. **Curved Arrows:** Connect Card A (right) to Card B (left). Verify smooth S-curve with arrowhead touching Card B's border cleanly.
 2. **Connection Handles:** Hover over a card; verify 4 circular handles appear. Drag from a handle to another card's handle and verify snapping.
 3. **Resizing:** Select a card; verify 8-point resize handles appear and resize smoothly with minimum bounds.

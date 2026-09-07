@@ -13,7 +13,11 @@ interface NotePickerModalProps {
   onSelect: (note: { name: string; path: string }) => void;
 }
 
-export function NotePickerModal({ isOpen, onClose, onSelect }: NotePickerModalProps) {
+export function NotePickerModal({
+  isOpen,
+  onClose,
+  onSelect,
+}: NotePickerModalProps) {
   const [query, setQuery] = useState("");
   const [notes, setNotes] = useState<NoteSuggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -53,10 +57,14 @@ export function NotePickerModal({ isOpen, onClose, onSelect }: NotePickerModalPr
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => (notes.length > 0 ? (prev + 1) % notes.length : 0));
+        setSelectedIndex((prev) =>
+          notes.length > 0 ? (prev + 1) % notes.length : 0,
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex((prev) => (notes.length > 0 ? (prev - 1 + notes.length) % notes.length : 0));
+        setSelectedIndex((prev) =>
+          notes.length > 0 ? (prev - 1 + notes.length) % notes.length : 0,
+        );
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (notes[selectedIndex]) {
@@ -68,7 +76,7 @@ export function NotePickerModal({ isOpen, onClose, onSelect }: NotePickerModalPr
         onClose();
       }
     },
-    [notes, selectedIndex, onSelect, onClose]
+    [notes, selectedIndex, onSelect, onClose],
   );
 
   if (!isOpen) return null;
@@ -87,7 +95,10 @@ export function NotePickerModal({ isOpen, onClose, onSelect }: NotePickerModalPr
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] shadow-2xl overflow-hidden flex flex-col">
         {/* Search header */}
         <div className="flex items-center px-4 py-3 border-b border-[var(--sat-layout-border)] gap-2">
-          <IconSearch size={18} className="text-[var(--sat-text-muted)] shrink-0" />
+          <IconSearch
+            size={18}
+            className="text-[var(--sat-text-muted)] shrink-0"
+          />
           <input
             ref={inputRef}
             type="text"
@@ -130,8 +141,13 @@ export function NotePickerModal({ isOpen, onClose, onSelect }: NotePickerModalPr
                   }}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <IconFileText size={16} className="text-[var(--sat-accent-primary)] shrink-0" />
-                  <span className="truncate flex-1">{note.name.replace(/\.md$/, "")}</span>
+                  <IconFileText
+                    size={16}
+                    className="text-[var(--sat-accent-primary)] shrink-0"
+                  />
+                  <span className="truncate flex-1">
+                    {note.name.replace(/\.md$/, "")}
+                  </span>
                   <span className="text-xs text-[var(--sat-text-muted)] truncate max-w-[140px]">
                     {note.path.split("/").slice(-2).join("/")}
                   </span>

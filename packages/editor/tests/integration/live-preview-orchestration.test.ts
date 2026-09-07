@@ -19,7 +19,11 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
+import {
+  EditorState,
+  EditorSelection,
+  type Extension,
+} from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { basaltMarkdownExtensions } from "../_helpers/parse-markdown";
 import {
@@ -27,7 +31,10 @@ import {
   livePreviewPlugin,
   requestPreviewRebuild,
 } from "../../src/preview/live-preview";
-import { TABLE_BLOCK_THEME, tableBlockSpec } from "../../src/block-widgets/table-widget";
+import {
+  TABLE_BLOCK_THEME,
+  tableBlockSpec,
+} from "../../src/block-widgets/table-widget";
 import { blockWidgetSpecsFacet } from "../../src/block-widgets/registry";
 
 const TABLE = "\n| A | B |\n|---|---|\n| 1 | 2 |";
@@ -55,7 +62,10 @@ const settle = () => new Promise((r) => setTimeout(r, 80));
 /** The budgeted parse takes several idle passes to cover a huge doc. Meet the
  * deferred rebuilds deterministically instead of betting on wall-clock timing:
  * poll until the field reports a complete parse (a generous cap for slow CI). */
-async function untilComplete(view: EditorView, timeoutMs = 2000): Promise<void> {
+async function untilComplete(
+  view: EditorView,
+  timeoutMs = 2000,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (
     !view.state.field(livePreviewField, false)?.complete &&
@@ -186,6 +196,8 @@ describe("live-preview field update paths", () => {
     // transaction from the test.
     await untilRebuilt(view, wm0);
     // The table at the doc end survived the rebuild.
-    expect(view.state.field(livePreviewField).widgetModels["table-block"]?.length).toBe(1);
+    expect(
+      view.state.field(livePreviewField).widgetModels["table-block"]?.length,
+    ).toBe(1);
   });
 });

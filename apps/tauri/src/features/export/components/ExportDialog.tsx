@@ -40,10 +40,7 @@ function SmartCheckbox({
         onChange={(e) => onChange(e.target.checked)}
         className="accent-[var(--sat-accent-primary)]"
       />
-      <label
-        htmlFor={id}
-        className="text-xs text-[var(--sat-text-secondary)]"
-      >
+      <label htmlFor={id} className="text-xs text-[var(--sat-text-secondary)]">
         {label}
       </label>
     </div>
@@ -51,8 +48,15 @@ function SmartCheckbox({
 }
 
 export function ExportDialog({ previewDeps }: ExportDialogProps) {
-  const { isOpen, noteContent, noteName, close, setOptions, options, contentFeatures } =
-    useExportStore();
+  const {
+    isOpen,
+    noteContent,
+    noteName,
+    close,
+    setOptions,
+    options,
+    contentFeatures,
+  } = useExportStore();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 

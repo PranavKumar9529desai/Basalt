@@ -330,7 +330,13 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
 
           {/* Icon */}
           <span className="mr-1.5 flex items-center shrink-0">
-            {isFolder ? <FolderIcon /> : isCanvas ? <CanvasIcon /> : <FileIcon />}
+            {isFolder ? (
+              <FolderIcon />
+            ) : isCanvas ? (
+              <CanvasIcon />
+            ) : (
+              <FileIcon />
+            )}
           </span>
 
           {/* Label or inline edit input */}

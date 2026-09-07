@@ -63,7 +63,8 @@ export function contextMenuExtension(
           text,
           isWord: text.length > 0 && !text.includes(" "),
         },
-        inTable: tableNodeAt(view.state, view.state.selection.main.head) !== null,
+        inTable:
+          tableNodeAt(view.state, view.state.selection.main.head) !== null,
       });
 
       return true;

@@ -14,7 +14,10 @@
  *    QuoteMark also absorb the trailing space.
  */
 import { describe, expect, it } from "vitest";
-import { HIDE_MARKS, handleMarkHidingNode } from "../../src/preview/mark-hiding";
+import {
+  HIDE_MARKS,
+  handleMarkHidingNode,
+} from "../../src/preview/mark-hiding";
 import { makeContext, makeUnfocusedContext } from "../_helpers/mock-context";
 import { makeCollector } from "../_helpers/mock-collector";
 import type { SyntaxNodeRef } from "@lezer/common";
@@ -44,17 +47,25 @@ describe("handleMarkHidingNode on the active line", () => {
     // doc: "#Headers" ; HeaderMark = "#" at 0..1, trailing space at 1
     const { ctx } = makeContext("# Headers", { headPos: 0 });
     const collector = makeCollector();
-    const handled = handleMarkHidingNode(nodeRef(0, 1, "HeaderMark"), ctx, collector);
+    const handled = handleMarkHidingNode(
+      nodeRef(0, 1, "HeaderMark"),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(true);
     // skipTrailingSpaces extends to index 2 (the space)
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-block-mark" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-block-mark" },
+    ]);
   });
 
   it("mutes the QuoteMark and its trailing space", () => {
     const { ctx } = makeContext("> quote", { headPos: 2 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "QuoteMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-block-mark" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-block-mark" },
+    ]);
   });
 
   it("mutes an inline marker without trailing space (cm-live-inline-mark)", () => {
@@ -62,14 +73,18 @@ describe("handleMarkHidingNode on the active line", () => {
     const { ctx } = makeContext("*text*", { headPos: 0 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "EmphasisMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 1, className: "cm-live-inline-mark" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 1, className: "cm-live-inline-mark" },
+    ]);
   });
 
   it("mutes a LinkMark / CodeMark the same way", () => {
     const { ctx } = makeContext("[a](b)", { headPos: 0 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "LinkMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 1, className: "cm-live-inline-mark" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 1, className: "cm-live-inline-mark" },
+    ]);
   });
 });
 
@@ -79,21 +94,27 @@ describe("handleMarkHidingNode on a non-active line", () => {
     const { ctx } = makeContext("# Headers\nbody", { headPos: 10 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "HeaderMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-hide" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-hide" },
+    ]);
   });
 
   it("hides a QuoteMark and its trailing space", () => {
     const { ctx } = makeContext("> quote\nbody", { headPos: 10 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "QuoteMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-hide" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-hide" },
+    ]);
   });
 
   it("hides an inline marker without trailing space", () => {
     const { ctx } = makeContext("**bold**\nbody", { headPos: 10 });
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 2, "EmphasisMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-hide" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-hide" },
+    ]);
   });
 });
 
@@ -102,7 +123,9 @@ describe("handleMarkHidingNode unfocused", () => {
     const { ctx } = makeUnfocusedContext("# heading");
     const collector = makeCollector();
     handleMarkHidingNode(nodeRef(0, 1, "HeaderMark"), ctx, collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 2, className: "cm-live-hide" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 2, className: "cm-live-hide" },
+    ]);
   });
 });
 
@@ -110,7 +133,11 @@ describe("handleMarkHidingNode non-marker", () => {
   it("returns false and adds nothing for non-marker nodes", () => {
     const { ctx } = makeContext("plain");
     const collector = makeCollector();
-    const handled = handleMarkHidingNode(nodeRef(0, 5, "Paragraph"), ctx, collector);
+    const handled = handleMarkHidingNode(
+      nodeRef(0, 5, "Paragraph"),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.marks).toHaveLength(0);
   });

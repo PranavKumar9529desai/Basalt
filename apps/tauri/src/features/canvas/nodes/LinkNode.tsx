@@ -1,6 +1,11 @@
 import { memo, useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
-import { IconWorld, IconExternalLink, IconPencil, IconCheck } from "@tabler/icons-react";
+import {
+  IconWorld,
+  IconExternalLink,
+  IconPencil,
+  IconCheck,
+} from "@tabler/icons-react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
@@ -44,7 +49,8 @@ function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
     }
   }, [url]);
 
-  const hasValidUrl = url.trim() !== "" && url.trim() !== "https://" && url.trim() !== "http://";
+  const hasValidUrl =
+    url.trim() !== "" && url.trim() !== "https://" && url.trim() !== "http://";
 
   const commitUrl = useCallback(() => {
     setIsEditing(false);
@@ -65,7 +71,7 @@ function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
         setInputUrl(url);
       }
     },
-    [commitUrl, url]
+    [commitUrl, url],
   );
 
   const handleOpen = (e?: React.MouseEvent) => {
@@ -84,7 +90,12 @@ function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
 
   return (
     <div className="group relative w-full h-full">
-      <NodeResizer minWidth={180} minHeight={80} isVisible={selected} onResizeEnd={() => canvas.saveNow()} />
+      <NodeResizer
+        minWidth={180}
+        minHeight={80}
+        isVisible={selected}
+        onResizeEnd={() => canvas.saveNow()}
+      />
       <CardHandles borderColor={borderColor} selected={selected} />
 
       <div
@@ -92,12 +103,15 @@ function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
         style={{ borderColor, contain: "layout style paint" }}
       >
         {/* Header bar */}
-        <div 
+        <div
           className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/60 select-none cursor-grab active:cursor-grabbing"
           onDoubleClick={startEditing}
         >
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <IconWorld size={15} className="text-[var(--sat-accent-blue)] shrink-0" />
+            <IconWorld
+              size={15}
+              className="text-[var(--sat-accent-blue)] shrink-0"
+            />
             <span className="text-xs font-semibold truncate text-[var(--sat-text-primary)]">
               {domain || "Web Link"}
             </span>

@@ -11,7 +11,10 @@ function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
   const text = (data.text as string) || "";
 
-  const borderColor = resolveCanvasColor(data.color as string | undefined, "var(--sat-layout-border)");
+  const borderColor = resolveCanvasColor(
+    data.color as string | undefined,
+    "var(--sat-layout-border)",
+  );
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -23,7 +26,7 @@ function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
       setIsEditing(false);
       canvas.updateText(id, newText);
     },
-    [id, canvas]
+    [id, canvas],
   );
 
   const handleCancel = useCallback(() => {
@@ -32,10 +35,15 @@ function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
 
   return (
     <div className="group relative w-full h-full">
-      <NodeResizer minWidth={160} minHeight={80} isVisible={selected} onResizeEnd={() => canvas.saveNow()} />
+      <NodeResizer
+        minWidth={160}
+        minHeight={80}
+        isVisible={selected}
+        onResizeEnd={() => canvas.saveNow()}
+      />
       <CardHandles borderColor={borderColor} selected={selected} />
 
-      <div 
+      <div
         className={`w-full h-full rounded-md border-2 bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)] shadow-sm overflow-hidden flex flex-col ${isEditing ? "cursor-text" : "cursor-grab active:cursor-grabbing"}`}
         style={{ borderColor, contain: "layout style paint" }}
         onDoubleClick={!isEditing ? handleDoubleClick : undefined}

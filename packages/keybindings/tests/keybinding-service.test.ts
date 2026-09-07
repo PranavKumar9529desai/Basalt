@@ -43,7 +43,11 @@ describe("KeybindingService — when-clause resolution", () => {
   it("falls through to an unconditional binding when no when-clause matches", () => {
     service.registerAction("a", onAction);
     service.registerAction("b", onAction);
-    service.register({ key: "Ctrl+1", when: "viewMode == 'reading'", action: "a" });
+    service.register({
+      key: "Ctrl+1",
+      when: "viewMode == 'reading'",
+      action: "a",
+    });
     service.register({ key: "Ctrl+1", action: "b" });
 
     expect(service.resolve(ctrlKey("1"))?.action).toBe("b");

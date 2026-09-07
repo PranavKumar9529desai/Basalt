@@ -15,26 +15,26 @@ second frontend rendering parser since ADR-029 deleted `Reading.tsx`.
 That is the right architecture — but it was enforced by luck, not by structure.
 Grammar coverage was ad-hoc:
 
-| Syntax       | Custom Lezer node? | Why it was added                                   | Correct? |
-| ------------ | ------------------ | -------------------------------------------------- | -------- |
-| Frontmatter  | ✅ `YAMLFrontMatter` | `---` collides with `HorizontalRule`               | ✅       |
-| Highlight    | ✅ `Highlight`       | `==` collides with `Emphasis`                      | ✅       |
-| Wikilink     | ✅ `WikiLink`        | `[[` collides with `Link` — **only the bare half** | ⚠️ 🚫      |
-| Embed `![[` | ❌ (never a node)    | None — the gap was never noticed                   | ❌       |
-| Tables       | ✅ `Table` (GFM ext)  | –                                                  | ✅       |
-| HTML blocks  | ✅ `HTMLBlock` (base) | –                                                  | ✅       |
-| DQL blocks   | ✅ `FencedCode` (base)| –                                                  | ✅       |
+| Syntax      | Custom Lezer node?     | Why it was added                                   | Correct? |
+| ----------- | ---------------------- | -------------------------------------------------- | -------- |
+| Frontmatter | ✅ `YAMLFrontMatter`   | `---` collides with `HorizontalRule`               | ✅       |
+| Highlight   | ✅ `Highlight`         | `==` collides with `Emphasis`                      | ✅       |
+| Wikilink    | ✅ `WikiLink`          | `[[` collides with `Link` — **only the bare half** | ⚠️ 🚫    |
+| Embed `![[` | ❌ (never a node)      | None — the gap was never noticed                   | ❌       |
+| Tables      | ✅ `Table` (GFM ext)   | –                                                  | ✅       |
+| HTML blocks | ✅ `HTMLBlock` (base)  | –                                                  | ✅       |
+| DQL blocks  | ✅ `FencedCode` (base) | –                                                  | ✅       |
 
 The **Image parser collision** is the load-bearing example. `![[image.png]]`
 was swallowed by the built-in `Image` parser (`![` …) before the wikilink
 inline parser (`before: "Link"`) ever ran, so the tree contained a nested plain
 `Link` and **no `WikiLink` node**. `scanEmbedWikiLinks` — the scanner behind
-edit-mode embed chips *and* reading-mode embed media (ADR-029) — looks for
+edit-mode embed chips _and_ reading-mode embed media (ADR-029) — looks for
 `WikiLink` nodes preceded by a literal `!`, so it matched nothing: embeds
 silently stopped rendering. It worked before ADR-029 only because the deleted
 `Reading.tsx` rendered embeds with a raw regex, bypassing the grammar entirely.
 
-**Root failure:** there was no place that *forced* every Basalt Markdown syntax
+**Root failure:** there was no place that _forced_ every Basalt Markdown syntax
 to declare itself — no equivalent of what ADR-018 (view/leaf/command registries)
 and ADR-022 (block-widget registry) already do for their surfaces. New syntax
 was bolted onto `editor.ts` by hand, with no coverage contract.

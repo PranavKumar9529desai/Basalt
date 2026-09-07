@@ -35,7 +35,9 @@ describe("updateCellText", () => {
   it("escapes pipes and handles newlines in cell content", () => {
     const result = updateCellText(TABLE, 1, 0, "line1\nline2|extra");
     expect(result).not.toBeNull();
-    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| line1 line2\\|extra | 2 |");
+    expect(result!.text).toBe(
+      "| A | B |\n| --- | --- |\n| line1 line2\\|extra | 2 |",
+    );
   });
 });
 
@@ -44,7 +46,10 @@ describe("parseTableSource", () => {
     const model = parseTableSource(TABLE);
     expect(model).not.toBeNull();
     expect(model!.colCount).toBe(2);
-    expect(model!.rows).toEqual([["A", "B"], ["1", "2"]]);
+    expect(model!.rows).toEqual([
+      ["A", "B"],
+      ["1", "2"],
+    ]);
     expect(model!.alignments).toEqual(["none", "none"]);
   });
 
@@ -62,17 +67,13 @@ describe("insertRowBelow", () => {
   it("inserts below the header row", () => {
     const result = insertRowBelow(TABLE, 0);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n|  |  |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n|  |  |\n| 1 | 2 |");
   });
 
   it("inserts below a body row", () => {
     const result = insertRowBelow(TABLE, 1);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n| 1 | 2 |\n|  |  |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| 1 | 2 |\n|  |  |");
   });
 });
 
@@ -80,9 +81,7 @@ describe("insertRowAbove", () => {
   it("inserts above a body row", () => {
     const result = insertRowAbove(TABLE, 1);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n|  |  |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n|  |  |\n| 1 | 2 |");
   });
 
   it("cannot insert above header", () => {
@@ -95,9 +94,7 @@ describe("deleteRow", () => {
     const threeRow = TABLE + "\n| 3 | 4 |";
     const result = deleteRow(threeRow, 1);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n| 3 | 4 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| 3 | 4 |");
   });
 
   it("cannot delete header", () => {
@@ -155,9 +152,7 @@ describe("moveRowUp", () => {
     const threeRow = TABLE + "\n| 3 | 4 |";
     const result = moveRowUp(threeRow, 2);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n| 3 | 4 |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| 3 | 4 |\n| 1 | 2 |");
   });
 });
 
@@ -166,9 +161,7 @@ describe("moveRowDown", () => {
     const threeRow = TABLE + "\n| 3 | 4 |";
     const result = moveRowDown(threeRow, 1);
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | --- |\n| 3 | 4 |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | --- |\n| 3 | 4 |\n| 1 | 2 |");
   });
 
   it("cannot move the last row down", () => {
@@ -185,34 +178,26 @@ describe("setAlignment", () => {
   it("sets left alignment", () => {
     const result = setAlignment(TABLE, 0, "left");
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| :--- | --- |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| :--- | --- |\n| 1 | 2 |");
   });
 
   it("sets center alignment", () => {
     const result = setAlignment(TABLE, 1, "center");
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| --- | :---: |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| --- | :---: |\n| 1 | 2 |");
   });
 
   it("sets right alignment", () => {
     const result = setAlignment(TABLE, 0, "right");
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| ---: | --- |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| ---: | --- |\n| 1 | 2 |");
   });
 
   it("resets to none alignment", () => {
     const aligned = "| A | B |\n|:---|---:|\n| 1 | 2 |";
     const result = setAlignment(aligned, 1, "none");
     expect(result).not.toBeNull();
-    expect(result!.text).toBe(
-      "| A | B |\n| :--- | --- |\n| 1 | 2 |",
-    );
+    expect(result!.text).toBe("| A | B |\n| :--- | --- |\n| 1 | 2 |");
   });
 
   it("returns null for out-of-range column", () => {

@@ -27,11 +27,11 @@ The review surfaced four systemic causes, not isolated style nits:
    (multiple sources, incl. the Rust API guidelines) is a firm rule:
    - **Libraries expose a `thiserror` enum** — callers can match on variants.
    - **Applications wrap those with `anyhow` + `.context()`** at the boundary.
-   - Never `anyhow` in a library *public* API; never return `Result<_, String>`.
+   - Never `anyhow` in a library _public_ API; never return `Result<_, String>`.
 3. **Duplicate knowledge (DRY).** `TypedValue` vs `FrontmatterValue`, two YAML
    converters, two divergent date detectors, `stem_from_path` in 4 places, three
    `[[`-scanners, copy-pasted `contains`, `register_embeds`/`register_links`.
-   When the same logic lives in two places it *diverges* (`metadata.rs` vs
+   When the same logic lives in two places it _diverges_ (`metadata.rs` vs
    `frontmatter.rs` frontmatter-fence detection already disagree).
 4. **Allocations & hot-path waste.** The high-value targets (per the
    2026 performance work: "a cheap-looking line inside a loop" is usually the
@@ -47,7 +47,7 @@ The review surfaced four systemic causes, not isolated style nits:
 
 ## 2. Rust practices we will adopt (grounded, 2026)
 
-This is the playbook. Each item is a *boring, standard* Rust idiom — we are
+This is the playbook. Each item is a _boring, standard_ Rust idiom — we are
 catching up to conventions, not being clever. (Source lines reference our own
 code; the guidance behind them is the consolidated community/NLP survey in
 Section 5.)
@@ -74,7 +74,7 @@ Section 5.)
 - Replace silent degradation in library code:
   - `asset_index`/`indexer` `.unwrap_or_default()` on a read error → return a
     typed error or `tracing::warn!`.
-  - `cache.rs VaultCache::load()` returning `Option` for *every* failure mode →
+  - `cache.rs VaultCache::load()` returning `Option` for _every_ failure mode →
     `Result<Option<Self>, VaultCacheError>`.
   - `let _ = flush_pending()` → propagate or `tracing::warn!`.
 - Panics are a bug or a provable invariant. `expect("...")` with the reason,
@@ -102,7 +102,7 @@ Section 5.)
 ### 2.4 Macros — judicious, not clever
 
 Per Effective Rust Item 28 + Microsoft's Rust Guidelines: **macros are a last
-resort**, best for *syntax* a function can't produce (a clean `HashMap` literal,
+resort**, best for _syntax_ a function can't produce (a clean `HashMap` literal,
 implementing the same trait across many types). Rules we adopt:
 
 - Prefer **function/generic first**, then `macro_rules!`, then (rarely) proc.
@@ -110,14 +110,14 @@ implementing the same trait across many types). Rules we adopt:
   cost, works in the crate, inlines with `$crate`.
 - Keep expansions small and Rust-shaped; avoid nonlocal control flow and
   repeated-expansion side effects.
-- Candidate uses in our tree (if any do *not* reduce to a function, we skip them):
+- Candidate uses in our tree (if any do _not_ reduce to a function, we skip them):
   enum↔string/strum derives that stay in sync with the data type, and any
   copy-pasted match that must never drift.
 
 ### 2.5 Performance
 
-Guiding quote (from the 2026 profiling work): *profile the process, not your
-model of it*; the expensive line rarely looks expensive — it's a `format!`, a
+Guiding quote (from the 2026 profiling work): _profile the process, not your
+model of it_; the expensive line rarely looks expensive — it's a `format!`, a
 `to_string()`, a `.clone()` **inside the loop**.
 
 - Reuse/pre-size collections: `with_capacity`, `.clear()` reuse, avoid
@@ -147,15 +147,15 @@ model of it*; the expensive line rarely looks expensive — it's a `format!`, a
 
 See the four deep reviews that produced this plan. Highlights:
 
-| Crate | Highest-impact findings |
-|---|---|
-| `basalt-parser` | `query.rs` god module (AST+parsers+tests); hand-rolled `source_not/and/or` reimplementing nom incl. dead `_offset`; `unwrap_or(0)` swallows bad LIMIT; `PartialEq` on `f64`; missing `FromStr`/`Display`; duplicated frontmatter-fence + line-find + text-consolidation + 3× wikilink scanners; `metadata.rs` single 223-loc function; only query.rs returns `Result`. |
-| `basalt-vault` | `asset_index.rs` god module; `register_embeds`/`register_links` identical-except-field; `resolve_asset` `.to_lowercase()` per asset; `.clone()` to re-index; `broken_embed_count` always 0 (dead field); `infer_mime_type` allocates `&'static` could be; `cache.rs load()` collapses all failures to `None`; `indexer` silent `.unwrap_or_default()`; `as u32` truncation; unused `_base_path`; `md5` crate outdated. |
-| `basalt-graph` | `graph_layout.rs` god module (params+layout+quadtree+simulator); double `to_string()` in arena; per-frame allocs in `reorder_tree`; `NodeId` bare alias; dead `let _ = (&bx, &by)`; magic constants ungrouped; `LayoutGraph::new` pointless 5-field ctor. |
-| `basalt-search` | `anyhow` everywhere (no typed errors); `AhoCorasick` rebuilt per doc; O(n²) snippets byte→char; `build_schema` returns opaque 5-tuple; `TantivyIndex::new` 7-arg; `let _ = flush_pending()`; schema-mismatch silently wipes index; `stem_from_path` duplicated across crates. |
-| `basalt-tables` | `execute_query` returns `ParseError` (can't express runtime errors) → needs `DqlError`; real `expect` panic `engine.rs:188`; non-deterministic un-SORTed output (HashMap order); O(N·G) `group_rows`; copy-pasted `contains` + result-building; `type_` as `String`; `compare_typed` cross-type returns `Equal` (untruth). |
-| `basalt-wasm` | No error channel (`0`/`null` sentinels); `graph_build` trusts caller pointer + clamps vs *last* buffer (UB class); two subcrates solve alloc/parse two different ways, neither fully sound; missing `# Safety` docs; `GraphState.edges` mirrors `ForceGraph::edges()`; duplicated `[profile.release]`+`[workspace]`. |
-| `basalt-types` | **Two parallel typed-value systems** `TypedValue` vs `FrontmatterValue` with two divergent YAML converters + two date detectors (the #1 DRY violation); `FrontmatterValue::None => PropertyType::Text` lie; `Document`/`FileMetadata` overlap; `new()` = `Default`. |
+| Crate           | Highest-impact findings                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `basalt-parser` | `query.rs` god module (AST+parsers+tests); hand-rolled `source_not/and/or` reimplementing nom incl. dead `_offset`; `unwrap_or(0)` swallows bad LIMIT; `PartialEq` on `f64`; missing `FromStr`/`Display`; duplicated frontmatter-fence + line-find + text-consolidation + 3× wikilink scanners; `metadata.rs` single 223-loc function; only query.rs returns `Result`.                                                 |
+| `basalt-vault`  | `asset_index.rs` god module; `register_embeds`/`register_links` identical-except-field; `resolve_asset` `.to_lowercase()` per asset; `.clone()` to re-index; `broken_embed_count` always 0 (dead field); `infer_mime_type` allocates `&'static` could be; `cache.rs load()` collapses all failures to `None`; `indexer` silent `.unwrap_or_default()`; `as u32` truncation; unused `_base_path`; `md5` crate outdated. |
+| `basalt-graph`  | `graph_layout.rs` god module (params+layout+quadtree+simulator); double `to_string()` in arena; per-frame allocs in `reorder_tree`; `NodeId` bare alias; dead `let _ = (&bx, &by)`; magic constants ungrouped; `LayoutGraph::new` pointless 5-field ctor.                                                                                                                                                              |
+| `basalt-search` | `anyhow` everywhere (no typed errors); `AhoCorasick` rebuilt per doc; O(n²) snippets byte→char; `build_schema` returns opaque 5-tuple; `TantivyIndex::new` 7-arg; `let _ = flush_pending()`; schema-mismatch silently wipes index; `stem_from_path` duplicated across crates.                                                                                                                                          |
+| `basalt-tables` | `execute_query` returns `ParseError` (can't express runtime errors) → needs `DqlError`; real `expect` panic `engine.rs:188`; non-deterministic un-SORTed output (HashMap order); O(N·G) `group_rows`; copy-pasted `contains` + result-building; `type_` as `String`; `compare_typed` cross-type returns `Equal` (untruth).                                                                                             |
+| `basalt-wasm`   | No error channel (`0`/`null` sentinels); `graph_build` trusts caller pointer + clamps vs _last_ buffer (UB class); two subcrates solve alloc/parse two different ways, neither fully sound; missing `# Safety` docs; `GraphState.edges` mirrors `ForceGraph::edges()`; duplicated `[profile.release]`+`[workspace]`.                                                                                                   |
+| `basalt-types`  | **Two parallel typed-value systems** `TypedValue` vs `FrontmatterValue` with two divergent YAML converters + two date detectors (the #1 DRY violation); `FrontmatterValue::None => PropertyType::Text` lie; `Document`/`FileMetadata` overlap; `new()` = `Default`.                                                                                                                                                    |
 
 ### 3.1 The single highest-ROI change (value-type unification)
 
@@ -189,6 +189,7 @@ then `bunx tsc --noEmit` + `bun run lint` when the TS mirrors change; run the
 25k Criterion benches for any perf-claiming change.
 
 ### Phase 0 — Baseline safety (mechanics unchanged)
+
 - `basalt-tables`: introduce `DqlError` (`thiserror`, `#[from] ParseError`);
   `execute_query -> Result<QueryResult, DqlError>`. Replace the `expect` at
   `engine.rs:188` with a `TypedValue::Null` fallback.
@@ -202,6 +203,7 @@ then `bunx tsc --noEmit` + `bun run lint` when the TS mirrors change; run the
 ### Phase 1 — Module decomposition (attack S / DRY, pure moves)
 
 The mechanical pattern for **every** file ≥500 loc:
+
 1. Split the file into `name/{mod,pieces}.rs`.
 2. `name/mod.rs` owns the entry point + `pub use` re-exports.
 3. `lib.rs` re-exports **unchanged** → no downstream edits; tests prove it.
@@ -210,6 +212,7 @@ The mechanical pattern for **every** file ≥500 loc:
 **Target module trees (before → after):**
 
 `basalt-parser/src/query.rs` (834 loc) →
+
 ```
 query/
   mod.rs      ← module root: parse_query + ParseError entry, re-exports
@@ -218,9 +221,11 @@ query/
   parse.rs    ← all nom parsers + parse_query                       (~354 loc)
   tests.rs    ← the 356-line #[cfg(test)] block
 ```
+
 `lib.rs` re-export of `parse_query`/`ParseError` unchanged.
 
 `basalt-vault/src/asset_index.rs` (614 loc) →
+
 ```
 asset_index/
   mod.rs       ← AssetIndex struct + methods (the map wrapper)
@@ -229,9 +234,11 @@ asset_index/
   hash.rs      ← compute_md5                                      (was 93–97)
   tests.rs     ← 232-line test block
 ```
+
 `lib.rs` re-export of `{AssetAuditReport, AssetInfo, AssetIndex, FileType}` unchanged.
 
 `basalt-graph/src/graph_layout.rs` (685 loc) →
+
 ```
 graph_layout/
   mod.rs         ← module root re-export
@@ -240,6 +247,7 @@ graph_layout/
   force_graph.rs ← Quad + ForceGraph simulator + constants     (was 138–592)
   tests.rs       ← ~90-line test block
 ```
+
 `lib.rs` re-export of `{ForceGraph, LayoutGraph, GraphParams}` unchanged.
 
 `basalt-search/src/tantivy/schema.rs` (32 loc) — stays one file; fix is the
@@ -250,6 +258,7 @@ opaque **5-tuple return** → a named `SchemaFields` struct.
 Do the split manually with these line anchors; they match the current files.
 
 **`basalt-parser/src/query.rs` (834 loc)**
+
 - Items in the file: `QueryType`(14), `ParseError`(22), `FieldRef`(33),
   `SortDirection`(37), `QueryField`(44), `DataCommand`(51), `Literal`(70),
   `Expr`(79), `CompareOp`(96), `SourceFilter`(108), `QueryPlan`(119) —
@@ -266,6 +275,7 @@ Do the split manually with these line anchors; they match the current files.
   **unchanged**.
 
 **`basalt-vault/src/asset_index.rs` (614 loc)** — anchors from the review:
+
 - `FileType` enum + `infer_file_type()` + `infer_mime_type()` (10–87) → `file_type.rs`.
 - `compute_md5()` (93–97) → `hash.rs` (or `utils.rs`).
 - `AssetInfo` + `AssetAuditReport` (103–145) → `info.rs`.
@@ -275,6 +285,7 @@ Do the split manually with these line anchors; they match the current files.
   `lib.rs`'s existing `pub use asset_index::{...}` stays untouched.
 
 **`basalt-graph/src/graph_layout.rs` (685 loc)** — anchors from the review:
+
 - `GraphParams` + `Default` (24–62) → `params.rs`.
 - `LayoutGraph` + `from_note_graph` (64–136) → `layout_graph.rs`.
 - `Quad` + quadtree constants (`EMPTY`/`MAX_DEPTH`/`UNPLACED`) (138–162) +
@@ -284,6 +295,7 @@ Do the split manually with these line anchors; they match the current files.
   `pub use graph_layout::{ForceGraph, LayoutGraph, GraphParams};` unchanged.
 
 **Function-level decomposition (not file-level):**
+
 - `basalt-tables/src/engine.rs` — split `execute_query` into per-`QueryType`
   handlers + a `link_row()` helper.
 - `basalt-parser/src/metadata.rs` — decompose the 223-loc `extract_metadata`
@@ -291,6 +303,7 @@ Do the split manually with these line anchors; they match the current files.
 - `basalt-wasm` — unify the two alloc/parse patterns; fix `graph_build` raw-pointer trust.
 
 ### Phase 2 — Value-type unification (biggest ROI)
+
 - Collapse `TypedValue` + `FrontmatterValue` into one internally-tagged enum;
   single YAML converter; single date classifier; all in `basalt-types`.
 - Delete `parser/frontmatter.rs` `yaml_to_value`; route through the shared one.
@@ -298,6 +311,7 @@ Do the split manually with these line anchors; they match the current files.
   `block-widgets/frontmatter.ts`. `features/editor/types/query.ts` unchanged.
 
 ### Phase 3 — Error handling + idiomatic types (attack I / D)
+
 - `VaultError` + `SearchError` (`thiserror`); fix each silent-failure site from
   Section 3 (cache load, indexer read, flush, schema-wipe → log).
 - `NodeId` newtype; `FieldPath`; `QueryColumn.type_` enum; `#[non_exhaustive]` on
@@ -306,6 +320,7 @@ Do the split manually with these line anchors; they match the current files.
 - `compare_typed`/`is_truthy` move onto `TypedValue` in `basalt-types`.
 
 ### Phase 4 — Performance + determinism
+
 - `group_rows` HashMap grouper; deterministic default sort (by path) for
   un-SORTed DQL; `resolve_asset` `eq_ignore_ascii_case`; single `to_string` in
   arena; scratch buffers in `reorder_tree`; `partition_point` in snippets;
@@ -313,6 +328,7 @@ Do the split manually with these line anchors; they match the current files.
 - Gate each on Criterion at 5k **and 25k**.
 
 ### Phase 5 — Hygiene / conventions
+
 - Single serde convention per crate; unify benchmark fixtures
   (`benches/common.rs`); fix README `FileSystem` claim; add `clippy.toml` +
   lint gates (`perf`, selected `pedantic`); update `AGENTS.md` + `CURRENT_WORK.md`.
@@ -326,8 +342,8 @@ available on request.
 
 - **Error handling:** thiserror/anyhow 2026 guides (SharpSkill, KruN, Andrew
   Odendaal, lucaberton, School of Web, oneuptime) — unanimous on
-  *libraries=thiserror, applications=anyhow, `#[from]`/`#[source]`, never
-  `Result<_, String>`, `#[non_exhaustive]`, `#[must_use]`*. Rust API guidelines.
+  _libraries=thiserror, applications=anyhow, `#[from]`/`#[source]`, never
+  `Result<_, String>`, `#[non_exhaustive]`, `#[must_use]`_. Rust API guidelines.
 - **Macros:** Microsoft Pragmatic Rust Guidelines (M-MACRO-LAST-RESORT,
   M-EXAMPLE-OVER-PROC, M-MACROS-DONT-LIE); Effective Rust Item 28; Rust
   Project Goals macro-improvements 2026.

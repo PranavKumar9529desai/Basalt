@@ -148,9 +148,7 @@ function makeCollector() {
       if (atomic) replaces.push(range);
     },
     addPoint(pos, widget) {
-      widgets.push(
-        Decoration.widget({ widget, side: 1 }).range(pos, pos),
-      );
+      widgets.push(Decoration.widget({ widget, side: 1 }).range(pos, pos));
     },
   };
 
@@ -195,8 +193,8 @@ function buildPreviewState(
   state: EditorState,
   hasFocus: boolean,
 ): PreviewState {
-    const t0 = performance.now();
-    const { collector, finish, finishAtomic } = makeCollector();
+  const t0 = performance.now();
+  const { collector, finish, finishAtomic } = makeCollector();
   const headPos = state.selection.main.head;
   const doc = state.doc;
   // Reading mode never reveals raw syntax, regardless of caret/focus — force
@@ -232,7 +230,9 @@ function buildPreviewState(
   const tree = ensureSyntaxTree(state, doc.length, budget);
   if (!tree) {
     if (import.meta.env.DEV && editorBenchmarkState.debug) {
-      console.log(`[live-preview] incomplete tree — no decorations (budget hit) docLen=${doc.length}`);
+      console.log(
+        `[live-preview] incomplete tree — no decorations (budget hit) docLen=${doc.length}`,
+      );
     }
     return {
       decorations: Decoration.none,
@@ -407,11 +407,7 @@ export const livePreviewField = StateField.define<PreviewState>({
       // (typing) have no explicit selection and take the lazy path.
       !tr.selection;
 
-    const path = lazy
-      ? tr.docChanged
-        ? "lazy-map"
-        : "no-op"
-      : "full-rebuild";
+    const path = lazy ? (tr.docChanged ? "lazy-map" : "no-op") : "full-rebuild";
     if (path !== "no-op" && import.meta.env.DEV && editorBenchmarkState.debug) {
       console.log(
         `[live-preview] field.update path=${path} docChanged=${tr.docChanged} selection=${!!tr.selection} forced=${forced} focusChanged=${focusChanged}`,
@@ -523,7 +519,11 @@ class PreviewScheduler {
       // would stay undecorated until the next interaction. Bounded: the parse
       // is monotonic, so the loop terminates once the tree covers the doc.
       const field = view.state.field(livePreviewField, false);
-      if (field !== undefined && !field.complete && !editorBenchmarkState.active) {
+      if (
+        field !== undefined &&
+        !field.complete &&
+        !editorBenchmarkState.active
+      ) {
         this.schedule(view);
       }
     };
@@ -571,7 +571,8 @@ function buildTagMarks(view: EditorView): DecorationSet {
       if (line.text.includes("#")) {
         handleTagsInLine(line.from, line.text, ranges, collector);
       }
-      if (line.number >= endLine.number || line.to >= view.state.doc.length) break;
+      if (line.number >= endLine.number || line.to >= view.state.doc.length)
+        break;
       line = view.state.doc.lineAt(line.to + 1);
     }
   }

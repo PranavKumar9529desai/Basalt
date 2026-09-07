@@ -41,7 +41,10 @@ export function createSplit(
     id: makePaneId(),
     type: "split",
     orientation,
-    children: [{ ...first, size: 0.5 }, { ...second, size: 0.5 }],
+    children: [
+      { ...first, size: 0.5 },
+      { ...second, size: 0.5 },
+    ],
   };
 }
 
@@ -58,10 +61,7 @@ export function findLeaf(root: LayoutNode, paneId: PaneId): LeafNode | null {
 }
 
 /** Find the leaf containing a specific tab. */
-export function findLeafByTab(
-  root: LayoutNode,
-  tabId: TabId,
-): LeafNode | null {
+export function findLeafByTab(root: LayoutNode, tabId: TabId): LeafNode | null {
   if (root.type === "leaf") {
     return root.tabGroup.tabIds.includes(tabId) ? root : null;
   }
@@ -139,10 +139,7 @@ export function findParent(
 }
 
 /** Find a split node by id (sash resize targets a split, not a leaf). */
-export function findSplit(
-  root: LayoutNode,
-  splitId: PaneId,
-): SplitNode | null {
+export function findSplit(root: LayoutNode, splitId: PaneId): SplitNode | null {
   if (root.type === "split") {
     if (root.id === splitId) return root;
     for (const child of root.children) {

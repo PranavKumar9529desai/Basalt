@@ -19,7 +19,10 @@
 import { describe, expect, it } from "vitest";
 import { parseMarkdown } from "../_helpers";
 
-function nodesOfType(tree: ReturnType<typeof parseMarkdown>["tree"], name: string) {
+function nodesOfType(
+  tree: ReturnType<typeof parseMarkdown>["tree"],
+  name: string,
+) {
   const found: { from: number; to: number }[] = [];
   tree.iterate({
     enter(node) {
@@ -106,7 +109,9 @@ describe("wikiLinkExtension", () => {
       // The `!` is immediately before the WikiLink's opening `[`.
       expect(embeds[0].to).toBe(links[0].from);
       expect(state.doc.sliceString(embeds[0].from, embeds[0].to)).toBe("!");
-      expect(state.doc.sliceString(links[0].from, links[0].to)).toBe("[[img.png]]");
+      expect(state.doc.sliceString(links[0].from, links[0].to)).toBe(
+        "[[img.png]]",
+      );
     });
 
     it("keeps the raw bracket content as the embed target", () => {

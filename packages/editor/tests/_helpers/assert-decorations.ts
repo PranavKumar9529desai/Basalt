@@ -7,10 +7,7 @@
  * `dump*` helpers pour *and* the report double as test failure output.
  */
 import { expect } from "vitest";
-import {
-  formatDecorationReport,
-  type DecorationReport,
-} from "./dump-decos";
+import { formatDecorationReport, type DecorationReport } from "./dump-decos";
 
 export interface DecorationAssertions {
   toHaveLineClass(pos: number, cls: string): DecorationAssertions;
@@ -37,7 +34,9 @@ export interface DecorationAssertions {
  *     .toHaveLineClass(0, "cm-live-heading-1")
  *     .toHaveMark(0, 1, "cm-live-hide");
  */
-export function assertDecorations(report: DecorationReport): DecorationAssertions {
+export function assertDecorations(
+  report: DecorationReport,
+): DecorationAssertions {
   const fmt = () => formatDecorationReport(report);
 
   function containEqual(arr: unknown[], expected: unknown, label: string) {
@@ -47,28 +46,46 @@ export function assertDecorations(report: DecorationReport): DecorationAssertion
   const api: DecorationAssertions = {
     report,
     toHaveLineClass(pos, cls) {
-      containEqual(report.lineClasses, { pos, class: cls }, `lineClass ${cls}@${pos}`);
+      containEqual(
+        report.lineClasses,
+        { pos, class: cls },
+        `lineClass ${cls}@${pos}`,
+      );
       return api;
     },
     toHaveLineClasses(entries) {
       for (const [pos, cls] of entries) {
-        containEqual(report.lineClasses, { pos, class: cls }, `lineClass ${cls}@${pos}`);
+        containEqual(
+          report.lineClasses,
+          { pos, class: cls },
+          `lineClass ${cls}@${pos}`,
+        );
       }
       return api;
     },
     toHaveMark(from, to, cls) {
-      containEqual(report.marks, { from, to, class: cls }, `mark [${from}..${to}]=${cls}`);
+      containEqual(
+        report.marks,
+        { from, to, class: cls },
+        `mark [${from}..${to}]=${cls}`,
+      );
       return api;
     },
     toHaveMarks(entries) {
       for (const [from, to, cls] of entries) {
-        containEqual(report.marks, { from, to, class: cls }, `mark [${from}..${to}]=${cls}`);
+        containEqual(
+          report.marks,
+          { from, to, class: cls },
+          `mark [${from}..${to}]=${cls}`,
+        );
       }
       return api;
     },
     toHaveNoMark(from, to, cls) {
       expect(
-        report.marks.some((m) => m.from === from && m.to === to && m.class === cls),
+        report.marks.some(
+          (m) => m.from === from && m.to === to && m.class === cls,
+        ),
         `unexpected mark [${from}..${to}]=${cls}\n${fmt()}`,
       ).toBe(false);
       return api;

@@ -48,8 +48,12 @@ function seedPane(tabIds: string[]) {
 // --- Pointer-drag helpers (the WebKitGTK path uses real window listeners and
 // DOM hit-testing, so tests drive those directly). ---
 
-const pointerEvent = (type: string, x: number, y: number, opts: Partial<MouseEventInit> = {}) =>
-  new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, ...opts });
+const pointerEvent = (
+  type: string,
+  x: number,
+  y: number,
+  opts: Partial<MouseEventInit> = {},
+) => new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, ...opts });
 
 function pointerDown(tabId: string, x: number, y: number) {
   act(() => {
@@ -59,7 +63,10 @@ function pointerDown(tabId: string, x: number, y: number) {
 
 // jsdom has no elementFromPoint; stub it per-call via a mutable cell.
 let hitTarget: HTMLElement | null = null;
-function setHit(el: HTMLElement | null, rect?: { left?: number; top?: number; width?: number; height?: number }) {
+function setHit(
+  el: HTMLElement | null,
+  rect?: { left?: number; top?: number; width?: number; height?: number },
+) {
   hitTarget = el;
   if (el && rect) {
     el.getBoundingClientRect = () =>
@@ -68,7 +75,9 @@ function setHit(el: HTMLElement | null, rect?: { left?: number; top?: number; wi
 }
 
 function stubElementFromPoint() {
-  (document as unknown as { elementFromPoint: () => HTMLElement | null }).elementFromPoint = () => hitTarget;
+  (
+    document as unknown as { elementFromPoint: () => HTMLElement | null }
+  ).elementFromPoint = () => hitTarget;
 }
 
 function makeEl(attrs: Record<string, string>) {
@@ -83,14 +92,15 @@ function makeEl(attrs: Record<string, string>) {
 type PointerDownFn = (tabId: string, x: number, y: number) => void;
 let handlers_handlePointerDown: PointerDownFn = () => undefined;
 
-function hookHandlePointerDown(
-  result: { current: ReturnType<typeof useTabDnD> },
-) {
+function hookHandlePointerDown(result: {
+  current: ReturnType<typeof useTabDnD>;
+}) {
   handlers_handlePointerDown = (tabId, x, y) =>
-    result.current.handleTabPointerDown(
-      tabId,
-      { button: 0, clientX: x, clientY: y } as unknown as ReactPointerEvent<HTMLElement>,
-    );
+    result.current.handleTabPointerDown(tabId, {
+      button: 0,
+      clientX: x,
+      clientY: y,
+    } as unknown as ReactPointerEvent<HTMLElement>);
 }
 
 function pointerMove(x: number, y: number) {
@@ -520,10 +530,7 @@ describe("useTabDnD", () => {
       const afterRight = collectLeaves(useTabsStore.getState().root).find(
         (l) => l.id === right.id,
       )!;
-      expect(afterRight.tabGroup.tabIds).toEqual([
-        "tab:a.md",
-        rightCloneId,
-      ]);
+      expect(afterRight.tabGroup.tabIds).toEqual(["tab:a.md", rightCloneId]);
       expect(useTabsStore.getState().activePaneId).toBe(right.id);
     });
 

@@ -19,7 +19,9 @@ import {
   type SyntaxManifest,
 } from "../../src/syntax/registry";
 
-function nodeNames(tree: ReturnType<typeof parseMarkdown>["tree"]): Set<string> {
+function nodeNames(
+  tree: ReturnType<typeof parseMarkdown>["tree"],
+): Set<string> {
   const found = new Set<string>();
   tree.iterate({
     enter(node) {
@@ -71,8 +73,8 @@ describe("syntax registry — coverage contract", () => {
 describe("createBasaltGrammar", () => {
   it("folds every manifest grammar exactly once, in declaration order", () => {
     const grammar = createBasaltGrammar();
-    const expectedGrammar: SyntaxManifest["grammar"] = basaltSyntaxManifests
-      .flatMap((m) => m.grammar ?? []);
+    const expectedGrammar: SyntaxManifest["grammar"] =
+      basaltSyntaxManifests.flatMap((m) => m.grammar ?? []);
     expect(grammar).toHaveLength(expectedGrammar?.length ?? 0);
     expect(new Set(grammar).size).toBe(grammar.length);
     // Order preserved: the first grammar entries match the manifest order.

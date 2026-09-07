@@ -52,9 +52,7 @@ export function SplitPane({
       const startSizes = [...current];
 
       const onMove = (ev: MouseEvent) => {
-        const pos = isVertical
-          ? ev.clientX - rect.left
-          : ev.clientY - rect.top;
+        const pos = isVertical ? ev.clientX - rect.left : ev.clientY - rect.top;
         const posFrac = axisSize > 0 ? pos / axisSize : 0;
 
         // Sash position = cumulative width before the sash + diff. Restrict
@@ -62,8 +60,7 @@ export function SplitPane({
         let prevEnd = 0;
         for (let i = 0; i <= sashIndex; i++) prevEnd += startSizes[i];
         const lo = prevEnd - startSizes[sashIndex] + MIN_SIZE_PERCENT;
-        const hi =
-          prevEnd + startSizes[sashIndex + 1] - MIN_SIZE_PERCENT;
+        const hi = prevEnd + startSizes[sashIndex + 1] - MIN_SIZE_PERCENT;
         const sashPos = Math.max(lo, Math.min(hi, posFrac));
 
         const diff = sashPos - prevEnd;

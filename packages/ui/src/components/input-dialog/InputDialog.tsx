@@ -85,10 +85,7 @@ export function InputDialog({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="sat-ghost"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="sat-ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button

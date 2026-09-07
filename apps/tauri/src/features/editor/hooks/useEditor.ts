@@ -30,10 +30,7 @@ import { useActiveNoteStore } from "../store/activeNote";
  * update listener and all per-tab caches; this hook only observes tab-level
  * events (switch, close, blur, unmount, external file change).
  */
-export function useEditor(
-  tab: LeafProps["tab"],
-  paneId: LeafProps["paneId"],
-) {
+export function useEditor(tab: LeafProps["tab"], paneId: LeafProps["paneId"]) {
   const services = useLeafServices();
   const io = useNoteIO();
   const keybindingService = useKeybindingService();

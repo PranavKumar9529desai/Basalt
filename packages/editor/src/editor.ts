@@ -392,5 +392,7 @@ function wikiLinkTargetAt(view: EditorView, event: MouseEvent): string | null {
     if (viaSyntax) return viaSyntax;
   }
   const text = (event.target as HTMLElement | null)?.textContent ?? "";
-  return normalizeWikiLinkTarget(text.replace(/^\[\[/, "").replace(/\]\]$/, ""));
+  return normalizeWikiLinkTarget(
+    text.replace(/^\[\[/, "").replace(/\]\]$/, ""),
+  );
 }

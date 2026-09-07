@@ -31,7 +31,9 @@ import type { Alignment, MutationResult } from "@workspace/editor";
  * Run a table mutation against the active editor. Resolves the view at call
  * time so buttons always target the focused pane.
  */
-function mutate(fn: (raw: string, row: number, col: number) => MutationResult | null): () => void {
+function mutate(
+  fn: (raw: string, row: number, col: number) => MutationResult | null,
+): () => void {
   return () => {
     const view = resolveActiveController()?.getView();
     if (!view) return;
@@ -115,31 +117,86 @@ export function TableControls() {
       {/* Section: Align */}
       <div className="flex items-center gap-1">
         <SectionLabel>Align</SectionLabel>
-        <Btn icon={<IconAlignLeft size={iconSize} />} title="Left align (Mod-Shift-L)" onClick={align("left")} disabled={!inTable} />
-        <Btn icon={<IconAlignCenter size={iconSize} />} title="Center align (Mod-Shift-C)" onClick={align("center")} disabled={!inTable} />
-        <Btn icon={<IconAlignRight size={iconSize} />} title="Right align (Mod-Shift-R)" onClick={align("right")} disabled={!inTable} />
+        <Btn
+          icon={<IconAlignLeft size={iconSize} />}
+          title="Left align (Mod-Shift-L)"
+          onClick={align("left")}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconAlignCenter size={iconSize} />}
+          title="Center align (Mod-Shift-C)"
+          onClick={align("center")}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconAlignRight size={iconSize} />}
+          title="Right align (Mod-Shift-R)"
+          onClick={align("right")}
+          disabled={!inTable}
+        />
       </div>
 
       {/* Section: Move */}
       <div className="flex items-center gap-1">
         <SectionLabel>Move</SectionLabel>
-        <Btn icon={<IconArrowUp size={iconSize} />} title="Move row up (Mod-Shift-ArrowUp)" onClick={moveRow(-1)} disabled={!inTable} />
-        <Btn icon={<IconArrowDown size={iconSize} />} title="Move row down (Mod-Shift-ArrowDown)" onClick={moveRow(1)} disabled={!inTable} />
+        <Btn
+          icon={<IconArrowUp size={iconSize} />}
+          title="Move row up (Mod-Shift-ArrowUp)"
+          onClick={moveRow(-1)}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconArrowDown size={iconSize} />}
+          title="Move row down (Mod-Shift-ArrowDown)"
+          onClick={moveRow(1)}
+          disabled={!inTable}
+        />
       </div>
 
       {/* Section: Edit */}
       <div className="flex items-center gap-1">
         <SectionLabel>Edit</SectionLabel>
-        <Btn icon={<IconRowInsertTop size={iconSize} />} title="Insert row above" onClick={mutate(insertRowAbove)} disabled={!inTable} />
-        <Btn icon={<IconRowInsertBottom size={iconSize} />} title="Insert row below" onClick={mutate(insertRowBelow)} disabled={!inTable} />
-        <Btn icon={<IconTableOff size={iconSize} />} title="Delete row" onClick={mutate(deleteRow)} disabled={!inTable} />
+        <Btn
+          icon={<IconRowInsertTop size={iconSize} />}
+          title="Insert row above"
+          onClick={mutate(insertRowAbove)}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconRowInsertBottom size={iconSize} />}
+          title="Insert row below"
+          onClick={mutate(insertRowBelow)}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconTableOff size={iconSize} />}
+          title="Delete row"
+          onClick={mutate(deleteRow)}
+          disabled={!inTable}
+        />
       </div>
 
       <div className="flex items-center gap-1">
         <SectionLabel>Column</SectionLabel>
-        <Btn icon={<IconColumnInsertLeft size={iconSize} />} title="Insert column left" onClick={mutate(insertColumnLeft)} disabled={!inTable} />
-        <Btn icon={<IconColumnInsertRight size={iconSize} />} title="Insert column right" onClick={mutate(insertColumnRight)} disabled={!inTable} />
-        <Btn icon={<IconColumnRemove size={iconSize} />} title="Delete column" onClick={mutate(deleteColumn)} disabled={!inTable} />
+        <Btn
+          icon={<IconColumnInsertLeft size={iconSize} />}
+          title="Insert column left"
+          onClick={mutate(insertColumnLeft)}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconColumnInsertRight size={iconSize} />}
+          title="Insert column right"
+          onClick={mutate(insertColumnRight)}
+          disabled={!inTable}
+        />
+        <Btn
+          icon={<IconColumnRemove size={iconSize} />}
+          title="Delete column"
+          onClick={mutate(deleteColumn)}
+          disabled={!inTable}
+        />
       </div>
 
       {/* Hint when no table */}

@@ -84,7 +84,7 @@ describe("reading mode fully renders (renderMode facet)", () => {
   });
 
   it("renders a DQL result widget with the caret inside the block (reading mode)", () => {
-    const dql = "```dql\nTABLE FROM \"docs\"\n```";
+    const dql = '```dql\nTABLE FROM "docs"\n```';
     // Caret at index 0 sits inside the dql fenced code block.
     const { state } = stateFor(dql, renderModeReading);
     expect(widgetNames(state)).toContain("DqlResultWidget");
@@ -113,7 +113,7 @@ describe("live preview keeps cursor-reveal (renderMode 'live')", () => {
   });
 
   it("keeps the DQL block raw with the caret inside it (live preview)", () => {
-    const dql = "```dql\nTABLE FROM \"docs\"\n```";
+    const dql = '```dql\nTABLE FROM "docs"\n```';
     const { state } = stateFor(dql);
     expect(widgetNames(state)).not.toContain("DqlResultWidget");
   });

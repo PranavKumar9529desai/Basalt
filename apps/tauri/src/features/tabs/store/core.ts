@@ -48,7 +48,10 @@ function titleFromPath(path: string) {
  * group (the graph-open orphan regression). Returns null only when the tree
  * has no leaf at all, which cannot happen (root is always a leaf or split).
  */
-function resolveInsertPaneId(root: LayoutNode, activePaneId: PaneId): PaneId | null {
+function resolveInsertPaneId(
+  root: LayoutNode,
+  activePaneId: PaneId,
+): PaneId | null {
   if (findLeaf(root, activePaneId)) return activePaneId;
   const leaves = collectLeaves(root);
   return leaves[0]?.id ?? null;
@@ -475,8 +478,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
             ...l.tabGroup,
             tabIds: [tabId],
             activeTabId: tabId,
-            previewTabId:
-              l.tabGroup.previewTabId === tabId ? tabId : null,
+            previewTabId: l.tabGroup.previewTabId === tabId ? tabId : null,
           },
         })),
         activePaneId: leaf.id,
@@ -512,8 +514,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
                 ? l.tabGroup.activeTabId
                 : tabId,
             previewTabId:
-              l.tabGroup.previewTabId &&
-              keepSet.has(l.tabGroup.previewTabId)
+              l.tabGroup.previewTabId && keepSet.has(l.tabGroup.previewTabId)
                 ? l.tabGroup.previewTabId
                 : null,
           },
@@ -726,9 +727,7 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
           tabIds: remaining,
           activeTabId,
           previewTabId:
-            l.tabGroup.previewTabId === tabId
-              ? null
-              : l.tabGroup.previewTabId,
+            l.tabGroup.previewTabId === tabId ? null : l.tabGroup.previewTabId,
         },
       }));
 

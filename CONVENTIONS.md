@@ -562,12 +562,12 @@ to keep files readable, errors honest, and hot paths fast. Full rationale in
 
 God modules are the #1 maintainability failure we hit. Enforce hard budgets:
 
-| Unit       | Soft limit | Smell threshold (must split) |
-| ---------- | ---------- | ---------------------------- |
-| File       | ≤ 450 loc  | 500+ loc                     |
-| Function   | ≤ 40 loc   | 90+ loc, deep nesting, 2+ abstraction levels |
-| `impl` block | one concern | mixed unrelated behavior |
-| Match arm  | a few lines | mini-program inside each arm |
+| Unit         | Soft limit  | Smell threshold (must split)                 |
+| ------------ | ----------- | -------------------------------------------- |
+| File         | ≤ 450 loc   | 500+ loc                                     |
+| Function     | ≤ 40 loc    | 90+ loc, deep nesting, 2+ abstraction levels |
+| `impl` block | one concern | mixed unrelated behavior                     |
+| Match arm    | a few lines | mini-program inside each arm                 |
 
 Split a file when: nesting deepens, control flow is hard to scan, a function
 both decides policy and performs mechanics, or variable lifetimes get long.

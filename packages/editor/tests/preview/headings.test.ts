@@ -44,13 +44,19 @@ describe("handleHeadingNode", () => {
     const handled = handleHeadingNode(nodeRef(3, 12, nodeName), ctx, collector);
     expect(handled).toBe(true);
     // addLineClass uses line.from -> line 2 starts at offset 3 (after "x\n")
-    expect(collector.lines).toEqual([{ pos: ctx.state.doc.lineAt(3).from, className }]);
+    expect(collector.lines).toEqual([
+      { pos: ctx.state.doc.lineAt(3).from, className },
+    ]);
   });
 
   it("returns false for a non-heading node", () => {
     const { ctx } = makeContext("hello");
     const collector = makeCollector();
-    const handled = handleHeadingNode(nodeRef(0, 5, "Paragraph"), ctx, collector);
+    const handled = handleHeadingNode(
+      nodeRef(0, 5, "Paragraph"),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.lines).toHaveLength(0);
   });
@@ -85,14 +91,19 @@ describe("handleHeading7Lines", () => {
     const { ctx } = makeContext("####### deep\nbody", { headPos: 3 }); // cursor inside heading
     const collector = makeCollector();
     handleHeading7Lines(0, ctx.state.doc.length, ctx, collector);
-    expect(collector.lines).toEqual([{ pos: 0, className: "cm-live-heading-7" }]);
+    expect(collector.lines).toEqual([
+      { pos: 0, className: "cm-live-heading-7" },
+    ]);
     // no hide mark because it's the active line
     expect(collector.marks).toHaveLength(0);
   });
 
   it("skips 7-hash lines inside code blocks", () => {
     const codeBlockRanges = [{ from: 0, to: 20 }];
-    const { ctx } = makeContext("####### deep", { headPos: 0, codeBlockRanges });
+    const { ctx } = makeContext("####### deep", {
+      headPos: 0,
+      codeBlockRanges,
+    });
     const collector = makeCollector();
     handleHeading7Lines(0, ctx.state.doc.length, ctx, collector);
     expect(collector.lines).toHaveLength(0);
@@ -112,7 +123,11 @@ describe("handleHeading7Lines unfocused", () => {
     const { ctx } = makeUnfocusedContext("####### deep");
     const collector = makeCollector();
     handleHeading7Lines(0, ctx.state.doc.length, ctx, collector);
-    expect(collector.lines).toEqual([{ pos: 0, className: "cm-live-heading-7" }]);
-    expect(collector.marks).toEqual([{ from: 0, to: 8, className: "cm-live-hide" }]);
+    expect(collector.lines).toEqual([
+      { pos: 0, className: "cm-live-heading-7" },
+    ]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 8, className: "cm-live-hide" },
+    ]);
   });
 });

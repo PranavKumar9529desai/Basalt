@@ -31,7 +31,11 @@ function flatten(obj: Dict, prefix = ""): Dict {
   return out;
 }
 
-function resolveRefs(value: unknown, lookup: Dict, seen = new Set<string>()): unknown {
+function resolveRefs(
+  value: unknown,
+  lookup: Dict,
+  seen = new Set<string>(),
+): unknown {
   if (typeof value !== "string") return value;
   return value.replace(/\{([^}]+)\}/g, (_, ref: string) => {
     if (seen.has(ref)) return `{${ref}}`;
@@ -174,7 +178,6 @@ function generateCss(baseMap: Dict, themes: ThemeBuild[]): string {
 
   return `${lines.join("\n")}\n`;
 }
-
 
 function generateManifest(themes: ThemeBuild[], defaultId: string): string {
   const ids = themes.map((t) => `"${t.meta.id}"`).join(" | ");

@@ -152,6 +152,8 @@ describe("PreviewPane.cachedPreviewState", () => {
     const re = cachedPreviewState("first-content", "0.md", deps);
     expect(re).not.toBe(first);
     // But the most recently used one is still cached.
-    expect(cachedPreviewState("content-number-26", "26.md", deps)).toBeDefined();
+    expect(
+      cachedPreviewState("content-number-26", "26.md", deps),
+    ).toBeDefined();
   });
 });

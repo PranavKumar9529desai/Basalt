@@ -47,20 +47,20 @@ import {
 
 ### Service
 
-| Method                     | Purpose                                          |
-| -------------------------- | ------------------------------------------------ |
-| `register(binding)`        | Add a binding at runtime                         |
-| `unregister(key)`          | Remove a binding by its `key` string             |
-| `registerAction(name, fn)` | Register a plain action handler (non-command)    |
-| `unregisterAction(name)`   | Remove an action handler                         |
+| Method                     | Purpose                                                           |
+| -------------------------- | ----------------------------------------------------------------- |
+| `register(binding)`        | Add a binding at runtime                                          |
+| `unregister(key)`          | Remove a binding by its `key` string                              |
+| `registerAction(name, fn)` | Register a plain action handler (non-command)                     |
+| `unregisterAction(name)`   | Remove an action handler                                          |
 | `setContext(key, value)`   | Set/update a `when` context value (`boolean \| string \| number`) |
-| `removeContext(key)`       | Delete a context key                              |
-| `updateContext(values)`    | Bulk-set context flags                           |
-| `getContext()`             | Snapshot of the current context                  |
-| `evaluateWhen(when?)`      | Evaluate a when clause against context           |
-| `resolve(event)`           | Find matching binding, or `null`                 |
-| `execute(binding)`         | Run the binding's command/action                 |
-| `handleKeydown(event)`     | Resolve + execute; returns `true` if handled     |
+| `removeContext(key)`       | Delete a context key                                              |
+| `updateContext(values)`    | Bulk-set context flags                                            |
+| `getContext()`             | Snapshot of the current context                                   |
+| `evaluateWhen(when?)`      | Evaluate a when clause against context                            |
+| `resolve(event)`           | Find matching binding, or `null`                                  |
+| `execute(binding)`         | Run the binding's command/action                                  |
+| `handleKeydown(event)`     | Resolve + execute; returns `true` if handled                      |
 
 `handleKeydown` returns `false` (and does **not** `preventDefault`) when no
 binding matches, letting other handlers see the event.

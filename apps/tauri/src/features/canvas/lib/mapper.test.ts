@@ -6,11 +6,33 @@ describe("canvas mapper", () => {
   it("converts JSON Canvas document to XYFlow nodes and edges", () => {
     const doc: CanvasDocument = {
       nodes: [
-        { id: "text-1", type: "text", text: "Hello Canvas", x: 100, y: 150, width: 250, height: 140 },
-        { id: "file-1", type: "file", file: "Notes/Idea.md", x: 400, y: 150, width: 300, height: 220 },
+        {
+          id: "text-1",
+          type: "text",
+          text: "Hello Canvas",
+          x: 100,
+          y: 150,
+          width: 250,
+          height: 140,
+        },
+        {
+          id: "file-1",
+          type: "file",
+          file: "Notes/Idea.md",
+          x: 400,
+          y: 150,
+          width: 300,
+          height: 220,
+        },
       ],
       edges: [
-        { id: "edge-1", fromNode: "text-1", fromSide: "right", toNode: "file-1", toSide: "left" },
+        {
+          id: "edge-1",
+          fromNode: "text-1",
+          fromSide: "right",
+          toNode: "file-1",
+          toSide: "left",
+        },
       ],
     };
 

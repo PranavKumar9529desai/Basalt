@@ -6,24 +6,32 @@ import { useCanvas } from "../CanvasContext";
 
 function GroupNode({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
-  const borderColor = resolveCanvasColor(data.color as string | undefined, "var(--sat-layout-border)");
+  const borderColor = resolveCanvasColor(
+    data.color as string | undefined,
+    "var(--sat-layout-border)",
+  );
   const backgroundColor = `${borderColor}1A`; // 10% opacity tint
 
   return (
     <>
-      <NodeResizer minWidth={200} minHeight={200} isVisible={selected} onResizeEnd={() => canvas.saveNow()} />
-      
-      <div 
+      <NodeResizer
+        minWidth={200}
+        minHeight={200}
+        isVisible={selected}
+        onResizeEnd={() => canvas.saveNow()}
+      />
+
+      <div
         className="w-full h-full rounded-xl border-2 pointer-events-none"
-        style={{ 
-          borderColor, 
+        style={{
+          borderColor,
           backgroundColor,
-          contain: "layout style paint" 
+          contain: "layout style paint",
         }}
       >
         {data.label && (
           <div className="absolute top-0 left-0 -translate-y-full pb-1 px-1">
-            <span 
+            <span
               className="px-2 py-1 text-sm font-medium rounded-t-md text-[var(--sat-text-primary)] inline-block pointer-events-auto"
               style={{ backgroundColor: borderColor }}
             >

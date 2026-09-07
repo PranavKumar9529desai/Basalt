@@ -45,27 +45,27 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 
 ## Current State (as of 2026-09-04)
 
-| Area                                                                | Status                                                                                                                                |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Four-layer architecture                                             | ✅ Established                                                                                                                        |
-| CommandService + KeybindingService (registry pattern)               | ✅ Complete                                                                                                                           |
-| Workspace grid + unified header band (`HeaderBandRule`)             | ✅ Complete                                                                                                                           |
-| Tab system (single pane, DnD, persistence, overflow dropdown)       | ✅ Complete                                                                                                                           |
-| Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete                                                                                                                           |
-| Command palette / quick switcher / search (tantivy + nucleo)        | ✅ Complete                                                                                                                           |
-| File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                                                                                                           |
-| **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                                                                                                           |
-| **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                                                                                                           |
-| Layout as serializable tree / pane splits (ADR-032)                  | ✅ Complete — root layout tree, per-pane tab bars, DnD between panes, v2 persistence, resize sashes (persisted `size` ratios), edge-drop split zones |
-| Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                    |
-| **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                           |
-| **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                            |
-| Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph |
-| **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                           |
+| Area                                                                | Status                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Four-layer architecture                                             | ✅ Established                                                                                                                                                                                                                                                                                |
+| CommandService + KeybindingService (registry pattern)               | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| Workspace grid + unified header band (`HeaderBandRule`)             | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| Tab system (single pane, DnD, persistence, overflow dropdown)       | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| Theming (`--sat-*` tokens) + ThemeProvider (injectable persistence) | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| Command palette / quick switcher / search (tantivy + nucleo)        | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| File tree / sidebar / note creation (Obsidian-style instant)        | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| **View registry + generic side docks (ADR-018 Phase 1)**            | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| **Leaf registry + uncontrolled CM6 editor (ADR-018 Phase 2)**       | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| Layout as serializable tree / pane splits (ADR-032)                 | ✅ Complete — root layout tree, per-pane tab bars, DnD between panes, v2 persistence, resize sashes (persisted `size` ratios), edge-drop split zones                                                                                                                                          |
+| Editor perf campaign (typing-latency harness, ADR-019/020)          | ✅ Gate passed — prod full-stack p95 = 4ms @ 100KB                                                                                                                                                                                                                                            |
+| **Inline title + rename (ADR-023)**                                 | ✅ Complete                                                                                                                                                                                                                                                                                   |
+| **Single renderer (ADR-029)** — unified live + reading mode         | ✅ Complete — one CM6 view, `readingExtensions()`; `Reading.tsx` deleted; search preview full parity                                                                                                                                                                                          |
+| Graph view (ADR-021)                                                | ✅ Complete (leaf + WASM force sim, perf pass done); UI in features/graph, renderer in packages/graph, compute in crates/basalt-graph                                                                                                                                                         |
+| **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                                                                                                                                                                                   |
 | **Rust quality-hardening (ADR-030)**                                | ✅ Complete (all phases 0–5: typed errors, module splits, `NodeId`/`QueryColumnType`, search `SearchError`, perf: HashMap `group_rows`, `eq_ignore_ascii_case`, hoisted `AhoCorasick`; Phase 2 value-type unification — `FrontmatterValue` collapsed into the internally-tagged `TypedValue`) |
-| **Embed rendering (ADR-034)**                                       | ✅ Complete — real media (img/video/audio) in reading + live preview + rich table cells; Linux loopback Range server (Part A), table embeds (B), live-preview media in every caret state (C), reading-mode link bracket slicing + table-link navigation (D), stem-aware `resolveAsset` (E) |
-| Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                        |
-| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                       |
+| **Embed rendering (ADR-034)**                                       | ✅ Complete — real media (img/video/audio) in reading + live preview + rich table cells; Linux loopback Range server (Part A), table embeds (B), live-preview media in every caret state (C), reading-mode link bracket slicing + table-link navigation (D), stem-aware `resolveAsset` (E)    |
+| Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                                                                                                                                                                                |
+| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                                                                                                                                                                               |
 
 > **Freshness:** the authoritative "what's done / what's next" is
 > [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md). If this table disagrees with
@@ -279,12 +279,12 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [027-dql-query-engine](docs/adr/027-dql-query-engine.md)                                 | ADR-027: DQL Query Engine — basalt-tables Crate                             |
 | [028-dql-aggregation](docs/adr/028-dql-aggregation.md)                                   | ADR-028: DQL Aggregation — GROUP BY, FLATTEN, Aggregate Functions           |
 | [029-single-renderer-architecture](docs/adr/029-single-renderer-architecture.md)         | ADR-029: Single Renderer — Unify Edit and Reading Modes                     |
-| [030-rust-crates-quality-refactor](docs/adr/030-rust-crates-quality-refactor.md)         | ADR-030: Rust Crates Quality Refactor — Practices, Structure, Plan         |
+| [030-rust-crates-quality-refactor](docs/adr/030-rust-crates-quality-refactor.md)         | ADR-030: Rust Crates Quality Refactor — Practices, Structure, Plan          |
 | [031-pdf-export-snapshot-reading-mode](docs/adr/031-pdf-export-snapshot-reading-mode.md) | ADR-031: PDF Export — Snapshot of Reading Mode                              |
-| [032-split-pane-layout-tree](docs/adr/032-split-pane-layout-tree.md)                   | ADR-032: Split Pane Layout Tree — VS Code Grid + Obsidian Flexibility      |
-| [033-syntax-registry](docs/adr/033-syntax-registry.md)                                 | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
-| [034-embed-rendering](docs/adr/034-embed-rendering.md)                               | ADR-034: Embed Rendering — Real Media in Every Surface                     |
-| [035-infinite-canvas](docs/adr/035-infinite-canvas.md)                                 | ADR-035: Infinite Canvas — Spatial Note Layout                              |
+| [032-split-pane-layout-tree](docs/adr/032-split-pane-layout-tree.md)                     | ADR-032: Split Pane Layout Tree — VS Code Grid + Obsidian Flexibility       |
+| [033-syntax-registry](docs/adr/033-syntax-registry.md)                                   | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
+| [034-embed-rendering](docs/adr/034-embed-rendering.md)                                   | ADR-034: Embed Rendering — Real Media in Every Surface                      |
+| [035-infinite-canvas](docs/adr/035-infinite-canvas.md)                                   | ADR-035: Infinite Canvas — Spatial Note Layout                              |
 
 <!-- ADR_INDEX_END -->
 
@@ -308,9 +308,9 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add vault/filesystem operations       | `crates/basalt-vault/`                     |
 | Add shared Rust domain types          | `crates/basalt-types/`                     |
 | Add graph/backlinks compute           | `crates/basalt-graph/`                     |
-| Add canvas/viewport business logic      | `apps/tauri/src/features/canvas/`          |
-| Add canvas viewport primitive           | `packages/canvas-viewport/`                |
-| Add canvas compute (Rust)               | `crates/basalt-canvas/`                    |
+| Add canvas/viewport business logic    | `apps/tauri/src/features/canvas/`          |
+| Add canvas viewport primitive         | `packages/canvas-viewport/`                |
+| Add canvas compute (Rust)             | `crates/basalt-canvas/`                    |
 | Add search/indexing compute           | `crates/basalt-search/`                    |
 
 ---

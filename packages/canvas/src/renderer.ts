@@ -169,9 +169,7 @@ function link(
 
 /** The two unit-quad corners (two triangles = 6 verts) shared by every rect
  * and edge instance. */
-const UNIT_QUAD = new Float32Array([
-  -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1,
-]);
+const UNIT_QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1]);
 
 export class CanvasViewportRenderer {
   private gl: WebGL2RenderingContext;
@@ -466,7 +464,11 @@ export class CanvasViewportRenderer {
     // Groups first (z = 0): colored backgrounds behind nodes/edges.
     if (this.groupCount > 0) {
       gl.useProgram(this.progRect);
-      gl.uniform2f(this.uniform(gl, this.progRect, "uResolution"), this.cssW, this.cssH);
+      gl.uniform2f(
+        this.uniform(gl, this.progRect, "uResolution"),
+        this.cssW,
+        this.cssH,
+      );
       gl.uniform1f(this.uniform(gl, this.progRect, "uScale"), v.scale);
       gl.uniform2f(this.uniform(gl, this.progRect, "uOffset"), v.ox, v.oy);
       gl.bindVertexArray(this.vaoGroups);
@@ -476,11 +478,18 @@ export class CanvasViewportRenderer {
     // Edges under nodes.
     if (this.edgeCount > 0) {
       gl.useProgram(this.progEdge);
-      gl.uniform2f(this.uniform(gl, this.progEdge, "uResolution"), this.cssW, this.cssH);
+      gl.uniform2f(
+        this.uniform(gl, this.progEdge, "uResolution"),
+        this.cssW,
+        this.cssH,
+      );
       gl.uniform1f(this.uniform(gl, this.progEdge, "uScale"), v.scale);
       gl.uniform2f(this.uniform(gl, this.progEdge, "uOffset"), v.ox, v.oy);
       gl.uniform1f(this.uniform(gl, this.progEdge, "uDpr"), this.dpr);
-      gl.uniform1f(this.uniform(gl, this.progEdge, "uEdgeWidth"), this.edgeWidth);
+      gl.uniform1f(
+        this.uniform(gl, this.progEdge, "uEdgeWidth"),
+        this.edgeWidth,
+      );
       gl.bindVertexArray(this.vaoEdges);
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.edgeCount);
     }
@@ -495,10 +504,20 @@ export class CanvasViewportRenderer {
     // Arrowheads above all.
     if (this.showArrows && this.arrowVertCount > 0) {
       gl.useProgram(this.progArrow);
-      gl.uniform2f(this.uniform(gl, this.progArrow, "uResolution"), this.cssW, this.cssH);
+      gl.uniform2f(
+        this.uniform(gl, this.progArrow, "uResolution"),
+        this.cssW,
+        this.cssH,
+      );
       gl.uniform1f(this.uniform(gl, this.progArrow, "uScale"), v.scale);
       gl.uniform2f(this.uniform(gl, this.progArrow, "uOffset"), v.ox, v.oy);
-      gl.uniform4f(this.uniform(gl, this.progArrow, "uColor"), 0.6, 0.65, 0.75, 0.8);
+      gl.uniform4f(
+        this.uniform(gl, this.progArrow, "uColor"),
+        0.6,
+        0.65,
+        0.75,
+        0.8,
+      );
       gl.bindVertexArray(this.vaoArrows);
       gl.drawArrays(gl.TRIANGLES, 0, this.arrowVertCount);
     }

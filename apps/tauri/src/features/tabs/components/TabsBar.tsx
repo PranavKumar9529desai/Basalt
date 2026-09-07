@@ -1,5 +1,11 @@
 import { TabsBar as UITabsBar } from "@workspace/ui/components/tabs";
-import { type DragEvent, type PointerEvent, type ReactNode, useCallback, useMemo } from "react";
+import {
+  type DragEvent,
+  type PointerEvent,
+  type ReactNode,
+  useCallback,
+  useMemo,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTabDnD } from "../hooks/useTabDnD";
 import { useTabsStore } from "../store";

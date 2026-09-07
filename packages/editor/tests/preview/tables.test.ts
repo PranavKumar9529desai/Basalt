@@ -18,7 +18,9 @@ import { handleTableNode } from "../../src/preview/tables";
 import { makeContext, makeCollector } from "../_helpers";
 
 /** Find the first Table syntax node in the doc and return it as a SyntaxNodeRef. */
-function tableRef(state: ReturnType<typeof makeContext>["state"]): SyntaxNode | null {
+function tableRef(
+  state: ReturnType<typeof makeContext>["state"],
+): SyntaxNode | null {
   const tree = syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({
@@ -40,7 +42,12 @@ describe("handleTableNode", () => {
     expect(node).not.toBeNull();
     const collector = makeCollector();
     const handled = handleTableNode(
-      { from: node!.from, to: node!.to, type: { name: "Table" } as never, node: node as never } as never,
+      {
+        from: node!.from,
+        to: node!.to,
+        type: { name: "Table" } as never,
+        node: node as never,
+      } as never,
       ctx,
       collector,
     );

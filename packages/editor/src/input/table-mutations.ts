@@ -82,14 +82,13 @@ function padCells(cells: string[], colCount: number): string[] {
 export function serializeTableSource(model: TableSource): string {
   const { rows, alignments, colCount } = model;
 
-  const headerLine =
-    "| " + padCells(rows[0], colCount).join(" | ") + " |";
+  const headerLine = "| " + padCells(rows[0], colCount).join(" | ") + " |";
   const delimLine =
     "| " + padCells(alignments.map(alignmentChar), colCount).join(" | ") + " |";
 
-  const bodyLines = rows.slice(1).map(
-    (r) => "| " + padCells(r, colCount).join(" | ") + " |",
-  );
+  const bodyLines = rows
+    .slice(1)
+    .map((r) => "| " + padCells(r, colCount).join(" | ") + " |");
 
   return [headerLine, delimLine, ...bodyLines].join("\n");
 }
@@ -108,7 +107,6 @@ export interface MutationResult {
 function emptyRow(colCount: number): string[] {
   return Array.from({ length: colCount }, () => "");
 }
-
 
 // --- Update cell text ---
 
@@ -140,10 +138,7 @@ export function updateCellText(
 
 // --- Insert row ---
 
-function insertRow(
-  model: TableSource,
-  afterRow: number,
-): MutationResult {
+function insertRow(model: TableSource, afterRow: number): MutationResult {
   const newRows = [
     ...model.rows.slice(0, afterRow + 1),
     emptyRow(model.colCount),
@@ -188,10 +183,7 @@ export function insertRowBelow(
 }
 
 /** Delete the row at the given index. Can't delete header or last body row. */
-export function deleteRow(
-  raw: string,
-  rowIdx: number,
-): MutationResult | null {
+export function deleteRow(raw: string, rowIdx: number): MutationResult | null {
   const model = parseTableSource(raw);
   if (!model) return null;
   if (rowIdx <= 0) return null; // can't delete header
@@ -354,10 +346,7 @@ export function deleteColumn(
 // --- Move row ---
 
 /** Move the row at the given index up by one position. Can't move header. */
-export function moveRowUp(
-  raw: string,
-  rowIdx: number,
-): MutationResult | null {
+export function moveRowUp(raw: string, rowIdx: number): MutationResult | null {
   const model = parseTableSource(raw);
   if (!model) return null;
   if (rowIdx <= 0) return null; // can't move header
@@ -365,7 +354,10 @@ export function moveRowUp(
 
   const newRows = [...model.rows];
   // Swap rowIdx with rowIdx-1.
-  [newRows[rowIdx - 1], newRows[rowIdx]] = [newRows[rowIdx], newRows[rowIdx - 1]];
+  [newRows[rowIdx - 1], newRows[rowIdx]] = [
+    newRows[rowIdx],
+    newRows[rowIdx - 1],
+  ];
   const newModel: TableSource = { ...model, rows: newRows };
   const text = serializeTableSource(newModel);
 
@@ -392,7 +384,10 @@ export function moveRowDown(
   if (rowIdx >= model.rows.length - 1) return null; // already last row
 
   const newRows = [...model.rows];
-  [newRows[rowIdx], newRows[rowIdx + 1]] = [newRows[rowIdx + 1], newRows[rowIdx]];
+  [newRows[rowIdx], newRows[rowIdx + 1]] = [
+    newRows[rowIdx + 1],
+    newRows[rowIdx],
+  ];
   const newModel: TableSource = { ...model, rows: newRows };
   const text = serializeTableSource(newModel);
 

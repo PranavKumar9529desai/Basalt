@@ -65,16 +65,17 @@ export function EdgeDropZones({
   }, []);
 
   const hover = tabDnD.dragState?.hoverTarget;
-  const active = Boolean(
-    tabDnD.dragState && hover && hover.paneId === paneId,
-  );
+  const active = Boolean(tabDnD.dragState && hover && hover.paneId === paneId);
 
   return (
     <>
       <div ref={rootRef} className="hidden" />
       {active && bodyEl && hover
         ? createPortal(
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-20"
+            >
               {hover.kind === "edge" && <EdgeZoneHighlight edge={hover.edge} />}
               {hover.kind === "pane-body" && <PaneBodyHighlight />}
             </div>,

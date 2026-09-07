@@ -22,15 +22,15 @@ Problems:
 
 Restructure into six crates with hyphenated package names:
 
-| Crate           | Responsibility                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| `basalt-types`  | Shared data types: `Document`, `MarkdownNode`, `FileMetadata`, search result types       |
-| `basalt-parser` | Markdown parsing, frontmatter extraction, inline parsing, UTF-16 mapping                 |
-| `basalt-graph`  | `StringArena`, `NoteGraph`, fuzzy search algorithm                                       |
-| `basalt-vault`  | Vault indexing, incremental reindex, file watching, cache, tree building, path utilities |
-| `basalt-search` | Full-text search (Tantivy BM25) and fuzzy file matching (Nucleo)                         |
-| `graph-wasm`    | `wasm-bindgen` force-layout graph sim for the GraphWorker (ADR-021)                       |
-| `frontmatter-wasm` | keystroke-path frontmatter parser (ADR-022)                                            |
+| Crate              | Responsibility                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `basalt-types`     | Shared data types: `Document`, `MarkdownNode`, `FileMetadata`, search result types       |
+| `basalt-parser`    | Markdown parsing, frontmatter extraction, inline parsing, UTF-16 mapping                 |
+| `basalt-graph`     | `StringArena`, `NoteGraph`, fuzzy search algorithm                                       |
+| `basalt-vault`     | Vault indexing, incremental reindex, file watching, cache, tree building, path utilities |
+| `basalt-search`    | Full-text search (Tantivy BM25) and fuzzy file matching (Nucleo)                         |
+| `graph-wasm`       | `wasm-bindgen` force-layout graph sim for the GraphWorker (ADR-021)                      |
+| `frontmatter-wasm` | keystroke-path frontmatter parser (ADR-022)                                              |
 
 Dependency order (WASM bridges live in standalone workspaces, not the main one):
 

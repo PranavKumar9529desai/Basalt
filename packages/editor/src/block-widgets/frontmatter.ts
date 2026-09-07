@@ -275,7 +275,9 @@ export const frontmatterBlockWidget: BlockWidgetSpec<FrontmatterModel> = {
     // we slice to `node.to + 1` to include the trailing line terminator.
     // Without it the Rust parser's `fm_bounds` loop (frontmatter.rs) can't
     // find the closing fence because `find('\n')` returns None.
-    return fn(state.doc.sliceString(node.from, Math.min(node.to + 1, state.doc.length)));
+    return fn(
+      state.doc.sliceString(node.from, Math.min(node.to + 1, state.doc.length)),
+    );
   },
   render,
   span: spanFor,

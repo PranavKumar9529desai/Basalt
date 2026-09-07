@@ -30,7 +30,11 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModalProps) {
+export function AssetPickerModal({
+  isOpen,
+  onClose,
+  onSelect,
+}: AssetPickerModalProps) {
   const [query, setQuery] = useState("");
   const [assets, setAssets] = useState<AssetInfo[]>([]);
   const [filterType, setFilterType] = useState<string>("all");
@@ -87,14 +91,14 @@ export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModal
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          filteredAssets.length > 0 ? (prev + 1) % filteredAssets.length : 0
+          filteredAssets.length > 0 ? (prev + 1) % filteredAssets.length : 0,
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((prev) =>
           filteredAssets.length > 0
             ? (prev - 1 + filteredAssets.length) % filteredAssets.length
-            : 0
+            : 0,
         );
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -107,7 +111,7 @@ export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModal
         onClose();
       }
     },
-    [filteredAssets, selectedIndex, onSelect, onClose]
+    [filteredAssets, selectedIndex, onSelect, onClose],
   );
 
   if (!isOpen) return null;
@@ -126,7 +130,10 @@ export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModal
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
         {/* Search header */}
         <div className="flex items-center px-4 py-3 border-b border-[var(--sat-layout-border)] gap-2">
-          <IconSearch size={18} className="text-[var(--sat-text-muted)] shrink-0" />
+          <IconSearch
+            size={18}
+            className="text-[var(--sat-text-muted)] shrink-0"
+          />
           <input
             ref={inputRef}
             type="text"
@@ -209,10 +216,14 @@ export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModal
                       )}
                     </span>
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="font-medium truncate">{asset.file_name}</span>
+                      <span className="font-medium truncate">
+                        {asset.file_name}
+                      </span>
                       <span
                         className={`text-[10px] truncate ${
-                          isSelected ? "text-white/70" : "text-[var(--sat-text-muted)]"
+                          isSelected
+                            ? "text-white/70"
+                            : "text-[var(--sat-text-muted)]"
                         }`}
                       >
                         {asset.rel_path}
@@ -221,7 +232,9 @@ export function AssetPickerModal({ isOpen, onClose, onSelect }: AssetPickerModal
                   </div>
                   <span
                     className={`text-[10px] shrink-0 ml-2 ${
-                      isSelected ? "text-white/70" : "text-[var(--sat-text-muted)]"
+                      isSelected
+                        ? "text-white/70"
+                        : "text-[var(--sat-text-muted)]"
                     }`}
                   >
                     {formatFileSize(asset.size_bytes)}

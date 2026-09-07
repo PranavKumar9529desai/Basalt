@@ -114,15 +114,15 @@ TTI instrumentation (ADR-017) is spread across two sides:
 
 ## 4. Where state lives
 
-| Concern                       | Home                                                   | Notes                                                       |
-| ----------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
-| Cross-feature orchestration   | `shared/useWorkspace.ts` + `app-shell/AppProvider.tsx` | Consumed via `useAppContext()`                              |
-| Vault tree / CRUD / selection | `features/vault/`                                      | `useVaultTree`, `useVaultController`, `useVaultMutations`   |
+| Concern                       | Home                                                   | Notes                                                                              |
+| ----------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Cross-feature orchestration   | `shared/useWorkspace.ts` + `app-shell/AppProvider.tsx` | Consumed via `useAppContext()`                                                     |
+| Vault tree / CRUD / selection | `features/vault/`                                      | `useVaultTree`, `useVaultController`, `useVaultMutations`                          |
 | Tabs + persistence            | `features/tabs/store/`                                 | `core.ts` (layout tree: panes + tabs, ADR-032) + `persistence.ts` (debounced save) |
-| Active note + stats           | `features/editor/store.ts`                             | `useActiveNoteStore` — **stats only, never content**        |
-| Search + switcher             | `features/search/store.ts`                             | Seq guards against out-of-order IPC                         |
-| Settings                      | `features/settings/`                                   | `useSetting(key)` selector + settings-section registry      |
-| Command/keybinding registries | `packages/commands`, `packages/keybindings`            | `CommandProvider`/`KeybindingProvider` at root              |
+| Active note + stats           | `features/editor/store.ts`                             | `useActiveNoteStore` — **stats only, never content**                               |
+| Search + switcher             | `features/search/store.ts`                             | Seq guards against out-of-order IPC                                                |
+| Settings                      | `features/settings/`                                   | `useSetting(key)` selector + settings-section registry                             |
+| Command/keybinding registries | `packages/commands`, `packages/keybindings`            | `CommandProvider`/`KeybindingProvider` at root                                     |
 
 ---
 
@@ -188,7 +188,7 @@ renders whatever the registries hold.
 | --------------------------------- | -------------------------------------------------------------------------------- |
 | Add a sidebar dock / leaf         | `app-shell/registrations.ts` + `packages/views`                                  |
 | Wire two features together        | `shared/` (never inside a feature)                                               |
-| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `lib/saveManager`                         |
+| Trace a note open → editor → save | `shared/useWorkspace.ts` → `useEditor` → `lib/saveManager`                       |
 | Understand the editor typing path | `packages/editor` (CM6 extensions) — **keep the keystroke path React-free**      |
 | Add an IPC command                | `src-tauri/src/lib.rs` + `commands/*`; expose via a feature hook                 |
 | Understand boot / TTI             | `app-shell/Boot.tsx`, `routes/index.tsx`, `app-shell/tti.ts`, `commands/boot.rs` |

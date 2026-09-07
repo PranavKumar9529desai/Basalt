@@ -35,13 +35,16 @@ export function useTabChrome(
     [tabs],
   );
 
-  const setTabRef = useCallback((tabId: string, el: HTMLDivElement | null) => {
-    if (el) {
-      tabRefs.current.set(tabId, el);
-    } else {
-      tabRefs.current.delete(tabId);
-    }
-  }, [tabRefs]);
+  const setTabRef = useCallback(
+    (tabId: string, el: HTMLDivElement | null) => {
+      if (el) {
+        tabRefs.current.set(tabId, el);
+      } else {
+        tabRefs.current.delete(tabId);
+      }
+    },
+    [tabRefs],
+  );
 
   const recalcChrome = useCallback(() => {
     const container = containerRef.current;
@@ -102,7 +105,14 @@ export function useTabChrome(
       }
       return { activeLeft, activeWidth, separatorXs };
     });
-  }, [activeTabId, tabs, visibleTabCount, visibleTabStart, containerRef, tabRefs]);
+  }, [
+    activeTabId,
+    tabs,
+    visibleTabCount,
+    visibleTabStart,
+    containerRef,
+    tabRefs,
+  ]);
 
   // Layout effect on mount/change
   useLayoutEffect(() => {

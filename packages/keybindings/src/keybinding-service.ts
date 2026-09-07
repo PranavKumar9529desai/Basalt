@@ -42,7 +42,8 @@ export class KeybindingService {
   private rebuild(): void {
     this.prepared = this.bindings.map((b) => {
       const evaluate = b.when ? parseWhen(b.when) : null;
-      const broken = b.when !== undefined && b.when.trim() !== "" && evaluate === null;
+      const broken =
+        b.when !== undefined && b.when.trim() !== "" && evaluate === null;
       if (broken) {
         console.warn(
           `[keybindings] invalid when clause "${b.when}" in binding "${b.key}" — it will never match`,
@@ -127,7 +128,8 @@ export class KeybindingService {
     // Most-specific match wins: a binding whose when-clause evaluates true
     // beats an unconditional one; unconditional bindings are the fallback.
     for (const binding of candidates) {
-      if (binding.evaluate && binding.evaluate(this.context)) return binding.original;
+      if (binding.evaluate && binding.evaluate(this.context))
+        return binding.original;
     }
     for (const binding of candidates) {
       if (!binding.evaluate) return binding.original;

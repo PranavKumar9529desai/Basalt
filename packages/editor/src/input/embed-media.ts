@@ -8,7 +8,11 @@ import {
   type PluginValue,
 } from "@codemirror/view";
 import { resolveAssetFacet } from "../types";
-import { classifyMediaExtension, extensionOf, scanEmbedWikiLinks } from "./embed-utils";
+import {
+  classifyMediaExtension,
+  extensionOf,
+  scanEmbedWikiLinks,
+} from "./embed-utils";
 import { createCodeToggleButton } from "../block-widgets/code-toggle-button";
 import { isEmbedInRawMode, setEmbedRawMode } from "./embed-state";
 import { notifyViewOfSizeChange } from "../block-widgets/utils";

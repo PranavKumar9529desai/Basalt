@@ -171,7 +171,10 @@ function parseComparison(p: Parser): WhenEvaluator {
   if (op && (op.type === "eq" || op.type === "neq")) {
     consume(p, op.type);
     const valueToken = peek(p);
-    if (!valueToken || (valueToken.type !== "ident" && valueToken.type !== "string")) {
+    if (
+      !valueToken ||
+      (valueToken.type !== "ident" && valueToken.type !== "string")
+    ) {
       throw new Error("expected value after comparison operator");
     }
     consume(p);

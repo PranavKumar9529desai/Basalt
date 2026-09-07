@@ -22,11 +22,17 @@ import {
 import type { QueryResult } from "../src/block-widgets/dql-widget";
 import { EmbedMediaWidget } from "../src/input/embed-media";
 import { wikiLinkExtension } from "../src/syntax/wiki-links";
-import { livePreviewField, livePreviewPlugin } from "../src/preview/live-preview";
+import {
+  livePreviewField,
+  livePreviewPlugin,
+} from "../src/preview/live-preview";
 import { blockWidgetSpecsFacet } from "../src/block-widgets/registry";
 import { dqlBlockSpec } from "../src/block-widgets/dql-widget";
 
-function mockView(): { view: EditorView; requestMeasure: ReturnType<typeof vi.fn> } {
+function mockView(): {
+  view: EditorView;
+  requestMeasure: ReturnType<typeof vi.fn>;
+} {
   const requestMeasure = vi.fn();
   const view = { requestMeasure } as unknown as EditorView;
   return { view, requestMeasure };
@@ -58,7 +64,7 @@ describe("DqlResultWidget layout notification", () => {
     const { view, requestMeasure } = mockView();
     const runQuery = vi.fn().mockResolvedValue(TABLE_RESULT);
     const widget = new DqlResultWidget(
-      "TABLE FROM \"docs\"",
+      'TABLE FROM "docs"',
       runQuery,
       undefined,
     );
@@ -72,7 +78,7 @@ describe("DqlResultWidget layout notification", () => {
     expect(dom.innerHTML).toContain("cm-dql-loading");
     expect(requestMeasure).not.toHaveBeenCalled();
 
-    await runQuery("TABLE FROM \"docs\"");
+    await runQuery('TABLE FROM "docs"');
 
     // After the result lands the placeholder is replaced — and the editor must
     // re-measure so content below the block doesn't overlap.
@@ -84,13 +90,17 @@ describe("DqlResultWidget layout notification", () => {
   it("calls requestMeasure after an error replaces the loading placeholder", async () => {
     const { view, requestMeasure } = mockView();
     const runQuery = vi.fn().mockRejectedValue(new Error("boom"));
-    const widget = new DqlResultWidget("TABLE FROM \"docs\"", runQuery, undefined);
+    const widget = new DqlResultWidget(
+      'TABLE FROM "docs"',
+      runQuery,
+      undefined,
+    );
 
     const dom = widget.toDOM(view);
     document.body.appendChild(dom);
     expect(dom.innerHTML).toContain("cm-dql-loading");
 
-    await runQuery("TABLE FROM \"docs\"").catch(() => {});
+    await runQuery('TABLE FROM "docs"').catch(() => {});
 
     expect(dom.innerHTML).toContain("cm-dql-error");
     expect(requestMeasure).toHaveBeenCalled();
@@ -103,7 +113,7 @@ describe("DqlResultWidget layout notification", () => {
       () => new Promise<QueryResult>((resolve) => (resolveQuery = resolve)),
     );
     const widget = new DqlResultWidget(
-      "TABLE FROM \"docs\"",
+      'TABLE FROM "docs"',
       runQuery,
       undefined,
     );
@@ -162,7 +172,9 @@ describe("DQL block widget uses a block: true decoration (no overlap)", () => {
     // inside the fenced code), which is the state where the overlap occurs.
     return EditorState.create({
       doc: '```dql\nTABLE FROM "docs"\n```\n\nBelow text',
-      selection: { anchor: '```dql\nTABLE FROM "docs"\n```\n\nBelow text'.length },
+      selection: {
+        anchor: '```dql\nTABLE FROM "docs"\n```\n\nBelow text'.length,
+      },
       extensions,
     });
   }

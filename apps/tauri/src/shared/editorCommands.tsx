@@ -309,12 +309,48 @@ function tableMutate(
 }
 
 const tableCommands = [
-  { id: "table:insert-row-above", name: "Insert Row Above", category: "Table", icon: <IconRowInsertTop size={16} />, callback: tableMutate(insertRowAbove) },
-  { id: "table:insert-row-below", name: "Insert Row Below", category: "Table", icon: <IconRowInsertBottom size={16} />, callback: tableMutate(insertRowBelow) },
-  { id: "table:delete-row", name: "Delete Row", category: "Table", icon: <IconTableOff size={16} />, callback: tableMutate(deleteRow) },
-  { id: "table:insert-column-left", name: "Insert Column Left", category: "Table", icon: <IconColumnInsertLeft size={16} />, callback: tableMutate(insertColumnLeft) },
-  { id: "table:insert-column-right", name: "Insert Column Right", category: "Table", icon: <IconColumnInsertRight size={16} />, callback: tableMutate(insertColumnRight) },
-  { id: "table:delete-column", name: "Delete Column", category: "Table", icon: <IconColumnRemove size={16} />, callback: tableMutate(deleteColumn) },
+  {
+    id: "table:insert-row-above",
+    name: "Insert Row Above",
+    category: "Table",
+    icon: <IconRowInsertTop size={16} />,
+    callback: tableMutate(insertRowAbove),
+  },
+  {
+    id: "table:insert-row-below",
+    name: "Insert Row Below",
+    category: "Table",
+    icon: <IconRowInsertBottom size={16} />,
+    callback: tableMutate(insertRowBelow),
+  },
+  {
+    id: "table:delete-row",
+    name: "Delete Row",
+    category: "Table",
+    icon: <IconTableOff size={16} />,
+    callback: tableMutate(deleteRow),
+  },
+  {
+    id: "table:insert-column-left",
+    name: "Insert Column Left",
+    category: "Table",
+    icon: <IconColumnInsertLeft size={16} />,
+    callback: tableMutate(insertColumnLeft),
+  },
+  {
+    id: "table:insert-column-right",
+    name: "Insert Column Right",
+    category: "Table",
+    icon: <IconColumnInsertRight size={16} />,
+    callback: tableMutate(insertColumnRight),
+  },
+  {
+    id: "table:delete-column",
+    name: "Delete Column",
+    category: "Table",
+    icon: <IconColumnRemove size={16} />,
+    callback: tableMutate(deleteColumn),
+  },
 ];
 
 tableCommands.forEach((cmd) =>
@@ -334,9 +370,7 @@ if (import.meta.env.DEV) {
         fileName: "editor-benchmark.md",
         contents: md,
       });
-      resolveActiveController()?.io.setStatus(
-        `Benchmark written to ${path}`,
-      );
+      resolveActiveController()?.io.setStatus(`Benchmark written to ${path}`);
     } catch (err) {
       console.error("[editorCommands] report write failed:", err);
       resolveActiveController()?.io.setStatus(

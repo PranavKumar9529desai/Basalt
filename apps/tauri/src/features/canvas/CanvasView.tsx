@@ -21,7 +21,7 @@ import {
   type OnConnect,
   type OnConnectStart,
   type OnConnectEnd,
-  MarkerType
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { LeafProps } from "@workspace/views";
@@ -30,7 +30,11 @@ import { CanvasToolbar } from "./CanvasToolbar";
 import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
 import { NotePickerModal } from "./components/NotePickerModal";
 import { AssetPickerModal } from "./components/AssetPickerModal";
-import { mapToXYFlow, mapToCanvasDocument, type CanvasXYNode } from "./lib/mapper";
+import {
+  mapToXYFlow,
+  mapToCanvasDocument,
+  type CanvasXYNode,
+} from "./lib/mapper";
 import { useLeafServices } from "@workspace/views";
 
 import TextCardNode from "./nodes/TextCardNode";
@@ -58,7 +62,10 @@ const edgeTypes = {
 function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   const [nodes, setNodes] = useState<CanvasXYNode[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [ctxMenu, setCtxMenu] = useState<{ target: ContextTarget; anchor: { x: number; y: number } } | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{
+    target: ContextTarget;
+    anchor: { x: number; y: number };
+  } | null>(null);
   const [isNotePickerOpen, setIsNotePickerOpen] = useState(false);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [guidelines, setGuidelines] = useState<{
@@ -73,7 +80,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     horizontalLines: [],
   });
   const reactFlowInstance = useReactFlow();
-  const connectingNodeRef = useRef<{ nodeId: string; handleId: string | null } | null>(null);
+  const connectingNodeRef = useRef<{
+    nodeId: string;
+    handleId: string | null;
+  } | null>(null);
 
   let services: ReturnType<typeof useLeafServices> | null = null;
   try {
@@ -103,7 +113,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     }
     try {
       const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
-      await invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) });
+      await invoke("save_canvas", {
+        path: tab.path,
+        content: JSON.stringify(doc),
+      });
       isDirtyRef.current = false;
       servicesRef.current?.markTabDirty(tab.id, false);
     } catch (e) {
@@ -163,7 +176,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       // Guard 2: Never flush on unmount unless canvas was loaded AND has unsaved edits
       if (isLoadedRef.current && isDirtyRef.current) {
         const doc = mapToCanvasDocument(nodesRef.current, edgesRef.current);
-        invoke("save_canvas", { path: tab.path, content: JSON.stringify(doc) }).catch(console.error);
+        invoke("save_canvas", {
+          path: tab.path,
+          content: JSON.stringify(doc),
+        }).catch(console.error);
         servicesRef.current?.markTabDirty(tab.id, false);
       }
     };
@@ -192,25 +208,29 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   const updateText = useCallback(
     (id: string, text: string) => {
       setNodes((nds) => {
-        const next = nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, text } } : n));
+        const next = nds.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, text } } : n,
+        );
         nodesRef.current = next;
         triggerSave();
         return next;
       });
     },
-    [triggerSave]
+    [triggerSave],
   );
 
   const updateUrl = useCallback(
     (id: string, url: string) => {
       setNodes((nds) => {
-        const next = nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, url } } : n));
+        const next = nds.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, url } } : n,
+        );
         nodesRef.current = next;
         triggerSave();
         return next;
       });
     },
-    [triggerSave]
+    [triggerSave],
   );
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -218,10 +238,17 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       setNodes((nds) => {
         let hasSnapChange = false;
         const nextChanges = changes.map((change) => {
-          if (change.type === "position" && change.dragging && change.position) {
+          if (
+            change.type === "position" &&
+            change.dragging &&
+            change.position
+          ) {
             const node = nds.find((n) => n.id === change.id);
             if (node) {
-              const tempNode: CanvasXYNode = { ...node, position: change.position };
+              const tempNode: CanvasXYNode = {
+                ...node,
+                position: change.position,
+              };
               const alignment = getSmartGuidelines(tempNode, nds);
               hasSnapChange = true;
               setGuidelines({
@@ -239,8 +266,16 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           return change;
         });
 
-        if (!hasSnapChange && changes.some((c) => c.type === "position" && !(c as any).dragging)) {
-          setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
+        if (
+          !hasSnapChange &&
+          changes.some((c) => c.type === "position" && !(c as any).dragging)
+        ) {
+          setGuidelines({
+            vertical: null,
+            horizontal: null,
+            verticalLines: [],
+            horizontalLines: [],
+          });
         }
 
         const nextNodes = applyNodeChanges(nextChanges, nds) as CanvasXYNode[];
@@ -267,19 +302,30 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
 
         nodesRef.current = nextNodes;
 
-        const isDragging = changes.some((c) => c.type === "position" && (c as any).dragging);
-        const isResizing = changes.some((c) => c.type === "dimensions" && (c as any).resizing === true);
+        const isDragging = changes.some(
+          (c) => c.type === "position" && (c as any).dragging,
+        );
+        const isResizing = changes.some(
+          (c) => c.type === "dimensions" && (c as any).resizing === true,
+        );
         const isPureSelect = changes.every((c) => c.type === "select");
-        const isInitialDimensions = changes.every((c) => c.type === "dimensions" && !(c as any).resizing);
+        const isInitialDimensions = changes.every(
+          (c) => c.type === "dimensions" && !(c as any).resizing,
+        );
 
-        if (!isDragging && !isResizing && !isPureSelect && !isInitialDimensions) {
+        if (
+          !isDragging &&
+          !isResizing &&
+          !isPureSelect &&
+          !isInitialDimensions
+        ) {
           triggerSave();
         }
 
         return nextNodes;
       });
     },
-    [triggerSave]
+    [triggerSave],
   );
 
   const onEdgesChange: OnEdgesChange = useCallback(
@@ -293,7 +339,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
         return nextEdges;
       });
     },
-    [triggerSave]
+    [triggerSave],
   );
 
   const dismissGhost = useCallback(() => {
@@ -322,17 +368,25 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           style: { stroke: strokeColor, strokeWidth: 2 },
         };
-        const nextEdges = addEdge(newEdge, eds.filter((e) => !e.id.startsWith("ghost-")));
+        const nextEdges = addEdge(
+          newEdge,
+          eds.filter((e) => !e.id.startsWith("ghost-")),
+        );
         edgesRef.current = nextEdges;
         saveCanvasNow();
         return nextEdges;
       });
     },
-    [dismissGhost, saveCanvasNow]
+    [dismissGhost, saveCanvasNow],
   );
 
   const commitGhost = useCallback(
-    (ghostNodeId: string, pos: { x: number; y: number }, sourceId: string, sourceHandle?: string) => {
+    (
+      ghostNodeId: string,
+      pos: { x: number; y: number },
+      sourceId: string,
+      sourceHandle?: string,
+    ) => {
       const realCardId = `text-${Date.now()}`;
       const realEdgeId = `edge-${Date.now()}`;
       const strokeColor = "var(--sat-accent-primary, #6366f1)";
@@ -371,15 +425,18 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
         return nextEdges;
       });
     },
-    [saveCanvasNow]
+    [saveCanvasNow],
   );
 
   // Obsidian UX: Drag edge into empty space shows a ghost preview card
-  const onConnectStart: OnConnectStart = useCallback((_, { nodeId, handleId }) => {
-    if (nodeId) {
-      connectingNodeRef.current = { nodeId, handleId: handleId ?? null };
-    }
-  }, []);
+  const onConnectStart: OnConnectStart = useCallback(
+    (_, { nodeId, handleId }) => {
+      if (nodeId) {
+        connectingNodeRef.current = { nodeId, handleId: handleId ?? null };
+      }
+    },
+    [],
+  );
 
   const onConnectEnd: OnConnectEnd = useCallback(
     (event) => {
@@ -387,10 +444,17 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       const target = event.target as HTMLElement;
       const isPane = target?.classList.contains("react-flow__pane");
       if (isPane) {
-        const clientX = (event as MouseEvent).clientX ?? (event as TouchEvent).changedTouches?.[0]?.clientX;
-        const clientY = (event as MouseEvent).clientY ?? (event as TouchEvent).changedTouches?.[0]?.clientY;
+        const clientX =
+          (event as MouseEvent).clientX ??
+          (event as TouchEvent).changedTouches?.[0]?.clientX;
+        const clientY =
+          (event as MouseEvent).clientY ??
+          (event as TouchEvent).changedTouches?.[0]?.clientY;
         if (clientX !== undefined && clientY !== undefined) {
-          const pos = reactFlowInstance.screenToFlowPosition({ x: clientX, y: clientY });
+          const pos = reactFlowInstance.screenToFlowPosition({
+            x: clientX,
+            y: clientY,
+          });
           const ghostNodeId = `ghost-${Date.now()}`;
           const sourceId = connectingNodeRef.current.nodeId;
           const sourceHandle = connectingNodeRef.current.handleId ?? undefined;
@@ -401,7 +465,13 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
             position: { x: pos.x - 110, y: pos.y - 50 },
             style: { width: 220, height: 100 },
             data: {
-              onCommit: () => commitGhost(ghostNodeId, { x: pos.x - 125, y: pos.y - 70 }, sourceId, sourceHandle),
+              onCommit: () =>
+                commitGhost(
+                  ghostNodeId,
+                  { x: pos.x - 125, y: pos.y - 70 },
+                  sourceId,
+                  sourceHandle,
+                ),
               onDismiss: () => dismissGhost(),
             },
           };
@@ -413,17 +483,30 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
             target: ghostNodeId,
             targetHandle: "left",
             type: "bezier",
-            markerEnd: { type: MarkerType.ArrowClosed, color: "var(--sat-accent-primary, #6366f1)" },
-            style: { stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2, strokeDasharray: "5,5" },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "var(--sat-accent-primary, #6366f1)",
+            },
+            style: {
+              stroke: "var(--sat-accent-primary, #6366f1)",
+              strokeWidth: 2,
+              strokeDasharray: "5,5",
+            },
           };
 
           setNodes((nds) => {
-            const next = [...nds.filter((n) => !n.id.startsWith("ghost-")), ghostNode];
+            const next = [
+              ...nds.filter((n) => !n.id.startsWith("ghost-")),
+              ghostNode,
+            ];
             nodesRef.current = next;
             return next;
           });
           setEdges((eds) => {
-            const next = [...eds.filter((e) => !e.id.startsWith("ghost-")), ghostEdge];
+            const next = [
+              ...eds.filter((e) => !e.id.startsWith("ghost-")),
+              ghostEdge,
+            ];
             edgesRef.current = next;
             return next;
           });
@@ -431,63 +514,74 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       }
       connectingNodeRef.current = null;
     },
-    [reactFlowInstance, commitGhost, dismissGhost]
+    [reactFlowInstance, commitGhost, dismissGhost],
   );
 
   // Obsidian UX: Hold Alt/Option while dragging to duplicate
-  const onNodeDragStart = useCallback((event: MouseEvent | TouchEvent, node: CanvasXYNode) => {
-    if ("altKey" in event && event.altKey) {
-      const cloneId = `${node.type?.replace("canvas", "").toLowerCase() || "card"}-${Date.now()}`;
-      const cloneNode: CanvasXYNode = {
-        ...node,
-        id: cloneId,
-        position: { ...node.position },
-        selected: false,
+  const onNodeDragStart = useCallback(
+    (event: MouseEvent | TouchEvent, node: CanvasXYNode) => {
+      if ("altKey" in event && event.altKey) {
+        const cloneId = `${node.type?.replace("canvas", "").toLowerCase() || "card"}-${Date.now()}`;
+        const cloneNode: CanvasXYNode = {
+          ...node,
+          id: cloneId,
+          position: { ...node.position },
+          selected: false,
+        };
+        setNodes((nds) => {
+          const next = [...nds, cloneNode];
+          nodesRef.current = next;
+          saveCanvasNow();
+          return next;
+        });
+      }
+    },
+    [saveCanvasNow],
+  );
+
+  const onNodeDragStop = useCallback(
+    (_event: MouseEvent | TouchEvent, _node: CanvasXYNode) => {
+      setGuidelines({
+        vertical: null,
+        horizontal: null,
+        verticalLines: [],
+        horizontalLines: [],
+      });
+      saveCanvasNow();
+    },
+    [saveCanvasNow],
+  );
+
+  // Creation helpers
+  const handleAddTextCard = useCallback(
+    (wx?: number, wy?: number) => {
+      const center = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+
+      const newNode: CanvasXYNode = {
+        id: `text-${Date.now()}`,
+        type: "canvasText",
+        position: { x: wx ?? center.x, y: wy ?? center.y },
+        style: { width: 250, height: 140 },
+        data: { text: "New Note" },
       };
+
       setNodes((nds) => {
-        const next = [...nds, cloneNode];
+        const next = [...nds, newNode];
         nodesRef.current = next;
         saveCanvasNow();
         return next;
       });
-    }
-  }, [saveCanvasNow]);
-
-  const onNodeDragStop = useCallback(
-    (_event: MouseEvent | TouchEvent, _node: CanvasXYNode) => {
-      setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
-      saveCanvasNow();
     },
-    [saveCanvasNow]
+    [reactFlowInstance, saveCanvasNow],
   );
 
-  // Creation helpers
-  const handleAddTextCard = useCallback((wx?: number, wy?: number) => {
-    const center = reactFlowInstance.screenToFlowPosition({ 
-      x: window.innerWidth / 2, 
-      y: window.innerHeight / 2 
-    });
-    
-    const newNode: CanvasXYNode = {
-      id: `text-${Date.now()}`,
-      type: "canvasText",
-      position: { x: wx ?? center.x, y: wy ?? center.y },
-      style: { width: 250, height: 140 },
-      data: { text: "New Note" },
-    };
-    
-    setNodes(nds => {
-      const next = [...nds, newNode];
-      nodesRef.current = next;
-      saveCanvasNow();
-      return next;
-    });
-  }, [reactFlowInstance, saveCanvasNow]);
-
   const handleAddGroup = useCallback(() => {
-    const center = reactFlowInstance.screenToFlowPosition({ 
-      x: window.innerWidth / 2, 
-      y: window.innerHeight / 2 
+    const center = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
     });
     const newGroup: CanvasXYNode = {
       id: `group-${Date.now()}`,
@@ -496,7 +590,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       style: { width: 400, height: 300, zIndex: -1 },
       data: { label: "Group" },
     };
-    setNodes(nds => {
+    setNodes((nds) => {
       const next = [...nds, newGroup];
       nodesRef.current = next;
       saveCanvasNow();
@@ -505,9 +599,9 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   }, [reactFlowInstance, saveCanvasNow]);
 
   const handleAddLink = useCallback(() => {
-    const center = reactFlowInstance.screenToFlowPosition({ 
-      x: window.innerWidth / 2, 
-      y: window.innerHeight / 2 
+    const center = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
     });
     const newLink: CanvasXYNode = {
       id: `link-${Date.now()}`,
@@ -516,7 +610,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       style: { width: 260, height: 100 },
       data: { url: "https://" },
     };
-    setNodes(nds => {
+    setNodes((nds) => {
       const next = [...nds, newLink];
       nodesRef.current = next;
       saveCanvasNow();
@@ -524,49 +618,55 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     });
   }, [reactFlowInstance, saveCanvasNow]);
 
-  const handleSelectNote = useCallback((note: { name: string; path: string }) => {
-    const center = reactFlowInstance.screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-    const newNode: CanvasXYNode = {
-      id: `file-${Date.now()}`,
-      type: "canvasFile",
-      position: { x: center.x - 150, y: center.y - 110 },
-      style: { width: 300, height: 220 },
-      data: { file: note.path },
-    };
-    setNodes((nds) => {
-      const next = [...nds, newNode];
-      nodesRef.current = next;
-      saveCanvasNow();
-      return next;
-    });
-  }, [reactFlowInstance, saveCanvasNow]);
+  const handleSelectNote = useCallback(
+    (note: { name: string; path: string }) => {
+      const center = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const newNode: CanvasXYNode = {
+        id: `file-${Date.now()}`,
+        type: "canvasFile",
+        position: { x: center.x - 150, y: center.y - 110 },
+        style: { width: 300, height: 220 },
+        data: { file: note.path },
+      };
+      setNodes((nds) => {
+        const next = [...nds, newNode];
+        nodesRef.current = next;
+        saveCanvasNow();
+        return next;
+      });
+    },
+    [reactFlowInstance, saveCanvasNow],
+  );
 
-  const handleSelectAsset = useCallback((asset: { rel_path: string; abs_path: string; file_type: string }) => {
-    const center = reactFlowInstance.screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-    const isAudio = asset.file_type === "audio";
-    const isImage = asset.file_type === "image";
-    const width = isImage ? 360 : isAudio ? 320 : 380;
-    const height = isImage ? 280 : isAudio ? 120 : 260;
-    const newNode: CanvasXYNode = {
-      id: `file-${Date.now()}`,
-      type: "canvasFile",
-      position: { x: center.x - width / 2, y: center.y - height / 2 },
-      style: { width, height },
-      data: { file: asset.rel_path || asset.abs_path },
-    };
-    setNodes((nds) => {
-      const next = [...nds, newNode];
-      nodesRef.current = next;
-      saveCanvasNow();
-      return next;
-    });
-  }, [reactFlowInstance, saveCanvasNow]);
+  const handleSelectAsset = useCallback(
+    (asset: { rel_path: string; abs_path: string; file_type: string }) => {
+      const center = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const isAudio = asset.file_type === "audio";
+      const isImage = asset.file_type === "image";
+      const width = isImage ? 360 : isAudio ? 320 : 380;
+      const height = isImage ? 280 : isAudio ? 120 : 260;
+      const newNode: CanvasXYNode = {
+        id: `file-${Date.now()}`,
+        type: "canvasFile",
+        position: { x: center.x - width / 2, y: center.y - height / 2 },
+        style: { width, height },
+        data: { file: asset.rel_path || asset.abs_path },
+      };
+      setNodes((nds) => {
+        const next = [...nds, newNode];
+        nodesRef.current = next;
+        saveCanvasNow();
+        return next;
+      });
+    },
+    [reactFlowInstance, saveCanvasNow],
+  );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -583,7 +683,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
 
       const droppedText = event.dataTransfer.getData("text/plain");
       if (droppedText) {
-        if (droppedText.startsWith("http://") || droppedText.startsWith("https://")) {
+        if (
+          droppedText.startsWith("http://") ||
+          droppedText.startsWith("https://")
+        ) {
           const newLink: CanvasXYNode = {
             id: `link-${Date.now()}`,
             type: "canvasLink",
@@ -635,15 +738,20 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
         });
       }
     },
-    [reactFlowInstance, saveCanvasNow]
+    [reactFlowInstance, saveCanvasNow],
   );
 
   const handleDeleteSelection = useCallback(() => {
-    setNodes(nds => {
-      const nextNds = nds.filter(n => !n.selected);
+    setNodes((nds) => {
+      const nextNds = nds.filter((n) => !n.selected);
       nodesRef.current = nextNds;
-      setEdges(eds => {
-        const nextEds = eds.filter(e => !e.selected && nextNds.some(n => n.id === e.source) && nextNds.some(n => n.id === e.target));
+      setEdges((eds) => {
+        const nextEds = eds.filter(
+          (e) =>
+            !e.selected &&
+            nextNds.some((n) => n.id === e.source) &&
+            nextNds.some((n) => n.id === e.target),
+        );
         edgesRef.current = nextEds;
         saveCanvasNow();
         return nextEds;
@@ -657,22 +765,39 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
   }, []);
 
   // Obsidian UX: Double-click empty canvas to create text card
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.classList.contains("react-flow__pane")) {
-      const pos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      handleAddTextCard(pos.x, pos.y);
-    }
-  }, [reactFlowInstance, handleAddTextCard]);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("react-flow__pane")) {
+        const pos = reactFlowInstance.screenToFlowPosition({
+          x: e.clientX,
+          y: e.clientY,
+        });
+        handleAddTextCard(pos.x, pos.y);
+      }
+    },
+    [reactFlowInstance, handleAddTextCard],
+  );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const pos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    setCtxMenu({ target: { kind: "background", wx: pos.x, wy: pos.y }, anchor: { x: e.clientX, y: e.clientY } });
-  }, [reactFlowInstance]);
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const pos = reactFlowInstance.screenToFlowPosition({
+        x: e.clientX,
+        y: e.clientY,
+      });
+      setCtxMenu({
+        target: { kind: "background", wx: pos.x, wy: pos.y },
+        anchor: { x: e.clientX, y: e.clientY },
+      });
+    },
+    [reactFlowInstance],
+  );
 
   return (
-    <CanvasContext.Provider value={{ updateText, updateUrl, saveNow: saveCanvasNow }}>
+    <CanvasContext.Provider
+      value={{ updateText, updateUrl, saveNow: saveCanvasNow }}
+    >
       <div
         className="relative h-full w-full bg-[var(--sat-surface-0)]"
         onContextMenu={handleContextMenu}
@@ -690,17 +815,31 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
           onNodeDragStop={onNodeDragStop}
           onPaneClick={() => {
             dismissGhost();
-            setGuidelines({ vertical: null, horizontal: null, verticalLines: [], horizontalLines: [] });
+            setGuidelines({
+              vertical: null,
+              horizontal: null,
+              verticalLines: [],
+              horizontalLines: [],
+            });
           }}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           connectionMode={ConnectionMode.Loose}
           connectionLineType={ConnectionLineType.Bezier}
-          connectionLineStyle={{ stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2 }}
+          connectionLineStyle={{
+            stroke: "var(--sat-accent-primary, #6366f1)",
+            strokeWidth: 2,
+          }}
           defaultEdgeOptions={{
             type: "bezier",
-            markerEnd: { type: MarkerType.ArrowClosed, color: "var(--sat-accent-primary, #6366f1)" },
-            style: { stroke: "var(--sat-accent-primary, #6366f1)", strokeWidth: 2 },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "var(--sat-accent-primary, #6366f1)",
+            },
+            style: {
+              stroke: "var(--sat-accent-primary, #6366f1)",
+              strokeWidth: 2,
+            },
           }}
           onDragOver={onDragOver}
           onDrop={onDrop}
@@ -731,7 +870,9 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
             onAddMedia={() => setIsAssetPickerOpen(true)}
             onAddLink={handleAddLink}
             onAddGroup={handleAddGroup}
-            onZoomToFit={() => reactFlowInstance.fitView({ padding: 0.2, duration: 200 })}
+            onZoomToFit={() =>
+              reactFlowInstance.fitView({ padding: 0.2, duration: 200 })
+            }
           />
           <CanvasContextMenu
             target={ctxMenu?.target ?? null}

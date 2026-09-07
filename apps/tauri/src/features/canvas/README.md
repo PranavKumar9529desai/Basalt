@@ -7,7 +7,7 @@
 
 ## 1. Overview & Purpose
 
-The **Canvas** feature provides a freeform 2D spatial workspace for thinking, mind-mapping, and note arrangement. 
+The **Canvas** feature provides a freeform 2D spatial workspace for thinking, mind-mapping, and note arrangement.
 
 It is 100% compliant with the open **JSON Canvas v1.0** specification (`.canvas` files), ensuring full bidirectional interoperability with Obsidian and the broader canvas ecosystem.
 
@@ -32,15 +32,17 @@ It is 100% compliant with the open **JSON Canvas v1.0** specification (`.canvas`
 ```
 
 ### Why We Do NOT Mount Full Editors on Every Card
-Mounting a full CodeMirror 6 instance on every note card across an infinite canvas of 100+ cards destroys WebView memory and frame rates (dropping pan/zoom to 20fps). 
+
+Mounting a full CodeMirror 6 instance on every note card across an infinite canvas of 100+ cards destroys WebView memory and frame rates (dropping pan/zoom to 20fps).
 
 To ensure **Obsidian-class 60fps performance**:
+
 1. **Lightweight Display Mode (Inactive Cards)**:
    - Inactive cards render lightweight, sanitized Markdown DOM elements styled using `--sat-*` tokens.
    - Headings get prose typography sizing and accent colors.
    - Task lists (`- [ ]`) render as clickable checkboxes that update the underlying Markdown without entering full edit mode.
 2. **Single Active Editor on Edit**:
-   - Double-clicking or clicking "Edit" mounts the live editor on *only the single focused card*.
+   - Double-clicking or clicking "Edit" mounts the live editor on _only the single focused card_.
    - Only one active editor instance exists at any time.
 3. **Viewport Virtualization**:
    - Canvas utilizes React Flow's `onlyRenderVisibleElements={true}` so off-screen elements are culled from DOM painting during pan and zoom.
@@ -84,6 +86,7 @@ To ensure **Obsidian-class 60fps performance**:
 ```
 
 ### Clarification: File Watcher vs. Auto-Save
+
 - **`VaultWatcher` (Rust crate `basalt-vault`)**: A background file-system observer using `notify`. It watches disk events to reload external modifications (e.g., git checkouts, third-party edits). It **never** auto-saves or flushes in-memory frontend changes to disk.
 - **Frontend Auto-Save (`CanvasView`)**: The frontend holds live graph state in React Flow. Any user interaction (moving cards, resizing, typing, connecting arrows) marks the tab as dirty (`services.markTabDirty(tab.id, true)`), runs a debounced timer (500ms), and calls `invoke("save_canvas", ...)`. On success, the tab is marked clean (`services.markTabDirty(tab.id, false)`).
 
@@ -126,18 +129,24 @@ features/canvas/
 > 🚫 **NEVER BREAK THESE INVARIANTS**
 
 ### 1. The Persistence Guard Rules (`isLoadedRef` & `isDirtyRef`)
+
 Canvas documents are loaded asynchronously over Tauri IPC (`invoke("open_canvas")`).
+
 - **Rule A (`isLoadedRef`)**: NEVER save or flush state before `open_canvas` has resolved and loaded the existing nodes. Otherwise, initial empty arrays (`[]`) will overwrite and wipe the user's `.canvas` file!
 - **Rule B (`isDirtyRef`)**: NEVER flush on unmount/tab close unless `isDirtyRef.current === true`. Unconditionally flushing on unmount causes race conditions during tab transitions and destroys content.
 - **Rule C (`markTabDirty`)**: Always call `services.markTabDirty(tab.id, true)` when mutating state and `services.markTabDirty(tab.id, false)` after saving. This renders the dirty dot indicator in the tab bar and prevents accidental tab closing.
 
 ### 2. The Four-Layer Architecture Rule
+
 Per repo-wide `AGENTS.md`:
+
 - `features/canvas` **MUST NEVER** import directly from other features (e.g., `features/tabs`, `features/vault`, `features/editor`).
 - Access cross-feature capabilities strictly through `useLeafServices()` from `@workspace/views`.
 
 ### 3. Theming & Token Rule
+
 Per [ADR-002](../../../../docs/adr/002-sat-css-theme-tokens.md):
+
 - **NEVER** hardcode hex colors or raw Tailwind colors (e.g. `bg-blue-600`, `border-gray-700`).
 - **ALWAYS** use `--sat-*` theme variables (e.g. `var(--sat-surface-1)`, `var(--sat-layout-border)`, `var(--sat-accent-primary)`).
 - When resolving JSON Canvas color numbers `1` through `6`, use `resolveCanvasColor()` in `lib/colors.ts`.
@@ -147,6 +156,7 @@ Per [ADR-002](../../../../docs/adr/002-sat-css-theme-tokens.md):
 ## 6. Extending Nodes & Components
 
 When adding a new node type:
+
 1. Create `nodes/YourNode.tsx` using `memo(...)` and `@xyflow/react`'s `NodeProps<CanvasXYNode>`.
 2. Include `<NodeResizer onResizeEnd={() => canvas.saveNow()} />` if resizable.
 3. Include `<CardHandles ... />` for connecting arrows.

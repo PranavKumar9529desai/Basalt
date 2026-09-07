@@ -1,10 +1,7 @@
 import type { LeafServices } from "@workspace/views";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useCallback, useMemo } from "react";
-import {
-  classifyMediaExtension,
-  extensionOf,
-} from "@workspace/editor";
+import { classifyMediaExtension, extensionOf } from "@workspace/editor";
 
 import { useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
@@ -16,7 +13,10 @@ import { isLinux, mediaUrlFor } from "./mediaServer";
  * Obsidian resolves it by filename across the vault. Returns the unique file
  * whose stem matches, or null when zero/ambiguous.
  */
-function stemMatch(treeNodes: FlatTreeNode[] | undefined, stem: string): FlatTreeNode | null {
+function stemMatch(
+  treeNodes: FlatTreeNode[] | undefined,
+  stem: string,
+): FlatTreeNode | null {
   if (!treeNodes) return null;
   const wanted = stem.toLowerCase();
   let match: FlatTreeNode | null = null;
@@ -99,7 +99,11 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
       renameNote: ws.renameNote,
       resolveAsset: ws.vaultPath
         ? (target: string) => {
-            const absPath = resolveEmbedTarget(target, ws.vaultPath, ws.treeNodes);
+            const absPath = resolveEmbedTarget(
+              target,
+              ws.vaultPath,
+              ws.treeNodes,
+            );
             if (!absPath) return null; // no broken <img> for unresolvable targets
             if (classifyMediaExtension(extensionOf(absPath)) === "other") {
               return null; // .txt etc → fallback chip (ADR-034), never a broken <img>

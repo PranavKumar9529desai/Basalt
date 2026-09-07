@@ -13,6 +13,7 @@
 **Status:** ADR-035 amended. Initial custom WebGL2 rect viewport + imperative DOM overlay superseded by `@xyflow/react` + Rust backend (`crates/basalt-canvas`) architecture. Detailed technical spec documented in `docs/adr/035-infinite-canvas.md`.
 
 ### Handoff Plan: Migration to `@xyflow/react`
+
 - **Dependencies:** Add `@xyflow/react` to `apps/tauri/package.json`.
 - **Rust Backend:** Keep `crates/basalt-canvas` for JSON Canvas v1.0 parse/serialize, validation, and file I/O via Tauri (`open_canvas`, `save_canvas`).
 - **Data Mapper:** Implement `features/canvas/lib/mapper.ts` (lossless bidirectional conversion between `CanvasDocument` and XYFlow `Node[]`/`Edge[]`).
@@ -29,7 +30,6 @@
   - Debounced auto-save back to `.canvas` file via `save_canvas`.
 - **Deprecate/Cleanup:** Deprecate `packages/canvas-viewport` and remove obsolete imperative geometry files (`lib/scene.ts`, `lib/interaction.ts`, `lib/spatial.ts`, `lib/overlay.ts`).
 
-
 ## Embed Rendering (ADR-034) — COMPLETE
 
 **Branch:** `feat/adr34-embed-rendering`
@@ -40,7 +40,7 @@ tests 275/275, `cargo test --workspace`, oxlint + tsc clean, clippy clean.
 ### Commits
 
 - `c4bdf8c` Part A/E — `feat(media): Linux embed playback via loopback HTTP
-  server + stem-aware resolveAsset`. New `media_server_url` command in
+server + stem-aware resolveAsset`. New `media_server_url` command in
   `apps/tauri/src-tauri/src/commands/media.rs` (`http-range` dep, lazy OnceLock
   bind on `127.0.0.1:0`, per-connection threads, 64 KiB streaming, path-traversal
   guard, 9 unit tests); frontend `app-shell/mediaServer.ts` + `resolveAsset`
@@ -51,15 +51,15 @@ tests 275/275, `cargo test --workspace`, oxlint + tsc clean, clippy clean.
   `<img>/<video>/<audio>`, `.cm-table-link[data-name]` + `.cm-table-media`);
   reads `resolveAssetFacet` at render time. 5 new tests.
 - `cd67988` Part C — `feat(editor): render real media for embeds in live
-  preview`. `embed-media.ts` exports `buildEmbedWidget(url, target)`; `embeds.ts`
+preview`. `embed-media.ts` exports `buildEmbedWidget(url, target)`; `embeds.ts`
   swaps the chip for media off the active line; `editor.ts` livePreview group
   gets `EMBED_MEDIA_THEME` + `resolveAssetFacet.of(config.resolveAsset)`.
 - `8088178` Part D — `fix(editor): reading-mode wikilink clicks slice brackets;
-  bind table links`. `wiki-links.ts` exports `targetFromWikiLinkNode` +
+bind table links`. `wiki-links.ts` exports `targetFromWikiLinkNode` +
   `normalizeWikiLinkTarget`; `readingLinkHandler` gates `video,audio` →
   `.cm-table-link[data-name]` → `.cm-live-wikilink`. 9 new tests.
 - `1e889d2` Part C correction — `feat(editor): render media embeds even with the
-  caret on their line`. ADR decided media renders in EVERY caret state
+caret on their line`. ADR decided media renders in EVERY caret state
   (Obsidian parity), dropping the WYSIWYM reveal for valid embeds. Broken
   embeds keep the chip AND the caret reveal (raw source under the caret stays
   editable).
@@ -107,7 +107,7 @@ session), oxlint + `tsc --noEmit` clean in both `packages/editor` and `apps/taur
 - **Known red on this branch (NOT mine):** `tests/block-widgets/table-widget.test.ts`
   has 3 failing embed tests from the concurrent ADR-034 table-embeds work —
   exclude when running the suite (`vitest run --exclude
-  tests/block-widgets/table-widget.test.ts`).
+tests/block-widgets/table-widget.test.ts`).
 - Concurrent session's untracked files remain: `crates/README.md`,
   `crates/basalt-tables/tests/complex_queries.rs`, `docs/plan/`.
 
@@ -240,7 +240,7 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   `metadata`) in `crates/basalt-vault/src/vault.rs`; commands no longer reach
   into `metadata_cache`/`arena` internals.
 - **Phase 2** `86d9417` — structure: moved `src-tauri/src/{app_state,cache,
-  config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
+config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
   deleted dead `crates/basalt-wasm` (superseded by `graph-wasm` +
   `frontmatter-wasm`); fixed stale `basalt-wasm` refs in ADR-009/020/021/022 +
   `docs/webview-costs.md`; fixed `EditorController.test.ts` mock path
@@ -251,7 +251,7 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   fixed stale `editor/logic/` → `lib/` path in CONVENTIONS §9; retitled doc to
   "Basalt Conventions — Frontend & Rust Backend".
 - **Phase 4** `bfd194f` — clippy: `cargo clippy --workspace --all-targets -- -D
-  warnings` passes clean. Fixed `Default` impls for `FileMetadata`/`Document`
+warnings` passes clean. Fixed `Default` impls for `FileMetadata`/`Document`
   (`new()` kept, delegates to `Self::default()` — 21 call sites) and derived
   `Default` for `QueryResult`; moved `[profile.release]` from
   `apps/tauri/src-tauri/Cargo.toml` (was ignored on a workspace member) to root
@@ -265,7 +265,7 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   jobs; repo previously had NO CI). Enabled the previously-dead
   `length_of_list_returns_count` in `basalt-tables/tests/query_execution.rs`
   (`#[test]` added; its matcher expected `Link` but the `file.name` group key is
-   `Text` — fixed). `cargo test --workspace` green (207 tests).
+  `Text` — fixed). `cargo test --workspace` green (207 tests).
 
 ### ADR-030 phases completed this session (uncommitted atop `main`)
 
@@ -329,7 +329,7 @@ work is uncommitted atop `main`.
 ### Pending (separate workstream, coordinate with user)
 
 - `test/editor-testing` render-mode fix + table fix (untracked `render-mode.ts`
-  + committed test) — NOT part of Rust commits; confirm branch first.
+  - committed test) — NOT part of Rust commits; confirm branch first.
 
 ---
 

@@ -126,7 +126,9 @@ export interface EditorConfig {
    * Called when the cursor enters/leaves a markdown table or moves within one.
    * Used by the table controls sidebar to enable/disable buttons.
    */
-  onTableCursorChange?: (state: { inTable: boolean; row: number; col: number } | null) => void;
+  onTableCursorChange?: (
+    state: { inTable: boolean; row: number; col: number } | null,
+  ) => void;
 }
 
 /** Resolve an embed target (`![[file]]`) to a loadable asset URL.

@@ -16,27 +16,43 @@
  *    [node.from..node.to]; in reading mode the widgets always render.
  */
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
+import {
+  EditorState,
+  EditorSelection,
+  type Extension,
+} from "@codemirror/state";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
 import { describe, expect, it } from "vitest";
-import { CodeFooterWidget, CodeHeaderWidget, handleCodeBlockNode } from "../../src/preview/code-blocks";
+import {
+  CodeFooterWidget,
+  CodeHeaderWidget,
+  handleCodeBlockNode,
+} from "../../src/preview/code-blocks";
 import { renderModeFacet } from "../../src/preview/render-mode";
-import { basaltMarkdownExtensions, makeCollector, testMarkdownFixture } from "../_helpers";
+import {
+  basaltMarkdownExtensions,
+  makeCollector,
+  testMarkdownFixture,
+} from "../_helpers";
 
 function stateFor(doc: string, headPos: number, extra: Extension[] = []) {
   return EditorState.create({
     doc,
     selection: EditorSelection.cursor(headPos),
     extensions: [
-      markdown({ base: markdownLanguage, extensions: basaltMarkdownExtensions }),
+      markdown({
+        base: markdownLanguage,
+        extensions: basaltMarkdownExtensions,
+      }),
       ...extra,
     ],
   });
 }
 
 function codeNode(state: EditorState, name: string): SyntaxNode {
-  const tree = ensureSyntaxTree(state, state.doc.length, 1000) ?? syntaxTree(state);
+  const tree =
+    ensureSyntaxTree(state, state.doc.length, 1000) ?? syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({
     enter(n) {
@@ -59,10 +75,20 @@ function invoke(
   const state = stateFor(doc, headPos, extra);
   const node = codeNode(state, nodeName);
   const ranges: { from: number; to: number }[] = [];
-  const ctx = { activeLine: null as never, headPos, state, codeBlockRanges: ranges };
+  const ctx = {
+    activeLine: null as never,
+    headPos,
+    state,
+    codeBlockRanges: ranges,
+  };
   const c = makeCollector();
   const handled = handleCodeBlockNode(
-    { from: node.from, to: node.to, type: { name: nodeName } as never, node: node as never } as never,
+    {
+      from: node.from,
+      to: node.to,
+      type: { name: nodeName } as never,
+      node: node as never,
+    } as never,
     0,
     state.doc.length,
     ctx,
@@ -101,7 +127,9 @@ describe("handleCodeBlockNode — FencedCode (js)", () => {
 
   it("renders header/footer in reading mode even with the cursor inside", () => {
     const doc = "```js\ncode\n```";
-    const { replaces } = invoke(doc, 5, "FencedCode", [renderModeFacet.of("reading")]);
+    const { replaces } = invoke(doc, 5, "FencedCode", [
+      renderModeFacet.of("reading"),
+    ]);
     expect(replaces.length).toBeGreaterThan(0);
     expect(replaces[0].widget).toBeInstanceOf(CodeHeaderWidget);
     expect(replaces[1].widget).toBeInstanceOf(CodeFooterWidget);
@@ -142,7 +170,12 @@ describe("handleCodeBlockNode — non-code node", () => {
   it("returns false for a Paragraph node", () => {
     const state = stateFor("plain", 0);
     const ranges: { from: number; to: number }[] = [];
-    const ctx = { activeLine: null as never, headPos: 0, state, codeBlockRanges: ranges };
+    const ctx = {
+      activeLine: null as never,
+      headPos: 0,
+      state,
+      codeBlockRanges: ranges,
+    };
     const c = makeCollector();
     const handled = handleCodeBlockNode(
       { from: 0, to: 5, type: { name: "Paragraph" } as never } as never,
@@ -164,7 +197,9 @@ describe("code-block box — constant height invariant", () => {
    * These are what drive the box's height; if they are identical whether the
    * caret is inside or outside the block, the block cannot grow/shrink on
    * reveal (the header/footer are absolute overlays that consume no height). */
-  function codeLineClasses(selection: number): { pos: number; class: string }[] {
+  function codeLineClasses(
+    selection: number,
+  ): { pos: number; class: string }[] {
     const { report } = testMarkdownFixture(doc, { selection });
     return report.lineClasses
       .filter((l) => l.class.includes("cm-live-code"))

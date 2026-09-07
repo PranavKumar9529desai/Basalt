@@ -40,7 +40,9 @@ export function dumpTree(tree: Tree, doc: string): string {
         ? `(anon) ${node.name}`
         : node.name;
     const shown =
-      text.length <= 40 ? JSON.stringify(text) : JSON.stringify(text.slice(0, 40) + "…");
+      text.length <= 40
+        ? JSON.stringify(text)
+        : JSON.stringify(text.slice(0, 40) + "…");
     const suffix = node.firstChild ? "" : `: ${shown}`;
     lines.push(`${indent}${label} [${node.from}..${node.to}]${suffix}`);
 

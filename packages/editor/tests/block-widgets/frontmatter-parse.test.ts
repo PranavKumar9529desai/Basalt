@@ -22,7 +22,10 @@ function frontmatterNode(doc: string): { from: number; to: number } | null {
   const state = EditorState.create({
     doc,
     extensions: [
-      markdown({ base: markdownLanguage, extensions: basaltMarkdownExtensions }),
+      markdown({
+        base: markdownLanguage,
+        extensions: basaltMarkdownExtensions,
+      }),
     ],
   });
   const tree = ensureSyntaxTree(state, state.doc.length, 10_000) ?? null;
@@ -48,21 +51,22 @@ describe("frontmatterBlockWidget.parse region slicing", () => {
     const node = frontmatterNode(doc);
     expect(node).not.toBeNull();
 
-    const parser = vi.fn(
-      (_text: string): FrontmatterModel | null => null,
-    );
+    const parser = vi.fn((_text: string): FrontmatterModel | null => null);
     const extState = EditorState.create({
       doc,
       extensions: [
-        markdown({ base: markdownLanguage, extensions: basaltMarkdownExtensions }),
+        markdown({
+          base: markdownLanguage,
+          extensions: basaltMarkdownExtensions,
+        }),
         frontmatterParserFacet.of(parser as unknown as ParseFrontmatterFn),
       ],
     });
 
-    frontmatterBlockWidget.parse!(
-      extState,
-      { from: node!.from, to: node!.to } as SyntaxNodeRef,
-    );
+    frontmatterBlockWidget.parse!(extState, {
+      from: node!.from,
+      to: node!.to,
+    } as SyntaxNodeRef);
 
     expect(parser).toHaveBeenCalledTimes(1);
     const input: unknown = parser.mock.calls[0][0];
@@ -80,15 +84,18 @@ describe("frontmatterBlockWidget.parse region slicing", () => {
     const state = EditorState.create({
       doc,
       extensions: [
-        markdown({ base: markdownLanguage, extensions: basaltMarkdownExtensions }),
+        markdown({
+          base: markdownLanguage,
+          extensions: basaltMarkdownExtensions,
+        }),
       ],
     });
     const node = frontmatterNode(doc);
     expect(node).not.toBeNull();
-    const result = frontmatterBlockWidget.parse!(
-      state,
-      { from: node!.from, to: node!.to } as SyntaxNodeRef,
-    );
+    const result = frontmatterBlockWidget.parse!(state, {
+      from: node!.from,
+      to: node!.to,
+    } as SyntaxNodeRef);
     expect(result).toBeNull();
   });
 });

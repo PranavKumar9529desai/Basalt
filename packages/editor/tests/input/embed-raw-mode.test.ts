@@ -68,7 +68,9 @@ describe("Asset Embed Raw Mode & Toggle", () => {
     const mediaEl = view.dom.querySelector(".cm-embed-media");
     expect(mediaEl).not.toBeNull();
 
-    const codeBtn = mediaEl?.querySelector(".cm-code-btn-toggle") as HTMLButtonElement;
+    const codeBtn = mediaEl?.querySelector(
+      ".cm-code-btn-toggle",
+    ) as HTMLButtonElement;
     expect(codeBtn).not.toBeNull();
     expect(codeBtn.title).toBe("Edit as raw Markdown");
 

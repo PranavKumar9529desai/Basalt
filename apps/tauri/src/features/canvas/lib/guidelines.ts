@@ -38,14 +38,20 @@ function getNodeBounds(node: CanvasXYNode): NodeBounds {
       : parseInt(String(node.style?.height));
 
   const width =
-    (typeof measuredWidth === "number" && measuredWidth > 0 ? measuredWidth : undefined) ??
+    (typeof measuredWidth === "number" && measuredWidth > 0
+      ? measuredWidth
+      : undefined) ??
     (typeof nodeWidth === "number" && nodeWidth > 0 ? nodeWidth : undefined) ??
     (!isNaN(styleWidth) && styleWidth > 0 ? styleWidth : undefined) ??
     250;
 
   const height =
-    (typeof measuredHeight === "number" && measuredHeight > 0 ? measuredHeight : undefined) ??
-    (typeof nodeHeight === "number" && nodeHeight > 0 ? nodeHeight : undefined) ??
+    (typeof measuredHeight === "number" && measuredHeight > 0
+      ? measuredHeight
+      : undefined) ??
+    (typeof nodeHeight === "number" && nodeHeight > 0
+      ? nodeHeight
+      : undefined) ??
     (!isNaN(styleHeight) && styleHeight > 0 ? styleHeight : undefined) ??
     140;
 
@@ -72,12 +78,15 @@ function getNodeBounds(node: CanvasXYNode): NodeBounds {
 export function getSmartGuidelines(
   draggedNode: CanvasXYNode,
   nodes: CanvasXYNode[],
-  threshold = 8
+  threshold = 8,
 ): AlignmentResult {
   const d = getNodeBounds(draggedNode);
 
   const candidateNodes = nodes
-    .filter((n) => n.id !== draggedNode.id && !n.selected && !n.id.startsWith("ghost-"))
+    .filter(
+      (n) =>
+        n.id !== draggedNode.id && !n.selected && !n.id.startsWith("ghost-"),
+    )
     .map(getNodeBounds);
 
   let closestDiffX = threshold;
@@ -102,11 +111,19 @@ export function getSmartGuidelines(
     // Left to Right
     xCandidates.push({ diff: o.right - d.x, snap: o.right, line: o.right });
     // Center to Center (Middle X)
-    xCandidates.push({ diff: o.centerX - d.centerX, snap: o.centerX - d.width / 2, line: o.centerX });
+    xCandidates.push({
+      diff: o.centerX - d.centerX,
+      snap: o.centerX - d.width / 2,
+      line: o.centerX,
+    });
     // Right to Left
     xCandidates.push({ diff: o.x - d.right, snap: o.x - d.width, line: o.x });
     // Right to Right
-    xCandidates.push({ diff: o.right - d.right, snap: o.right - d.width, line: o.right });
+    xCandidates.push({
+      diff: o.right - d.right,
+      snap: o.right - d.width,
+      line: o.right,
+    });
 
     // ─── Horizontal Snapping (Y-axis alignment) ───
     // Top to Top
@@ -114,11 +131,19 @@ export function getSmartGuidelines(
     // Top to Bottom
     yCandidates.push({ diff: o.bottom - d.y, snap: o.bottom, line: o.bottom });
     // Center to Center (Middle Y)
-    yCandidates.push({ diff: o.centerY - d.centerY, snap: o.centerY - d.height / 2, line: o.centerY });
+    yCandidates.push({
+      diff: o.centerY - d.centerY,
+      snap: o.centerY - d.height / 2,
+      line: o.centerY,
+    });
     // Bottom to Top
     yCandidates.push({ diff: o.y - d.bottom, snap: o.y - d.height, line: o.y });
     // Bottom to Bottom
-    yCandidates.push({ diff: o.bottom - d.bottom, snap: o.bottom - d.height, line: o.bottom });
+    yCandidates.push({
+      diff: o.bottom - d.bottom,
+      snap: o.bottom - d.height,
+      line: o.bottom,
+    });
   }
 
   // 2. Multi-node Midpoint & Equal Spacing Alignments (cap pairs if vault has many nodes)
@@ -128,7 +153,7 @@ export function getSmartGuidelines(
           .sort(
             (a, b) =>
               Math.hypot(a.centerX - d.centerX, a.centerY - d.centerY) -
-              Math.hypot(b.centerX - d.centerX, b.centerY - d.centerY)
+              Math.hypot(b.centerX - d.centerX, b.centerY - d.centerY),
           )
           .slice(0, 30)
       : candidateNodes;

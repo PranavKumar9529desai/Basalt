@@ -44,9 +44,10 @@ function MenuItem({
     <button
       type="button"
       className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors
-        ${danger
-          ? "text-red-400 hover:bg-red-500/10"
-          : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]"
+        ${
+          danger
+            ? "text-red-400 hover:bg-red-500/10"
+            : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]"
         }`}
       onClick={(e) => {
         e.stopPropagation();

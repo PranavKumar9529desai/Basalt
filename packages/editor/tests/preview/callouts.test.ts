@@ -18,7 +18,10 @@
 import { describe, expect, it } from "vitest";
 import { syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
-import { CalloutHeaderWidget, handleCalloutNode } from "../../src/preview/callouts";
+import {
+  CalloutHeaderWidget,
+  handleCalloutNode,
+} from "../../src/preview/callouts";
 import { makeContext, makeCollector } from "../_helpers";
 
 function firstCalloutNode(

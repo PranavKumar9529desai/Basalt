@@ -9,12 +9,12 @@ via `mod.rs` re-exports.
 
 ## Current state
 
-| File | Lines | Main responsibilities |
-|------|-------|----------------------|
-| `assets.rs` | 1122 | cleanup, reorganize, save attachment, date helpers, tests |
-| `notes.rs` | 896 | backlinks, autocomplete, create, rename (wikilink rewrite), tests |
-| `folders.rs` | 785 | create, delete, move, rename (path rewrite), tests |
-| `vault.rs` | 513 | reindex, tree, dialog, **graph snapshot** (186 LOC of tests) |
+| File         | Lines | Main responsibilities                                             |
+| ------------ | ----- | ----------------------------------------------------------------- |
+| `assets.rs`  | 1122  | cleanup, reorganize, save attachment, date helpers, tests         |
+| `notes.rs`   | 896   | backlinks, autocomplete, create, rename (wikilink rewrite), tests |
+| `folders.rs` | 785   | create, delete, move, rename (path rewrite), tests                |
+| `vault.rs`   | 513   | reindex, tree, dialog, **graph snapshot** (186 LOC of tests)      |
 
 All four have large test modules (200–300 LOC each) that are prime candidates
 for extraction.

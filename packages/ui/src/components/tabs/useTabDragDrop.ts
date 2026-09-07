@@ -21,16 +21,15 @@ export function useTabDragDrop(
   ) => void,
   onTabDragEnd?: (tabId: string, event: DragEvent<HTMLElement>) => void,
 ) {
-  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(
+    null,
+  );
   const dropIndicatorRef = useRef<DropIndicator | null>(null);
 
-  const setDropIndicatorBoth = useCallback(
-    (val: DropIndicator | null) => {
-      dropIndicatorRef.current = val;
-      setDropIndicator(val);
-    },
-    [],
-  );
+  const setDropIndicatorBoth = useCallback((val: DropIndicator | null) => {
+    dropIndicatorRef.current = val;
+    setDropIndicator(val);
+  }, []);
 
   const handleInternalDragOver = useCallback(
     (tabId: string, event: DragEvent<HTMLElement>) => {

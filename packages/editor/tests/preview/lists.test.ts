@@ -15,7 +15,11 @@
 import { describe, expect, it } from "vitest";
 import type { SyntaxNode } from "@lezer/common";
 import { syntaxTree } from "@codemirror/language";
-import { ListBulletWidget, ListNumberWidget, handleListNode } from "../../src/preview/lists";
+import {
+  ListBulletWidget,
+  ListNumberWidget,
+  handleListNode,
+} from "../../src/preview/lists";
 import { makeContext, makeCollector } from "../_helpers";
 
 function listNodes(
@@ -23,7 +27,8 @@ function listNodes(
   names = ["ListItem", "ListMark"],
 ) {
   const tree = syntaxTree(state);
-  const out: { name: string; from: number; to: number; node: SyntaxNode }[] = [];
+  const out: { name: string; from: number; to: number; node: SyntaxNode }[] =
+    [];
   tree.iterate({
     enter(n) {
       if (names.includes(n.name)) {
@@ -34,10 +39,18 @@ function listNodes(
   return out;
 }
 
-function handle(n: { from: number; to: number; name: string; node: SyntaxNode }, ctx: ReturnType<typeof makeContext>["ctx"]) {
+function handle(
+  n: { from: number; to: number; name: string; node: SyntaxNode },
+  ctx: ReturnType<typeof makeContext>["ctx"],
+) {
   const c = makeCollector();
   const handled = handleListNode(
-    { from: n.from, to: n.to, type: { name: n.name } as never, node: n.node } as never,
+    {
+      from: n.from,
+      to: n.to,
+      type: { name: n.name } as never,
+      node: n.node,
+    } as never,
     ctx,
     c,
   );

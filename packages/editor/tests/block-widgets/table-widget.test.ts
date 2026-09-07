@@ -40,11 +40,7 @@ function tableWidgetHtml(state: EditorState): HTMLElement | null {
   return found;
 }
 
-const RESOLVABLE = new Set([
-  "photo.png",
-  "narration.mp3",
-  "clip.mp4",
-]);
+const RESOLVABLE = new Set(["photo.png", "narration.mp3", "clip.mp4"]);
 
 const mediaResolve = resolveAssetFacet.of((target: string) =>
   RESOLVABLE.has(target) ? `asset:///vault/${target}` : null,
@@ -203,12 +199,18 @@ describe("table block widget embeds (ADR-034 part B)", () => {
       extensions: [registerBlockWidget(tableBlockSpec), mediaResolve],
     });
     const view = new EditorView({ state: fixture.state });
-    const preview = fixture.state.field(livePreviewField) as { decorations: DecorationSet };
+    const preview = fixture.state.field(livePreviewField) as {
+      decorations: DecorationSet;
+    };
     let widgetObj: { toDOM: (view?: any) => HTMLElement } | null = null;
-    preview.decorations.between(0, fixture.state.doc.length, (_from, _to, deco) => {
-      const w = (deco as any).widget;
-      if (w?.constructor?.name === "TableBlockWidget") widgetObj = w;
-    });
+    preview.decorations.between(
+      0,
+      fixture.state.doc.length,
+      (_from, _to, deco) => {
+        const w = (deco as any).widget;
+        if (w?.constructor?.name === "TableBlockWidget") widgetObj = w;
+      },
+    );
     expect(widgetObj).not.toBeNull();
     const dom = widgetObj!.toDOM(view);
 
@@ -218,7 +220,9 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     expect(codeBtn.parentElement).toBe(container);
 
     // Clicking code toggle dispatches setTableRawMode
-    codeBtn.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    codeBtn.dispatchEvent(
+      new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+    );
     const rawRange = view.state.field(tableRawModeField, false);
     expect(rawRange).not.toBeNull();
     expect(rawRange!.from).toBe(0);
@@ -236,20 +240,26 @@ describe("table block widget embeds (ADR-034 part B)", () => {
     expect(container.classList.contains("cm-zone-row-active")).toBe(false);
 
     // Hover over an interior cell (Row 1, Col 1) -> neither zone active
-    const interiorCell = liveHtml!.querySelector('td[data-row="1"][data-col="1"]')!;
+    const interiorCell = liveHtml!.querySelector(
+      'td[data-row="1"][data-col="1"]',
+    )!;
     container.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
     interiorCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
     expect(container.classList.contains("cm-zone-col-active")).toBe(false);
     expect(container.classList.contains("cm-zone-row-active")).toBe(false);
 
     // Hover over last column cell (Row 1, Col 2) -> only col zone active
-    const lastColCell = liveHtml!.querySelector('td[data-row="1"][data-col="2"]')!;
+    const lastColCell = liveHtml!.querySelector(
+      'td[data-row="1"][data-col="2"]',
+    )!;
     lastColCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
     expect(container.classList.contains("cm-zone-col-active")).toBe(true);
     expect(container.classList.contains("cm-zone-row-active")).toBe(false);
 
     // Hover over last row cell (Row 2, Col 0) -> only row zone active
-    const lastRowCell = liveHtml!.querySelector('td[data-row="2"][data-col="0"]')!;
+    const lastRowCell = liveHtml!.querySelector(
+      'td[data-row="2"][data-col="0"]',
+    )!;
     lastRowCell.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
     expect(container.classList.contains("cm-zone-col-active")).toBe(false);
     expect(container.classList.contains("cm-zone-row-active")).toBe(true);

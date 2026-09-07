@@ -13,7 +13,10 @@
  *   anything else -> false, no marks
  */
 import { describe, expect, it } from "vitest";
-import { handleInlineNode, handleTagsInLine } from "../../src/preview/inline-marks";
+import {
+  handleInlineNode,
+  handleTagsInLine,
+} from "../../src/preview/inline-marks";
 import { makeCollector } from "../_helpers/mock-collector";
 import { parseMarkdown } from "../_helpers/parse-markdown";
 import type { SyntaxNodeRef } from "@lezer/common";
@@ -23,7 +26,8 @@ function firstNode(
   type: ReturnType<typeof parseMarkdown>["tree"],
   name: string,
 ): SyntaxNodeRef | null {
-  let result: { from: number; to: number; type: SyntaxNodeRef["type"] } | null = null;
+  let result: { from: number; to: number; type: SyntaxNodeRef["type"] } | null =
+    null;
   type.iterate({
     enter(node) {
       if (node.name === name) {
@@ -46,7 +50,10 @@ describe("handleInlineNode", () => {
     const node = firstNode(tree, "InlineCode");
     expect(node).not.toBeNull();
     const collector = makeCollector();
-    const handled = handleInlineNode(nodeRef(node!.from, node!.to, "InlineCode"), collector);
+    const handled = handleInlineNode(
+      nodeRef(node!.from, node!.to, "InlineCode"),
+      collector,
+    );
     expect(handled).toBe(true);
     expect(collector.marks).toEqual([
       { from: node!.from, to: node!.to, className: "cm-live-inline-code" },
@@ -91,7 +98,10 @@ describe("handleInlineNode", () => {
     const node = firstNode(tree, "StrongEmphasis");
     expect(node).not.toBeNull();
     const collector = makeCollector();
-    const handled = handleInlineNode(nodeRef(node!.from, node!.to, "StrongEmphasis"), collector);
+    const handled = handleInlineNode(
+      nodeRef(node!.from, node!.to, "StrongEmphasis"),
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.marks).toEqual([
       { from: node!.from, to: node!.to, className: "cm-live-strong" },
@@ -103,7 +113,10 @@ describe("handleInlineNode", () => {
     const node = firstNode(tree, "Emphasis");
     expect(node).not.toBeNull();
     const collector = makeCollector();
-    const handled = handleInlineNode(nodeRef(node!.from, node!.to, "Emphasis"), collector);
+    const handled = handleInlineNode(
+      nodeRef(node!.from, node!.to, "Emphasis"),
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.marks).toEqual([
       { from: node!.from, to: node!.to, className: "cm-live-em" },
@@ -131,7 +144,9 @@ describe("handleTagsInLine", () => {
   it("marks a valid #tag with cm-live-tag at correct offsets", () => {
     const collector = makeCollector();
     handleTagsInLine(0, "#hello world", [], collector);
-    expect(collector.marks).toEqual([{ from: 0, to: 6, className: "cm-live-tag" }]);
+    expect(collector.marks).toEqual([
+      { from: 0, to: 6, className: "cm-live-tag" },
+    ]);
   });
 
   it("skips tags whose span falls inside a code-block range", () => {

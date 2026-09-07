@@ -1,9 +1,6 @@
 import { create } from "zustand";
 import type { ContentFeatures, ExportOptions } from "./types";
-import {
-  DEFAULT_EXPORT_OPTIONS,
-  EMPTY_CONTENT_FEATURES,
-} from "./types";
+import { DEFAULT_EXPORT_OPTIONS, EMPTY_CONTENT_FEATURES } from "./types";
 
 interface ExportStore {
   isOpen: boolean;
@@ -25,7 +22,12 @@ export const useExportStore = create<ExportStore>()((set) => ({
 
   open: (content, name) => {
     const contentFeatures = detectFeatures(content);
-    set({ isOpen: true, noteContent: content, noteName: name, contentFeatures });
+    set({
+      isOpen: true,
+      noteContent: content,
+      noteName: name,
+      contentFeatures,
+    });
   },
   close: () =>
     set({
@@ -34,8 +36,7 @@ export const useExportStore = create<ExportStore>()((set) => ({
       noteName: null,
       contentFeatures: EMPTY_CONTENT_FEATURES,
     }),
-  setOptions: (opts) =>
-    set((s) => ({ options: { ...s.options, ...opts } })),
+  setOptions: (opts) => set((s) => ({ options: { ...s.options, ...opts } })),
 }));
 
 function detectFeatures(content: string): ContentFeatures {

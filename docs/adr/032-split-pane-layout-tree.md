@@ -10,15 +10,15 @@ Basalt currently uses a **single-pane tab model**: one `TabPane` object holds al
 
 Both Obsidian and VS Code have solved this problem, but they took different architectural paths:
 
-| Aspect | Obsidian | VS Code |
-|--------|----------|---------|
-| Grid model | `WorkspaceSplit` tree (DOM-based) | `SerializableGrid` (custom widget) |
-| Split granularity | Root + left/right docks | Editor area only |
-| Dock splits | Yes (tabs in sidebars) | No |
-| Orientation | Per-split (vertical root default) | Per-branch (toggleable) |
-| Maximize/expand | No | Yes |
-| Multi-window | Popout windows | Auxiliary windows |
-| Persistence | `workspace.json` | `IStorageService` |
+| Aspect            | Obsidian                          | VS Code                            |
+| ----------------- | --------------------------------- | ---------------------------------- |
+| Grid model        | `WorkspaceSplit` tree (DOM-based) | `SerializableGrid` (custom widget) |
+| Split granularity | Root + left/right docks           | Editor area only                   |
+| Dock splits       | Yes (tabs in sidebars)            | No                                 |
+| Orientation       | Per-split (vertical root default) | Per-branch (toggleable)            |
+| Maximize/expand   | No                                | Yes                                |
+| Multi-window      | Popout windows                    | Auxiliary windows                  |
+| Persistence       | `workspace.json`                  | `IStorageService`                  |
 
 **Neither model is directly suitable for Basalt:**
 
@@ -134,7 +134,8 @@ function PaneRenderer({ node, renderLeaf }) {
     return renderLeaf(node.tabGroup);
   }
   // node.type === "split"
-  const Flex = node.orientation === "vertical" ? VerticalSplit : HorizontalSplit;
+  const Flex =
+    node.orientation === "vertical" ? VerticalSplit : HorizontalSplit;
   return (
     <Flex>
       {node.children.map((child, i) => (
@@ -150,35 +151,39 @@ function PaneRenderer({ node, renderLeaf }) {
 ### What we adopt from each
 
 **From VS Code:**
+
 - Declarative serialized layout: `{ orientation, children: [{size}] }` tree
 - Per-branch orientation (root = vertical, children can be horizontal)
 - Grid operations: `addGroup(location, direction)`, `mergeGroup()`, `removeGroup()`
 - Proportional sizing (flex ratios, not fixed pixels)
 
 **From Obsidian:**
+
 - Simpler model: `SplitNode | LeafNode` (no `WorkspaceTabs` wrapper — tabs live directly in `LeafNode.tabGroup`)
 - Side dock splits: extend the same `LayoutNode` tree to side docks in a future phase (not v1)
 - Workspace persistence: single `workspace.json` file, not scattered storage keys
 
 **From neither (deferred):**
+
 - Maximize/expand group (nice-to-have, not v1)
 - Multi-window / auxiliary windows (complex, not v1)
 - Centered layout (niche)
 
 ### Split operations
 
-| Operation | Implementation |
-|-----------|----------------|
-| Split active pane right | Wrap current leaf + new leaf in a `SplitNode(orientation=vertical)` |
-| Split active pane down | Wrap current leaf + new leaf in a `SplitNode(orientation=horizontal)` |
-| Close pane | Remove leaf from parent `SplitNode`; if parent has 1 child left, unwrap |
-| Move tab to pane | `removeTabFromSource` + `addTabToTarget`; create pane if needed |
-| Drag tab between panes | Same as move, triggered by drop handler |
-| Resize | Update `size` ratios on sash drag end |
+| Operation               | Implementation                                                          |
+| ----------------------- | ----------------------------------------------------------------------- |
+| Split active pane right | Wrap current leaf + new leaf in a `SplitNode(orientation=vertical)`     |
+| Split active pane down  | Wrap current leaf + new leaf in a `SplitNode(orientation=horizontal)`   |
+| Close pane              | Remove leaf from parent `SplitNode`; if parent has 1 child left, unwrap |
+| Move tab to pane        | `removeTabFromSource` + `addTabToTarget`; create pane if needed         |
+| Drag tab between panes  | Same as move, triggered by drop handler                                 |
+| Resize                  | Update `size` ratios on sash drag end                                   |
 
 ### Close/unwrap invariant
 
 When a `SplitNode` has only 1 child after a close, it unwraps:
+
 ```
 Before: SplitNode [LeafA, LeafB]
 Close LeafB → SplitNode [LeafA]

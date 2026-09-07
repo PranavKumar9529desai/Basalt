@@ -16,13 +16,13 @@ Our current table block widget (ADR-034) shows the rich `<table>` **only when
 the cursor is outside**; clicking inside immediately reverts to raw `|` source
 (the `active` gate in `table-widget.ts:265-268`). The user wants the opposite:
 
-| Aspect | We have today | Obsidian core table editor |
-|---|---|---|
-| Default view | Raw source when cursor inside | Rich table with editable cells |
-| Edit a cell | Type into raw `\|` source | Click cell, type in place |
-| Reveal source | Auto on cursor-inside | Manual `</>` toggle button |
-| Add row/col | Sidebar buttons / context menu / keys | Inline `+` buttons at table edges |
-| Row/col ops | Sidebar + context menu | Context menu + inline + |
+| Aspect        | We have today                         | Obsidian core table editor        |
+| ------------- | ------------------------------------- | --------------------------------- |
+| Default view  | Raw source when cursor inside         | Rich table with editable cells    |
+| Edit a cell   | Type into raw `\|` source             | Click cell, type in place         |
+| Reveal source | Auto on cursor-inside                 | Manual `</>` toggle button        |
+| Add row/col   | Sidebar buttons / context menu / keys | Inline `+` buttons at table edges |
+| Row/col ops   | Sidebar + context menu                | Context menu + inline +           |
 
 ## Design constraints
 
@@ -30,7 +30,7 @@ the cursor is outside**; clicking inside immediately reverts to raw `|` source
    changes against the table's source range — never a separate state model.
 2. **Keep existing Phase 1-3 features.** Tab/Enter navigation, row/col
    mutations, alignment keybindings, and the context menu all still work.
-   The inline editor is a *richer surface* on top of the same mutation engine.
+   The inline editor is a _richer surface_ on top of the same mutation engine.
 3. **No layout shift.** Editing one cell rewrites only that cell's source
    span, not the whole table (avoids the prettify conflict that made us
    defer auto-padding).
@@ -95,6 +95,7 @@ shift following cells correctly.
 
 **Writing on input**: listen for `input` events on the widget DOM. On each
 input:
+
 1. Re-parse the table source to locate the exact `[from, to]` span of cell
    `(row, col)` (the text between its surrounding pipes, incl. its padding).
 2. Compute the new cell text from the contenteditable's `textContent`.
@@ -115,7 +116,7 @@ in a contenteditable cell, forward it to CM6 (or handle directly).
 ### 4. `</>` toggle → reveal source
 
 Clicking `</>` dispatches a CM6 transaction that moves the selection into the
-table source (so the raw pipes are visible and editable). For a *per-table*
+table source (so the raw pipes are visible and editable). For a _per-table_
 reveal (not whole-document source mode), render the raw source in place:
 when toggled, `render()` returns a plain text widget (the raw `|` source) for
 that table instead of the rich table, until the user clicks `</>` again (or
@@ -133,27 +134,27 @@ just new trigger surfaces. After insert, re-focus the cell at the cursor.
 
 ## Files
 
-| File | Change |
-|---|---|
+| File                                                | Change                                                                                                         |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `packages/editor/src/block-widgets/table-widget.ts` | Drop `active` gate; build editable widget DOM (cells, toggle, `+`); cell↔source write-back; `</>` toggle state |
-| `packages/editor/src/input/table-navigation.ts` | Reuse for raw-source navigation (unchanged) |
-| `packages/editor/src/input/table-mutations.ts` | Reuse for insert/delete/align (unchanged) |
-| `packages/editor/src/block-widgets/registry.ts` | Support per-table "reveal source" widget state if needed |
-| `apps/tauri/...` | Table controls sidebar + context menu stay (still useful) |
+| `packages/editor/src/input/table-navigation.ts`     | Reuse for raw-source navigation (unchanged)                                                                    |
+| `packages/editor/src/input/table-mutations.ts`      | Reuse for insert/delete/align (unchanged)                                                                      |
+| `packages/editor/src/block-widgets/registry.ts`     | Support per-table "reveal source" widget state if needed                                                       |
+| `apps/tauri/...`                                    | Table controls sidebar + context menu stay (still useful)                                                      |
 
 ## Behavior matrix
 
-| Interaction | Behavior |
-|---|---|
-| Click a cell | Focus cell, sync CM6 selection, type in place |
-| Type in a cell | Dispatch source change for that cell only |
-| Click `</>` | Toggle this table to raw source (edit pipes directly) |
-| Click `+` at row end | Insert row below |
-| Click `+` at col end | Insert column right |
-| Hover cell edge / `+` | Show the add affordance |
-| Right-click table | Existing Table context submenu (row/col ops) |
-| Tab / Shift-Tab / Enter | Existing cell navigation (now in editable cells) |
-| Mod-Shift-L/C/R | Existing alignment keybindings |
+| Interaction             | Behavior                                              |
+| ----------------------- | ----------------------------------------------------- |
+| Click a cell            | Focus cell, sync CM6 selection, type in place         |
+| Type in a cell          | Dispatch source change for that cell only             |
+| Click `</>`             | Toggle this table to raw source (edit pipes directly) |
+| Click `+` at row end    | Insert row below                                      |
+| Click `+` at col end    | Insert column right                                   |
+| Hover cell edge / `+`   | Show the add affordance                               |
+| Right-click table       | Existing Table context submenu (row/col ops)          |
+| Tab / Shift-Tab / Enter | Existing cell navigation (now in editable cells)      |
+| Mod-Shift-L/C/R         | Existing alignment keybindings                        |
 
 ## Risks & open questions
 

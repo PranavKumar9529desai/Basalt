@@ -1,10 +1,7 @@
 import { viewRegistry, type ViewSide } from "@workspace/views";
 import { cn } from "@workspace/ui/lib/utils";
 import { useState, useMemo } from "react";
-import {
-  SidebarPanel,
-  SidebarSection,
-} from "@workspace/ui/components/sidebar";
+import { SidebarPanel, SidebarSection } from "@workspace/ui/components/sidebar";
 
 export interface SideDockProps {
   side: ViewSide;

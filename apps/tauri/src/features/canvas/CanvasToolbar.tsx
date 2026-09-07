@@ -1,7 +1,6 @@
 // CanvasToolbar — floating bottom bar for canvas element creation.
 // Matches Obsidian Canvas: focused purely on creating cards, notes, media, and groups.
 
-
 import {
   IconFileText,
   IconNote,
@@ -68,11 +67,7 @@ export function CanvasToolbar({
         label="Add media / asset from vault"
         onClick={onAddMedia}
       />
-      <ToolButton
-        icon={IconLink}
-        label="Add web link"
-        onClick={onAddLink}
-      />
+      <ToolButton icon={IconLink} label="Add web link" onClick={onAddLink} />
       <div className="mx-1 h-5 w-px bg-[var(--sat-layout-border)]" />
       <ToolButton
         icon={IconBorderCornerRounded}

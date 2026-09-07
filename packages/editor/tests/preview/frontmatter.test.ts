@@ -20,7 +20,9 @@ import {
 } from "../../src/preview/frontmatter";
 import { makeContext, makeCollector } from "../_helpers";
 
-function fmNode(state: ReturnType<typeof makeContext>["state"]): SyntaxNode | null {
+function fmNode(
+  state: ReturnType<typeof makeContext>["state"],
+): SyntaxNode | null {
   const tree = syntaxTree(state);
   let node: SyntaxNode | null = null;
   tree.iterate({
@@ -42,7 +44,12 @@ describe("handleFrontmatterNode", () => {
     expect(node).not.toBeNull();
     const c = makeCollector();
     const handled = handleFrontmatterNode(
-      { from: node!.from, to: node!.to, type: { name: "YAMLFrontMatter" } as never, node: node as never } as never,
+      {
+        from: node!.from,
+        to: node!.to,
+        type: { name: "YAMLFrontMatter" } as never,
+        node: node as never,
+      } as never,
       ctx,
       c,
     );
@@ -53,7 +60,10 @@ describe("handleFrontmatterNode", () => {
       expect(c.lines).toContainEqual({ pos, className: "cm-live-frontmatter" });
     }
     for (const pos of fenceLines) {
-      expect(c.lines).toContainEqual({ pos, className: "cm-live-frontmatter-fence" });
+      expect(c.lines).toContainEqual({
+        pos,
+        className: "cm-live-frontmatter-fence",
+      });
     }
   });
 
@@ -63,12 +73,25 @@ describe("handleFrontmatterNode", () => {
     const node = fmNode(state);
     const c = makeCollector();
     handleFrontmatterNode(
-      { from: node!.from, to: node!.to, type: { name: "YAMLFrontMatter" } as never, node: node as never } as never,
+      {
+        from: node!.from,
+        to: node!.to,
+        type: { name: "YAMLFrontMatter" } as never,
+        node: node as never,
+      } as never,
       ctx,
       c,
     );
-    expect(c.marks).toContainEqual({ from: 4, to: 9, className: "cm-live-frontmatter-key" });
-    expect(c.marks).toContainEqual({ from: 17, to: 21, className: "cm-live-frontmatter-key" });
+    expect(c.marks).toContainEqual({
+      from: 4,
+      to: 9,
+      className: "cm-live-frontmatter-key",
+    });
+    expect(c.marks).toContainEqual({
+      from: 17,
+      to: 21,
+      className: "cm-live-frontmatter-key",
+    });
   });
 
   it("returns false and adds nothing when there is no frontmatter", () => {
@@ -91,11 +114,27 @@ describe("handleFrontmatterFallback", () => {
     const { ctx } = makeContext("---\ntitle: x\n---\nbody");
     const c = makeCollector();
     handleFrontmatterFallback(ctx, c);
-    expect(c.lines).toContainEqual({ pos: 0, className: "cm-live-frontmatter" });
-    expect(c.lines).toContainEqual({ pos: 0, className: "cm-live-frontmatter-fence" });
-    expect(c.lines).toContainEqual({ pos: 13, className: "cm-live-frontmatter" });
-    expect(c.lines).toContainEqual({ pos: 13, className: "cm-live-frontmatter-fence" });
-    expect(c.marks).toContainEqual({ from: 4, to: 9, className: "cm-live-frontmatter-key" });
+    expect(c.lines).toContainEqual({
+      pos: 0,
+      className: "cm-live-frontmatter",
+    });
+    expect(c.lines).toContainEqual({
+      pos: 0,
+      className: "cm-live-frontmatter-fence",
+    });
+    expect(c.lines).toContainEqual({
+      pos: 13,
+      className: "cm-live-frontmatter",
+    });
+    expect(c.lines).toContainEqual({
+      pos: 13,
+      className: "cm-live-frontmatter-fence",
+    });
+    expect(c.marks).toContainEqual({
+      from: 4,
+      to: 9,
+      className: "cm-live-frontmatter-key",
+    });
   });
 
   it("adds nothing when the doc does not start with ---", () => {

@@ -59,8 +59,9 @@ function collect(set: DecorationSet, out: DecorationReport) {
       out.replaces.push({
         from,
         to,
-        widget: (deco as { widget?: { constructor: { name: string } } }).widget
-          ?.constructor?.name ?? "unknown",
+        widget:
+          (deco as { widget?: { constructor: { name: string } } }).widget
+            ?.constructor?.name ?? "unknown",
       });
     }
   });
@@ -99,9 +100,7 @@ export function formatDecorationReport(r: DecorationReport): string {
   const parts: string[] = [];
   if (r.lineClasses.length)
     parts.push(
-      `lines: ${r.lineClasses
-        .map((x) => `${x.pos}=${x.class}`)
-        .join(", ")}`,
+      `lines: ${r.lineClasses.map((x) => `${x.pos}=${x.class}`).join(", ")}`,
     );
   if (r.marks.length)
     parts.push(

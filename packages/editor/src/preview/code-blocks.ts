@@ -200,13 +200,14 @@ function addCodeLineClasses(
     // selectors (`.cm-line.cm-live-code …`) and the shared background keep
     // matching. The first/last lines additionally carry the begin/end modifier
     // whose more-specific, later-declared rules apply the fixed strip + corners.
-    const className = isFirst && isLast
-      ? "cm-live-code cm-live-code-begin cm-live-code-end"
-      : isFirst
-        ? "cm-live-code cm-live-code-begin"
-        : isLast
-          ? "cm-live-code cm-live-code-end"
-          : "cm-live-code";
+    const className =
+      isFirst && isLast
+        ? "cm-live-code cm-live-code-begin cm-live-code-end"
+        : isFirst
+          ? "cm-live-code cm-live-code-begin"
+          : isLast
+            ? "cm-live-code cm-live-code-end"
+            : "cm-live-code";
     collector.addLineClass(line.from, className);
     if (line.number >= endLineNumber || line.to >= doc.length) break;
     line = doc.lineAt(line.to + 1);

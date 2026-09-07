@@ -7,11 +7,16 @@
  * passes through under the shared allow-list.
  */
 import { describe, expect, it } from "vitest";
-import { HTML_SANITIZE_CONFIG, sanitizeHtml } from "../../src/preview/html-sanitize";
+import {
+  HTML_SANITIZE_CONFIG,
+  sanitizeHtml,
+} from "../../src/preview/html-sanitize";
 
 describe("sanitizeHtml allow-list", () => {
   it("allow-lists common safe inline/block tags", () => {
-    const out = sanitizeHtml("<p>Hello <strong>world</strong></p><ul><li>a</li></ul>");
+    const out = sanitizeHtml(
+      "<p>Hello <strong>world</strong></p><ul><li>a</li></ul>",
+    );
     expect(out).toContain("<strong>");
     expect(out).toContain("<ul>");
     expect(out).toContain("<li>");
@@ -57,7 +62,16 @@ describe("HTML_SANITIZE_CONFIG", () => {
   });
 
   it("allows table + figure structure used by widgets", () => {
-    for (const t of ["table", "thead", "tbody", "tr", "th", "td", "figure", "figcaption"]) {
+    for (const t of [
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "figure",
+      "figcaption",
+    ]) {
       expect(HTML_SANITIZE_CONFIG.ALLOWED_TAGS).toContain(t);
     }
   });

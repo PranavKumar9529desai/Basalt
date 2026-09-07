@@ -18,12 +18,16 @@ export function setActiveCanvas(h: CanvasCommandHandle | null): void {
 
 commandService.registerCommand(
   "canvas:group-selection",
-  () => { active?.groupSelection(); },
+  () => {
+    active?.groupSelection();
+  },
   () => active !== null && active.selectionCount() >= 2,
 );
 
 commandService.registerCommand(
   "canvas:delete-selection",
-  () => { active?.deleteSelection(); },
+  () => {
+    active?.deleteSelection();
+  },
   () => active !== null && active.selectionCount() > 0,
 );

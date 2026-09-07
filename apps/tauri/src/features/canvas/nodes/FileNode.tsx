@@ -90,7 +90,12 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
 
   return (
     <div className="group relative w-full h-full">
-      <NodeResizer minWidth={160} minHeight={100} isVisible={selected} onResizeEnd={() => canvas.saveNow()} />
+      <NodeResizer
+        minWidth={160}
+        minHeight={100}
+        isVisible={selected}
+        onResizeEnd={() => canvas.saveNow()}
+      />
       <CardHandles borderColor={borderColor} selected={selected} />
 
       <div
@@ -104,17 +109,35 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
         >
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
             {isMarkdown ? (
-              <IconFileText size={15} className="text-[var(--sat-accent-primary)] shrink-0" />
+              <IconFileText
+                size={15}
+                className="text-[var(--sat-accent-primary)] shrink-0"
+              />
             ) : mediaType === "image" ? (
-              <IconPhoto size={15} className="text-[var(--sat-accent-green)] shrink-0" />
+              <IconPhoto
+                size={15}
+                className="text-[var(--sat-accent-green)] shrink-0"
+              />
             ) : mediaType === "video" ? (
-              <IconVideo size={15} className="text-[var(--sat-accent-orange)] shrink-0" />
+              <IconVideo
+                size={15}
+                className="text-[var(--sat-accent-orange)] shrink-0"
+              />
             ) : mediaType === "audio" ? (
-              <IconVolume size={15} className="text-[var(--sat-accent-purple)] shrink-0" />
+              <IconVolume
+                size={15}
+                className="text-[var(--sat-accent-purple)] shrink-0"
+              />
             ) : (
-              <IconFileCode size={15} className="text-[var(--sat-text-muted)] shrink-0" />
+              <IconFileCode
+                size={15}
+                className="text-[var(--sat-text-muted)] shrink-0"
+              />
             )}
-            <span className="text-xs font-semibold truncate text-[var(--sat-text-primary)]" title={filePath}>
+            <span
+              className="text-xs font-semibold truncate text-[var(--sat-text-primary)]"
+              title={filePath}
+            >
               {fileName}
             </span>
             {subpath && (
@@ -137,13 +160,20 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
         </div>
 
         {/* Card Body */}
-        <div className={`flex-1 overflow-auto w-full h-full flex flex-col ${isMarkdown ? "p-0" : "p-3"}`}>
+        <div
+          className={`flex-1 overflow-auto w-full h-full flex flex-col ${isMarkdown ? "p-0" : "p-3"}`}
+        >
           {isMarkdown ? (
             loadError ? (
               <div className="flex flex-col items-center justify-center h-full text-center text-xs text-[var(--sat-text-muted)] p-2">
-                <IconAlertTriangle size={20} className="text-[var(--sat-accent-yellow)] mb-1" />
+                <IconAlertTriangle
+                  size={20}
+                  className="text-[var(--sat-accent-yellow)] mb-1"
+                />
                 <span>Could not load note</span>
-                <span className="text-[10px] opacity-70 truncate max-w-full mt-0.5">{filePath}</span>
+                <span className="text-[10px] opacity-70 truncate max-w-full mt-0.5">
+                  {filePath}
+                </span>
               </div>
             ) : noteContent === null ? (
               <div className="flex items-center justify-center h-full text-xs text-[var(--sat-text-muted)]">
@@ -166,7 +196,11 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
               </div>
             ) : mediaType === "video" ? (
               <div className="flex-1 flex items-center justify-center overflow-hidden">
-                <video src={mediaUrl} controls className="w-full h-full object-contain rounded">
+                <video
+                  src={mediaUrl}
+                  controls
+                  className="w-full h-full object-contain rounded"
+                >
                   <track kind="captions" />
                 </video>
               </div>
@@ -177,7 +211,11 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
                 </audio>
               </div>
             ) : mediaType === "pdf" ? (
-              <iframe src={mediaUrl} className="w-full h-full rounded border-0" title={fileName} />
+              <iframe
+                src={mediaUrl}
+                className="w-full h-full rounded border-0"
+                title={fileName}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-xs text-[var(--sat-text-muted)]">
                 <IconFileCode size={24} className="mb-1" />
@@ -188,7 +226,9 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
             <div className="flex flex-col items-center justify-center h-full text-center text-xs text-[var(--sat-text-muted)] p-2">
               <IconPhoto size={24} className="mb-1 opacity-50" />
               <span>{fileName}</span>
-              <span className="text-[10px] opacity-70">Media preview unavailable</span>
+              <span className="text-[10px] opacity-70">
+                Media preview unavailable
+              </span>
             </div>
           )}
         </div>

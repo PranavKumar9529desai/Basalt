@@ -12,7 +12,11 @@
  * preserved — table fixtures work verbatim.
  */
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
+import {
+  EditorState,
+  EditorSelection,
+  type Extension,
+} from "@codemirror/state";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { Tree } from "@lezer/common";
 import { livePreviewPlugin } from "../../src/preview/live-preview";
@@ -61,7 +65,8 @@ export function testMarkdownFixture(
     extensions,
   });
 
-  const tree = ensureSyntaxTree(state, state.doc.length, 10_000) ?? syntaxTree(state);
+  const tree =
+    ensureSyntaxTree(state, state.doc.length, 10_000) ?? syntaxTree(state);
   const report = dumpDecorations(state);
   return { state, tree, doc, report };
 }

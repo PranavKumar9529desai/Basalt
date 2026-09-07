@@ -18,12 +18,12 @@ source of truth is `src/syntax/registry.ts`:
 ```ts
 // Every Basalt syntax boxes itself in a manifest:
 interface SyntaxManifest {
-  id: string;                    // e.g. "wikilink", "frontmatter", "dql"
-  description: string;           // why a custom node is/isn't needed
-  nodeNames: string[];           // Lezer nodes this syntax addresses in the ONE parser
-  grammar?: MarkdownConfig[];    // custom Lezer configs, ONLY for parser collisions
-  hiddenMarks?: string[];        // delimiter nodes live-preview hides/mutes
-  fixtures: string[];            // real docs — the mandatory coverage-test gate
+  id: string; // e.g. "wikilink", "frontmatter", "dql"
+  description: string; // why a custom node is/isn't needed
+  nodeNames: string[]; // Lezer nodes this syntax addresses in the ONE parser
+  grammar?: MarkdownConfig[]; // custom Lezer configs, ONLY for parser collisions
+  hiddenMarks?: string[]; // delimiter nodes live-preview hides/mutes
+  fixtures: string[]; // real docs — the mandatory coverage-test gate
 }
 
 // Fold all manifests into the one MarkdownConfig[] consumed by the editor:
@@ -190,12 +190,12 @@ See [ADR-034](../../../docs/adr/034-embed-rendering.md).
 
 ```ts
 import {
-  createEditorExtensions,   // Full extension stack (ADR-029 live mode)
+  createEditorExtensions, // Full extension stack (ADR-029 live mode)
   createEditorExtensionGroups, // Extensions partitioned by concern
-  previewExtensions,        // Read-only preview pane (search results, etc.)
-  readingExtensions,        // Full reading-mode stack (ADR-029)
-  readingModeExtras,        // Reading-specific extras for the mode compartment
-  contextMenuExtension,     // Right-click state capture
+  previewExtensions, // Read-only preview pane (search results, etc.)
+  readingExtensions, // Full reading-mode stack (ADR-029)
+  readingModeExtras, // Reading-specific extras for the mode compartment
+  contextMenuExtension, // Right-click state capture
 } from "@workspace/editor";
 import type {
   EditorConfig,

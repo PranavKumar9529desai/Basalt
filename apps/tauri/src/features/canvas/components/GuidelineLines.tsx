@@ -20,15 +20,15 @@ function GuidelineLines({
     verticalLines.length > 0
       ? verticalLines
       : verticalLine !== null && verticalLine !== undefined
-      ? [verticalLine]
-      : [];
+        ? [verticalLine]
+        : [];
 
   const hLines =
     horizontalLines.length > 0
       ? horizontalLines
       : horizontalLine !== null && horizontalLine !== undefined
-      ? [horizontalLine]
-      : [];
+        ? [horizontalLine]
+        : [];
 
   if (vLines.length === 0 && hLines.length === 0) {
     return null;

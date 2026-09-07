@@ -17,7 +17,11 @@ export interface DialogFrameProps {
  * Provides the themed surface, header, title and optional description that
  * both InputDialog and ConfirmDialog would otherwise duplicate.
  */
-export function DialogFrame({ title, description, children }: DialogFrameProps) {
+export function DialogFrame({
+  title,
+  description,
+  children,
+}: DialogFrameProps) {
   return (
     <DialogContent className="sm:max-w-[400px] bg-[var(--sat-surface-2)] border-[var(--sat-layout-border)]">
       <DialogHeader>

@@ -11,14 +11,14 @@ tables in the editor.
 
 ## Current state
 
-| Aspect | What exists today | File |
-|---|---|---|
-| Block widget render | Rich `<table>` HTML when cursor is outside; raw source when cursor is inside | `packages/editor/src/block-widgets/table-widget.ts` |
-| Cursor-reveal gate | `active = renderModeFacet === "live" && headLine ∈ [from, to]` — line-level granularity | `table-widget.ts:265-268` |
-| Table source parser | `parseMarkdownTable()` splits on `\|`, detects alignment from delimiter row | `table-widget.ts:44-81` |
-| Block widget registry | Facet-based spec list, `render()` returns `null` when `active` is true | `block-widgets/registry.ts` |
-| Keymap pattern | `KeyBinding[]` exported, wired via `keymap.of(...)` in `input` group | `packages/editor/src/input/backticks.ts`, wired in `editor.ts:143` |
-| Live-preview styling | Header/delimiter/body line classes only | `packages/editor/src/preview/tables.ts` |
+| Aspect                | What exists today                                                                       | File                                                               |
+| --------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Block widget render   | Rich `<table>` HTML when cursor is outside; raw source when cursor is inside            | `packages/editor/src/block-widgets/table-widget.ts`                |
+| Cursor-reveal gate    | `active = renderModeFacet === "live" && headLine ∈ [from, to]` — line-level granularity | `table-widget.ts:265-268`                                          |
+| Table source parser   | `parseMarkdownTable()` splits on `\|`, detects alignment from delimiter row             | `table-widget.ts:44-81`                                            |
+| Block widget registry | Facet-based spec list, `render()` returns `null` when `active` is true                  | `block-widgets/registry.ts`                                        |
+| Keymap pattern        | `KeyBinding[]` exported, wired via `keymap.of(...)` in `input` group                    | `packages/editor/src/input/backticks.ts`, wired in `editor.ts:143` |
+| Live-preview styling  | Header/delimiter/body line classes only                                                 | `packages/editor/src/preview/tables.ts`                            |
 
 **What does NOT exist:** Tab/Enter cell navigation, row/column insert/delete, or any
 interaction beyond "reveal raw source on click."
@@ -52,17 +52,18 @@ by cell basis."
 ## Phase 1 — Cell navigation (Tab / Shift-Tab / Enter)
 
 **Files:**
+
 - New: `packages/editor/src/input/table-navigation.ts` — `tableNavigationKeymap: KeyBinding[]`
 - Edit: `packages/editor/src/editor.ts` — add `keymap.of(tableNavigationKeymap)` to `input` group
 - New: `packages/editor/src/input/table-navigation.test.ts`
 
 **Behavior:**
 
-| Key | Condition | Action |
-|---|---|---|
-| `Tab` | Cursor is inside a Table node | Move cursor to start of next cell in the same row. If at last cell of last row: append a new empty row below, move cursor to its first cell. |
-| `Shift-Tab` | Cursor is inside a Table node | Move cursor to start of previous cell. If at first cell of first row: no-op (return false). |
-| `Enter` | Cursor is inside a Table node | If at last cell of any row: append a new empty row below, move cursor to its first cell. Otherwise: insert a newline (default CM6 behavior — allow multi-line cell content). |
+| Key         | Condition                     | Action                                                                                                                                                                       |
+| ----------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Tab`       | Cursor is inside a Table node | Move cursor to start of next cell in the same row. If at last cell of last row: append a new empty row below, move cursor to its first cell.                                 |
+| `Shift-Tab` | Cursor is inside a Table node | Move cursor to start of previous cell. If at first cell of first row: no-op (return false).                                                                                  |
+| `Enter`     | Cursor is inside a Table node | If at last cell of any row: append a new empty row below, move cursor to its first cell. Otherwise: insert a newline (default CM6 behavior — allow multi-line cell content). |
 
 **Implementation sketch:**
 
@@ -127,17 +128,24 @@ function cellAtCursor(
 export const tableNavigationKeymap: KeyBinding[] = [
   {
     key: "Tab",
-    run: (view) => { /* ... see below ... */ },
-    shift: (view) => { /* Shift-Tab ... */ },
+    run: (view) => {
+      /* ... see below ... */
+    },
+    shift: (view) => {
+      /* Shift-Tab ... */
+    },
   },
   {
     key: "Enter",
-    run: (view) => { /* ... */ },
+    run: (view) => {
+      /* ... */
+    },
   },
 ];
 ```
 
 **Tab logic (detail):**
+
 1. `syntaxTree(state)` → find the innermost node at `selection.main.head` that is or
    contains a `Table` node. If none → `return false` (let default Tab handle indent).
 2. Call `cellAtCursor()` to get current row/col.
@@ -150,11 +158,13 @@ export const tableNavigationKeymap: KeyBinding[] = [
 6. Dispatch and `return true`.
 
 **Enter logic (detail):**
+
 1. Same Table node detection as Tab.
 2. Get last TableRow node; if cursor is inside it → append new row, same as Tab's last-row case.
 3. Otherwise → `return false` (let CM6 handle the newline for multi-line cells).
 
 **Verification:**
+
 - `bunx tsc --noEmit` from `apps/tauri/`
 - `bun run test` (table-navigation.test.ts)
 - Manual smoke test: open a note with a 3×3 table, Tab/Shift-Tab through all cells, Enter
@@ -167,29 +177,31 @@ export const tableNavigationKeymap: KeyBinding[] = [
 ## Phase 2 — Row/column operations (keybindings + context menu)
 
 **Files:**
+
 - Edit: `packages/editor/src/input/table-navigation.ts` — extend with new KeyBindings
 - Edit: `packages/editor/src/input/context-menu.ts` — add table-specific context menu entries
 - Edit: `packages/editor/src/input/table-navigation.test.ts`
 
 **Keybindings:**
 
-| Key | Action |
-|---|---|
-| `Mod-Shift-ArrowUp` | Move row up |
+| Key                   | Action        |
+| --------------------- | ------------- |
+| `Mod-Shift-ArrowUp`   | Move row up   |
 | `Mod-Shift-ArrowDown` | Move row down |
 
 **Context menu entries (right-click on a Table node):**
 
-| Entry | Action |
-|---|---|
-| Insert row above | Insert empty row above current |
-| Insert row below | Insert empty row below current |
-| Delete row | Remove current row |
-| Insert column left | Insert empty column left of current |
-| Insert column right | Insert column right of current |
-| Delete column | Remove current column |
+| Entry               | Action                              |
+| ------------------- | ----------------------------------- |
+| Insert row above    | Insert empty row above current      |
+| Insert row below    | Insert empty row below current      |
+| Delete row          | Remove current row                  |
+| Insert column left  | Insert empty column left of current |
+| Insert column right | Insert column right of current      |
+| Delete column       | Remove current column               |
 
 **Implementation:** All operations work on raw markdown source text:
+
 1. Parse the full Table node text into rows/columns (reuse `parseMarkdownTable()` or a shared
    utility — it's zero-dependency).
 2. Mutate the in-memory structure (add/remove/splice).
@@ -198,6 +210,7 @@ export const tableNavigationKeymap: KeyBinding[] = [
 5. Place the cursor in a sensible position (same row, same column when possible).
 
 **Verification:**
+
 - `bunx tsc --noEmit` from `apps/tauri/`
 - `bun run test` (extended test suite)
 - Manual smoke test: 4×4 table, add/remove rows and columns, verify cursor stays in
@@ -210,21 +223,23 @@ export const tableNavigationKeymap: KeyBinding[] = [
 ## Phase 3 — Alignment + formatting
 
 **Files:**
+
 - Edit: `packages/editor/src/input/table-navigation.ts` or new `table-format.ts`
 
 **Keybindings:**
 
-| Key | Action |
-|---|---|
-| `Mod-Shift-L` | Set column alignment to left (`:---`) |
+| Key           | Action                                   |
+| ------------- | ---------------------------------------- |
+| `Mod-Shift-L` | Set column alignment to left (`:---`)    |
 | `Mod-Shift-C` | Set column alignment to center (`:---:`) |
-| `Mod-Shift-R` | Set column alignment to right (`---:`) |
+| `Mod-Shift-R` | Set column alignment to right (`---:`)   |
 
 **Behavior:** Rewrite only the delimiter row's cell for the current column. No full-table
 reformat — this avoids the "whole table shifts" problem that makes prettify conflict with
 the cursor-reveal model.
 
 **Verification:**
+
 - `bunx tsc --noEmit` from `apps/tauri/`
 - Manual smoke test: set alignment on various columns, verify rendered table in reading
   mode reflects the alignment, raw source is correct.

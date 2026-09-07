@@ -17,7 +17,12 @@ import {
   useActiveNoteStore,
   type EditorController,
 } from "../features/editor";
-import { findLeaf, getTabByPath, useTabsStore, type TabModel } from "../features/tabs";
+import {
+  findLeaf,
+  getTabByPath,
+  useTabsStore,
+  type TabModel,
+} from "../features/tabs";
 
 /** The controller of the currently active pane, or null when it isn't an
  *  editor pane (or isn't mounted yet). */

@@ -74,7 +74,9 @@ export function FileTreeContextMenu({
           {isMultiSelect ? (
             <>
               <ContextMenuItem disabled={isRoot} onClick={onCut}>
-                <ContextMenuItemIcon><IconCut size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconCut size={14} />
+                </ContextMenuItemIcon>
                 Cut
               </ContextMenuItem>
               <ContextMenuItem
@@ -82,29 +84,39 @@ export function FileTreeContextMenu({
                 onClick={onDelete}
                 variant="destructive"
               >
-                <ContextMenuItemIcon><IconTrash size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconTrash size={14} />
+                </ContextMenuItemIcon>
                 Delete
               </ContextMenuItem>
             </>
           ) : (
             <>
               <ContextMenuItem disabled={!canCreate} onClick={onNewNote}>
-                <ContextMenuItemIcon><IconFilePlus size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconFilePlus size={14} />
+                </ContextMenuItemIcon>
                 New Note
               </ContextMenuItem>
               <ContextMenuItem disabled={!canCreate} onClick={onNewFolder}>
-                <ContextMenuItemIcon><IconFolderPlus size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconFolderPlus size={14} />
+                </ContextMenuItemIcon>
                 New Folder
               </ContextMenuItem>
 
               <ContextMenuSeparator />
 
               <ContextMenuItem disabled={isRoot} onClick={onCut}>
-                <ContextMenuItemIcon><IconCut size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconCut size={14} />
+                </ContextMenuItemIcon>
                 Cut
               </ContextMenuItem>
               <ContextMenuItem disabled={isNote || !canPaste} onClick={onPaste}>
-                <ContextMenuItemIcon><IconCopy size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconCopy size={14} />
+                </ContextMenuItemIcon>
                 Paste
               </ContextMenuItem>
               <ContextMenuItem
@@ -112,30 +124,42 @@ export function FileTreeContextMenu({
                 onClick={onDelete}
                 variant="destructive"
               >
-                <ContextMenuItemIcon><IconTrash size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconTrash size={14} />
+                </ContextMenuItemIcon>
                 Delete
               </ContextMenuItem>
 
               <ContextMenuSeparator />
 
               <ContextMenuItem disabled>
-                <ContextMenuItemIcon><IconArrowRight size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconArrowRight size={14} />
+                </ContextMenuItemIcon>
                 Open to the Side
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <ContextMenuItemIcon><IconWindow size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconWindow size={14} />
+                </ContextMenuItemIcon>
                 Open in New Window
               </ContextMenuItem>
               <ContextMenuItem disabled={isRoot} onClick={onRename}>
-                <ContextMenuItemIcon><IconPencil size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconPencil size={14} />
+                </ContextMenuItemIcon>
                 Rename
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <ContextMenuItemIcon><IconCopy size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconCopy size={14} />
+                </ContextMenuItemIcon>
                 Copy Path
               </ContextMenuItem>
               <ContextMenuItem disabled>
-                <ContextMenuItemIcon><IconWindow size={14} /></ContextMenuItemIcon>
+                <ContextMenuItemIcon>
+                  <IconWindow size={14} />
+                </ContextMenuItemIcon>
                 Reveal in Explorer
               </ContextMenuItem>
             </>

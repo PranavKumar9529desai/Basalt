@@ -50,7 +50,9 @@ describe("parseWhen", () => {
     });
 
     it("supports negated compound expressions via parens", () => {
-      const notCompound = parseWhen("!(editorFocused && modalOpen)") as WhenEvaluator;
+      const notCompound = parseWhen(
+        "!(editorFocused && modalOpen)",
+      ) as WhenEvaluator;
       expect(notCompound({ editorFocused: true, modalOpen: true })).toBe(false);
       expect(notCompound({ editorFocused: true, modalOpen: false })).toBe(true);
     });
@@ -58,14 +60,20 @@ describe("parseWhen", () => {
 
   describe("boolean composition", () => {
     it("AND", () => {
-      const and = parseWhen("editorFocused && editorHasSelection") as WhenEvaluator;
+      const and = parseWhen(
+        "editorFocused && editorHasSelection",
+      ) as WhenEvaluator;
       expect(and({ editorFocused: true, editorHasSelection: true })).toBe(true);
-      expect(and({ editorFocused: true, editorHasSelection: false })).toBe(false);
+      expect(and({ editorFocused: true, editorHasSelection: false })).toBe(
+        false,
+      );
       expect(and({ editorFocused: true })).toBe(false);
     });
 
     it("OR", () => {
-      const or = parseWhen("modalOpen || viewMode == 'reading'") as WhenEvaluator;
+      const or = parseWhen(
+        "modalOpen || viewMode == 'reading'",
+      ) as WhenEvaluator;
       expect(or({ modalOpen: true })).toBe(true);
       expect(or({ viewMode: "reading" })).toBe(true);
       expect(or({})).toBe(false);
@@ -107,8 +115,12 @@ describe("parseWhen", () => {
 
     it("== against a boolean via 'true'/'false' strings", () => {
       expect(ev("editorFocused == 'true'", { editorFocused: true })).toBe(true);
-      expect(ev("editorFocused == 'true'", { editorFocused: false })).toBe(false);
-      expect(ev("editorFocused != 'true'", { editorFocused: false })).toBe(true);
+      expect(ev("editorFocused == 'true'", { editorFocused: false })).toBe(
+        false,
+      );
+      expect(ev("editorFocused != 'true'", { editorFocused: false })).toBe(
+        true,
+      );
     });
 
     it("bare words on the right compare as strings", () => {
@@ -130,7 +142,9 @@ describe("parseWhen", () => {
     expect(
       evaluator({ editorFocused: true, modalOpen: true, viewMode: "reading" }),
     ).toBe(false);
-    expect(evaluator({ editorFocused: false, viewMode: "reading" })).toBe(false);
+    expect(evaluator({ editorFocused: false, viewMode: "reading" })).toBe(
+      false,
+    );
     expect(evaluator({ editorFocused: true, viewMode: "live" })).toBe(false);
   });
 });

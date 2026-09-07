@@ -149,4 +149,6 @@ export interface TabsWorkspaceSnapshotV2 {
   tabs: SerializedTab[];
 }
 
-export type TabsWorkspaceSnapshot = TabsWorkspaceSnapshotV1 | TabsWorkspaceSnapshotV2;
+export type TabsWorkspaceSnapshot =
+  | TabsWorkspaceSnapshotV1
+  | TabsWorkspaceSnapshotV2;

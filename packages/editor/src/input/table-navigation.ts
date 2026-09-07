@@ -51,7 +51,8 @@ export function rowsOf(table: SyntaxNode): SyntaxNode[] {
   const rows: SyntaxNode[] = [];
   let child = table.firstChild;
   while (child) {
-    if (child.name === "TableHeader" || child.name === "TableRow") rows.push(child);
+    if (child.name === "TableHeader" || child.name === "TableRow")
+      rows.push(child);
     child = child.nextSibling;
   }
   return rows;
@@ -202,7 +203,6 @@ export function enterInTable(view: EditorView): boolean {
   return appendRow(view, table, cellCount);
 }
 
-
 // ---------------------------------------------------------------------------
 // Row/column mutation keybindings + application helper.
 // ---------------------------------------------------------------------------
@@ -220,7 +220,12 @@ export function tablePositionAtCursor(
   if (!table) return null;
   const info = cellAt(state, head, table);
   if (!info) return null;
-  return { row: info.rowIndex, col: info.col, raw: state.doc.sliceString(table.from, table.to), table };
+  return {
+    row: info.rowIndex,
+    col: info.col,
+    raw: state.doc.sliceString(table.from, table.to),
+    table,
+  };
 }
 
 /**
@@ -268,7 +273,6 @@ function setColumnAlignment(view: EditorView, alignment: Alignment): boolean {
   });
   return true;
 }
-
 
 export const tableNavigationKeymap: KeyBinding[] = [
   {

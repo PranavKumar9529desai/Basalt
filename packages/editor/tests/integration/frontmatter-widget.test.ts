@@ -8,9 +8,16 @@
  */
 import { describe, expect, it } from "vitest";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { EditorState, EditorSelection, type Extension } from "@codemirror/state";
+import {
+  EditorState,
+  EditorSelection,
+  type Extension,
+} from "@codemirror/state";
 import { ensureSyntaxTree } from "@codemirror/language";
-import { livePreviewField, livePreviewPlugin } from "../../src/preview/live-preview";
+import {
+  livePreviewField,
+  livePreviewPlugin,
+} from "../../src/preview/live-preview";
 import { renderModeFacet } from "../../src/preview/render-mode";
 import { basaltMarkdownExtensions } from "../_helpers/parse-markdown";
 import { frontmatterBlockWidgetGroup } from "../../src/block-widgets/frontmatter";
@@ -26,7 +33,9 @@ import { dumpDecorations, type DecorationReport } from "../_helpers/dump-decos";
  * closing fence, `fm_bounds` returns None and the widget never renders
  * (the ADR-034 regression fixed by `state.doc.lineAt(node.to).to`).
  */
-const stubParser: ParseFrontmatterFn = (text: string): FrontmatterModel | null => {
+const stubParser: ParseFrontmatterFn = (
+  text: string,
+): FrontmatterModel | null => {
   if (!text.startsWith("---\n")) return null;
   const lines = text.split("\n");
   const closeIdx = lines.findIndex(
@@ -63,7 +72,10 @@ const stubParser: ParseFrontmatterFn = (text: string): FrontmatterModel | null =
 
 function buildState(
   doc: string,
-  opts: { renderMode?: "live" | "reading"; parser?: ParseFrontmatterFn | null } = {},
+  opts: {
+    renderMode?: "live" | "reading";
+    parser?: ParseFrontmatterFn | null;
+  } = {},
 ) {
   const groupConfig: { parseFrontmatter?: ParseFrontmatterFn } =
     opts.parser === null ? {} : { parseFrontmatter: opts.parser ?? stubParser };
@@ -88,7 +100,9 @@ describe("frontmatter widget — live-preview pipeline", () => {
   it("produces a frontmatter model in live mode (parser provided)", () => {
     const state = buildState(DOC, { renderMode: "live" });
     const lp = state.field(livePreviewField);
-    const model = lp.widgetModels["frontmatter"]?.[0] as FrontmatterModel | undefined;
+    const model = lp.widgetModels["frontmatter"]?.[0] as
+      | FrontmatterModel
+      | undefined;
     expect(model).toBeDefined();
     expect(model!.entries).toHaveLength(1);
     expect(model!.entries[0].key).toBe("title");
@@ -98,7 +112,9 @@ describe("frontmatter widget — live-preview pipeline", () => {
   it("produces a frontmatter model in reading mode (parser provided)", () => {
     const state = buildState(DOC, { renderMode: "reading" });
     const lp = state.field(livePreviewField);
-    const model = lp.widgetModels["frontmatter"]?.[0] as FrontmatterModel | undefined;
+    const model = lp.widgetModels["frontmatter"]?.[0] as
+      | FrontmatterModel
+      | undefined;
     expect(model).toBeDefined();
     expect(model!.entries).toHaveLength(1);
   });

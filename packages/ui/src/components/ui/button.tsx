@@ -19,7 +19,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         "sat-primary":
           "bg-[var(--sat-accent-primary)] text-[var(--sat-text-inverse)] hover:opacity-90",
-        "sat-ghost": "text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)] hover:bg-transparent",
+        "sat-ghost":
+          "text-[var(--sat-text-secondary)] hover:text-[var(--sat-text-primary)] hover:bg-transparent",
         "sat-destructive":
           "bg-[var(--sat-state-danger)] text-[var(--sat-text-inverse)] hover:opacity-90",
       },

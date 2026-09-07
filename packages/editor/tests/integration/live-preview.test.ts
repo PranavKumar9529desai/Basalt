@@ -66,7 +66,9 @@ describe("live-preview full pipeline — default (live) state", () => {
   it("keeps a fenced block raw when the caret is inside it (live reveal)", () => {
     const doc = "```js\ncode\n```";
     const { report } = testMarkdownFixture(doc, { selection: 5 }); // caret inside
-    expect(report.replaces.some((r) => r.widget === "CodeHeaderWidget")).toBe(false);
+    expect(report.replaces.some((r) => r.widget === "CodeHeaderWidget")).toBe(
+      false,
+    );
   });
 });
 

@@ -31,9 +31,7 @@ export function PaneRenderer({ node, renderLeaf }: PaneRendererProps) {
   const tabDnD = useTabDnD();
 
   if (node.type === "leaf") {
-    return (
-      <LeafPane node={node} renderLeaf={renderLeaf} tabDnD={tabDnD} />
-    );
+    return <LeafPane node={node} renderLeaf={renderLeaf} tabDnD={tabDnD} />;
   }
 
   return (

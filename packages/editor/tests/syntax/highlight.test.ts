@@ -15,7 +15,10 @@
 import { describe, expect, it } from "vitest";
 import { parseMarkdown } from "../_helpers";
 
-function nodesOfType(tree: ReturnType<typeof parseMarkdown>["tree"], name: string) {
+function nodesOfType(
+  tree: ReturnType<typeof parseMarkdown>["tree"],
+  name: string,
+) {
   const found: { from: number; to: number }[] = [];
   tree.iterate({
     enter(node) {

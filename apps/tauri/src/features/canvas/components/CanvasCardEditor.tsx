@@ -75,9 +75,12 @@ export function CanvasCardEditor({
 
   const onFetchLinks = useCallback(async (query: string) => {
     try {
-      return await invoke<Array<{ name: string; path: string }>>("autocomplete_links", {
-        prefix: query,
-      });
+      return await invoke<Array<{ name: string; path: string }>>(
+        "autocomplete_links",
+        {
+          prefix: query,
+        },
+      );
     } catch {
       return [];
     }
@@ -97,7 +100,7 @@ export function CanvasCardEditor({
       const resolved = services.findNote(target);
       services.openNote(resolved?.path || target);
     },
-    [services]
+    [services],
   );
 
   const openExternalLink = useCallback((url: string) => {
@@ -155,7 +158,7 @@ export function CanvasCardEditor({
               return true;
             },
           },
-        ])
+        ]),
       );
 
       const updateListener = EditorView.updateListener.of((update) => {
@@ -239,7 +242,7 @@ export function CanvasCardEditor({
       }
       commit();
     },
-    [isEditing, commit]
+    [isEditing, commit],
   );
 
   const handleKeyDownCapture = useCallback(
@@ -256,7 +259,7 @@ export function CanvasCardEditor({
         }
       }
     },
-    [isEditing, commit, cancel]
+    [isEditing, commit, cancel],
   );
 
   return (

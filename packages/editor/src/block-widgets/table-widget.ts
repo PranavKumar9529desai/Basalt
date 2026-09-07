@@ -3,10 +3,7 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
-import {
-  classifyMediaExtension,
-  extensionOf,
-} from "../input/embed-utils";
+import { classifyMediaExtension, extensionOf } from "../input/embed-utils";
 import { resolveAssetFacet } from "../types";
 import { createCodeToggleButton } from "./code-toggle-button";
 import { escapeHtml } from "./utils";
@@ -119,7 +116,9 @@ function embedMediaHtml(
   name: string,
 ): string {
   const attrs =
-    ' class="cm-table-link cm-table-media" data-name="' + escapeHtml(name) + '"';
+    ' class="cm-table-link cm-table-media" data-name="' +
+    escapeHtml(name) +
+    '"';
   switch (kind) {
     case "image":
       return `<img${attrs} src="${escapeHtml(url)}" alt="${escapeHtml(
@@ -156,22 +155,25 @@ export function renderInlineCell(
   }
 
   if (result.includes("[[")) {
-    result = result.replace(/(!?)\[\[([^\]]+)\]\]/g, (_m, bang: string, inner: string) => {
-      const [target, alias] = inner.split("|");
-      const cleanTarget = target.split("#")[0].trim();
-      const display = alias?.trim() || cleanTarget;
+    result = result.replace(
+      /(!?)\[\[([^\]]+)\]\]/g,
+      (_m, bang: string, inner: string) => {
+        const [target, alias] = inner.split("|");
+        const cleanTarget = target.split("#")[0].trim();
+        const display = alias?.trim() || cleanTarget;
 
-      if (bang && !alias && resolve) {
-        const url = resolve(htmlDecode(cleanTarget));
-        if (url) {
-          const kind = classifyMediaExtension(extensionOf(cleanTarget));
-          if (kind === "image" || kind === "video" || kind === "audio") {
-            return embedMediaHtml(kind, url, cleanTarget);
+        if (bang && !alias && resolve) {
+          const url = resolve(htmlDecode(cleanTarget));
+          if (url) {
+            const kind = classifyMediaExtension(extensionOf(cleanTarget));
+            if (kind === "image" || kind === "video" || kind === "audio") {
+              return embedMediaHtml(kind, url, cleanTarget);
+            }
           }
         }
-      }
-      return tableLinkHtml(cleanTarget, display);
-    });
+        return tableLinkHtml(cleanTarget, display);
+      },
+    );
   }
 
   // **bold**
@@ -249,7 +251,11 @@ export class TableBlockWidget extends WidgetType {
       col: lastColIdx + 1,
     };
     this.view.dispatch({
-      changes: { from: this.model.from, to: this.model.to, insert: result.text },
+      changes: {
+        from: this.model.from,
+        to: this.model.to,
+        insert: result.text,
+      },
     });
   }
 
@@ -264,7 +270,11 @@ export class TableBlockWidget extends WidgetType {
       col: 0,
     };
     this.view.dispatch({
-      changes: { from: this.model.from, to: this.model.to, insert: result.text },
+      changes: {
+        from: this.model.from,
+        to: this.model.to,
+        insert: result.text,
+      },
     });
   }
 
@@ -291,7 +301,11 @@ export class TableBlockWidget extends WidgetType {
       };
     }
     this.view.dispatch({
-      changes: { from: this.model.from, to: this.model.to, insert: result.text },
+      changes: {
+        from: this.model.from,
+        to: this.model.to,
+        insert: result.text,
+      },
     });
   }
 
@@ -305,8 +319,8 @@ export class TableBlockWidget extends WidgetType {
     let currentRaw = this.model.raw;
     const oldText =
       rowIdx === 0
-        ? this.model.headers[colIdx] ?? ""
-        : this.model.body[rowIdx - 1]?.[colIdx] ?? "";
+        ? (this.model.headers[colIdx] ?? "")
+        : (this.model.body[rowIdx - 1]?.[colIdx] ?? "");
     if (newText !== oldText) {
       const cellUpdate = updateCellText(currentRaw, rowIdx, colIdx, newText);
       if (cellUpdate) currentRaw = cellUpdate.text;
@@ -320,7 +334,11 @@ export class TableBlockWidget extends WidgetType {
       col: targetCol,
     };
     this.view.dispatch({
-      changes: { from: this.model.from, to: this.model.to, insert: appendRes.text },
+      changes: {
+        from: this.model.from,
+        to: this.model.to,
+        insert: appendRes.text,
+      },
     });
   }
 
@@ -406,7 +424,13 @@ export class TableBlockWidget extends WidgetType {
             }
             if (prevRow >= 0) {
               if (changed) {
-                this.commitCell(rowIdx, colIdx, newText, { row: prevRow, col: prevCol }, wrapper);
+                this.commitCell(
+                  rowIdx,
+                  colIdx,
+                  newText,
+                  { row: prevRow, col: prevCol },
+                  wrapper,
+                );
               } else {
                 this.focusCell(wrapper, prevRow, prevCol);
               }
@@ -422,7 +446,13 @@ export class TableBlockWidget extends WidgetType {
               this.commitAndAppendRow(rowIdx, colIdx, newText, nextCol);
             } else {
               if (changed) {
-                this.commitCell(rowIdx, colIdx, newText, { row: nextRow, col: nextCol }, wrapper);
+                this.commitCell(
+                  rowIdx,
+                  colIdx,
+                  newText,
+                  { row: nextRow, col: nextCol },
+                  wrapper,
+                );
               } else {
                 this.focusCell(wrapper, nextRow, nextCol);
               }
@@ -441,7 +471,13 @@ export class TableBlockWidget extends WidgetType {
             this.commitAndAppendRow(rowIdx, colIdx, newText, colIdx);
           } else {
             if (changed) {
-              this.commitCell(rowIdx, colIdx, newText, { row: nextRow, col: colIdx }, wrapper);
+              this.commitCell(
+                rowIdx,
+                colIdx,
+                newText,
+                { row: nextRow, col: colIdx },
+                wrapper,
+              );
             } else {
               this.focusCell(wrapper, nextRow, colIdx);
             }
@@ -461,8 +497,6 @@ export class TableBlockWidget extends WidgetType {
       if (a === "left") th.style.textAlign = "left";
       else if (a === "center") th.style.textAlign = "center";
       else if (a === "right") th.style.textAlign = "right";
-
-
 
       th.innerHTML = renderInlineCell(headers[c], this.resolve);
 
@@ -484,7 +518,8 @@ export class TableBlockWidget extends WidgetType {
     // Trailing ghost column header (Live Preview only)
     if (this.model.isLive) {
       const ghostColTh = document.createElement("th");
-      ghostColTh.className = "cm-table-ghost-col-cell cm-table-ghost-col-th cm-table-add-col-th";
+      ghostColTh.className =
+        "cm-table-ghost-col-cell cm-table-ghost-col-th cm-table-add-col-th";
       headerTr.appendChild(ghostColTh);
     }
     thead.appendChild(headerTr);
@@ -530,7 +565,8 @@ export class TableBlockWidget extends WidgetType {
 
       if (this.model.isLive) {
         const ghostColTd = document.createElement("td");
-        ghostColTd.className = "cm-table-ghost-col-cell cm-table-ghost-col-td cm-table-add-col-td";
+        ghostColTd.className =
+          "cm-table-ghost-col-cell cm-table-ghost-col-td cm-table-add-col-td";
         bodyTr.appendChild(ghostColTd);
       }
       tbody.appendChild(bodyTr);
@@ -547,7 +583,8 @@ export class TableBlockWidget extends WidgetType {
       }
       // Corner cell for intersection with ghost column
       const ghostCornerCell = document.createElement("td");
-      ghostCornerCell.className = "cm-table-ghost-row-cell cm-table-ghost-corner-cell cm-table-add-row-td";
+      ghostCornerCell.className =
+        "cm-table-ghost-row-cell cm-table-ghost-corner-cell cm-table-add-row-td";
       ghostRowTr.appendChild(ghostCornerCell);
       tbody.appendChild(ghostRowTr);
     }
@@ -575,8 +612,12 @@ export class TableBlockWidget extends WidgetType {
       colLabel.className = "cm-table-ghost-label-col";
       colLabel.textContent = "Add column to the right";
 
-      addColBtn.addEventListener("mouseenter", () => colLabel.classList.add("visible"));
-      addColBtn.addEventListener("mouseleave", () => colLabel.classList.remove("visible"));
+      addColBtn.addEventListener("mouseenter", () =>
+        colLabel.classList.add("visible"),
+      );
+      addColBtn.addEventListener("mouseleave", () =>
+        colLabel.classList.remove("visible"),
+      );
       addColBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -594,8 +635,12 @@ export class TableBlockWidget extends WidgetType {
       rowLabel.className = "cm-table-ghost-label-row";
       rowLabel.textContent = "Add row below";
 
-      addRowBtn.addEventListener("mouseenter", () => rowLabel.classList.add("visible"));
-      addRowBtn.addEventListener("mouseleave", () => rowLabel.classList.remove("visible"));
+      addRowBtn.addEventListener("mouseenter", () =>
+        rowLabel.classList.add("visible"),
+      );
+      addRowBtn.addEventListener("mouseleave", () =>
+        rowLabel.classList.remove("visible"),
+      );
       addRowBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -636,13 +681,21 @@ export class TableBlockWidget extends WidgetType {
         }
 
         // 1. Directly over or inside col button / label / ghost col cell
-        if (target.closest(".cm-table-ghost-btn-col, .cm-table-ghost-label-col, .cm-table-ghost-col-cell")) {
+        if (
+          target.closest(
+            ".cm-table-ghost-btn-col, .cm-table-ghost-label-col, .cm-table-ghost-col-cell",
+          )
+        ) {
           setZone("col");
           return;
         }
 
         // 2. Directly over or inside row button / label / ghost row
-        if (target.closest(".cm-table-ghost-btn-row, .cm-table-ghost-label-row, .cm-table-ghost-row, .cm-table-ghost-row-cell")) {
+        if (
+          target.closest(
+            ".cm-table-ghost-btn-row, .cm-table-ghost-label-row, .cm-table-ghost-row, .cm-table-ghost-row-cell",
+          )
+        ) {
           setZone("row");
           return;
         }
@@ -835,12 +888,14 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     color: "var(--sat-text-muted, #94a3b8)",
     cursor: "pointer",
     opacity: "0",
-    transition: "opacity 150ms ease, color 150ms ease, background-color 150ms ease",
+    transition:
+      "opacity 150ms ease, color 150ms ease, background-color 150ms ease",
     zIndex: "10",
   },
-  ".cm-table-container:hover .cm-table-btn-code, .cm-table-container:focus-within .cm-table-btn-code": {
-    opacity: "1",
-  },
+  ".cm-table-container:hover .cm-table-btn-code, .cm-table-container:focus-within .cm-table-btn-code":
+    {
+      opacity: "1",
+    },
   ".cm-table-btn-code:hover": {
     color: "var(--sat-text-primary, #f8fafc)",
     background: "var(--sat-surface-3, rgba(255, 255, 255, 0.16))",
@@ -852,9 +907,10 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     paddingBottom: "0",
     transition: "padding-bottom 120ms ease",
   },
-  ".cm-table-container.cm-zone-row-active, .cm-table-container.cm-zone-col-active": {
-    paddingBottom: "24px",
-  },
+  ".cm-table-container.cm-zone-row-active, .cm-table-container.cm-zone-col-active":
+    {
+      paddingBottom: "24px",
+    },
   ".cm-table-ghost-col-cell": {
     display: "none",
     width: "28px",
@@ -869,13 +925,16 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-zone-col-active .cm-table-ghost-col-th": {
     borderLeft: "1px solid var(--sat-table-border, #334155)",
     borderBottom: "2px solid var(--sat-table-border, #334155)",
-    borderRight: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    borderRight:
+      "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
     borderTop: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
   },
   ".cm-zone-col-active .cm-table-ghost-col-td": {
     borderLeft: "1px solid var(--sat-table-border, #334155)",
-    borderBottom: "1px solid var(--sat-layout-divider, rgba(255, 255, 255, 0.06))",
-    borderRight: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    borderBottom:
+      "1px solid var(--sat-layout-divider, rgba(255, 255, 255, 0.06))",
+    borderRight:
+      "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
   },
   ".cm-table-ghost-row": {
     display: "none",
@@ -886,7 +945,8 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-zone-row-active .cm-table-ghost-row td": {
     height: "26px",
     padding: "0",
-    borderBottom: "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
+    borderBottom:
+      "1px dashed var(--sat-layout-border, rgba(255, 255, 255, 0.2))",
     borderRight: "1px solid var(--sat-table-border, #334155)",
     borderLeft: "1px solid var(--sat-table-border, #334155)",
     boxSizing: "border-box",
@@ -906,7 +966,8 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     display: "none",
     alignItems: "center",
     justifyContent: "center",
-    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    transition:
+      "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
     zIndex: "10",
   },
   ".cm-zone-col-active .cm-table-ghost-btn-col": {
@@ -946,7 +1007,8 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
     display: "none",
     alignItems: "center",
     justifyContent: "center",
-    transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+    transition:
+      "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
     zIndex: "10",
   },
   ".cm-zone-row-active .cm-table-ghost-btn-row": {
@@ -972,12 +1034,13 @@ export const TABLE_BLOCK_THEME = EditorView.baseTheme({
   ".cm-table-ghost-label-row.visible": {
     display: "block",
   },
-  ".cm-table-block th[contenteditable=\"plaintext-only\"]:focus, .cm-table-block td[contenteditable=\"plaintext-only\"]:focus, .cm-table-block th[contenteditable=\"true\"]:focus, .cm-table-block td[contenteditable=\"true\"]:focus": {
-    outline: "2px solid var(--sat-accent-primary, #60a5fa)",
-    outlineOffset: "-1px",
-    background: "var(--sat-surface-2, rgba(255, 255, 255, 0.04))",
-    borderRadius: "2px",
-  },
+  '.cm-table-block th[contenteditable="plaintext-only"]:focus, .cm-table-block td[contenteditable="plaintext-only"]:focus, .cm-table-block th[contenteditable="true"]:focus, .cm-table-block td[contenteditable="true"]:focus':
+    {
+      outline: "2px solid var(--sat-accent-primary, #60a5fa)",
+      outlineOffset: "-1px",
+      background: "var(--sat-surface-2, rgba(255, 255, 255, 0.04))",
+      borderRadius: "2px",
+    },
 });
 
 export const tableBlockSpec: BlockWidgetSpec<TableBlockModel> = {

@@ -104,12 +104,13 @@ is never mounted. One CM6 view, two extension configurations.
 - Host CSS hide/show toggle (`invisible pointer-events-none`)
 
 ### Risks
+
 1. **Task checkbox toggling** — In reading mode, should clicking a checkbox
    toggle it? Obsidian allows this. The implementation dispatches a transaction
    that overrides `readOnly` for the specific click, toggles the `[x]`/`[ ]`,
    then returns to read-only.
 
-3. **Frontmatter editing** — In reading mode the interactive frontmatter widget
+2. **Frontmatter editing** — In reading mode the interactive frontmatter widget
    (property editing, tag picker) renders the full Properties panel but is
    read-only (`EditorState.readOnly` + `EditorView.editable(false)`), same as
    the editor. Any property edits happen in edit mode.

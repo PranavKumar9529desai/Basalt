@@ -42,13 +42,7 @@ describe("handleBlockquoteNode", () => {
     const { ctx, state } = makeContext(doc, { headPos: 20 });
     const collector = makeCollector();
     // Only the second quote line is in the visible range [11..19]
-    handleBlockquoteNode(
-      nodeRef(0, 19, "Blockquote"),
-      11,
-      19,
-      ctx,
-      collector,
-    );
+    handleBlockquoteNode(nodeRef(0, 19, "Blockquote"), 11, 19, ctx, collector);
     expect(collector.lines).toEqual([
       { pos: state.doc.line(2).from, className: "cm-live-blockquote" },
     ]);
@@ -67,7 +61,13 @@ describe("handleBlockquoteNode", () => {
   it("returns false and adds nothing for a non-blockquote node", () => {
     const { ctx } = makeContext("plain");
     const collector = makeCollector();
-    const handled = handleBlockquoteNode(nodeRef(0, 5, "Paragraph"), 0, 5, ctx, collector);
+    const handled = handleBlockquoteNode(
+      nodeRef(0, 5, "Paragraph"),
+      0,
+      5,
+      ctx,
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.lines).toHaveLength(0);
   });
