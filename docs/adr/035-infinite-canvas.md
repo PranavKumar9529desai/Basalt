@@ -1,6 +1,6 @@
 # ADR-035: Infinite Canvas — Spatial Note Layout
 
-**Status:** Accepted (Amended 2026-09-06: Architecture revised from custom WebGL2 to `@xyflow/react` + Rust compute)  
+**Status:** Accepted (Amended 2026-09-06: Architecture revised from custom WebGL2 to `@xyflow/react` + Rust compute) — **implemented**  
 **Date:** 2026-09-05  
 **Amended:** 2026-09-06  
 **Extends:** ADR-018 (registry-driven workbench), ADR-020 (desktop-tier performance), ADR-029 (single renderer), ADR-032 (split pane layout tree), ADR-034 (embed rendering)
@@ -53,17 +53,23 @@ We adopt **`@xyflow/react` (React Flow)** for the Canvas UI layer, backed by our
 │  ├── CanvasView.tsx            React Flow Provider & Canvas │
 │  ├── CanvasToolbar.tsx         Floating quick-action bar    │
 │  ├── CanvasContextMenu.tsx     Right-click action menu      │
+│  ├── CanvasContext.ts          React context + useCanvas()  │
+│  ├── commands.ts               Canvas leaf commands         │
 │  ├── nodes/                    Custom React Node Components │
 │  │   ├── TextCardNode.tsx      Markdown card + inline edit  │
 │  │   ├── FileNode.tsx          Vault note embed             │
 │  │   ├── LinkNode.tsx          Web link card                │
-│  │   └── GroupNode.tsx         Translucent group container  │
+│  │   ├── GroupNode.tsx         Translucent group container  │
+│  │   ├── GhostCardNode.tsx     Drag ghost + drop ghost      │
+│  │   └── CardHandles.tsx       Source/target handle pairs   │
 │  ├── edges/                    Obsidian Edge Definitions    │
 │  │   └── CanvasEdge.tsx        Smooth Bezier + arrow marker │
+│  ├── components/               CanvasCardEditor, GuidelineLines, pickers │
 │  ├── lib/                      Pure Domain Helpers          │
 │  │   ├── mapper.ts             JSON Canvas ↔ XYFlow mapper  │
+│  │   ├── guidelines.ts         Smart alignment guidelines   │
 │  │   └── colors.ts             Obsidian 6-color presets     │
-│  └── store/                    useCanvasStore (Zustand)     │
+│  └── types.ts                  Feature types                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,12 +169,15 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
 
 ## 6. Deprecation & Cleanup
 
-- Deprecate `packages/canvas-viewport` (remove from active rendering path).
-- Remove obsolete imperative geometry and overlay files:
-  - `apps/tauri/src/features/canvas/lib/scene.ts`
-  - `apps/tauri/src/features/canvas/lib/interaction.ts`
-  - `apps/tauri/src/features/canvas/lib/spatial.ts`
-  - `apps/tauri/src/features/canvas/lib/overlay.ts`
+Done:
+- The initial WebGL2 viewport attempt (`@workspace/canvas-viewport`) is
+  deprecated and removed from the active rendering path. The directory now
+  lives as `packages/canvas` (its `package.json` name remains
+  `@workspace/canvas-viewport`).
+- The imperative geometry/overlay files are gone
+  (`features/canvas/lib/scene.ts`, `interaction.ts`, `spatial.ts`,
+  `overlay.ts`); the board runs entirely on the `@xyflow/react`
+  (`^12.11.6`) node/edge layer + `features/canvas` React components.
 
 ---
 

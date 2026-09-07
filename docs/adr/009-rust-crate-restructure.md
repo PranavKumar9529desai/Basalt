@@ -20,25 +20,35 @@ Problems:
 
 ## Decision
 
-Restructure into six crates with hyphenated package names:
+Restructure into hyphenated, single-responsibility crates. Original five
+functional crates + two standalone WASM bridges:
 
-| Crate              | Responsibility                                                                           |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| `basalt-types`     | Shared data types: `Document`, `MarkdownNode`, `FileMetadata`, search result types       |
-| `basalt-parser`    | Markdown parsing, frontmatter extraction, inline parsing, UTF-16 mapping                 |
-| `basalt-graph`     | `StringArena`, `NoteGraph`, fuzzy search algorithm                                       |
-| `basalt-vault`     | Vault indexing, incremental reindex, file watching, cache, tree building, path utilities |
-| `basalt-search`    | Full-text search (Tantivy BM25) and fuzzy file matching (Nucleo)                         |
-| `graph-wasm`       | `wasm-bindgen` force-layout graph sim for the GraphWorker (ADR-021)                      |
-| `frontmatter-wasm` | keystroke-path frontmatter parser (ADR-022)                                              |
+| Crate               | Responsibility                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `basalt-types`      | Shared data types: `Document`, `MarkdownNode`, `FileMetadata`, search result types, `TypedValue` |
+| `basalt-parser`     | Markdown parsing, frontmatter extraction, inline parsing, UTF-16 mapping, `link_rewrite` |
+| `basalt-graph`      | `StringArena`, `NoteGraph`, fuzzy search algorithm, force-layout sim (`graph_layout/`)    |
+| `basalt-vault`      | Vault indexing, incremental reindex, file watching, cache, tree building, path utilities |
+| `basalt-search`     | Full-text search (Tantivy BM25) and fuzzy file matching (Nucleo)                          |
+| `graph-wasm`        | C-ABI (`#[no_mangle] extern "C"`) force-layout graph bridge for the GraphWorker (ADR-021) |
+| `frontmatter-wasm`  | keystroke-path frontmatter parser (ADR-022)                                               |
 
-Dependency order (WASM bridges live in standalone workspaces, not the main one):
+Later crates in the same layout: `basalt-tables` (DQL engine, ADR-027/028) and
+`basalt-canvas` (JSON Canvas, ADR-035). `graph-wasm`/`frontmatter-wasm` are
+subcrates of the `crates/basalt-wasm/` container, each a standalone workspace.
+
+Dependency order (WASM bridges live in standalone workspaces, not the main one;
+`basalt-graph` depends on `basalt-types` only — parsing stays out of the graph
+path):
 
 ```
-basalt-types → basalt-parser → basalt-graph → basalt-vault → basalt-search
-    │              │                │
-    └──────────────┴──► frontmatter-wasm
-                     └────────────► graph-wasm
+basalt-types → basalt-parser → basalt-vault → basalt-search
+      │              │                │
+      │              ├─► basalt-tables (→ basalt-types)
+      │              │
+      └──────────────┴──► frontmatter-wasm
+                       └────────────► basalt-graph → graph-wasm
+                                     basalt-graph → basalt-types (direct)
 ```
 
 ## Rationale

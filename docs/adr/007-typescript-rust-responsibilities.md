@@ -21,8 +21,12 @@ Basalt runs Rust via Tauri IPC. The question of what belongs in TypeScript vs Ru
 ### Rust owns: Heavy I/O and compute
 
 - `open_files(paths[])` — batched file reads
-- `save_files([{path, content, expected_mtime}])` — batched writes with conflict checks
-- `get_workspace_snapshot` / `save_workspace_snapshot` — atomic workspace state persistence
+- `save_files([{path, content, expected_mtime_ms}])` — batched writes; the
+  mtime field is a wire-contract placeholder (`#[expect(dead_code)]` in
+  `commands/files.rs`) — the conflict check it enables is not yet implemented
+- Workspace state persistence — **frontend-owned** (ADR-025/032): tabs and the
+  layout tree serialize to the vault's `.basalt/workspace.json`; there are no
+  `get_workspace_snapshot`/`save_workspace_snapshot` Rust commands
 - Vault indexing: walk vault, extract metadata, build NoteGraph, maintain link graph
 - Full AST parsing per file (`parse_markdown`) — on demand, not on every keystroke
 - Filesystem watcher — event coalescing for changed/deleted files
@@ -34,7 +38,10 @@ Basalt runs Rust via Tauri IPC. The question of what belongs in TypeScript vs Ru
 > If it allocates memory proportional to vault size, blocks on I/O, or runs more than once per second on a background task → Rust.  
 > If it responds to a user gesture and completes in one event loop tick → TypeScript.
 
-Never make N serial Tauri `invoke()` calls where one batched call works.
+Never make N serial Tauri `invoke()` calls where one batched call works. The
+frontend currently calls the singular `open_file`/`save_file` pair; the
+batched `open_files`/`save_files` commands exist in Rust but are not yet
+consumed.
 
 ## Consequences
 

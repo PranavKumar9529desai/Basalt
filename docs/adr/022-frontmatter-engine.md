@@ -7,6 +7,13 @@ architecture, fresh Obsidian-Properties research, the WASM keystroke path, and
 the generic **block-widget kernel** (rule 14, below) that generalizes the
 frontmatter widget to any presentational/replacive block feature.
 
+Implementation status: **rules 1–4, 6–11, and 14 are shipped** (synchronous
+WASM keystroke parse, `FrontmatterModel` with UTF-16 spans, span-scoped
+`surgicalEdit`, the block-widget kernel, inline Properties widget, and the
+frontmatter link/tag extraction fix). Rules 5 (vault-wide type registry +
+per-note-type schemas), 12 (per-type field registry), and 13 (auto-date
+maintenance) remain deferred.
+
 ## Context
 
 Frontmatter (YAML between the leading `---` fences) is the metadata layer that
@@ -17,12 +24,14 @@ it. Basalt must treat it as a first-class citizen, not decoration.
 
 ### Current state in Basalt
 
-- **Editor (TS) — display only.** `packages/editor/src/syntax/frontmatter.ts`
+- **Editor (TS) — structured model + editing.** `packages/editor/src/syntax/frontmatter.ts`
   adds a Lezer `YAMLFrontMatter` block node so the opening `---` is not eaten by
-  `HorizontalRule`; `packages/editor/src/preview/frontmatter.ts` (wired at
-  `live-preview.ts:230`) merely dims the block and colors keys/fences. There is
-  **no structured model, no parsing into values, no editing, no extraction to the
-  app.**
+  `HorizontalRule`. A `FrontmatterModel` / `FrontmatterEntry` model with UTF-16
+  spans lives in `packages/editor/src/types.ts`, is parsed synchronously on the
+  keystroke path via the injected WASM `parseFrontmatter`, and
+  `block-widgets/frontmatter.ts` renders either the interactive Properties widget
+  (`"widget"` mode) or tinted YAML (`"dim"` mode). Edits are span-scoped
+  `surgicalEdit` calls.
 - **Rust — already structured.** `crates/basalt-parser/src/metadata.rs::extract_metadata`
   parses the frontmatter block with `serde_yaml_ng` into
   `FileMetadata.frontmatter: Option<serde_yaml_ng::Value>`
@@ -31,14 +40,16 @@ it. Basalt must treat it as a first-class citizen, not decoration.
   synchronous C-ABI `fm_parse` to JS, and `benches/parse_metadata.rs` benchmarks
   it (at 1k docs).
 
-### The concrete gap (a real defect today)
+### The gap this ADR closes (shipped)
 
-`extract_metadata` sets its link/tag scan cursor _past_ the frontmatter before
-scanning (`metadata.rs:21`, `i = after_frontmatter`). Consequently **`[[links]]`
-and `tags:` declared inside frontmatter are never added to `meta.links` /
-`meta.tags`.** That is exactly the Obsidian "quoted wikilink in frontmatter is
-not a graph/backlink edge" and "frontmatter tags are not indexed" problem — and
-Basalt ships it today.
+`extract_metadata` used to set its link/tag scan cursor _past_ the frontmatter
+before scanning, so **`[[links]]` and `tags:` declared inside frontmatter never
+reached `meta.links` / `meta.tags`** — the Obsidian "quoted wikilink in
+frontmatter is not a graph/backlink edge" and "frontmatter tags are not indexed"
+problem. The fix rides into `crates/basalt-parser/src/metadata.rs` via
+`crate::frontmatter::walk_fm`: frontmatter `[[links]]`, `tags:`, and `aliases:`
+are extracted and merged (deduplicated) into the metadata, so frontmatter-only
+links and tags are real graph/backlink/search edges.
 
 ### What users actually struggle with (research)
 
@@ -155,12 +166,13 @@ graph, search, and backlinks natively — never as a render-only layer.**
 
 ### Rules (binding on the listed crates/packages)
 
-1. **One parser of truth.** Fix `extract_metadata` so its link/tag scan also
-   covers the frontmatter block (extract `[[…]]` and `tags:`/`aliases:` from it).
-   Add `parse_frontmatter(input) -> FrontmatterModel { values: Vec<(key,
-FrontmatterValue, Span)>, diagnostics: Vec<Diag> }` returning **typed** values
-   and **UTF-16 per-key/value spans**. The vault indexer and the live editor call
-   the _same_ function → no live/indexed drift.
+1. **One parser of truth.** `extract_metadata` covers the frontmatter block
+   (extracts `[[…]]` and `tags:`/`aliases:` from it — shipped via `walk_fm`).
+   `parse_frontmatter(input) -> FrontmatterModel` returns **typed** values and
+   **UTF-16 per-key/per-value spans**: shaped as
+   `{ entries: Vec<FrontmatterEntry { key, value, key_span, value_span }>,
+   diagnostics, block_span }` in `basalt-types`. The vault indexer and the live
+   editor call the _same_ function → no live/indexed drift.
 2. **Parser injection keeps `packages/editor` pure.** The editor receives the
    parser through `EditorConfig.parseFrontmatter`, exactly like the existing
    `onFetchLinks` / `onFetchTags` callbacks (`packages/editor/src/editor.ts`).
@@ -215,10 +227,8 @@ safe, and extensible to future property types:
    `crates/basalt-wasm/graph-wasm`), wrapped and injected as `EditorConfig.parseFrontmatter`
    (rule 2). A frontmatter-region transaction reparses and re-renders the
    widget in the same frame — no async gap, no "widget lags the keystroke."
-   The Tauri `parse_frontmatter` **command** remains for the vault
-   indexer/batch only. _Landing note (2026-08-30 amend): the previous
-   deviation (feature-layer IPC + module-global cache/debounce/reparse
-   effect) is deleted; the sync WASM path is the code._*
+The Tauri `parse_frontmatter` **command** remains for the vault
+    indexer/batch only. The sync WASM path is the code.
 10. **Per-view state, never module globals.** The live-preview field's
     `widgetModels` (kernel) is the single per-editor holder of the model;
     `surgicalEdit` is bound to its own `EditorView`; the widget binds its view
@@ -279,7 +289,7 @@ safe, and extensible to future property types:
 Rust (single source of truth)
   basalt-parser::parse_frontmatter  ──►  FrontmatterModel {typed values, UTF-16 spans, diags}
   basalt-parser::extract_metadata    (fixed: FM links/tags/aliases)  ──► vault index
-  basalt-types::{FrontmatterValue, PropertyType, TypeRegistry}
+  basalt-types::{FrontmatterValue (alias of TypedValue), PropertyType}
   crates/basalt-wasm/frontmatter-wasm            (C-ABI fm_alloc/fm_parse/fm_ptr/fm_len; WASM `?init`)
 
 Webview (per keystroke, synchronous via frontmatter-wasm)
@@ -333,7 +343,7 @@ Webview (per keystroke, synchronous via frontmatter-wasm)
   `handleBlockWidgetsNode` dispatch + per-view `widgetModels` in the live-preview
   field, `getBlockWidgetModel`/`requestPreviewRebuild`, `FrontmatterWidget`
   (view-bound edits), the per-type `propertyFieldRegistry` (rule 12),
-  `frontmatterModeFacet` (rule 11), `frontmatterFetchFacet`/`suggestFor`, and a
+  `blockWidgetModeFacet` (rule 11), `frontmatterFetchFacet`/`suggestFor`, and a
   `blockWidgets` isolation group — all pure. The bespoke `frontmatter-model.ts`
   StateField is deleted.
 - `features/editor` supplies the sync WASM loader + parser impl and deletes the

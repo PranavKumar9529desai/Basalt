@@ -111,10 +111,11 @@ mutations belong there):
 
 1. Sanitize `newName` (strip trailing `.md`/`.markdown`, reject empty/invalid
    or path-containing names).
-2. Enumerate candidate notes whose wikilinks may reference the target, from
-   `graph.metadata_cache` using `NoteRename::matches` (the same normalization
-   the graph resolver uses: trim/lowercase/`.md`-strip, bare-name or
-   path-suffixed match). Register self-writes for the renamed note and every
+2. Enumerate candidate notes whose wikilinks may reference the target, via
+   `vault.note_paths()` + `vault.metadata(path).links` filtered by
+   `NoteRename::matches` (in `crates/basalt-parser/src/link_rewrite.rs` — same
+   normalization the graph resolver uses: trim/lowercase/`.md`-strip, bare-name
+   or path-suffixed match). Register self-writes for the renamed note and every
    candidate.
 3. `std::fs::rename`, then read + rewrite each candidate's `[[wikilinks]]`
    (path prefixes preserved), writing back only files that changed.
@@ -128,7 +129,7 @@ mutations belong there):
 Frontend orchestration (`renameNote` in `shared/useWorkspace.ts`): invoke →
 `refreshTree()` → `updateTabPaths([{ from, to }])`, which repoints the tab's
 path/title **in place (id stable)**, preserving leaf editor caches, undo
-history, and dirty state — the same mechanism moves use (tab ids are stable
+history, and dirty state — the same mechanism moves us (tab ids are stable
 by design). Watcher self-write suppression (already in Rust) guarantees the
 rename's own disk writes never surface as conflicts.
 

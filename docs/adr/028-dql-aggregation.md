@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (2026-09-02)
+Accepted (2026-09-02) — implemented
 
 ## Context
 
@@ -232,15 +232,18 @@ The argument is evaluated per member with a leading `rows.` prefix stripped, so
 
 ### FLATTEN scope
 
-Scalar FLATTEN is implemented: the expression is evaluated per page and the
-result injected as a synthetic frontmatter entry under the alias (or the
-expression text when unnamed), available to later WHERE/SORT/GROUP BY. This
-does not depend on a `TypedValue::List` variant. **List-splitting FLATTEN is
-deferred** until `TypedValue::List` exists, and FLATTEN applied to group rows
-(i.e. after GROUP BY) is currently a no-op.
+FLATTEN is shipped. The expression is evaluated per page and the result
+injected as a synthetic frontmatter entry under the alias (or the expression
+text when unnamed), available to later WHERE/SORT/GROUP BY. This uses
+`TypedValue::List` (ADR-030 unified value type): when the result is a `List`,
+the row **splits into one row per item**, and an empty list drops the row.
+Flattened group fields resolve through the group context via `eval_to_typed`.
+FLATTEN applied to already-grouped rows (i.e. after GROUP BY) is a no-op —
+the command walk only FLATTENs page rows.
 
 ### Date comparison
 
-`compare_typed` now orders `Date`-vs-`Date` lexicographically, which is correct
-for ISO-8601 strings, so `SORT date` and `min`/`max` over dates work. The
-"Known debt" note about `compare_typed` falling through to `Equal` is resolved.
+`compare_typed` (basalt-tables) orders `Date`-vs-`Date` lexicographically,
+which is correct for ISO-8601 strings, so `SORT date` and `min`/`max` over
+dates work. The "Known debt" note about `compare_typed` falling through to
+`Equal` is resolved.

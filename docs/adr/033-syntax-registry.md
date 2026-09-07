@@ -69,7 +69,7 @@ interface SyntaxManifest {
   /** Nodes this syntax addresses in the single parser (built-ins allowed). */
   nodeNames: string[];
   /** Custom Lezer `MarkdownConfig`s — only for parser collisions/gaps. */
-  grammar?: MarkdownConfig | MarkdownConfig[];
+  grammar?: MarkdownConfig[];
   /** Delimiter nodes live-preview mark-hiding hides ("WikiLinkMark",
    *  "EmbedMark", "HighlightMark", …) — derived into `HIDE_MARKS`. */
   hiddenMarks?: string[];
@@ -133,4 +133,8 @@ Implemented with the embed grammar fix in
 `packages/editor/src/syntax/registry.ts` (tests:
 `tests/syntax/registry.test.ts`, `tests/syntax/embed-scan.test.ts`,
 `tests/syntax/wiki-links.test.ts`; documented in
-`packages/editor/README.md`).
+`packages/editor/README.md`). Shipped manifests: wikilink, frontmatter
+(`YAMLFrontMatter`), highlight (`Highlight`), table, html-block, dql — all
+declared in the registry's `basaltSyntaxManifests` with parse fixtures.
+`createBasaltGrammar()` is the single grammar source for `editor.ts` and the
+test helper. **Status: Complete.**

@@ -40,7 +40,7 @@ Dependencies flow downward only. See `../../AGENTS.md` and `../../CONVENTIONS.md
 for the full rules.
 
 ```
-routes/       TanStack Router — exactly 2 modes ("/" + "/onboarding"), never more
+routes/       TanStack Router — exactly 1 route ("/"), never more
 app-shell/    Thin layout composition; the ONLY place cross-feature wiring renders
 shared/       Cross-feature orchestration; the ONLY place to import 2+ features
 features/     Business logic, one directory per domain — zero cross-feature imports

@@ -15,7 +15,7 @@ Use **Zustand** for feature-level state across the app.
 
 Rationale:
 
-- Already in use in `packages/editor/src/commands/store.ts` — consistency
+- Already the de-facto pattern in every feature store (`apps/tauri/src/features/<name>/store/`) — consistency
 - Fine-grained selector subscriptions prevent unnecessary re-renders in large tab sets
 - Low boilerplate: actions and state live in one store definition
 - Works well with the feature folder model — each feature owns its Zustand slice

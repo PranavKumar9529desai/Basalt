@@ -58,8 +58,8 @@ that touches the code — no big-bang rename.
 ### Phases (each builds on the last; each ships independently)
 
 1. **View registry + generic side docks** — `packages/views`; side docks
-   render registered views; `BacklinksSidebar` and `FileTree` become the
-   first contributions.
+   render registered views; `Backlinks` and `FileExplorer` (`app-shell/views/`)
+   become the first contributions.
 2. **Leaf types for the editor area** — tab model gains `viewType`; pane
    content resolves from the registry (`"markdown"` first).
 3. **Layout as serializable tree** — `pane` → `panes: PaneTree`, persisted
@@ -83,7 +83,7 @@ that touches the code — no big-bang rename.
 - First-party features and future plugins use the identical registration
   path — the plugin story is the architecture, not a separate project.
 - Registries must be import-side-effect safe (same pattern as
-  `shared/paneCommands.ts`) or registration must be explicit at boot;
+  `shared/tabCommands.ts`) or registration must be explicit at boot;
   prefer explicit boot-time registration lists for determinism.
 - `packages/views` is a leaf dependency: no imports from `apps/tauri`
   features, mirroring `packages/commands`.

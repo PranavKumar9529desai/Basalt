@@ -63,8 +63,11 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **Tab lifecycle & persistence (ADR-025)**                           | ✅ Complete                                                                                                                                                                                                                                                                                   |
 | **Rust quality-hardening (ADR-030)**                                | ✅ Complete (all phases 0–5: typed errors, module splits, `NodeId`/`QueryColumnType`, search `SearchError`, perf: HashMap `group_rows`, `eq_ignore_ascii_case`, hoisted `AhoCorasick`; Phase 2 value-type unification — `FrontmatterValue` collapsed into the internally-tagged `TypedValue`) |
 | **Embed rendering (ADR-034)**                                       | ✅ Complete — real media (img/video/audio) in reading + live preview + rich table cells; Linux loopback Range server (Part A), table embeds (B), live-preview media in every caret state (C), reading-mode link bracket slicing + table-link navigation (D), stem-aware `resolveAsset` (E)    |
-| Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                                                                                                                                                                                |
-| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                                                                                                                                                                               |
+| **DQL query engine (ADR-027/028)**                                  | ✅ Complete — `basalt-tables` (boolean FROM, WHERE/SORT/LIMIT, GROUP BY/FLATTEN, aggregates), `TypedValue::List`, typed `AppError` wrapper                                                 |
+| **PDF export (ADR-031)**                                            | ✅ Complete — `features/export`: reading-mode snapshot via `readingExtensions()` into a print `@page` pipeline; page size/orientation/font, theme + no-theme, include toggles                   |
+| **Infinite canvas (ADR-035)**                                       | ✅ Complete — `@xyflow/react` leaf over `basalt-canvas` (JSON Canvas v1.0), custom nodes/edges, alignment guidelines; legacy viewport primitive deprecated (dir `packages/canvas`)       |
+| Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                                                                                |
+| Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                                                                               |
 
 > **Freshness:** the authoritative "what's done / what's next" is
 > [`docs/CURRENT_WORK.md`](docs/CURRENT_WORK.md). If this table disagrees with
@@ -192,12 +195,9 @@ Full standards (naming, file budgets, state rules, anti-patterns) live in [`CONV
 
 Desktop workspace app — navigation is **state-driven**, not URL-driven.
 
-Routes exist ONLY for top-level app modes:
-
-- `/` → Main workspace
-- `/onboarding` → First-run experience
-
-🚫 NEVER create a route for something that should be a tab or panel (graph view, settings, backlinks).
+The single route is `/` → Main workspace. 🚫 NEVER create a route for
+something that should be a tab or panel (graph view, settings, backlinks,
+canvas).
 
 ---
 

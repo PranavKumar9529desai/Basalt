@@ -289,7 +289,7 @@ fn scan_body_tokens(input: &str, start: usize, meta: &mut FileMetadata) {
 }
 
 /// A highly optimized, zero-AST parser that only extracts metadata (frontmatter, tags, links)
-/// Used by `basalt_fs` to quickly index thousands of files without memory bloat.
+/// Used by `basalt_vault` to quickly index thousands of files without memory bloat.
 pub fn extract_metadata(input: &str) -> FileMetadata {
     let mut meta = FileMetadata::new();
     let body_start = parse_frontmatter(input, &mut meta);

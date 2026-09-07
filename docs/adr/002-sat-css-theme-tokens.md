@@ -38,7 +38,8 @@ Token families:
 
 Tailwind utility classes are still allowed for layout and spacing (`flex`, `gap-2`, `p-4`, `w-full`).
 
-Theme definitions live in `packages/ui/src/styles/` and `packages/ui/theme/`.
+Theme definitions live in `packages/theme/tokens/` (token layers) and
+`packages/theme/themes/` (seven built-in themes).
 
 ## Token Layer Architecture
 
@@ -50,11 +51,13 @@ Tokens are defined in three layers in `packages/theme/tokens/`, processed by `pa
 | **Semantic**  | `semantic.json`  | Named roles — `surface.1 = {palette.surface1}`. Describes _what a token is for_, not what color it is.                     |
 | **Component** | `component.json` | Context-specific tokens — `editor.heading1`, `layout.border`. References semantic or base tokens.                          |
 
-The build pipeline resolves `{key.path}` references across layers and emits:
+The build pipeline (`packages/theme/build.ts`) resolves `{key.path}`
+references across layers and emits exactly two artifacts:
 
-- `packages/theme/src/generated/tokens.css` — source of truth
-- `packages/ui/src/styles/globals.css` — synced copy for app import
-- `packages/theme/src/types.ts` — `TokenName` union type
+- `packages/ui/src/styles/globals.css` — the token/theme stylesheet the app
+  imports
+- `packages/theme/themes/manifest.ts` — generated `ThemeId` union, theme list,
+  and `defaultThemeId`
 
 **Known limitation:** The `--sat-palette-*` variables (base layer) are emitted into CSS but nothing in the codebase reads them directly. Components consume the semantic layer (`--sat-surface-*`, `--sat-accent-*`, etc.). The palette layer exists as scaffolding for future use cases where multiple semantic roles might share a palette entry, or where themes reuse colors under different names.
 

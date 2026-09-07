@@ -10,11 +10,11 @@ All five parts shipped on `feat/adr34-embed-rendering` (base branch `main`):
 
 | Part | What shipped                                                                                                                | Key files                                                                                                                              |
 | ---- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| A    | Loopback HTTP media server (random port, Range/206, path-traversal guard, 64 KiB streaming) + platform-aware `resolveAsset` | `apps/tauri/src-tauri/src/commands/media.rs`, `apps/tauri/src/app-shell/mediaServer.ts`, `apps/tauri/src/app-shell/useLeafServices.ts` |
+| A    | Loopback HTTP media server (random port, Range/206, path-traversal guard, 64 KiB streaming) + platform-aware `resolveAsset` | `apps/tauri/src-tauri/src/commands/media.rs`, `apps/tauri/src/shared/mediaServer.ts`, `apps/tauri/src/shared/useLeafServices.ts` |
 | B    | Table cells render `![[…]]` as real `<img>/<video>/<audio>`; `.cm-table-link[data-name]` on links + media                   | `packages/editor/src/block-widgets/table-widget.ts`                                                                                    |
 | C    | Live preview renders real media in every caret state (Obsidian parity)                                                      | `packages/editor/src/preview/embeds.ts`, `packages/editor/src/input/embed-media.ts` (`buildEmbedWidget`)                               |
 | D    | Reading-mode link clicks slice `[[…]]` via syntax offsets; table links navigate                                             | `packages/editor/src/editor.ts`, `packages/editor/src/syntax/wiki-links.ts` (`targetFromWikiLinkNode`)                                 |
-| E    | Extension-less stems resolve via unique case-insensitive filename match                                                     | `apps/tauri/src/app-shell/useLeafServices.ts`                                                                                          |
+| E    | Extension-less stems resolve via unique case-insensitive filename match                                                     | `apps/tauri/src/shared/useLeafServices.ts`                                                                                          |
 
 Deliberate deviations from the plan above — documented for future readers:
 
@@ -174,7 +174,7 @@ support.** `resolveAsset` returns those URLs for Linux; `convertFileSrc`
 `resolveAsset` becomes platform-aware:
 
 ```ts
-// apps/tauri/src/app-shell/useLeafServices.ts
+// apps/tauri/src/shared/useLeafServices.ts
 resolveAsset: ws.vaultPath
   ? (target) => {
       const absPath = target.startsWith("/") ? target : `${ws.vaultPath}/${target}`;
@@ -291,7 +291,7 @@ against the vault tree (case-insensitive, extension-less stems):
    `http://127.0.0.1:{port}`; `register` in `commands/mod.rs`. Tokio or
    `std::net` thread + `http-range` crate for Range/206 and
    `Content-Type`/`Content-Length`. Path-traversal guard against `vaultPath`.
-2. `apps/tauri/src/app-shell/useLeafServices.ts`: platform-aware `resolveAsset`
+2. `apps/tauri/src/shared/useLeafServices.ts`: platform-aware `resolveAsset`
    (http URL on Linux, `convertFileSrc` elsewhere) + stem fallback; `mediaKind`
    guard to route `other` (`asset-txt.txt`) to the fallback chip.
 3. `apps/tauri/src/app-shell/Shell.tsx`: pass `resolveAsset` (already wired via
@@ -303,9 +303,10 @@ against the vault tree (case-insensitive, extension-less stems):
 5. `packages/editor/src/input/embed-media.ts`: export a `buildEmbedWidget(target,
 url, view)` factory usable by the walk and the plugin (DRY); keep plugin.
 6. `packages/editor/src/block-widgets/table-widget.ts`: `renderInlineCell`
-   becomes `renderInlineCell(view, text)` with a `![[…]]` media branch
-   (`resolveAssetFacet` read from `view.state`); `.cm-table-link` gets
-   `data-name`.
+   gains an embed branch by threading a `resolve` fn — shipped as
+   `renderInlineCell(text, resolve)` where `resolve` reads
+   `view.state.facet(resolveAssetFacet)` (from `this.resolve`); `.cm-table-link`
+   gets `data-name`.
 7. `packages/editor/src/editor.ts`: `readingLinkHandler` slices via
    `posAtCoords` + syntax tree; binds `.cm-table-link[data-name]`.
 8. `packages/editor/src/syntax/wiki-links.ts`: optionally export the

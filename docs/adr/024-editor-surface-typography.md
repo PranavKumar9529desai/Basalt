@@ -4,6 +4,15 @@
 **Date:** 2026-08-30
 **Extends:** ADR-011 (prose typography system), ADR-022 (frontmatter Properties widget), ADR-023 (inline note title)
 
+> **Implementation status:** the token catalogue below is shipped in
+> `packages/theme/tokens/component.json` → `packages/ui/src/styles/globals.css`
+> (title/section-label/property rows/gaps/hover/focus/readable-width tokens
+> emitted as `--sat-editor-*`; title consumed by the ADR-023 scroller title).
+> Two clarifications against the letter of this ADR: the prose font family is
+> delivered by the shared `--sat-font-sans` token (ADR-011's family), **not** a
+> dedicated `--sat-editor-font-*`; and no editor-scoped control-radius token
+> exists — radii use the cross-cutting `--sat-radius-*` family.
+
 ## Context
 
 Basalt's editor now has three visible layers at the top of a note:

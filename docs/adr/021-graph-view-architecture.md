@@ -62,9 +62,10 @@ D3.js at 10k+ nodes**. We own the crate already.
 ### Governing principle
 
 **The graph view is a GPU-rendered, Rust-owned visualization.** Rust
-(`basalt-graph`) owns the model and the force graphulation; the simulation runs
-off the main thread in a Web Worker; positions stream to a WebGL2/WebGPU
-renderer as typed arrays; React never touches per-frame data.
+(`basalt-graph`, compiled to WASM as `graph-wasm`) owns the model and the
+force graphulation; the simulation runs off the main thread in a Web Worker;
+positions flow from the wasm module's linear memory (a C-ABI pointer) to a
+WebGL2 renderer as typed arrays; React never touches per-frame data.
 
 **Acceptance bar (non-negotiable): sustained ≥60fps at ≥25k nodes** on target
 hardware — strictly better than Obsidian, which degrades past ~10k notes on
@@ -73,50 +74,57 @@ Canvas2D.
 ### Four tiers (aligned to the four-layer rule)
 
 ```
-crates/basalt-graph     model + force graph (Rust, native + WASM)
-        │  wasm-bindgen
-crates/basalt-wasm/graph-wasm      JS/WASM bridge: build graph, graph_step() -> Float32Array
-        │  loaded in
-packages/graph          GRAPH WORKER (wasm graph tick) + WEBGL2/WebGPU RENDERER
+crates/basalt-graph              model + force graph (Rust, native + WASM)
+        │  wasm-bindgen (graph-wasm, C-ABI exports)
+features/graph/components/GraphWorker.ts
+                                 GRAPH WORKER: ticks graph_step(), posts
+                                 positions from wasm linear memory each frame
         │  postMessage (transferable typed arrays)
-features/graph          React view, filters, selection, mode; registers via ADR-018
-        │  viewRegistry.register(...)
-app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
+packages/graph                   WEBGL2 RENDERER (pure geometry, no React)
+        │  <Graph/> draws from buffers
+features/graph                   React view: filters, selection, local graph,
+                                 hover/click-to-open; registers via ADR-018
+        │  leafRegistry.register({ type: "graph", … })
+app-shell/registrations.ts       one-line contribution, no shell surgery
 ```
 
-1. **Model tier — `crates/basalt-graph` (extend).** Add a force-simulation
-   module: **Barnes-Hut quadtree** for O(n log n) repulsion, **velocity-Verlet**
-   integration with damping, spring attraction on edges, gravity/centering,
-   optional collision. Edge list is built from parser/vault link extraction
-   (reuses the backlink pipeline that already feeds `get_backlinks`). Reuse the
-   existing arena + `fuzzy` query paths.
-2. **Bridge tier — `crates/basalt-wasm/graph-wasm` (extend).** Expose graph construction
-   and `graph_step()` returning `Float32Array` position buffers (SharedArrayBuffer
-   where COOP/COEP allow zero-copy). Already scaffolded.
-3. **Engine tier — new `packages/graph` (primitive).** A Web Worker hosting the
-   wasm graph ticks it and posts transferable position arrays; a **WebGL2**
-   renderer draws instanced points + lines. **No Tauri, no business state** —
+1. **Model tier — `crates/basalt-graph` (extend).** Force-simulation module:
+   Barnes-Hut quadtree for O(n log n) repulsion, velocity-Verlet integration
+   with damping, spring attraction on edges, gravity/centering, optional
+   collision. Edge list is built from parser/vault link extraction (reuses the
+   backlink pipeline that feeds `get_backlinks`). Reuse the existing arena +
+   `fuzzy` query paths.
+2. **Bridge tier — `crates/basalt-wasm/graph-wasm` (extend).** Expose graph
+   construction and `graph_step()` over a flat **C-ABI** (`graph_alloc_edges`,
+   `graph_build`, `graph_step`, `graph_positions_ptr`, `graph_reheat`,
+   `graph_set_position`) so a Web Worker can copy edges in and read positions
+   back from the wasm linear memory — zero serialization per frame.
+3. **Engine tier — `packages/graph` (primitive).** A pure WebGL2 renderer
+   (`GraphRenderer`): given a canvas and typed-array scene buffers it draws
+   nodes (`gl.POINTS`), edges (`gl.LINES` via `UNSIGNED_INT` index buffer), and
+   directional arrowhead triangles. No React, no Tauri, no business state —
    renders in an empty `index.html` given position buffers (passes the
-   packages/ litmus). WebGPU compute is the stretch path for the graph itself at
-   the 25k+ tier (fallback to WebGL2). **Zero React per frame.**
-4. **Feature tier — new `apps/tauri/src/features/graph`.** The React view
-   component, filter UI, hover/selection, mode switch. Registers via
-   `viewRegistry.register({ type: "graph", … })` in
-   `app-shell/viewRegistrations.ts` (ADR-018); reads state through
-   `useWorkspaceContext()`; opens notes via `openNote`. **Never a route**
+   `packages/` litmus). **Zero React per frame.** No WebGPU path is used;
+   WebGL2 is the shipped renderer.
+4. **Feature tier — `apps/tauri/src/features/graph`.** The React view: filter
+   bar (`tag:`/`path:` operators), color groups (tag, then folder), local-graph
+   mode with depth control, directional arrows, display toggles (orphans /
+   attachments / text-fade), hover/selection, context menu, click-to-open.
+   Registers via `leafRegistry.register({ type: "graph", … })` in
+   `app-shell/registrations.ts` (ADR-018); reads state through
+   `useLeafServices()`; opens notes via `services.openNote`. **Never a route**
    (ADR-004). Respects feature rules: ≤2 store files, ≤4 hooks, `index.ts`
    surface.
 
-### IPC (realizes ADR-020 moves 3/5/6)
+### Snapshot IPC
 
-- **Bulk dump (move 3):** node/edge arrays serialized with bincode/postcard in
-  Rust, returned via `tauri::ipc::Response::new(bytes)` (skips JSON); decoded
-  into typed arrays frontend-side. Matters at ≥10k notes.
-- **Windowed paging (move 5):** frontend requests slices ("nodes 500–550");
-  Rust answers from its arena. Whole-graph only for small vaults.
-- **Channel streams (move 6):** vault-watcher mutations flow over one
-  `tauri::ipc::Channel`, coalesced to one batched graph update per frame — a
-  25k git checkout fires hundreds of events; React must see one update.
+The feature pulls `get_graph` (a regular Tauri command) which returns a JSON
+snapshot — `GraphSnapshot { node_count, nodes (meta: path, tags, is_attachment,
+is_tag, cluster), edges (index pairs), edge_weights }`. The snapshot is built
+once and transferred to the worker as an `Uint32Array` of edges plus the node
+count; the worker copies the edges into wasm linear memory and ticks from then
+on. No binary IPC (`tauri::ipc::Response` bytes), no slice-level paging, and no
+`Channel` streaming are used — the graph is re-snapshotted on demand.
 
 ### Physics spec ("real physics")
 
@@ -144,14 +152,16 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
 
 ### Phases (each ships independently)
 
-1. Force-graph module in `basalt-graph` + Criterion benches at 5k and 25k.
-2. `graph-wasm` bridge + graph Web Worker + WebGL2 renderer (`packages/graph`);
-   render the full vault graph at 60fps.
-3. Registered `graph` view (ADR-018) + open-on-click + binary IPC dump (move 3).
-4. Filters (tag-frequency, relative/neighbor, property, directionality) +
-   queryable neighborhood + orphan detection.
-5. Physics polish: drag momentum, animated filter transitions, inertia pan/zoom.
-6. (Stretch) WebGPU compute graph + spatial whiteboard mode.
+1. Force-graph module in `basalt-graph` + Criterion benches at 5k and 25k. ✅
+2. `graph-wasm` C-ABI bridge + `GraphWorker` (features/graph/components) + WebGL2
+   renderer (`packages/graph`); render the full vault graph at 60fps. ✅
+3. Registered `graph` leaf (ADR-018) + hover/click-to-open + JSON snapshot
+   (`get_graph`). ✅
+4. Filters (`tag:`/`path:` operators), local-graph mode + depth, directional
+   edges, display toggles (orphans/attachments/text-fade), color groups. ✅
+5. Physics polish: drag-pan, node drag with reheat. ⚠️ partial — animated
+   filter-transition migrations and inertia pan/zoom not shipped.
+6. (Deferred) WebGPU compute graph + spatial whiteboard mode.
 
 ### Non-goals
 
@@ -164,14 +174,18 @@ app-shell/viewRegistrations.ts   one-line contribution, no shell surgery
 
 - Graph compute leaves the webview; the GPU draws. Matches ADR-007 (Rust bulk
   work) and ADR-020.
-- Two new packages: `packages/graph` (primitive renderer/worker) and
-  `apps/tauri/src/features/graph` (React feature). Both obey layer rules.
-- Build pipeline must compile `basalt-graph` → WASM and bundle the worker.
-- **Risk — SharedArrayBuffer** needs COOP/COEP headers in dev; set via Tauri
-  config / Rust response headers, fall back to transferable `postMessage`.
-- **Risk — WebGPU availability**; WebGL2 is the baseline renderer, WebGPU opt-in.
-- **Risk — wasm/worker tooling** complexity; mitigated by reusing the existing
+- Two locations: `packages/graph` (WebGL2 renderer primitive) and
+  `apps/tauri/src/features/graph` (React feature + `GraphWorker`). Both obey
+  layer rules; the graph leaf is lazy-loaded out of the startup bundle.
+- Build pipeline must compile `basalt-graph` → WASM and bundle the worker
+  (`graph_sim.wasm?init`, vite-plugin-wasm).
+- **Risk — worker tooling:** latency-sensitive; mitigated by reusing the
   `graph-wasm` scaffold and the benchmarked `@invariantcontinuum/graph` pattern.
+  Edge transfer into wasm memory plus per-frame pointer reads avoid any
+  serialization on the hot loop.
+- **Risk — worker init failure:** the worker latches the failure and reports
+  once (`{ action: "error" }`) instead of hanging every `await`; the graph
+  degrades to a drawing-less area rather than freezing the app.
 
 ## Verification
 

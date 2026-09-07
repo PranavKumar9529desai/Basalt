@@ -9,12 +9,16 @@ Basalt is a desktop workspace app, not a web page. Early versions used URL route
 
 ## Decision
 
-Routes are used **only** for fundamentally different application modes:
+Routes are used **only** for fundamentally different application modes.
+
+Currently the app has a single live route; inside the workspace everything is
+state-driven:
 
 - `/` → Main workspace (sidebar + tabs + editor)
-- `/onboarding` → Vault picker / first-run experience
 
-Everything inside the workspace is state-driven:
+First-run / vault-picker experiences are workspace state (overlays, panels),
+not routes. If a genuinely distinct top-level mode ever needs a definitional
+boundary, it may earn a route — but nothing in the current app does.
 
 - Opening a file → opens a tab in the current pane
 - Graph view, settings, backlinks → tabs or sidebar panels, not routes

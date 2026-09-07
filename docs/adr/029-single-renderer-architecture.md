@@ -1,8 +1,8 @@
 # ADR-029: Single-Renderer Architecture — Unify Edit and Reading Modes
 
-**Status:** Accepted (implemented)
+**Status:** Accepted
 **Date:** 2026-09-03
-**Last updated:** 2026-09-04 (impl → Accepted + search preview parity)
+**Last updated:** 2026-09-04
 **Extends:** ADR-018 (registry-driven workbench), ADR-019 (editor decoration pipeline), ADR-022 (frontmatter engine)
 
 ## Context
@@ -36,31 +36,48 @@ has no such legacy — we can unify from the start.
 ## Decision
 
 Replace `Reading.tsx` with CM6 in reading mode. The same `livePreviewField` +
-block-widget decoration engine renders both modes. Reading mode becomes:
+block-widget decoration engine renders both modes. Reading mode runs the
+grammar + live preview in a shared extension set (present in both modes) and
+swaps a mode-specific set over a CM6 `Compartment` giving read-only behavior:
 
-```
-EditorState.readOnly.of(true) + EditorView.editable.of(false)
-```
+- `EditorState.readOnly.of(true)` + `EditorView.editable.of(false)`
+- all block widgets rendering rich content (no cursor to reveal raw source)
+- executing DQL blocks, resolved media embeds, and link-click navigation
 
-Mode switching uses a CM6 `Compartment` to swap mode-specific extensions
-without recreating the `EditorView` or its state. Scroll position, undo
-history, and cursor survive the toggle automatically.
+The `EditorView` is never recreated — scroll position, undo history, and
+cursor survive the toggle automatically.
 
 ### New components
 
-1. **`readingExtensions(config)`** — builds the full read-only extension set
-   (grammar + live-preview + all block widgets + embed media + link handling).
+1. **`readingExtensions(config)`** (`packages/editor/src/editor.ts`) — the full
+   read-only extension stack: the markdown grammar, live-preview decorations,
+   the frontmatter block widget, common block widgets (tables, DQL, HTML),
+   embed media resolution, and the reading link handler. Used by
+   `features/search` `PreviewPane` (with explicit `readOnly`.of(true) +
+   `editable`.of(false) added by the caller) and by `features/export`
+   `pdf.ts` for print snapshots.
 
-2. **`embed-media.ts`** — ViewPlugin that resolves `![[file]]` to actual
-   `<img>/<audio>/<video>/<iframe>` via a `resolveAssetFacet`, replacing the
-   edit-mode placeholder chips.
+2. **`readingModeExtras(config)`** — the reading-only slice used inside the
+   mode compartment: block widgets (reading config), `embedMediaPlugin`,
+   `readingLinkHandler()`, `renderModeReading`, and the `readOnly`/`editable`
+   flags. The shared grammar + live-preview extensions live outside the
+   compartment (`sharedExtensions` in `EditorController`).
 
-3. **`reading-link-handler.ts`** — ViewPlugin with event delegation that
-   intercepts clicks on `.cm-live-wikilink` and `<a>` elements, navigating
-   via `openLinkFacet`.
+3. **`embedMediaPlugin`** (`packages/editor/src/input/embed-media.ts`) — a
+   ViewPlugin (`embed-media.ts`, ADR-034 Part C + reading-mode path) that
+   resolves `![[file]]` to actual `<img>/<audio>/<video>/<iframe>` via a
+   `resolveAssetFacet`.
 
-4. **`resolveAssetFacet`** — CM6 Facet injected by the feature layer, following
-   the same pattern as `runQueryFacet` and `openLinkFacet`.
+4. **`readingLinkHandler()`** — a ViewPlugin returned as
+   `EditorView.domEventHandlers` (defined inline in `editor.ts`); event
+   delegation on `.cm-content` navigates `.cm-live-wikilink`, `<a>`, and
+   `.cm-table-link[data-name]` via `openLinkFacet` / `openExternalLinkFacet`.
+   Wikilink targets are sliced from the syntax tree so the `[[`/`]]` brackets
+   never reach the lookup (ADR-034 Part D).
+
+5. **`resolveAssetFacet`** (`packages/editor/src/types.ts`) — CM6 Facet
+   injected by the feature layer, following the same pattern as `runQueryFacet`
+   and `openLinkFacet`.
 
 ### Removed components
 
@@ -72,18 +89,18 @@ history, and cursor survive the toggle automatically.
 ```
 EditorController
   ├── modeCompartment: Compartment
-  ├── editExts: Extension[]    (current extensions)
-  └── readingExts: Extension[] (readingExtensions())
+  ├── sharedExtensions: Extension[]   (grammar + syntax + live preview)
+  └── editExtensions: Extension[]     (input + suggestions + links + block widgets)
 
-setMode("reading"):
-  view.dispatch({ effects: modeCompartment.reconfigure(readingExts) })
-
-setMode("edit"):
-  view.dispatch({ effects: modeCompartment.reconfigure(editExts) })
+modeCompartment.of(editExtensions)                    → edit mode
+modeCompartment.reconfigure(readingModeExtras({...})) → reading mode
 ```
 
-The `EditorView` is never hidden or destroyed. The `<Reading>` React component
-is never mounted. One CM6 view, two extension configurations.
+The `EditorView` is never hidden or destroyed (see
+`apps/tauri/src/features/editor/controller/EditorController.ts` — `setMode()`
+dispatches `modeCompartment.reconfigure` with `readingModeExtras`). The
+`<Reading>` React component is never mounted. One CM6 view, two extension
+configurations.
 
 ## Consequences
 
@@ -118,20 +135,23 @@ is never mounted. One CM6 view, two extension configurations.
 
 ### Phase 1: `readingExtensions()` + `resolveAssetFacet`
 
-Add to `packages/editor/src/editor.ts`. Extends `previewExtensions()` with
+Add to `packages/editor/src/editor.ts`. Extends the live-preview stack with
 DQL widgets, embed media, and link handling. Export `resolveAssetFacet` from
-`packages/editor/src/index.ts`.
+`packages/editor/src/index.ts`. The full `readingModeExtras` variants are
+defined alongside so the mode compartment can swap edit ↔ reading.
 
 ### Phase 2: Embed media ViewPlugin
 
-New file `packages/editor/src/input/embed-media.ts`. Scans for `![[target]]`
-WikiLink nodes, resolves via `resolveAssetFacet`, renders `<img>/<audio>/
-<video>/<iframe>` widgets.
+`packages/editor/src/input/embed-media.ts` exposes `embedMediaPlugin`. Scans
+for `![[target]]` WikiLink nodes, resolves via `resolveAssetFacet`, renders
+`<img>/<audio>/<video>/<iframe>` widgets.
 
 ### Phase 3: Reading link handler
 
-New file `packages/editor/src/input/reading-link-handler.ts`. Event delegation
-on `.cm-content` for clicks on `.cm-live-wikilink` and `<a>` elements.
+`readingLinkHandler()` is defined inline in `packages/editor/src/editor.ts`
+(a `ViewPlugin` via `EditorView.domEventHandlers`). Event delegation on
+`.cm-content` for clicks on `.cm-live-wikilink`, `<a>` elements, and
+`.cm-table-link[data-name]` table-cell widgets.
 
 ### Phase 4: `modeCompartment` in EditorController
 
@@ -146,8 +166,9 @@ Call `controller.setMode(tab.viewMode)` via `useEffect`.
 
 ### Phase 6: Delete `Reading.tsx` + `reading.css`
 
-Remove files. Add `READING_THEME` CM6 extension for reading-mode typography
-(heading scale, prose width, code block styling migrated from `reading.css`).
+Remove the files. Reading-mode typography carries over through the shared CM6
+theme stack (`BASE_EDITOR_THEME` / `editor.css`) — no separate reading theme
+exists.
 
 ### Phase 7: Verification
 

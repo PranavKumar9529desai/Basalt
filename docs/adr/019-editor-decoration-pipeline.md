@@ -10,6 +10,13 @@ The editor performance campaign (see `docs/CURRENT_WORK.md`) measured typing
 latency with the extension-isolation benchmark (commit `44b3885`) and produced
 a clean attribution at 100KB (production build, no devtools):
 
+> **Implementation status:** this ADR's design is implemented — the single-pass
+> engine ships in `packages/editor/src/preview/live-preview.ts` (fused walk,
+> viewport-independent field decorations, `hasFocusField`, bounded
+> `ensureSyntaxTree`, idle `PreviewScheduler`). The performance gate passed:
+> prod full-stack p95 = 4ms @ 100KB. The root-cause list below is **historical
+> (pre-refactor)** and must not be read as describing live code.
+
 | Variant                         | p50     | p95      | Cost added vs base |
 | ------------------------------- | ------- | -------- | ------------------ |
 | base                            | 0ms     | 1ms      | —                  |
@@ -22,15 +29,15 @@ Live preview owns essentially the entire keystroke overhead above the CM6
 floor, and it scales with document size. Root causes in
 `packages/editor/src/preview/live-preview.ts`:
 
-1. **Nested dispatch per keystroke.** `blockDecorationUpdater` is an update
-   listener that rebuilds block decorations by walking the full syntax tree,
-   then dispatches a _second_ transaction to install them. Every keystroke
-   pays for two transactions and two update cycles.
-2. **Three full-document walks per keystroke.** The block builder iterates the
-   entire parsed tree; the inline plugin's code-block pre-pass iterates the
-   entire parsed tree again even though its marks only cover visible ranges;
-   the marks pass re-walks per visible range.
-3. **Rebuild on every viewport change.** Both builders recompute on scroll,
+1. **Nested dispatch per keystroke.** `blockDecorationUpdater` was an update
+   listener that rebuilt block decorations by walking the full syntax tree,
+   then dispatched a _second_ transaction to install them. Every keystroke
+   paid for two transactions and two update cycles.
+2. **Three full-document walks per keystroke.** The block builder iterated the
+   entire parsed tree; the inline plugin's code-block pre-pass iterated the
+   entire parsed tree again even though its marks only covered visible ranges;
+   the marks pass re-walked per visible range.
+3. **Rebuild on every viewport change.** Both builders recomputed on scroll,
    making scrolling pay the same cost as editing.
 
 ### Why not Rust for the keystroke path

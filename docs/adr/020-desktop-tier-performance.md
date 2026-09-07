@@ -1,6 +1,6 @@
 # ADR-020: Desktop-Tier Performance Architecture
 
-**Status:** Accepted (moves 1 & 5 implemented; 2–4, 6 proposed)
+**Status:** Accepted (moves 1, 2 & 4 implemented; 3, 5, 6 proposed)
 **Date:** 2026-08-24
 
 ## Context
@@ -36,11 +36,13 @@ A web app cannot do this. Expected: −150ms+ off launch.
 
 ### 2. Hidden-until-painted window ✅ IMPLEMENTED
 
-Window created `"visible": false`; frontend calls `show()` only after the
-workspace has actually painted (double-rAF mark in `WorkspaceInit`). Rust
-runs a 10s failsafe timer that shows the window regardless (JS failure must
-never yield an invisible app). Kills the white-flash and improves perceived
-launch even when real time is unchanged.
+Window created `"visible": false`; the frontend calls `show()` immediately on
+mount — deliberately **not** gated on a paint rAF, because WebKit suspends
+`requestAnimationFrame` for hidden windows (observed deadlock until the
+failsafe). rAF is used only *after* `show()` to timestamp paint. Rust runs a
+10s failsafe timer that shows the window regardless (JS failure must never
+yield an invisible app). Kills the white-flash and improves perceived launch
+even when real time is unchanged.
 
 ### 3. Binary IPC for bulk payloads (proposed)
 
@@ -51,12 +53,13 @@ serialize with bincode/postcard in Rust, return via
 `tauri::ipc::Response::new(bytes)` (raw, skips JSON), decode in the
 frontend into typed arrays. Matters at ≥10k notes; do with graph view.
 
-### 4. WASM compute + worker rendering (proposed)
+### 4. WASM compute + worker rendering ✅ IMPLEMENTED
 
 Interactive-rate work that must live in the webview compiles FROM our own
-crates: `basalt-graph` → WASM running force-directed physics inside a Web
-Worker, streaming positions via typed arrays to a canvas/WebGL renderer.
-Zero React involvement per frame. `graph-wasm` exists for exactly this.
+crates: `basalt-graph` → WASM running force-directed physics, ticked inside a
+Web Worker (`features/graph/components/GraphWorker.ts`), positions read
+through the wasm C-ABI over linear memory into the WebGL2 renderer. Zero
+React involvement per frame. `graph-wasm` exists for exactly this.
 
 ### 5. Rust-windowed virtualization protocol (proposed)
 

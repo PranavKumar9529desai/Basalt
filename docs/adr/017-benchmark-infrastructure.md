@@ -1,6 +1,6 @@
 # ADR-017: Benchmark Infrastructure — Criterion for Performance Measurement
 
-**Status:** Draft  
+**Status:** Accepted (implementation complete)
 **Date:** 2026-07-12
 
 ## Context
@@ -12,7 +12,7 @@ Basalt aims to beat Obsidian's performance (<800ms TTI, <150ms search on 5k note
 - Compare two approaches (e.g. parallel vs sequential indexing) with confidence
 - Justify complexity of optimizations with hard numbers
 
-The author is a solo developer with no CI/CD pipeline, so benchmarking must work in a local-only workflow with minimal ceremony.
+The author is a solo developer; benchmarking must work in a local-only workflow with minimal ceremony.
 
 ## Decision
 
@@ -35,29 +35,22 @@ No separate bench crate. Each existing workspace member gets a `[[bench]]` entry
 crates/basalt-parser/Cargo.toml    → benches/parse_metadata.rs
 crates/basalt-vault/Cargo.toml     → benches/index_walk.rs, benches/cache_roundtrip.rs
 crates/basalt-search/Cargo.toml    → benches/index_docs.rs, benches/search_query.rs, benches/search_reindex.rs
-crates/basalt-graph/Cargo.toml     → benches/graph_insert.rs, benches/graph_query.rs, benches/arena_growth.rs
+crates/basalt-graph/Cargo.toml     → benches/graph_insert.rs, benches/graph_query.rs, benches/arena_growth.rs, benches/graph_step.rs
+crates/basalt-tables/Cargo.toml    → benches/query_execution.rs
 ```
 
 Criterion discovers all `[[bench]]` entries across the workspace with a single `cargo bench`.
 
-### Fixture generation: Deterministic temp-directory helpers
+### Fixture generation
 
-Fixture generators live in `crates/basalt-vault/src/test_utils.rs` and are re-exported for other crates via `dev-dependencies` path dependency. Design:
-
-- Fixed-seed `SmallRng` produces **deterministic** output — same invocation produces identical file trees, guaranteeing comparable measurements across git revisions
-- Three scale tiers: 50, 500, 5 000 notes
-- Notes include realistic frontmatter (title, tags, created date), wikilinks, tags, and prose
-- Generated into `tempfile::TempDir` — automatically cleaned up after each benchmark iteration
-- Generator accepts a multiplier to simulate larger vaults without checking in binary blobs
-
-```rust
-// Public API shape (pseudocode)
-pub fn generate_vault_fixture(
-    rng: &mut SmallRng,
-    note_count: usize,
-    link_density: f64,
-) -> TempDir { ... }
-```
+Every bench carries its own inline content generator (`generate_note_content`
+in the vault benches, `generate_doc` in the search benches, inline
+note/table builders in parser/graph/tables); determinism comes from
+index-modulo content rather than a seeded RNG. Tier sizes are ad-hoc per
+bench: parser, `search_query`, tables, and `graph_step` include the
+AGENTS.md-mandated 25k tier; vault and `index_docs`/`search_reindex` top out
+at 5k. Closing the 25k gap in the vault and remaining search benches is a
+tracked follow-up.
 
 ### Workflow
 
@@ -75,29 +68,30 @@ Output: color-coded terminal table showing each benchmark's change with ± confi
 
 ### Benchmark targets
 
-| Benchmark            | Crate           | Measures                                                                        |
-| -------------------- | --------------- | ------------------------------------------------------------------------------- |
-| `parse_metadata_seq` | `basalt-parser` | Zero-AST scanner throughput on 1k files                                         |
-| `index_walk`         | `basalt-vault`  | Full `collect_markdown_files` + `reindex_all` — wall-clock time and allocations |
-| `cache_roundtrip`    | `basalt-vault`  | `Cache::save()` + `Cache::load()` on 1k / 5k entries                            |
-| `file_watch_burst`   | `basalt-vault`  | Debounce + batch dispatch under synthetic fs event burst                        |
-| `index_docs`         | `basalt-search` | Tantivy `IndexWriter::add_document` throughput                                  |
-| `search_query`       | `basalt-search` | `searcher.search()` P50/P95/P99 for prefix, fuzzy, and exact queries            |
-| `search_reindex`     | `basalt-search` | Full delete-all + rebuild index cycle                                           |
-| `graph_insert`       | `basalt-graph`  | `NoteGraph::add_entry` — link rebuild cost per insert                           |
-| `graph_query`        | `basalt-graph`  | Backlink lookup latency                                                         |
-| `arena_growth`       | `basalt-graph`  | `StringArena` memory growth and allocation count vs entry count                 |
+| Benchmark          | Crate           | Measures                                                                 |
+| ------------------ | --------------- | ------------------------------------------------------------------------ |
+| `parse_metadata`   | `basalt-parser` | Zero-AST scanner throughput — groups `seq_1k`/`parse_frontmatter_1k`/`seq_25k`/`parse_frontmatter_25k` |
+| `index_walk`       | `basalt-vault`  | `index_directory` full sweep + reindex — wall-clock time and allocations |
+| `cache_roundtrip`  | `basalt-vault`  | `VaultCache::save()` + `load()` on 1k / 5k entries                       |
+| `index_docs`       | `basalt-search` | Tantivy `IndexWriter::add_document` throughput                            |
+| `search_query`     | `basalt-search` | `index.search(q, 10)` on a fixed query set (no percentile breakdown)     |
+| `search_reindex`   | `basalt-search` | Full delete-all + rebuild index cycle                                     |
+| `graph_insert`     | `basalt-graph`  | `NoteGraph::add_document` — link rebuild cost per insert                  |
+| `graph_query`      | `basalt-graph`  | Backlink lookup latency                                                    |
+| `graph_step`       | `basalt-graph`  | One force-layout tick (25k)                                                |
+| `arena_growth`     | `basalt-graph`  | `StringArena` memory growth and allocation count vs entry count           |
+| `query_execution`  | `basalt-tables` | DQL query execution over a generated 25k-note corpus                      |
 
 ## Rationale
 
 - **Criterion over custom harness**: Criterion is the de facto standard for Rust benchmarks (used by Tokio, Serde, and the compiler itself). It handles statistical noise, outlier detection, and cross-run comparison — code that would take weeks to write correctly.
 - **Per-crate benches over monolithic crate**: Keeps dependencies minimal. `basalt-parser` benches don't need `tantivy` or `nucleo` on the dependency tree.
-- **Deterministic generation over static fixtures**: No binary blobs in git, no stale fixtures. The same seed produces the same tree every time, so results are comparable across revisions. Tempdir cleanup means no disk pollution.
-- **No CI integration yet**: As a solo project, CI is unnecessary overhead. The `--baseline main` workflow provides all the rigor needed for local development.
+- **Deterministic generation over static fixtures**: No binary blobs in git, no stale fixtures. Same input produces the same tree every time, so results are comparable across revisions. Tempdir cleanup means no disk pollution.
+- **CI**: the repo now has CI (`.github/workflows/ci.yml`) running clippy + tests; it does not yet run `cargo bench`, so `--baseline main` remains the primary regression gate.
 
 ## Consequences
 
-- Every optimization from ADR-012 through ADR-018 will be measured with statistical confidence
+- Every optimization to the parsing/search/vault/graph/tables hot paths is measured with statistical confidence
 - Adding a benchmark for new functionality costs ~10 lines of code — low enough to become habit
 - `cargo bench` completes in ~2–3 minutes end-to-end
 - Criterion HTML reports provide visual history even without CI

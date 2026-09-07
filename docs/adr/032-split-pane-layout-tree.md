@@ -39,13 +39,19 @@ Inside the editor area (column 3 of the current workspace grid), we introduce a 
 
 ```
 EditorArea
-└── SplitNode (orientation: vertical = columns)
+└── SplitNode (orientation: horizontal = side-by-side columns)
     ├── LeafNode (tab group A)
-    ├── SplitNode (orientation: horizontal = rows)
+    ├── SplitNode (orientation: vertical = stacked rows)
     │   ├── LeafNode (tab group B)
     │   └── LeafNode (tab group C)
     └── LeafNode (tab group D)
 ```
+
+> **Orientation vocabulary (as shipped):** `"horizontal"` renders children as
+> side-by-side columns (`flex-row`); `"vertical"` stacks children as rows
+> (`flex-col`). This is the semantics of `SplitPane.tsx` (`isVertical =
+> orientation === "horizontal"`) and of the edge-drop mapper `edgeToSplit`
+> (left/right edges → `"horizontal"`, top/bottom → `"vertical"`).
 
 ### Data model
 
@@ -171,14 +177,19 @@ function PaneRenderer({ node, renderLeaf }) {
 
 ### Split operations
 
-| Operation               | Implementation                                                          |
-| ----------------------- | ----------------------------------------------------------------------- |
-| Split active pane right | Wrap current leaf + new leaf in a `SplitNode(orientation=vertical)`     |
-| Split active pane down  | Wrap current leaf + new leaf in a `SplitNode(orientation=horizontal)`   |
-| Close pane              | Remove leaf from parent `SplitNode`; if parent has 1 child left, unwrap |
-| Move tab to pane        | `removeTabFromSource` + `addTabToTarget`; create pane if needed         |
-| Drag tab between panes  | Same as move, triggered by drop handler                                 |
-| Resize                  | Update `size` ratios on sash drag end                                   |
+| Operation                | Implementation                                                          |
+| ------------------------ | ----------------------------------------------------------------------- |
+| Split active pane right  | Wrap current leaf + new leaf in a `SplitNode(orientation="horizontal")` |
+| Split active pane down   | Wrap current leaf + new leaf in a `SplitNode(orientation="vertical")`   |
+| Close pane               | Remove leaf from parent `SplitNode`; if parent has 1 child left, unwrap |
+| Move tab to pane         | `removeTabFromSource` + `addTabToTarget`; create pane if needed         |
+| Drag tab between panes   | Same as move, triggered by drop handler                                 |
+| Resize                   | Update `size` ratios on sash drag end                                   |
+
+The palette commands (`shared/tabCommands.ts`) pass the renderer-correct
+orientation — `pane:split-right` → `"horizontal"` (columns), `pane:split-down`
+→ `"vertical"` (rows) — matching `edgeToSplit` (left/right edges →
+`"horizontal"`, top/bottom → `"vertical"`).
 
 ### Close/unwrap invariant
 

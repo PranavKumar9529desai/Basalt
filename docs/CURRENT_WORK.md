@@ -17,6 +17,43 @@
 
 ---
 
+## ADR↔code consistency audit — COMPLETE
+
+**Branch:** `main` (uncommitted)
+**Status:** All 28 ADRs in `docs/adr/` audited against the live code and
+corrected; 003 + 010 verified accurate (untouched). Corrected files:
+002, 004, 005, 007, 008, 009, 011, 017, 018, 019, 020, 021, 022, 023, 024, 026,
+027, 028, 029, 030, 031, 032, 033, 034, 035. Style rule applied throughout:
+clean current-state prose, no "was X → now Y" narration.
+
+Cross-cutting corrections (details live in each ADR):
+
+- **002/007/030** — theme build outputs (`globals.css` + `themes/manifest.ts`),
+  remaining-debt lists (e.g. `arena.rs` still double `to_string()`), crate
+  inventory.
+- **021/029/031** — graph shipped as `leafRegistry` leaf + `GraphWorker.ts`
+  (C-ABI `graph_positions_ptr`, JSON `get_graph` snapshot — no binary IPC);
+  reading mode via `readingModeExtras` compartment; PDF via
+  `features/export/lib/pdf.ts` (readingExtensions → hidden CM6 → `window.print()`).
+- **032** — orientation vocabulary documented as shipped (`"horizontal"` =
+  side-by-side columns): flagged `pane:split-right`/`split-down` passing the
+  swapped orientation to `splitActivePane` as a known issue.
+- **026/034** — HTML block rendering shipped, inline HTML deferred; media
+  server lives in `shared/mediaServer.ts` (5 app-shell refs corrected).
+- **027/028** — DQL shipped via `TypedValue::List`, FLATTEN list-splitting,
+  `query/` parser dir; stale test-counts singular "has one pane" claims removed.
+- **004/025/035** — `/onboarding` route removed from docs (only `/` exists);
+  tab persistence v1/v2 hydration documented; canvas tree/status corrected
+  (`CanvasContext.ts`, `packages/canvas` = `@workspace/canvas-viewport`).
+
+Also fixed: `crates/basalt-parser/src/metadata.rs` doc-comment
+`basalt_fs` → `basalt_vault`; AGENTS.md §4 (`/onboarding`) + status-table rows
+for DQL/canvas/export; this file's stale `basalt-wasm` deletion claim.
+
+**Verify:** `bun run lint && bunx tsc --noEmit`, review `git diff`, commit on
+user request. Next real workstreams (from the status table): Rust batched IPC,
+plugin host (ADR-018 Phase 5).
+
 ## Infinite Canvas (ADR-035) — ARCHITECTURE REVISED (HANDOFF READY)
 
 **Branch:** `feat/adr35-canvas-parse`
@@ -150,11 +187,18 @@ suite: 240 tests passing, oxlint + tsc clean.
 
 ---
 
-## Frontend Restructure — ACTIVE
+## Frontend Restructure — PARTIALLY SHIPPED (see below)
 
-**Branch:** `feat/frontend-restructure`
+**Branch:** `feat/frontend-restructure` — shipped on `main`; small remainder open
 **Worktree:** `/home/pranav/Projects/.worktrees/basalt-feat/frontend-restructure`
 **Based on:** `main` at `fb83910`
+
+**On `main` now:** Phase 2 (orchestration `app-shell/` → `shared/`) landed as
+`ae44f61` (`AppProvider`, `Boot`, `useLeafServices`, `shellCommands`, `tti`,
+`ViewHeader` all live in `shared/`). Phase 1 landed partially: `editor/logic` →
+`editor/lib` and `tabs/lib/layoutTree.ts` are in place. **Still open:**
+`graph/{nodeScale,spatialGrid}.ts` remain at the feature root (not `graph/lib/`),
+and `search/lib`, `settings/lib`, `vault/lib` were never filled in.
 
 ### Goal
 
@@ -249,10 +293,11 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   `metadata`) in `crates/basalt-vault/src/vault.rs`; commands no longer reach
   into `metadata_cache`/`arena` internals.
 - **Phase 2** `86d9417` — structure: moved `src-tauri/src/{app_state,cache,
-config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
-  deleted dead `crates/basalt-wasm` (superseded by `graph-wasm` +
-  `frontmatter-wasm`); fixed stale `basalt-wasm` refs in ADR-009/020/021/022;
-  fixed `EditorController.test.ts` mock path
+  config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
+  `crates/basalt-wasm` still exists on `main` as a container directory holding
+  the `graph-wasm` + `frontmatter-wasm` subcrates (no workspace members, built
+  standalone) — NOT deleted; fixed stale `basalt-wasm` refs in
+  ADR-009/020/021/022; fixed `EditorController.test.ts` mock path
   `../logic/` → `../lib/`.
 - **Phase 3** `ecdcd7f` — docs: added CONVENTIONS.md §11 "Rust Backend
   Conventions" (thiserror-where, error-variant granularity, wire contract,

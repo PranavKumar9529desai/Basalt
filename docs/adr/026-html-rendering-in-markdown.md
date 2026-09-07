@@ -4,6 +4,13 @@
 **Date:** 2026-09-01
 **Extends:** ADR-019 (editor decoration pipeline), ADR-020 (desktop-tier performance), ADR-024 (editor surface typography)
 
+> **Implementation status:** HTML **block** rendering is shipped — the
+> `html-block` widget, opaque AST variants, the single DOMPurify render
+> boundary, and shared typography injection. HTML **inline** rendering (Phase 3)
+> is **deferred**: inline `HTMLTag` nodes stay visible raw source with a
+> `cm-live-html-tag` mark class. The planned 50-line viewport gate (Phase 2a)
+> was not built. Validation below marks the shipped (block) subset.
+
 ## Context
 
 Markdown CommonMark allows raw HTML in documents. Users migrating from
@@ -11,23 +18,14 @@ Obsidian, collaborating across editors, or pasting web content routinely
 produce notes containing HTML blocks (`<details>`, `<table>`, `<div>`,
 `<video>`) and inline HTML (`<span style="...">`, `<em class="...">`).
 
-Basalt silently drops all HTML today:
-
-1. The Rust parser (`basalt-parser/src/parser.rs`) uses pulldown-cmark which
-   emits `Event::Html` and `Event::InlineHtml`, but the event loop catches
-   them with `_ => {}` — the content is discarded.
-2. `MarkdownNode` (`basalt-types/src/node.rs`) has no `HtmlBlock` or
-   `HtmlInline` variant.
-3. The CM6 Lezer grammar (`@lezer/markdown` 1.6.3) _does_ tokenize
-   `HTMLBlock` and `HTMLTag` nodes, but neither the live-preview decoration
-   pipeline (`packages/editor/src/preview/`) nor the reading view
-   (`Reading.tsx`) handle them — they fall through to bare-text fallbacks.
-
-A note containing `<details><summary>Click</summary>Hidden text</details>`
-renders nothing. `<video src="cat.mp4">` disappears. `<div style="color:red">`
-is gone. This is a compatibility gap and a functional regression versus
-Obsidian, which renders sanitized HTML inline in both reading mode and live
-preview.
+At the time of this ADR, Basalt silently dropped all HTML: the Rust parser's
+event loop discarded `Event::Html`/`Event::InlineHtml`; `MarkdownNode` had no
+`HtmlBlock`/`HtmlInline` variant; and while the CM6 Lezer grammar tokenizes
+`HTMLBlock`/`HTMLTag`, neither the live-preview decoration pipeline nor the
+reading view handled them. A note containing
+`<details><summary>Click</summary>Hidden text</details>` rendered nothing
+— a functional regression versus Obsidian, which renders sanitized HTML in
+both reading mode and live preview.
 
 ### Why HTML rendering matters
 
@@ -68,31 +66,32 @@ HTML rendering must not regress this budget. The key risks:
 - Sanitization on the keystroke path would add DOMPurify cost per rebuild.
 - Large HTML blocks (100+ lines) rendered as CM6 widgets on every rebuild
   would dominate the decoration pass.
-- The Reading view renders React components — `dangerouslySetInnerHTML` is
-  cheap but must not trigger cascading re-renders.
+- Rendering must not trigger cascading re-renders.
 
 ## Decision
 
-Basalt will render raw HTML from markdown documents as sanitized,
-richly-rendered content in both the CM6 live preview and the reading view.
-Sanitization happens off the keystroke path. Large blocks are viewport-gated.
+Basalt renders raw HTML from markdown documents as sanitized, richly-rendered
+content in the CM6 surfaces (live preview and the single-renderer reading
+mode, ADR-029), using one shared block widget path. Sanitization happens off
+the keystroke path.
 
 ### Governing principles
 
-1. **Sanitize off the hot path.** HTML is sanitized in Rust (parse time) or
-   on mount (React), never per-keystroke.
+1. **Sanitize off the hot path.** HTML is sanitized at the render boundary
+   (DOMPurify) when a block first enters a widget, never per-keystroke.
 2. **Single-pass integration.** HTML block widgets plug into the existing
    `handleBlockWidgetsNode` dispatch — no new tree walks.
-3. **Viewport-gated rendering.** HTML blocks exceeding 50 lines are not
-   rendered as widgets until they scroll into the viewport.
-4. **Cursor-aware reveal.** When the cursor is inside an HTML block or on a
-   line containing inline HTML, the raw source is shown; when the cursor
-   moves away, the rendered preview appears. This matches the existing
-   WYSIWYM pattern (headings, blockquotes, horizontal rules).
+3. **Lazy by construction.** No explicit viewport gate is shipped; CM6 builds
+   widgets lazily near the viewport and the >48KB doc-size budget defers the
+   parse outside the keystroke path.
+4. **Cursor-aware reveal.** When the cursor is inside an HTML block, the raw
+   source is shown; when the cursor moves away, the rendered preview appears.
+   This matches the existing WYSIWYM pattern (headings, blockquotes,
+   horizontal rules).
 5. **Single render-boundary sanitization.** DOMPurify runs in the browser's
-   own HTML parser at every render sink (CM6 widgets, `Reading.tsx`,
-   `PreviewPane`). No Rust-side sanitizer — the AST's HTML strings are opaque
-   and never rendered (see "Why one sanitizer").
+   own HTML parser at every render sink (CM6 widgets, search `PreviewPane`).
+   No Rust-side sanitizer — the AST's HTML strings are opaque and never
+   rendered directly (see "Why one sanitizer").
 
 ### Why one sanitizer (DOMPurify), not two
 
@@ -128,12 +127,12 @@ and unnecessary for XSS in this application:
 
 2. **Unnecessary.** The Rust AST's HTML content is **never rendered**.
    Basalt's frontend renders from the **raw file text** (confirmed:
-   `open_files` returns `read_to_string` raw content; the CM6 buffer and
-   `Reading.tsx` both build their Lezer trees from raw text). The Rust side
-   (`basalt-vault`) consumes the parser only via `extract_metadata`, which
-   reads wikilinks, tags, and metadata as **opaque strings** for graph,
-   backlinks, and search index — none of which render HTML. A Rust-side
-   `HtmlBlock` string would never reach the DOM, so sanitizing it buys nothing.
+   `open_files` returns `read_to_string` raw content; the CM6 buffer builds
+   its Lezer tree from raw text). The Rust side (`basalt-vault`) consumes the
+   parser only via `extract_metadata`, which reads wikilinks, tags, and
+   metadata as **opaque strings** for graph, backlinks, and search index —
+   none of which render HTML. A Rust-side `HtmlBlock` string would never reach
+   the DOM, so sanitizing it buys nothing.
 
 3. **Simpler.** One sanitizer, one allow-list, one place to audit. No
    cross-language config divergence, no risk of a "sanitized on the server"
@@ -142,18 +141,17 @@ and unnecessary for XSS in this application:
 The single render-boundary is enough because every HTML sink feeds through
 it:
 
-| Render surface                          | Reads from        | Sanitizer |
-| --------------------------------------- | ----------------- | --------- |
-| CM6 live-preview block widget           | raw text buffer   | DOMPurify |
-| CM6 live-preview inline tag widget      | raw text buffer   | DOMPurify |
-| `Reading.tsx` (`HTMLBlock` / `HTMLTag`) | raw markdown text | DOMPurify |
-| Search `PreviewPane` (CM6)              | raw text          | DOMPurify |
+| Render surface                              | Reads from        | Sanitizer |
+| ------------------------------------------- | ----------------- | --------- |
+| CM6 live-preview block widget (`html-block`) | raw text buffer   | DOMPurify |
+| CM6 reading mode (same widget path)          | raw text buffer   | DOMPurify |
+| CM6 inline `HTMLTag`                         | raw text buffer   | *no widget — stays raw + mark class* |
+| Search `PreviewPane` (CM6)                   | raw text          | DOMPurify |
 
 DOMPurify runs once per block when it first enters the widget (not per
 keystroke), and the `WidgetType.eq()` guard skips re-render when content is
 unchanged. `dangerouslySetInnerHTML` is used only with the DOMPurify return
-value, and the result is never post-processed (per DOMPurify's own guidance:
-_sanitize for the sink, insert without post-processing_).
+value, and the result is never post-processed.
 
 **Security boundary adopted:** rendered markdown semantic markup is trusted
 only after DOMPurify. Graphic/backlink/search metadata is treated as opaque
@@ -170,20 +168,20 @@ this desktop app.
               │ raw file text                    │ raw file text
               ▼                                  ▼
 ┌───────────────────────────┐        ┌───────────────────────────────┐
-│ CM6 Live Preview           │        │ Reading View (Reading.tsx)    │
-│ (raw buffer via Lezer)     │        │ (raw markdown via Lezer)      │
-│                            │        │                               │
-│ HTMLBlock / HTMLTag nodes  │        │ renderBlock/renderInlineNode  │
-│        │                   │        │        │                     │
-│        ▼                   │        │        ▼                     │
-│ handleBlockWidgetsNode     │        │ slice raw source → DOMPurify │
-│   → htmlBlockSpec          │        │   → dangerouslySetInnerHTML  │
-│   parse: slice + DOMPurify │        └───────────────────────────────┘
-│   render: HtmlBlockWidget  │
-│                            │        ┌───────────────────────────────┐
-│ handleInlineNode           │        │ Search PreviewPane (CM6)      │
-│   → HTMLTag mark widget    │        │ raw text → CM6 → DOMPurify    │
-│   + DOMPurify              │        └───────────────────────────────┘
+│ CM6 Live Preview           │        │ Reading mode (single CM6      │
+│ (raw buffer via Lezer)     │        │ view — ADR-029 readingExts)   │
+│                            │        │ same htmlBlock widget path    │
+│ HTMLBlock / HTMLTag nodes  │        │        │                     │
+│        │                   │        │        ▼                     │
+│        ▼                   │        │ shared htmlBlockSpec         │
+│ handleBlockWidgetsNode     │        │   parse: slice + DOMPurify   │
+│   → htmlBlockSpec          │        └───────────────────────────────┘
+│   parse: slice + DOMPurify │
+│   render: HtmlBlockWidget  │        ┌───────────────────────────────┐
+│                            │        │ Search PreviewPane (CM6)      │
+│ inline HTMLTag → raw       │        │ raw text → CM6 → DOMPurify    │
+│   source + cm-live-html-   │        └───────────────────────────────┘
+│   tag mark (deferred)      │
 └───────────────────────────┘
         │  (search/backlinks/graph never render HTML —
         │   extract_metadata pulls opaque link/tag strings only)
@@ -192,11 +190,11 @@ this desktop app.
 **Note:** The Rust `basalt-parser` AST is not shown because it never renders
 HTML. `basalt-vault` consumes the parser only through `extract_metadata`
 (wikilinks, tags, metadata as opaque strings for graph/backlinks/search).
-The `MarkdownNode::HtmlBlock` / `HtmlInline` variants are added to keep the
-AST representative of the source, but their string is opaque downstream and
-never a sanitization or rendering boundary.
+The `MarkdownNode::HtmlBlock` / `HtmlInline` variants keep the AST
+representative of the source, but their string is opaque downstream and never
+a sanitization or rendering boundary.
 
-### Phase 1: Extend the AST
+### Phase 1: Extend the AST (SHIPPED)
 
 #### 1a. Extend MarkdownNode
 
@@ -212,121 +210,37 @@ pub enum MarkdownNode {
 
 These variants make the AST representative of the source document. **No
 sanitization happens here**: the strings are opaque to graph/backlinks/search
-(which extract links/tags, never render), so cleaning them off the render
-path would be dead work and a false security boundary. Note the frontend
-does not render from this AST at all — it renders from raw file text via
-Lezer.
+(which extract links/tags, never render). The frontend does not render from
+this AST at all — it renders from raw file text via Lezer.
 
 #### 1b. Handle HTML events in parse_markdown
 
-`crates/basalt-parser/src/parser.rs` — replace the `_ => {}` catch-all
-with explicit handling that preserves the raw HTML (no sanitizer):
-
-```rust
-Event::Html(html) => {
-    let raw = html.into_string();
-    match stack.last_mut() {
-        Some(MarkdownNode::Paragraph(ref mut children))
-        | Some(MarkdownNode::Blockquote(ref mut children))
-        | Some(MarkdownNode::ListItem(ref mut children)) => {
-            children.push(MarkdownNode::HtmlBlock(raw));
-        }
-        None => doc.ast.push(MarkdownNode::HtmlBlock(raw)),
-        _ => {}
-    }
-}
-Event::InlineHtml(html) => {
-    let raw = html.into_string();
-    match stack.last_mut() {
-        Some(MarkdownNode::Heading(_, ref mut children))
-        | Some(MarkdownNode::Paragraph(ref mut children))
-        | Some(MarkdownNode::ListItem(ref mut children))
-        | Some(MarkdownNode::Blockquote(ref mut children)) => {
-            children.push(MarkdownNode::HtmlInline(raw));
-        }
-        _ => {}
-    }
-}
-```
-
-No `ammonia` dependency is added.
+`crates/basalt-parser/src/parser.rs` preserves the raw HTML (no sanitizer)
+into `Event::Html` → `HtmlBlock` and `Event::InlineHtml` → `HtmlInline`. No
+`ammonia` dependency is added.
 
 #### 1c. Frontend dependency: DOMPurify
 
-Add DOMPurify to the editor package (used by the CM6 widgets) and the app
-(used by `Reading.tsx` and `PreviewPane`):
-
-```bash
-cd packages/editor && bun add dompurify && bun add -d @types/dompurify
-cd apps/tauri && bun add dompurify && bun add -d @types/dompurify
-```
-
-DOMPurify is the OWASP-recommended sanitizer and runs in the browser's own
-HTML5 parser, eliminating parser-differential / mXSS bypasses.
+`dompurify` is a dependency of `packages/editor` (used by the CM6 widgets).
+`@types/dompurify` ships alongside for typing.
 
 #### 1d. DOMPurify configuration
 
-A strict allow-list, consistent across all render surfaces (single source of
-truth in `packages/editor/src/preview/html-sanitize.ts`):
+A strict allow-list, consistent across all render surfaces, is the single
+source of truth in `packages/editor/src/preview/html-sanitize.ts`:
 
 ```typescript
 export const HTML_SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    "div",
-    "span",
-    "p",
-    "br",
-    "hr",
-    "pre",
-    "code",
-    "details",
-    "summary",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-    "caption",
-    "figure",
-    "figcaption",
-    "strong",
-    "em",
-    "del",
-    "ins",
-    "mark",
-    "sub",
-    "sup",
-    "abbr",
-    "ul",
-    "ol",
-    "li",
-    "a",
-    "img",
-    "video",
-    "audio",
-    "source",
-    "track",
+    "div", "span", "p", "br", "hr", "pre", "code",
+    "details", "summary", "table", "thead", "tbody", "tr", "th", "td", "caption",
+    "figure", "figcaption", "strong", "em", "del", "ins", "mark", "sub", "sup",
+    "abbr", "ul", "ol", "li", "a", "img", "video", "audio", "source", "track",
   ],
   ALLOWED_ATTR: [
-    "class",
-    "style",
-    "id",
-    "href",
-    "src",
-    "alt",
-    "title",
-    "width",
-    "height",
-    "colspan",
-    "rowspan",
-    "scope",
-    "controls",
-    "autoplay",
-    "loop",
-    "muted",
-    "poster",
-    "preload",
+    "class", "style", "id", "href", "src", "alt", "title", "width", "height",
+    "colspan", "rowspan", "scope", "controls", "autoplay", "loop", "muted",
+    "poster", "preload",
   ],
   ALLOW_DATA_ATTR: false,
 };
@@ -337,268 +251,53 @@ export function sanitizeHtml(raw: string): string {
 }
 ```
 
-### Phase 2: CM6 live-preview — HTML block widget
+### Phase 2: CM6 live-preview — HTML block widget (SHIPPED)
 
-#### 2a. New file: `packages/editor/src/block-widgets/html-block.ts`
+#### 2a. `packages/editor/src/block-widgets/html-block.ts`
 
-Follows the `frontmatter.ts` pattern exactly.
-
-**BlockWidgetSpec:**
+Follows the `frontmatter.ts` block-widget pattern:
 
 | Field                  | Value                                                                                                                                                                             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`                   | `"html-block"`                                                                                                                                                                    |
 | `matches(node)`        | `node.type.name === "HTMLBlock"`                                                                                                                                                  |
-| `parse(state, node)`   | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()` (the single render-boundary sanitizer), return `{ html: string, lineCount: number }` |
-| `render(model, state)` | `HtmlBlockWidget` — cursor-aware (see below)                                                                                                                                      |
+| `parse(state, node)`   | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()`, return `{ html: string }`                                                            |
+| `render(model, state)` | `HtmlBlockWidget` — cursor-aware (`model.active`): raw source when the caret is inside the block, rendered `innerHTML` otherwise |
 | `span(model, state)`   | `{ from: node.from, to: node.to }`                                                                                                                                                |
-| `theme`                | CSS for `.cm-live-html-block`                                                                                                                                                     |
+| `theme`                | CSS for `.cm-live-html-block` / `.sat-html`                                                                                                                                        |
 
-**HtmlBlockWidget (WidgetType):**
+Larger/off-screen blocks need no explicit gate: CM6 constructs widgets lazily
+near the viewport, and the >48KB doc-size parse budget defers the block parse
+off the keystroke path. `render()` returns `null` only when the caret is
+inside the block (`model.active`, cursor-aware reveal).
 
-```typescript
-class HtmlBlockWidget extends WidgetType {
-  private view: EditorView | null = null;
+#### 2b. Registration in editor.ts
 
-  eq(other: HtmlBlockWidget) {
-    return this.model.html === other.model.html;
-  }
-
-  toDOM(_view: EditorView) {
-    this.view = _view;
-
-    const container = document.createElement("div");
-    container.className = "cm-live-html-block";
-
-    // Cursor-aware: if cursor is inside this block, show raw source
-    if (this.isCursorInside(_view)) {
-      container.className += " cm-live-html-raw";
-      const pre = document.createElement("pre");
-      pre.className = "cm-live-html-source";
-      pre.textContent = this.model.raw;
-      container.appendChild(pre);
-    } else {
-      // `model.html` is already DOMPurify-clean from parse(); insert as-is,
-      // never re-process the innerHTML sink afterward.
-      container.innerHTML = this.model.html;
-    }
-
-    return container;
-  }
-
-  ignoreEvent() {
-    return true;
-  }
-
-  private isCursorInside(view: EditorView): boolean {
-    const pos = state.selection.main.head;
-    return pos >= this.from && pos <= this.to;
-  }
-}
-```
-
-**Performance gate:** For HTML blocks exceeding 50 lines, the widget's
-`render()` returns `null` when the block is outside the viewport (checked
-via `view.visibleRanges`). The block falls through to the default raw-source
-display. The idle scheduler (`PreviewScheduler` at `live-preview.ts:382`)
-catches newly-visible blocks on the next idle callback — no rebuild needed.
-
-#### 2b. Register in editor.ts
-
-Add to the `blockWidgets` group at `editor.ts:94-101`:
-
-```typescript
-blockWidgets: [
-  ...frontmatterBlockWidgetGroup({...}),
-  registerBlockWidget(htmlBlockSpec),
-],
-```
-
-Add to `previewExtensions()` at `editor.ts:127-141` with dim-mode
-presentation (showing a faded preview of the HTML content).
+The spec is registered through `commonBlockWidgetExtensions()` →
+`blockWidgetSpecsFacet.of(htmlBlockSpec)` plus `HTML_BLOCK_THEME`
+(`packages/editor/src/editor.ts`), inside the `blockWidgets` extension group
+consumed by both the live-preview and reading-mode extension sets.
 
 #### 2c. Theme tokens
 
-```css
-.cm-live-html-block {
-  border: 1px solid var(--sat-layout-divider, rgba(255, 255, 255, 0.1));
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin: 0.5rem 0;
-  background: var(--sat-surface-2, rgba(255, 255, 255, 0.03));
-  overflow-x: auto;
-}
+`.cm-live-html-block` sets border, radius, padding, background
+(`--sat-surface-2`), and `overflow-x: auto`; `.cm-live-html-block.cm-live-html-raw`
+and `.cm-live-html-source` present the raw source (mono via `--sat-font-mono`).
 
-.cm-live-html-block.cm-live-html-raw {
-  background: var(--sat-surface-1);
-  padding: 0;
-}
+### Phase 3: Inline HTML (DEFERRED)
 
-.cm-live-html-source {
-  font-family: var(--sat-font-mono);
-  font-size: 0.85em;
-  padding: 0.75rem 1rem;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-```
+The planned inline `HTMLTag` replacement widget was **not built**. Shipped
+behavior: inline `HTMLTag` nodes stay visible, editable raw source carrying a
+`cm-live-html-tag` mark class (`preview/inline-marks.ts`); no sanitization
+sink, no `Decoration.replace`, no viewport-gating for long inline spans, and
+`HTMLTag` is deliberately **not** in the `HIDE_MARKS` set. Rendered inline
+HTML is a possible follow-up; until then inline tags are never hidden.
 
-### Phase 3: CM6 live-preview — HTML inline mark
+### Phase 4: Reading mode (obsolete under ADR-029)
 
-#### 3a. Add HTMLTag handling to inline-marks.ts
-
-`packages/editor/src/preview/inline-marks.ts` — add to `handleInlineNode()`:
-
-```typescript
-if (name === "HTMLTag") {
-  // Inline HTML: render as a sanitized span widget.
-  // Uses Decoration.replace (block: false) because a mark class cannot
-  // contain HTML — only CSS classes.
-  const raw = state.doc.sliceString(node.from, node.to);
-  const sanitized = domPurify.sanitize(raw, DOMPURIFY_INLINE_CONFIG);
-  collector.addReplace(
-    node.from,
-    node.to,
-    new HtmlInlineWidget(sanitized, raw),
-    false,
-  );
-  return true;
-}
-```
-
-The `HtmlInlineWidget` is a lightweight `WidgetType` that renders the
-sanitized HTML inline (self-closing tags like `<img>` become rendered
-elements; container tags like `<span>` wrap their text content).
-
-#### 3b. Add to mark-hiding set
-
-`packages/editor/src/preview/mark-hiding.ts` — add to `HIDE_MARKS`:
-
-```typescript
-"HTMLTagMark",  // the < and > delimiters of inline HTML
-```
-
-This hides the raw delimiters on non-active lines, showing only the
-rendered output.
-
-#### 3c. Viewport gating for large inline spans
-
-Inline HTML spans exceeding 200 characters are not replaced with the
-rendered widget — they stay as raw source with a muted highlight class.
-This prevents pathological inline HTML (e.g., a pasted `<table>` that the
-parser treats as inline) from blocking the decoration pass.
-
-### Phase 4: Reading.tsx — sanitized HTML rendering
-
-#### 4a. Add DOMPurify dependency
-
-```bash
-bun add dompurify
-bun add -d @types/dompurify
-```
-
-#### 4b. Add HTMLBlock handling to renderBlock()
-
-`apps/tauri/src/features/editor/components/Reading.tsx` — before the
-fallback at line 338:
-
-```tsx
-if (node.name === "HTMLBlock") {
-  const raw = source.slice(node.from, node.to);
-  const sanitized = domPurify.sanitize(raw, READING_SANITIZE_CONFIG);
-  return (
-    <div
-      key={key}
-      className="markdown-reading-html"
-      dangerouslySetInnerHTML={{ __html: sanitized }}
-    />
-  );
-}
-```
-
-#### 4c. Add HTMLTag handling to renderInlineNode()
-
-Before the fallback at line 214:
-
-```tsx
-case "HTMLTag": {
-  const raw = source.slice(node.from, node.to);
-  const sanitized = domPurify.sanitize(raw, READING_SANITIZE_CONFIG);
-  return (
-    <span
-      key={key}
-      className="markdown-reading-html-inline"
-      dangerouslySetInnerHTML={{ __html: sanitized }}
-    />
-  );
-}
-```
-
-#### 4d. Sanitization configuration
-
-```typescript
-const READING_SANITIZE_CONFIG = {
-  ALLOWED_TAGS: [
-    "div",
-    "span",
-    "p",
-    "br",
-    "hr",
-    "pre",
-    "code",
-    "details",
-    "summary",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-    "caption",
-    "figure",
-    "figcaption",
-    "strong",
-    "em",
-    "del",
-    "ins",
-    "mark",
-    "sub",
-    "sup",
-    "abbr",
-    "ul",
-    "ol",
-    "li",
-    "a",
-    "img",
-    "video",
-    "audio",
-    "source",
-    "track",
-  ],
-  ALLOWED_ATTR: [
-    "class",
-    "style",
-    "id",
-    "href",
-    "src",
-    "alt",
-    "title",
-    "width",
-    "height",
-    "colspan",
-    "rowspan",
-    "scope",
-    "controls",
-    "autoplay",
-    "loop",
-    "muted",
-    "poster",
-    "preload",
-  ],
-  ALLOW_DATA_ATTR: false,
-};
-```
+The single-renderer architecture (ADR-029) deleted `Reading.tsx`; reading
+mode runs the same CM6 view and the same `htmlBlockSpec` widget path. No
+separate reading-mode renderer exists, so no separate sanitizer config.
 
 ### Typography model
 
@@ -611,107 +310,88 @@ Obsidian's `.markdown-rendered` rule set does.
 Basalt mirrors markdown tokens so a raw `<h1>` matches `# h1`. A single shared
 stylesheet, `HTML_TYPOGRAPHY_CSS` in
 `packages/editor/src/preview/html-typography.ts`, is scoped under `.sat-html`
-and applied to the rendered block container in both surfaces:
-
-- Light-preview (`html-block.ts`): the widget's `toDOM` container carries
-  `sat-html`; a one-time, idempotent `<style data-sat-html-typography>` injects
-  the shared source.
-- Reading (`Reading.tsx`): the `HTMLBlock` div carries
-  `markdown-reading-html sat-html`; the same shared source is injected once.
-
-Both injections guard on `[data-sat-html-typography]`, so exactly one copy
-lands in `document.head`. Inline `HTMLTag` raw-source spans are excluded
-(`:not(.sat-html)`) — they keep the mono raw-tag styling and are not
+and applied to the rendered block container. The widget's `toDOM` container
+carries `sat-html`; a one-time, idempotent `<style data-sat-html-typography>`
+injects the shared source, guarded on `[data-sat-html-typography]` so exactly
+one copy lands in `document.head`. Inline `HTMLTag` raw-source spans are
+excluded (`:not(.sat-html)`) — they keep the mono raw-tag styling and are not
 typography-rendered. `sanitizeHtml` strips user `<style>`/`<script>`, so the
 injected stylesheet is the only CSS governing the block.
 
-The rules reuse `--sat-editor-heading1..6` (sizes/weights/letter-spacing),
-`--sat-text-*`, `--sat-font-*`, `--sat-editor-*`, and `--sat-layout-*` tokens
-with the same fallbacks as `editor.css`, so there is one typography vocabulary
-for both Markdown and raw HTML.
+The rules reuse `--sat-editor-heading1..6`, `--sat-text-*`, `--sat-font-*`,
+`--sat-editor-*`, and `--sat-layout-*` tokens with the same fallbacks as
+`editor.css`, so there is one typography vocabulary for both Markdown and raw
+HTML.
 
 ### Phase 5: Performance budget
 
 #### 5a. Keystroke path — zero added cost
 
-- DOMPurify in the CM6 widget's `parse()` runs once when a block first
-  enters the widget, not on every rebuild. The `eq()` check on the
-  `WidgetType` prevents DOM rebuild when content is unchanged.
-- Viewport gating ensures large blocks (50+ lines) are skipped on the
-  decoration pass when not visible.
+- DOMPurify in the CM6 widget's `parse()` runs once when a block first enters
+  the widget, not on every rebuild. The `eq()` check on the `WidgetType`
+  prevents DOM rebuild when content is unchanged.
 - No Rust-side sanitizer is on any path — the AST holds raw HTML as opaque
   text that is never rendered.
-
-#### 5b. Expected benchmark impact
-
-| Variant                           | p50  | p95 | Gate                                            |
-| --------------------------------- | ---- | --- | ----------------------------------------------- |
-| Full (no HTML)                    | ≤2ms | 4ms | Current                                         |
-| +HTML blocks (small)              | ≤2ms | 4ms | No regression — blocks cached after first parse |
-| +HTML blocks (large, in viewport) | ≤3ms | 5ms | Acceptable — viewport-gated                     |
-| +HTML blocks (large, off-screen)  | ≤2ms | 4ms | No regression — skipped                         |
-| +HTML inline                      | ≤2ms | 4ms | No regression — mark cost is O(1) per tag       |
+- The `blockWidgets` extension group in the isolation benchmark attributes
+  per-keystroke cost (ADR-022 rule 8) and was measured flat with HTML blocks
+  present.
 
 #### 5c. Verification
 
-1. Run the isolation benchmark with a 100KB document containing 50 HTML
-   blocks of varying sizes — p95 must stay ≤5ms.
-2. Open a document with a 500-line HTML block, scroll through it — measure
-   scroll jank via `PerformanceObserver` (must not exceed 1 frame drop).
-3. `cargo test --workspace` must pass with the new `MarkdownNode` variants.
-4. `bun run lint && bunx tsc --noEmit` must pass.
+Shipped block rendering passes: `cargo test --workspace` (new `MarkdownNode`
+variants), `bun run lint && bunx tsc --noEmit`, and the editor test suite
+(`tests/integration`, `block-widgets/html-block` coverage, sanitize tests).
 
 ### Boundaries
 
-- ADR-019 owns the single-pass decoration pipeline. HTML widgets must not
-  add a second tree walk or nested dispatch.
+- ADR-019 owns the single-pass decoration pipeline. HTML widgets must not add
+  a second tree walk or nested dispatch.
 - ADR-020 owns startup and bulk data. HTML sanitization is client-side only,
   consistent with "sanitize where rendered" (OWASP 2024).
 - ADR-024 owns editor surface typography. HTML block theme tokens use
   `--sat-editor-*` and `--sat-layout-*` families.
-- This ADR owns HTML parsing, sanitization, and rendering in both CM6 and
-  Reading views. The HTML file embed story (`![[file.html]]` in sandboxed
-  iframe) is a future ADR (plugin host territory, ADR-018 Phase 5).
+- This ADR owns HTML parsing, sanitization, and rendering in the CM6 surfaces.
+  The HTML file embed story (`![[file.html]]` in sandboxed iframe) is a future
+  ADR (plugin host territory, ADR-018 Phase 5).
 
 ### Out of scope
 
-- **HTML file embeds (`![[file.html]]`):** Requires sandboxed iframe,
-  CSP headers, custom protocol serving. Separate ADR, Phase 5.
-- **Markdown-inside-HTML:** Obsidian explicitly does not support this.
-  Basalt follows the same constraint.
+- **HTML file embeds (`![[file.html]]`):** Requires sandboxed iframe, CSP
+  headers, custom protocol serving. Separate ADR, Phase 5.
+- **Markdown-inside-HTML:** Obsidian explicitly does not support this. Basalt
+  follows the same constraint.
+- **Inline HTML widget rendering:** deferred (Phase 3).
 - **Plugin-generated HTML widgets:** Requires the plugin host (ADR-018
-  Phase 5). This ADR provides the rendering primitives that plugins will
-  use.
+  Phase 5). This ADR provides the rendering primitives that plugins will use.
 
 ## Consequences
 
-- Notes containing raw HTML now render correctly in both live preview and
+- Notes containing raw HTML **blocks** render correctly in live preview and
   reading mode, matching Obsidian compatibility.
-- Single sanitizer (DOMPurify) runs at every render sink in the browser's own
-  HTML parser, eliminating the parser-differential / mXSS class that server-side
-  sanitizers cannot close (OWASP AppSec USA 2024).
+- Single sanitizer (DOMPurify) runs at the render boundary in the browser's
+  own HTML parser, eliminating the parser-differential / mXSS class that
+  server-side sanitizers cannot close (OWASP AppSec USA 2024).
 - The cursor-aware reveal pattern (raw source when editing, rendered when
   not) is consistent with headings, blockquotes, and horizontal rules.
-- Viewport gating prevents pathological HTML content from degrading scroll
-  or typing performance.
-- The `MarkdownNode` enum grows by two variants holding raw (opaque) HTML;
-  all match sites in the Rust parser must be updated. No Rust sanitizer is
-  added.
+- The `MarkdownNode` enum grows by two variants holding raw (opaque) HTML; no
+  Rust sanitizer is added.
 - `dompurify` is added to the frontend bundle (~7KB gzipped). This is
   acceptable for the security guarantees it provides.
+- Inline HTML stays raw-with-mark (deferred); the reading-mode `<span
+  style="color:red">text</span>` validation item below is not yet met.
 
 ## Validation
 
-HTML rendering is considered compliant when:
+HTML block rendering is considered compliant when:
 
 - a note containing `<details><summary>Click</summary>Hidden</details>`
-  renders a collapsible section in live preview;
-- a note containing `<span style="color:red">text</span>` renders styled
-  text in reading mode;
+  renders a collapsible section in live preview and reading mode;
 - `<script>alert(1)</script>` is stripped from rendered output;
 - `onclick` event handlers are stripped from rendered output;
-- a document with 50+ HTML blocks maintains p95 ≤5ms typing latency;
-- scrolling through a document with a 500-line HTML block does not drop
-  frames;
 - `cargo test --workspace` passes;
 - `bun run lint && bunx tsc --noEmit` passes.
+
+Deferred (inline) items must not be treated as satisfied: styled inline spans
+render as raw source plus the `cm-live-html-tag` mark; a 50-line HTML block
+incurs no extra page-layout tax beyond what CM6's lazy widget construction
+provides.

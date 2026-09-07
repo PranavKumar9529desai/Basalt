@@ -24,8 +24,10 @@ The previous implementation had several correctness gaps:
 
 Obsidian's workspace model treats tabs and leaves as persistent workspace
 state, while its desktop editor supports live preview/source modes and moving
-tabs between tab groups and windows. Basalt currently has one pane, but its
-tab contract must not make those future extensions unsafe.
+tabs between tab groups and windows. Basalt's workspace is a multi-pane layout
+tree (ADR-032): tabs live in ordered groups inside pane leaves, and the layout
+root plus the active pane are persisted. The tab contract is pane-owned so
+ordering and active state survive splits.
 
 ## Decision
 
@@ -81,6 +83,15 @@ tab contract must not make those future extensions unsafe.
 
 ### Persistence contract
 
+The workspace snapshot serializes the layout tree (ADR-032) plus the open
+tabs. Format is **v2** — `{ version: 2, root, activePaneId }` where `root` is
+the split-pane layout tree (`tabs/lib/layoutTree.ts`). **v1** — the legacy flat
+`panes`/`groups` format — hydrates through a compatibility path
+(`useTabPersistence.isTabSnapshot`). Persistence is debounced (~400ms) and
+keyed on `persistVersion`, which bumps only on structural mutation and
+active-tab changes — dirty-state changes do not persist because editor
+documents and undo history are owned by the editor cache.
+
 Persisted tabs include `id`, `path`, `title`, `leafType`, pin/preview state,
 dirty marker, and timestamps. Transient navigation data such as jump-to-line
 and rename-on-open is never persisted. The active pane selection is persisted
@@ -88,7 +99,8 @@ separately from tab records.
 
 Hydration filters pane ids that no longer have tab records and maps legacy
 `viewType` snapshots to `leafType`, defaulting unknown legacy note tabs to
-`markdown`.
+`markdown`. Keep the hydration path strict — malformed or unknown-version
+snapshots leave the store untouched.
 
 ## Consequences
 
