@@ -12,8 +12,8 @@ members = [
 ]
 
 [profile.release]
-opt-level = "z" # Optimize for binary size (most aggressive)
-lto = true # Link-Time Optimization — eliminates dead code across crates
-codegen-units = 1 # Single unit = better optimization (slower compile, smaller output)
+opt-level = 3 # Optimize for maximum execution speed, auto-vectorization and loop unrolling
+lto = "fat" # Full Link-Time Optimization across all crates and dependencies
+codegen-units = 1 # Single unit = better cross-crate inlining and optimization
 strip = true # Strip debug symbols from the final binary
-panic = "abort" # Removes stack-unwinding code, saves size
+panic = "abort" # Removes stack-unwinding code, saves size and branch overhead
