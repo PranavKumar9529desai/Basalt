@@ -79,3 +79,26 @@ export function pruneClosedTabCaches<T>(
     }
   }
 }
+
+/**
+ * Evict oldest clean EditorStates when cached states exceed `maxStates` (LRU).
+ *
+ * Prevents memory leaks and unbound heap growth when users open dozens of notes.
+ * - Dirty tabs with unsaved edits are NEVER evicted.
+ * - The currently active tab is NEVER evicted.
+ * - Evicted tabs are seamlessly re-loaded from disk on demand when switched to.
+ */
+export function evictLruStates<T>(
+  caches: TabCaches<T>,
+  activeTabId: string | undefined,
+  maxStates = 10,
+): void {
+  if (caches.states.size <= maxStates) return;
+
+  for (const id of caches.states.keys()) {
+    if (caches.states.size <= maxStates) break;
+    if (id === activeTabId || caches.dirty.has(id)) continue;
+    caches.states.delete(id);
+  }
+}
+

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   pruneClosedTabCaches,
+  evictLruStates,
   type TabCaches,
   type TabStructureSource,
 } from "./pruneCache";
@@ -120,3 +121,56 @@ describe("pruneClosedTabCaches", () => {
     expect(caches.tabMeta.has("tab:a.md")).toBe(true);
   });
 });
+
+describe("evictLruStates", () => {
+  it("does nothing when state count is under maxStates", () => {
+    const caches = makeCaches();
+    caches.states.set("tab:1", { doc: "1" });
+    caches.states.set("tab:2", { doc: "2" });
+    evictLruStates(caches, "tab:2", 5);
+    expect(caches.states.size).toBe(2);
+  });
+
+  it("evicts oldest non-active, non-dirty states down to maxStates", () => {
+    const caches = makeCaches();
+    caches.states.set("tab:1", { doc: "1" });
+    caches.states.set("tab:2", { doc: "2" });
+    caches.states.set("tab:3", { doc: "3" });
+    caches.states.set("tab:4", { doc: "4" });
+
+    // tab:4 is active, tab:2 is dirty
+    caches.dirty.add("tab:2");
+
+    evictLruStates(caches, "tab:4", 2);
+
+    // tab:1 was oldest clean -> evicted
+    expect(caches.states.has("tab:1")).toBe(false);
+    // tab:2 was dirty -> preserved
+    expect(caches.states.has("tab:2")).toBe(true);
+    // tab:3 was clean -> evicted
+    expect(caches.states.has("tab:3")).toBe(false);
+    // tab:4 was active -> preserved
+    expect(caches.states.has("tab:4")).toBe(true);
+    expect(caches.states.size).toBe(2);
+  });
+
+  it("never evicts dirty tabs even if states exceed maxStates", () => {
+    const caches = makeCaches();
+    caches.states.set("tab:1", { doc: "1" });
+    caches.states.set("tab:2", { doc: "2" });
+    caches.states.set("tab:3", { doc: "3" });
+
+    // all tabs are dirty
+    caches.dirty.add("tab:1");
+    caches.dirty.add("tab:2");
+    caches.dirty.add("tab:3");
+
+    evictLruStates(caches, "tab:3", 1);
+
+    expect(caches.states.size).toBe(3);
+    expect(caches.states.has("tab:1")).toBe(true);
+    expect(caches.states.has("tab:2")).toBe(true);
+    expect(caches.states.has("tab:3")).toBe(true);
+  });
+});
+

@@ -13,7 +13,7 @@ import { useKeybindingService } from "@workspace/keybindings";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
-import { pruneClosedTabCaches } from "../lib/pruneCache";
+import { pruneClosedTabCaches, evictLruStates } from "../lib/pruneCache";
 import { editFrontmatter, initFrontmatterWasm } from "../lib/frontmatter";
 import { useActiveNoteStore } from "../store/activeNote";
 import { AUTOSAVE_DEBOUNCE_MS } from "../lib/saveManager";
@@ -274,6 +274,9 @@ export class EditorController {
 
     const cached = this.statesRef.get(t.id);
     if (cached) {
+      // Re-insert to keep active tab at the end of the LRU map
+      this.statesRef.delete(t.id);
+      this.statesRef.set(t.id, cached);
       view.setState(cached);
       this.onDocumentReady?.();
       view.scrollDOM.scrollTop = this.scrollRef.get(t.id) ?? 0;
@@ -444,6 +447,16 @@ export class EditorController {
         getTabInfo: (id) => this.services.getTabInfo(id),
       },
       (id) => void this.saveTab(id),
+    );
+    evictLruStates(
+      {
+        states: this.statesRef,
+        scroll: this.scrollRef,
+        dirty: this.dirtyRef,
+        tabMeta: this.tabMetaRef,
+      },
+      this.currentTab?.id,
+      10,
     );
   }
 
