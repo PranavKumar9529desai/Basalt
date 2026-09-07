@@ -66,6 +66,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **DQL query engine (ADR-027/028)**                                  | ✅ Complete — `basalt-tables` (boolean FROM, WHERE/SORT/LIMIT, GROUP BY/FLATTEN, aggregates), `TypedValue::List`, typed `AppError` wrapper                                                 |
 | **PDF export (ADR-031)**                                            | ✅ Complete — `features/export`: reading-mode snapshot via `readingExtensions()` into a print `@page` pipeline; page size/orientation/font, theme + no-theme, include toggles                   |
 | **Infinite canvas (ADR-035)**                                       | ✅ Complete — `@xyflow/react` leaf over `basalt-canvas` (JSON Canvas v1.0), custom nodes/edges, alignment guidelines; legacy viewport primitive deprecated (dir `packages/canvas`)       |
+| **Templates + Daily notes core plugins (ADR-036)**                   | ✅ Complete — `features/templates` (picker, TS date/template expansion) + `commands/{templates,dailies}` (Rust list/read/open-or-create), settings sections, ribbon + palette entries        |
 | Rust acceleration (batched IPC)                                     | ⏳ Not started                                                                                                                                                                                |
 | Plugin host (ADR-018 Phase 5)                                       | ⏳ Not started — do not build before phases 1–4                                                                                                                                               |
 
@@ -284,6 +285,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [033-syntax-registry](docs/adr/033-syntax-registry.md)                                   | ADR-033: Syntax Registry — Single-Parser Grammar Manifests                  |
 | [034-embed-rendering](docs/adr/034-embed-rendering.md)                                   | ADR-034: Embed Rendering — Real Media in Every Surface                      |
 | [035-infinite-canvas](docs/adr/035-infinite-canvas.md)                                   | ADR-035: Infinite Canvas — Spatial Note Layout                              |
+| [036-core-plugin-architecture](docs/adr/036-core-plugin-architecture.md)                  | ADR-036: Core Plugin Architecture — Self-Contained First-Party Plugins      |
 
 <!-- ADR_INDEX_END -->
 

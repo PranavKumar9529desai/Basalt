@@ -7,6 +7,30 @@
 
 ---
 
+## Core plugins: Templates + Daily notes — COMPLETE
+
+**Status:** First two core plugins per new [ADR-036](adr/036-core-plugin-architecture.md).
+
+- **ADR-036** written + indexed in AGENTS.md.
+- **Rust** (`src-tauri/src/commands/`): `templates/mod.rs` (`list_templates`,
+  `read_template`, traversal-guarded) + `dailies/mod.rs` (`open_daily_note` =
+  idempotent open-or-create); shared write contract in `commands/common.rs`
+  (`resolve_parent_dir` + `write_markdown_note`), which `notes/` now uses —
+  gained `..`-traversal protection on `create_note`/`create_untitled_note` for
+  free. No chrono: dates/template expansion are TS-only (ADR-036 §Conventions 3).
+- **Frontend**: `features/templates/` (Moment-subset `date-format.ts`,
+  `expand-template.ts`, palette `TemplatePicker`, `templates:insert` command);
+  `dailies:open-today` in `shared/useShellCommands.ts`; settings sections
+  (Templates/Daily notes, group `core-plugins`) via generic `SettingsFields` +
+  declarative `SETTING_SPECS`; ribbon buttons + palette metadata.
+- **Verify**: `cargo test --workspace` + `cargo clippy --workspace --all-targets
+  -- -D warnings` clean; `bunx tsc --noEmit` + `bun run lint` clean; 294 vitest
+  (13 new) pass; `bun run build` (vite) succeeds. GUI smoke not run in this
+  environment (native Tauri window; command logic covered by the Rust + TS
+  unit suites above).
+
+---
+
 ## Command module refactor — COMPLETE
 
 **Status:** Split the four oversized `src-tauri/src/commands/` files into module
