@@ -148,5 +148,17 @@
     "name": "Group Selected Items",
     "category": "Canvas",
     "icon": "IconLayoutGrid"
+  },
+  {
+    "id": "templates:insert",
+    "name": "Insert Template",
+    "category": "Templates",
+    "icon": "IconTemplate"
+  },
+  {
+    "id": "dailies:open-today",
+    "name": "Open today's daily note",
+    "category": "Daily notes",
+    "icon": "IconCalendarEvent"
   }
 ]

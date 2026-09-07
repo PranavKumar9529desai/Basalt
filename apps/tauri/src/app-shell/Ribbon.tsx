@@ -1,11 +1,14 @@
 import {
+  IconCalendarEvent,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLink,
   IconSearch,
   IconSettings,
   IconSitemap,
+  IconTemplate,
 } from "@tabler/icons-react";
+import { commandService } from "@workspace/commands";
 import { Ribbon as RibbonUI } from "@workspace/ui/components/ribbon";
 import { useSearchStore } from "../features/search";
 import { useSettingsModalStore } from "../features/settings";
@@ -64,6 +67,18 @@ export function Ribbon({
       icon: <IconSitemap size={20} stroke={1.5} />,
       label: "Open graph view",
       onClick: () => openGraph("graph", { title: "Graph" }),
+    },
+    {
+      id: "templates",
+      icon: <IconTemplate size={20} stroke={1.5} />,
+      label: "Insert template",
+      onClick: () => commandService.execute("templates:insert"),
+    },
+    {
+      id: "dailies",
+      icon: <IconCalendarEvent size={20} stroke={1.5} />,
+      label: "Open today's daily note",
+      onClick: () => commandService.execute("dailies:open-today"),
     },
   ];
 

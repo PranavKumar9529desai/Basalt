@@ -22,6 +22,9 @@ const SettingsModal = lazy(() =>
 const ExportDialog = lazy(() =>
   import("../features/export").then((m) => ({ default: m.ExportDialog })),
 );
+const TemplatePicker = lazy(() =>
+  import("../features/templates").then((m) => ({ default: m.TemplatePicker })),
+);
 
 interface OverlaysProps {
   contextMenu: {
@@ -105,6 +108,7 @@ export function Overlays({
         <QuickSwitcher onOpen={onSearchOpen} />
         <SettingsModal />
         <ExportDialog previewDeps={previewDeps} />
+        <TemplatePicker />
       </Suspense>
     </>
   );

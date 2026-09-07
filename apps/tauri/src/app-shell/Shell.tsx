@@ -49,6 +49,7 @@ import {
   startEditorContextSync,
 } from "../shared";
 import "../features/export/commands";
+import "../features/templates/commands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
 import "./registrations";
