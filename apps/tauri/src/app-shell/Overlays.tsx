@@ -54,6 +54,7 @@ interface OverlaysProps {
   };
   onConfirmDelete: () => void;
   onSearchOpen: (path: string, line?: number) => void;
+  onCreateNote: (name: string) => Promise<boolean>;
   previewDeps: PreviewDeps;
 }
 
@@ -63,6 +64,7 @@ export function Overlays({
   controller,
   onConfirmDelete,
   onSearchOpen,
+  onCreateNote,
   previewDeps,
 }: OverlaysProps) {
   return (
@@ -105,7 +107,7 @@ export function Overlays({
 
       <Suspense fallback={null}>
         <SearchModal onOpen={onSearchOpen} previewDeps={previewDeps} />
-        <QuickSwitcher onOpen={onSearchOpen} />
+        <QuickSwitcher onOpen={onSearchOpen} onCreate={onCreateNote} />
         <SettingsModal />
         <ExportDialog previewDeps={previewDeps} />
         <TemplatePicker />

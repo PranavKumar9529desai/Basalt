@@ -73,6 +73,23 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     },
     [treeNodes, openInPreview, setTabTitle],
   );
+  const { createNote } = workspace.mutations;
+  // Quick-switcher "Create new note: <query>" (Obsidian parity): create the
+  // named note at the vault root, refresh the tree, and open it.
+  const createNoteFromQuery = useCallback(
+    async (name: string): Promise<boolean> => {
+      const q = name.trim();
+      if (!q) return false;
+      const fileName = /\.md$/i.test(q) ? q : `${q}.md`;
+      const result = await createNote(fileName);
+      if (!result) return false;
+      await refreshTree();
+      openNote(result.path);
+      return true;
+    },
+    [createNote, refreshTree, openNote],
+  );
+
 
   return {
     vaultPath,
@@ -83,6 +100,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     activeNoteBacklinks,
     findNote,
     openNote,
+    createNoteFromQuery,
   };
 }
 

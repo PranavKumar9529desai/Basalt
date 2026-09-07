@@ -1,4 +1,5 @@
 import {
+  HighlightedText,
   PaletteShell,
   PaletteShellFooter,
   PaletteShellInput,
@@ -11,10 +12,12 @@ import { filterTemplates, useTemplatePickerStore } from "./picker-store";
 
 function TemplateRow({
   name,
+  query,
   isSelected,
   onClick,
 }: {
   name: string;
+  query: string;
   isSelected: boolean;
   onClick: () => void;
 }) {
@@ -35,7 +38,9 @@ function TemplateRow({
       ].join(" ")}
       onClick={onClick}
     >
-      <span className="text-sm font-medium truncate">{displayName}</span>
+      <span className="text-sm font-medium truncate">
+        <HighlightedText text={displayName} query={query} />
+      </span>
     </Button>
   );
 }
@@ -145,6 +150,7 @@ export function TemplatePicker() {
               key={name}
               name={name}
               isSelected={i === selectedIndex}
+              query={query}
               onClick={() => {
                 close();
                 void insertTemplate(name);

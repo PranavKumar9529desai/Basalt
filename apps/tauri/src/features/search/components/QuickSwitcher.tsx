@@ -1,11 +1,13 @@
 import {
+  HighlightedText,
   PaletteShell,
   PaletteShellFooter,
   PaletteShellInput,
 } from "@workspace/ui/components/palette-shell";
 import { Button } from "@workspace/ui/components/ui/button";
+import { IconFilePlus } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useSearchStore } from "../store";
 import type { FileResult } from "../types";
@@ -15,11 +17,13 @@ function ResultRow({
   isSelected,
   onClick,
   optionId,
+  query,
 }: {
   result: FileResult;
   isSelected: boolean;
   onClick: () => void;
   optionId: string;
+  query: string;
 }) {
   const parts = result.path.split("/");
   const rawName = parts.pop() ?? result.path;
@@ -46,7 +50,9 @@ function ResultRow({
       ].join(" ")}
       onClick={onClick}
     >
-      <span className="text-sm font-medium truncate">{displayName}</span>
+      <span className="text-sm font-medium truncate">
+        <HighlightedText text={displayName} query={query} />
+      </span>
       {isCanvas && (
         <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[var(--sat-accent-primary)]/20 text-[var(--sat-accent-primary)] shrink-0">
           Canvas
@@ -61,12 +67,59 @@ function ResultRow({
   );
 }
 
+/**
+ * "Create new note: <query>" row (Obsidian quick-switcher parity). Rendered
+ * as the last option whenever the query names no existing file, so Enter
+ * creates the typed note instead of merely opening one.
+ */
+function CreateNoteRow({
+  query,
+  isSelected,
+  onClick,
+  optionId,
+  disabled,
+}: {
+  query: string;
+  isSelected: boolean;
+  onClick: () => void;
+  optionId: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Button
+      id={optionId}
+      // Custom role on a Button — not a native <option>.
+      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+      role="option"
+      aria-selected={isSelected}
+      variant="ghost"
+      tabIndex={-1}
+      disabled={disabled}
+      className={[
+        "w-full justify-start gap-2.5 px-4 py-2 h-auto rounded-md",
+        isSelected
+          ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
+          : "",
+      ].join(" ")}
+      onClick={onClick}
+    >
+      <IconFilePlus size={16} stroke={1.5} className="shrink-0" />
+      <span className="text-sm font-medium truncate">
+        Create new note: <HighlightedText text={query} query={query} />
+      </span>
+    </Button>
+  );
+}
+
 interface QuickSwitcherProps {
   /** Called when the user confirms a result. Receives the absolute file path. */
   onOpen: (path: string) => void;
+  /** Called when the user confirms the "Create new note: <query>" row.
+   *  Resolves to whether the note was created; the switcher closes on success. */
+  onCreate?: (name: string) => boolean | Promise<boolean>;
 }
 
-export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
+export function QuickSwitcher({ onOpen, onCreate }: QuickSwitcherProps) {
   const {
     isSwitcherOpen,
     closeSwitcher,
@@ -79,6 +132,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     switcherSelectPrev,
     isSwitcherLoading,
     switcherError,
+    switcherCanCreate,
   } = useSearchStore();
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -86,6 +140,8 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const rowVirtualizer = useVirtualizer({
     count: switcherResults.length,
@@ -120,6 +176,18 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
     },
     [setSwitcherQuery, runSwitcher],
   );
+  const handleCreate = useCallback(async () => {
+    if (isCreating) return;
+    setCreateError(null);
+    setIsCreating(true);
+    try {
+      const ok = await onCreate?.(switcherQuery.trim());
+      if (ok) closeSwitcher();
+      else setCreateError("Could not create note");
+    } finally {
+      setIsCreating(false);
+    }
+  }, [onCreate, switcherQuery, closeSwitcher, isCreating]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -135,6 +203,15 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
         closeSwitcher();
       }
       if (e.key === "Enter") {
+        if (
+          onCreate &&
+          switcherCanCreate &&
+          switcherSelectedIndex === switcherResults.length
+        ) {
+          e.preventDefault();
+          void handleCreate();
+          return;
+        }
         const result = switcherResults[switcherSelectedIndex];
         if (result) {
           onOpen(result.path);
@@ -149,6 +226,9 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
       switcherResults,
       switcherSelectedIndex,
       onOpen,
+      onCreate,
+      switcherCanCreate,
+      handleCreate,
     ],
   );
 
@@ -172,9 +252,13 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
           role: "combobox",
           "aria-expanded": switcherResults.length > 0,
           "aria-controls": "quick-switcher-results",
-          "aria-activedescendant": switcherResults[switcherSelectedIndex]
-            ? `quick-switcher-${switcherSelectedIndex}`
-            : undefined,
+          "aria-activedescendant":
+            switcherCanCreate &&
+            switcherSelectedIndex === switcherResults.length
+              ? "quick-switcher-create"
+              : switcherResults[switcherSelectedIndex]
+                ? `quick-switcher-${switcherSelectedIndex}`
+                : undefined,
           "aria-autocomplete": "list",
         }}
       />
@@ -226,6 +310,7 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
                     result={r}
                     isSelected={vItem.index === switcherSelectedIndex}
                     optionId={`quick-switcher-${vItem.index}`}
+                    query={switcherQuery}
                     onClick={() => {
                       onOpen(r.path);
                       closeSwitcher();
@@ -236,6 +321,20 @@ export function QuickSwitcher({ onOpen }: QuickSwitcherProps) {
             })}
           </div>
         )}
+      {switcherCanCreate && onCreate && (
+        <CreateNoteRow
+          query={switcherQuery.trim()}
+          isSelected={switcherSelectedIndex === switcherResults.length}
+          optionId="quick-switcher-create"
+          onClick={() => void handleCreate()}
+          disabled={isCreating}
+        />
+      )}
+      {createError && (
+        <p className="px-4 py-3 text-sm text-[var(--sat-state-error)]">
+          {createError}
+        </p>
+      )}
       </div>
 
       <PaletteShellFooter />

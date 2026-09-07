@@ -11,6 +11,24 @@ let latestPreviewSeq = 0;
 /** Number of line matches in the bounded result window shown in the modal. */
 const countMatches = (results: FileMatch[]): number =>
   results.reduce((n, f) => n + f.matches.length, 0);
+const SWITCHER_EXT_RE = /\.(?:md|markdown|canvas)$/i;
+const switcherBasename = (path: string): string =>
+  path.split("/").pop() ?? path;
+const switcherDisplayName = (path: string): string =>
+  switcherBasename(path).replace(SWITCHER_EXT_RE, "");
+
+/** Offer the "Create new note" row whenever the query names no existing file. */
+const canCreateSwitcher = (query: string, results: FileResult[]): boolean => {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+  return !results.some((r) => {
+    const raw = switcherBasename(r.path);
+    return (
+      switcherDisplayName(r.path).toLowerCase() === q ||
+      raw.toLowerCase() === q
+    );
+  });
+};
 
 interface SearchStore {
   isSearchOpen: boolean;
@@ -39,6 +57,7 @@ interface SearchStore {
   switcherSelectedIndex: number;
   isSwitcherLoading: boolean;
   switcherError: string | null;
+  switcherCanCreate: boolean;
 
   openSwitcher: () => void;
   closeSwitcher: () => void;
@@ -160,6 +179,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   switcherSelectedIndex: 0,
   isSwitcherLoading: false,
   switcherError: null,
+  switcherCanCreate: false,
 
   openSwitcher: () => {
     const seq = ++latestSwitcherSeq;
@@ -170,6 +190,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
       switcherSelectedIndex: 0,
       isSwitcherLoading: true,
       switcherError: null,
+      switcherCanCreate: false,
     });
     // Pre-load all files immediately so the switcher isn't empty on open.
     invoke<FileResult[]>("search_files", { query: "", limit: 20 })
@@ -189,7 +210,11 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     set({ isSwitcherOpen: false, isSwitcherLoading: false });
   },
 
-  setSwitcherQuery: (query) => set({ switcherQuery: query }),
+  setSwitcherQuery: (query) =>
+    set((s) => ({
+      switcherQuery: query,
+      switcherCanCreate: canCreateSwitcher(query, s.switcherResults),
+    })),
 
   runSwitcher: async (query) => {
     const seq = ++latestSwitcherSeq;
@@ -200,6 +225,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         switcherSelectedIndex: 0,
         isSwitcherLoading: false,
         switcherError: null,
+        switcherCanCreate: canCreateSwitcher(q, []),
       });
       return;
     }
@@ -214,6 +240,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
         switcherResults: results,
         switcherSelectedIndex: 0,
         isSwitcherLoading: false,
+        switcherCanCreate: canCreateSwitcher(q, results),
       });
     } catch (err) {
       if (seq !== latestSwitcherSeq) return;
@@ -223,13 +250,12 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   },
 
   switcherSelectNext: () => {
-    const { switcherSelectedIndex, switcherResults } = get();
-    if (switcherResults.length === 0) return;
+    const { switcherSelectedIndex, switcherResults, switcherCanCreate } =
+      get();
+    const last = switcherResults.length - 1 + (switcherCanCreate ? 1 : 0);
+    if (last < 0) return;
     set({
-      switcherSelectedIndex: Math.min(
-        switcherSelectedIndex + 1,
-        switcherResults.length - 1,
-      ),
+      switcherSelectedIndex: Math.min(switcherSelectedIndex + 1, last),
     });
   },
   switcherSelectPrev: () => {

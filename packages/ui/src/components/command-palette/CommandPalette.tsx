@@ -10,6 +10,7 @@ import {
   PaletteShell,
   PaletteShellFooter,
 } from "../palette-shell/PaletteShell";
+import { HighlightedText as SharedHighlightedText } from "../palette-shell";
 import { Button } from "../ui/button";
 import {
   Command,
@@ -38,21 +39,7 @@ export interface CommandPaletteProps {
 
 function HighlightedText({ text }: { text: string }) {
   const search = useCommandState((state) => state.search);
-
-  if (!search) return <span>{text}</span>;
-
-  const index = text.toLowerCase().indexOf(search.toLowerCase());
-  if (index === -1) return <span>{text}</span>;
-
-  return (
-    <span>
-      {text.substring(0, index)}
-      <span className="text-foreground font-bold underline underline-offset-2">
-        {text.substring(index, index + search.length)}
-      </span>
-      {text.substring(index + search.length)}
-    </span>
-  );
+  return <SharedHighlightedText text={text} query={search} />;
 }
 
 export function CommandPalette({

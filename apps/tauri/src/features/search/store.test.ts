@@ -42,6 +42,7 @@ const initial = {
   switcherQuery: "",
   switcherResults: [] as FileResult[],
   switcherSelectedIndex: 0,
+  switcherCanCreate: false,
 };
 
 describe("useSearchStore", () => {
@@ -222,6 +223,77 @@ describe("useSearchStore", () => {
       });
       useSearchStore.getState().switcherSelectPrev();
       expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+    });
+  });
+
+  describe("switcher create row", () => {
+    it("offers create when no existing file matches the query", () => {
+      useSearchStore.setState({ switcherResults: [file("a.md", "Alpha")] });
+      useSearchStore.getState().setSwitcherQuery("beta");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(true);
+    });
+
+    it("hides create when a file matches the query by display name", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a/alpha.md", "Alpha")],
+      });
+      useSearchStore.getState().setSwitcherQuery("alpha");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(false);
+    });
+
+    it("hides create when a file matches the query by full basename", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a/alpha.md", "Alpha")],
+      });
+      useSearchStore.getState().setSwitcherQuery("alpha.md");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(false);
+    });
+
+    it("never offers create for an empty or whitespace query", () => {
+      useSearchStore.setState({ switcherResults: [file("a.md", "A")] });
+      useSearchStore.getState().setSwitcherQuery("");
+      useSearchStore.getState().setSwitcherQuery("   ");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(false);
+    });
+
+    it("runSwitcher recomputes canCreate from fresh results", async () => {
+      useSearchStore.setState({ switcherResults: [file("a.md", "Alpha")] });
+      useSearchStore.getState().setSwitcherQuery("alpha");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(true);
+      vi.mocked(invoke).mockResolvedValue([file("a/alpha.md", "Alpha")]);
+      await useSearchStore.getState().runSwitcher("alpha");
+      expect(useSearchStore.getState().switcherCanCreate).toBe(false);
+    });
+
+    it("selectNext clamps onto the create row at index results.length", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a.md", "A"), file("b.md", "B")],
+        switcherCanCreate: true,
+      });
+      useSearchStore.getState().switcherSelectNext(); // 0 → 1
+      useSearchStore.getState().switcherSelectNext(); // 1 → 2 (create row)
+      useSearchStore.getState().switcherSelectNext(); // stays on create row
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(2);
+    });
+
+    it("selectPrev walks back from the create row", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a.md", "A")],
+        switcherCanCreate: true,
+        switcherSelectedIndex: 1,
+      });
+      useSearchStore.getState().switcherSelectPrev();
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(0);
+    });
+
+    it("selectNext without create still clamps at the last result", () => {
+      useSearchStore.setState({
+        switcherResults: [file("a.md", "A"), file("b.md", "B")],
+        switcherCanCreate: false,
+        switcherSelectedIndex: 1,
+      });
+      useSearchStore.getState().switcherSelectNext();
+      expect(useSearchStore.getState().switcherSelectedIndex).toBe(1);
     });
   });
 });

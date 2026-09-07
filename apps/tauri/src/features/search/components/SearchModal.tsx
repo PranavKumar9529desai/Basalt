@@ -257,6 +257,7 @@ export function SearchModal({ onOpen, previewDeps }: SearchModalProps) {
                         key={`file-${item.file.path}`}
                         file={item.file}
                         top={vi.start}
+                        query={searchQuery}
                       />
                     );
                   }
@@ -270,6 +271,7 @@ export function SearchModal({ onOpen, previewDeps }: SearchModalProps) {
                       top={vi.start}
                       optionId={`search-result-${gi}`}
                       onOpen={openItem}
+                      query={searchQuery}
                     />
                   );
                 })}

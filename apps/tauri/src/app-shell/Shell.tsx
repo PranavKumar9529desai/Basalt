@@ -274,6 +274,7 @@ function WorkspaceShell({
         controller={ws.controller}
         onConfirmDelete={ws.handleConfirmDeleteWithTabs}
         onSearchOpen={ws.openNote}
+        onCreateNote={ws.createNoteFromQuery}
         previewDeps={previewDeps}
       />
 

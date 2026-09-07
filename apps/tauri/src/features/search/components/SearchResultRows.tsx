@@ -1,4 +1,5 @@
 import { IconFileText } from "@tabler/icons-react";
+import { HighlightedText } from "@workspace/ui/components/palette-shell";
 import { memo, type CSSProperties } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
 
@@ -22,9 +23,11 @@ function rowStyle(top: number): CSSProperties {
 export const FileRow = memo(function FileRow({
   file,
   top,
+  query,
 }: {
   file: FileMatch;
   top: number;
+  query: string;
 }) {
   return (
     <div
@@ -34,7 +37,7 @@ export const FileRow = memo(function FileRow({
     >
       <IconFileText className="size-3.5 shrink-0 text-[var(--sat-text-muted)]" />
       <span className="flex-1 truncate text-[11px] font-semibold text-[var(--sat-text-primary)]">
-        {file.title}
+        <HighlightedText text={file.title} query={query} />
       </span>
       <span className="text-[10px] tabular-nums text-[var(--sat-text-muted)]">
         {file.matches.length}
@@ -55,6 +58,7 @@ export const MatchRow = memo(function MatchRow({
   top,
   onOpen,
   optionId,
+  query,
 }: {
   file: FileMatch;
   match: LineMatch;
@@ -62,6 +66,7 @@ export const MatchRow = memo(function MatchRow({
   top: number;
   onOpen: (path: string, line: number) => void;
   optionId: string;
+  query: string;
 }) {
   return (
     <Button
@@ -85,7 +90,7 @@ export const MatchRow = memo(function MatchRow({
         Ln {match.lineNumber}
       </span>
       <span className="w-full truncate text-[11px] leading-snug text-[var(--sat-text-primary)]">
-        {match.text}
+        <HighlightedText text={match.text} query={query} />
       </span>
     </Button>
   );

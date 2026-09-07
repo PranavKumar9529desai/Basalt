@@ -7,3 +7,7 @@ export {
   type PaletteShellInputProps,
   type PaletteShellProps,
 } from "./PaletteShell";
+export {
+  HighlightedText,
+  type HighlightedTextProps,
+} from "./HighlightedText";
