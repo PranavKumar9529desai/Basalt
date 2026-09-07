@@ -75,21 +75,26 @@ export const MatchRow = memo(function MatchRow({
       // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="option"
       aria-selected={selected}
-      style={rowStyle(top)}
       variant="ghost"
       tabIndex={-1}
       className={[
         "w-full flex-col items-start gap-0.5 px-4 py-2 h-auto rounded-none text-left",
         selected
-          ? "bg-[var(--sat-surface-3)]"
-          : "hover:bg-[var(--sat-surface-1)]",
+          ? "text-[var(--sat-accent-primary)]"
+          : "hover:bg-[var(--sat-surface-1)] text-[var(--sat-text-primary)]",
       ].join(" ")}
+      style={{
+        ...rowStyle(top),
+        backgroundColor: selected
+          ? "color-mix(in srgb, var(--sat-accent-primary) 12%, transparent)"
+          : undefined,
+      }}
       onClick={() => onOpen(file.path, match.lineNumber)}
     >
-      <span className="text-[9px] text-[var(--sat-text-muted)] tabular-nums">
+      <span className={`text-[9px] tabular-nums ${selected ? "opacity-70" : "text-[var(--sat-text-muted)]"}`}>
         Ln {match.lineNumber}
       </span>
-      <span className="w-full truncate text-[11px] leading-snug text-[var(--sat-text-primary)]">
+      <span className={`w-full truncate text-[11px] leading-snug ${selected ? "" : "text-[var(--sat-text-primary)]"}`}>
         <HighlightedText text={match.text} query={query} />
       </span>
     </Button>

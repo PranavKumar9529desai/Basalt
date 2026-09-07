@@ -197,9 +197,9 @@ export function AssetPickerModal({
                     onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded ${
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded group ${
                     isSelected
-                      ? "bg-[var(--sat-accent-primary)] text-white"
+                      ? "bg-accent text-accent-foreground *:[svg]:text-accent-foreground"
                       : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-2)]"
                   }`}
                 >
@@ -222,7 +222,7 @@ export function AssetPickerModal({
                       <span
                         className={`text-[10px] truncate ${
                           isSelected
-                            ? "text-white/70"
+                            ? "text-accent-foreground/70"
                             : "text-[var(--sat-text-muted)]"
                         }`}
                       >
@@ -233,7 +233,7 @@ export function AssetPickerModal({
                   <span
                     className={`text-[10px] shrink-0 ml-2 ${
                       isSelected
-                        ? "text-white/70"
+                        ? "text-accent-foreground/70"
                         : "text-[var(--sat-text-muted)]"
                     }`}
                   >

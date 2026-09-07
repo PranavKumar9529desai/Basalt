@@ -33,7 +33,7 @@ function TemplateRow({
       className={[
         "w-full justify-start gap-2.5 px-4 py-2 h-auto rounded-md",
         isSelected
-          ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
+          ? "bg-accent text-accent-foreground *:[svg]:text-accent-foreground"
           : "",
       ].join(" ")}
       onClick={onClick}

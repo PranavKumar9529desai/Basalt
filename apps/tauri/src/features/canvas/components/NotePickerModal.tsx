@@ -132,7 +132,7 @@ export function NotePickerModal({
                   type="button"
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
                     isSelected
-                      ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)] font-medium"
+                      ? "bg-accent text-accent-foreground font-medium *:[svg]:text-accent-foreground"
                       : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]"
                   }`}
                   onClick={() => {
