@@ -7,13 +7,20 @@
 
 ---
 
-## Backlog (planned, not started)
+## Command module refactor — COMPLETE
 
-- **Refactor:** split oversized `src-tauri/src/commands/` files into module
-  directories — `assets.rs` (1122L), `notes.rs` (896L), `folders.rs` (785L),
-  `vault.rs` (511L); extract shared `temp_vault()` test helpers into a
-  `common::tests` module. Plan was authored then deleted as stale; the code is
-  still monolithic.
+**Status:** Split the four oversized `src-tauri/src/commands/` files into module
+directories (pure structure, no logic changes; ADR-030 conventions — thin
+`mod.rs`, result structs at module root, `crate::commands::common` imports in
+submodules):
+- `vault.rs` (511L) → `vault/{mod,graph}.rs`
+- `assets.rs` (1122L) → `assets/{mod,reorganize,save}.rs`
+- `notes.rs` (896L) → `notes/{mod,rename}.rs`
+- `folders.rs` (785L) → `folders/{mod,move_rename}.rs`
+
+All `#[tauri::command]` exports and `commands/mod.rs` re-exports unchanged;
+workspace clippy `-D warnings` clean, 287 tests pass. Still backlogged:
+extract shared `temp_vault()` test helpers into a `common::tests` module.
 
 ---
 

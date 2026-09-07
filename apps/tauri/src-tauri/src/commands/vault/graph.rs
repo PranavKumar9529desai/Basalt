@@ -1,74 +1,13 @@
+//! Graph snapshot construction for the force simulation.
+
+use std::collections::HashMap;
 use std::path::Path;
 
-use basalt_vault::{build_flat_tree, indexer::index_directory, Vault, VaultCache};
-use serde::Serialize;
-use tauri::State;
-
-use crate::app_state::AppState;
-use crate::cache::cache_path;
-use crate::error::{AppError, AppResult};
-
-#[derive(Serialize)]
-pub struct VaultSummary {
-    pub note_count: usize,
-}
-
-#[tauri::command]
-pub fn reindex_vault(state: State<AppState>, app: tauri::AppHandle) -> AppResult<VaultSummary> {
-    let vault_path = state
-        .vault_path
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault path"))?
-        .clone()
-        .ok_or(AppError::NoVault)?;
-
-    let vault = index_directory(Path::new(&vault_path));
-    let note_count = vault.note_count();
-
-    let cache = VaultCache::build(&vault_path, vault);
-    let cache_file = cache_path(&app, &vault_path);
-    let _ = cache.save(&cache_file);
-    *state
-        .vault
-        .write()
-        .map_err(|_| AppError::LockPoisoned("vault"))? = cache.vault;
-
-    Ok(VaultSummary { note_count })
-}
-
-/// Return the current vault's flat tree, freshly built from the in-memory
-/// index.  The frontend calls this after any `vault://file-changed` event to
-/// keep the sidebar in sync without a full restart.
-#[tauri::command]
-pub fn get_vault_tree(state: State<AppState>) -> AppResult<Vec<basalt_vault::FlatTreeNode>> {
-    let vault_path = state
-        .vault_path
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault path"))?
-        .clone()
-        .ok_or(AppError::NoVault)?;
-
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-
-    Ok(build_flat_tree(&vault, Path::new(&vault_path)))
-}
-
-/// Open the native folder-picker dialog and return the chosen path (or null).
-#[tauri::command]
-pub async fn open_vault_dialog(app: tauri::AppHandle) -> Option<String> {
-    use tauri_plugin_dialog::DialogExt;
-
-    app.dialog()
-        .file()
-        .set_title("Choose your Basalt vault folder")
-        .blocking_pick_folder()
-        .map(|p| p.to_string())
-}
 use basalt_graph::NodeId;
-use std::collections::HashMap;
+use basalt_vault::Vault;
+use serde::Serialize;
+
+use crate::error::{AppError, AppResult};
 
 #[derive(Serialize)]
 pub struct GraphNodeMeta {
@@ -97,21 +36,6 @@ pub struct GraphSnapshot {
     pub edge_weights: Vec<f32>,
 }
 
-/// Snapshot of the vault's note-link graph for the force simulation.
-///
-/// Every file still on disk becomes a node; `.md` notes carry tags from the
-/// metadata cache, the rest are marked `is_attachment`. Tag-tree nodes
-/// (`#project/alpha` -> `project/alpha`) are also emitted so co-tagged notes
-/// connect through shared hubs. Edges are the `[[wikilinks]]` plus the tag
-/// tree (note->exact-tag and parent->child), as directed dense-id pairs with
-/// self-links dropped. The frontend hands `edges` straight to the wasm
-/// `graph_build`, which rebuilds the dense `LayoutGraph` — keeping one-shot graph
-/// construction on the Rust side (ADR-021) and the interactive graph in the worker.
-/// Build the graph snapshot (nodes + dense edges) from an in-memory `Vault`.
-///
-/// Pure with respect to Tauri state so it can be unit-tested directly; the
-/// `get_graph` command is a thin wrapper over this. Tag-tree semantics:
-/// notes link to their exact tags; nested tags chain parent->child.
 /// Union-find root lookup with path compression.
 fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     while parent[x as usize] != x {
@@ -120,6 +44,12 @@ fn cc_find(parent: &mut [u32], mut x: u32) -> u32 {
     }
     x
 }
+
+/// Build the graph snapshot (nodes + dense edges) from an in-memory `Vault`.
+///
+/// Pure with respect to Tauri state so it can be unit-tested directly; the
+/// `get_graph` command is a thin wrapper over this. Tag-tree semantics:
+/// notes link to their exact tags; nested tags chain parent->child.
 pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResult<GraphSnapshot> {
     // Every file still on disk is a node. `.md` notes carry tags from the
     // metadata cache; everything else is an "attachment".
@@ -304,21 +234,6 @@ pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResul
         edges,
         edge_weights,
     })
-}
-
-#[tauri::command]
-pub fn get_graph(state: State<AppState>) -> AppResult<GraphSnapshot> {
-    let vault_path = state
-        .vault_path
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault path"))?
-        .clone()
-        .ok_or(AppError::NoVault)?;
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-    build_graph_snapshot(&vault, Path::new(&vault_path))
 }
 
 #[cfg(test)]

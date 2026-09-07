@@ -154,7 +154,7 @@ extensions without recreating the view. Both modes share the same
 `preview/embeds.ts` returns early (no cursor gating needed), deferring media
 rendering to `embedMediaPlugin`.
 
-See [ADR-029](../../../docs/adr/029-single-renderer.md).
+See [ADR-029](../../../docs/adr/029-single-renderer-architecture.md).
 
 ## Embed Rendering (ADR-034)
 

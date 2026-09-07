@@ -1,223 +1,15 @@
-//! Asset management: list, audit, cleanup, reorganize, and save attachments.
+//! Bulk-reorganize existing attachments and the asset path-rewrite helpers.
 
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::commands::common::{register_self_writes, strip_asset_ext};
 use crate::error::{AppError, AppResult};
 
-use super::common::{register_self_writes, strip_asset_ext};
-
-/// Return all non-markdown assets tracked in the vault.
-#[tauri::command]
-pub fn get_assets(state: State<AppState>) -> AppResult<Vec<basalt_vault::AssetInfo>> {
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-    Ok(vault.asset_index.all())
-}
-
-/// Run a consistency audit: count orphans and duplicates.
-#[tauri::command]
-pub fn get_asset_audit(state: State<AppState>) -> AppResult<basalt_vault::AssetAuditReport> {
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-    let report = vault.asset_index.audit();
-    Ok(report)
-}
-
-#[derive(Serialize)]
-pub struct CleanupResult {
-    pub orphans_deleted: u32,
-    pub duplicates_deleted: u32,
-}
-
-/// Delete orphaned assets and consolidate duplicates.
-///
-/// Safety contract — cleanup NEVER breaks a note's references:
-/// - Only assets with zero `embeds_by`/`linked_by` references are deleted;
-///   a referenced asset is never removed, even as a byte-identical duplicate.
-/// - Within a same-`content_hash` group where no copy is referenced, exactly
-///   one copy (shortest `rel_path`) is kept so cleanup never destroys the
-///   last remaining copy of an asset.
-///
-/// Front-end must refresh the asset list after calling this.
-#[tauri::command]
-pub fn cleanup_assets(state: State<AppState>) -> AppResult<CleanupResult> {
-    cleanup_assets_impl(state.inner())
-}
-
-/// Testable core of `cleanup_assets` (no `tauri::State`).
-fn cleanup_assets_impl(state: &AppState) -> AppResult<CleanupResult> {
-    let _vault_path = state
-        .vault_path
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault path"))?
-        .clone()
-        .ok_or(AppError::NoVault)?;
-
-    let mut orphans_deleted: u32 = 0;
-    let mut duplicates_deleted: u32 = 0;
-
-    // Phase 1: Identify deletable assets.
-    let to_delete: Vec<(String, bool)> = {
-        let vault = state
-            .vault
-            .read()
-            .map_err(|_| AppError::LockPoisoned("vault"))?;
-
-        let all_assets = vault.asset_index.all();
-
-        // Group by content hash; membership in a >1 group flags duplicates.
-        let mut hash_groups: std::collections::HashMap<String, Vec<&basalt_vault::AssetInfo>> =
-            std::collections::HashMap::new();
-        for asset in &all_assets {
-            if !asset.content_hash.is_empty() {
-                hash_groups
-                    .entry(asset.content_hash.clone())
-                    .or_default()
-                    .push(asset);
-            }
-        }
-
-        // One keeper per unreferenced duplicate group (shortest rel_path).
-        let mut keep: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for group in hash_groups.values().filter(|g| g.len() > 1) {
-            let referenced = group
-                .iter()
-                .any(|a| !a.embeds_by.is_empty() || !a.linked_by.is_empty());
-            if referenced {
-                // Content survives in the referenced copy(ies); every
-                // unreferenced member is a spare copy and safe to delete.
-                continue;
-            }
-            let keeper = group
-                .iter()
-                .min_by(|a, b| a.rel_path.cmp(&b.rel_path))
-                .expect("group is non-empty");
-            keep.insert(keeper.abs_path.clone());
-        }
-
-        let mut out: Vec<(String, bool)> = Vec::new();
-        for asset in &all_assets {
-            let referenced = !asset.embeds_by.is_empty() || !asset.linked_by.is_empty();
-            if referenced || keep.contains(&asset.abs_path) {
-                continue;
-            }
-            let is_duplicate = hash_groups
-                .get(&asset.content_hash)
-                .is_some_and(|g| g.len() > 1);
-            out.push((asset.abs_path.clone(), !is_duplicate));
-        }
-        out
-    };
-
-    // Phase 2: Delete files from disk and remove from the index.
-    if !to_delete.is_empty() {
-        register_self_writes(
-            state,
-            &to_delete
-                .iter()
-                .map(|(p, _)| PathBuf::from(p))
-                .collect::<Vec<_>>(),
-        );
-
-        let mut vault = state
-            .vault
-            .write()
-            .map_err(|_| AppError::LockPoisoned("vault"))?;
-
-        for (abs_path, is_orphan) in &to_delete {
-            if std::fs::remove_file(abs_path).is_ok() {
-                vault.asset_index.remove(abs_path);
-                if *is_orphan {
-                    orphans_deleted += 1;
-                } else {
-                    duplicates_deleted += 1;
-                }
-            }
-        }
-    }
-
-    Ok(CleanupResult {
-        orphans_deleted,
-        duplicates_deleted,
-    })
-}
-
-/// Strip only the final extension segment of a path-like string, keeping any
-/// directory components. `"_attachments/foo.png"` → `"_attachments/foo"`;
-/// `"_attachments/foo"` (no dot) is returned unchanged.
-fn strip_last_ext(s: &str) -> &str {
-    let slash = s.rfind('/').map_or(0, |v| v + 1);
-    match s[slash..].rfind('.') {
-        Some(dot) => &s[..slash + dot],
-        None => s,
-    }
-}
-
-/// Rewrite `[[old_target]]` / `![[old_target]]` wikilink targets (preserving
-/// aliases, anchors, and the target's extension) to `new_target`.
-///
-/// Boundary-aware: a target only matches when its extension-stripped form
-/// equals `old_target`, so moving `_attachments/foo.png` never corrupts
-/// `![[foobar.png]]` or `![[foo/bar.png]]`. Both plain links and embeds are
-/// rewritten. Matching is case-insensitive; the canonical `new_target` (with
-/// the original extension) is written back.
-fn rewrite_asset_embeds(content: &str, old_target: &str, new_target: &str) -> String {
-    let bytes = content.as_bytes();
-    let n = bytes.len();
-    let mut out = String::with_capacity(content.len() + 16);
-    let mut last = 0usize;
-    let mut i = 0usize;
-    while i < n {
-        let is_embed =
-            i + 2 < n && bytes[i] == b'!' && bytes[i + 1] == b'[' && bytes[i + 2] == b'[';
-        let is_link = i + 1 < n && bytes[i] == b'[' && bytes[i + 1] == b'[';
-        if !(is_embed || is_link) {
-            i += 1;
-            continue;
-        }
-        let target_start = i + if is_embed { 3 } else { 2 };
-        let mut j = target_start;
-        while j < n && !matches!(bytes[j], b']' | b'|' | b'#') {
-            j += 1;
-        }
-        let raw_target = &content[target_start..j];
-        let trimmed = raw_target.trim();
-        if strip_last_ext(trimmed).eq_ignore_ascii_case(old_target) {
-            out.push_str(&content[last..i]);
-            out.push_str(&content[i..target_start]); // keep `![[` / `[[`
-            out.push_str(new_target);
-            if let Some(ext) = Path::new(trimmed).extension().and_then(|e| e.to_str()) {
-                out.push('.');
-                out.push_str(ext);
-            }
-            let trailing = &content[target_start + trimmed.len()..j];
-            out.push_str(trailing);
-            last = j;
-            i = j;
-        } else {
-            i = j; // skip past this target, keep scanning
-        }
-    }
-    out.push_str(&content[last..]);
-    out
-}
-
-#[derive(Serialize)]
-pub struct ReorganizeResult {
-    /// Number of attachment files moved to their correct location.
-    pub files_moved: u32,
-    /// Number of notes whose `![[...]]` / `[[...]]` asset targets were
-    /// rewritten.
-    pub embeds_rewritten: u32,
-}
+use super::save::file_mtime_date;
+use super::ReorganizeResult;
 
 /// Bulk-reorganize all existing attachments according to the current
 /// `attachmentOrganization` and `attachmentNaming` settings.
@@ -529,308 +321,70 @@ fn reorganize_assets_impl(
     })
 }
 
-#[derive(Serialize)]
-pub struct SaveAttachmentResult {
-    /// Vault-relative path, e.g. `"_attachments/image.png"`.
-    pub rel_path: String,
-    /// Absolute path on disk.
-    pub abs_path: String,
-    /// Filename written (may differ from input due to collision handling).
-    pub name: String,
+/// Strip only the final extension segment of a path-like string, keeping any
+/// directory components. `"_attachments/foo.png"` → `"_attachments/foo"`;
+/// `"_attachments/foo"` (no dot) is returned unchanged.
+fn strip_last_ext(s: &str) -> &str {
+    let slash = s.rfind('/').map_or(0, |v| v + 1);
+    match s[slash..].rfind('.') {
+        Some(dot) => &s[..slash + dot],
+        None => s,
+    }
 }
 
-/// Save a binary attachment (pasted/dropped image, PDF, etc.) to the vault.
+/// Rewrite `[[old_target]]` / `![[old_target]]` wikilink targets (preserving
+/// aliases, anchors, and the target's extension) to `new_target`.
 ///
-/// Organization rules (from settings):
-/// - `flat`: all in `{attachments_dir}/`
-/// - `by_note`: in `{attachments_dir}/{note_stem}/`
-/// - `by_type`: in `{attachments_dir}/{type}/` (images/, audio/, etc.)
-/// - `by_date`: in `{attachments_dir}/{YYYY-MM}/`
-///
-/// Naming templates:
-/// - `{original_name}`: the original filename
-/// - `{note_name}-{n}`: note stem + counter
-/// - `{date}-{original_name}`: date prefix + original
-///
-/// Dedup: before writing, checks `content_hash` against existing assets —
-/// returns the existing file's path if a match is found.
-#[tauri::command]
-pub fn save_attachment(
-    name: String,
-    data: Vec<u8>,
-    note_path: Option<String>,
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> AppResult<SaveAttachmentResult> {
-    use crate::config::load_config;
-    use basalt_vault::asset_index::{compute_md5, infer_file_type, infer_mime_type, AssetInfo};
-
-    let vault_path = state
-        .vault_path
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault path"))?
-        .clone()
-        .ok_or(AppError::NoVault)?;
-
-    let config = load_config(&app);
-    let attachments_dir = config
-        .settings
-        .get("attachmentFolder")
-        .and_then(|v| v.as_str())
-        .unwrap_or("_attachments");
-    let organization = config
-        .settings
-        .get("attachmentOrganization")
-        .and_then(|v| v.as_str())
-        .unwrap_or("flat");
-    let naming = config
-        .settings
-        .get("attachmentNaming")
-        .and_then(|v| v.as_str())
-        .unwrap_or("{original_name}");
-
-    // Determine extension.
-    let ext = infer_ext_from_name(&name)
-        .or_else(|| infer_ext_from_data(&data))
-        .unwrap_or("bin");
-    let original_stem = strip_ext_from_name(&name);
-
-    // Compute organization subdirectory.
-    let vault_root = PathBuf::from(&vault_path);
-    let base_dir = vault_root.join(attachments_dir);
-    let sub_dir = match organization {
-        "by_note" => {
-            let note_stem = note_path
-                .as_deref()
-                .and_then(|p| Path::new(p).file_stem())
-                .and_then(|s| s.to_str())
-                .unwrap_or("_unfiled");
-            base_dir.join(note_stem)
+/// Boundary-aware: a target only matches when its extension-stripped form
+/// equals `old_target`, so moving `_attachments/foo.png` never corrupts
+/// `![[foobar.png]]` or `![[foo/bar.png]]`. Both plain links and embeds are
+/// rewritten. Matching is case-insensitive; the canonical `new_target` (with
+/// the original extension) is written back.
+fn rewrite_asset_embeds(content: &str, old_target: &str, new_target: &str) -> String {
+    let bytes = content.as_bytes();
+    let n = bytes.len();
+    let mut out = String::with_capacity(content.len() + 16);
+    let mut last = 0usize;
+    let mut i = 0usize;
+    while i < n {
+        let is_embed =
+            i + 2 < n && bytes[i] == b'!' && bytes[i + 1] == b'[' && bytes[i + 2] == b'[';
+        let is_link = i + 1 < n && bytes[i] == b'[' && bytes[i + 1] == b'[';
+        if !(is_embed || is_link) {
+            i += 1;
+            continue;
         }
-        "by_type" => {
-            let type_dir = match ext {
-                "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" => "images",
-                "mp3" | "wav" | "flac" | "ogg" | "aac" | "m4a" => "audio",
-                "mp4" | "mov" | "avi" | "webm" | "mkv" => "video",
-                "pdf" | "doc" | "docx" | "xls" | "xlsx" => "documents",
-                _ => "other",
-            };
-            base_dir.join(type_dir)
+        let target_start = i + if is_embed { 3 } else { 2 };
+        let mut j = target_start;
+        while j < n && !matches!(bytes[j], b']' | b'|' | b'#') {
+            j += 1;
         }
-        "by_date" => {
-            let (y, m, _) = current_date();
-            base_dir.join(format!("{y:04}-{m:02}"))
-        }
-        _ => base_dir, // "flat" or unknown
-    };
-
-    std::fs::create_dir_all(&sub_dir)
-        .map_err(|e| AppError::Io(format!("failed to create dir: {e}")))?;
-
-    // Apply naming template.
-    let base_name = match naming {
-        "{note_name}-{n}" => {
-            let note_stem = note_path
-                .as_deref()
-                .and_then(|p| Path::new(p).file_stem())
-                .and_then(|s| s.to_str())
-                .unwrap_or("note");
-            // Counter will be applied in collision loop.
-            note_stem.to_string()
-        }
-        "{date}-{original_name}" => {
-            let (y, m, d) = current_date();
-            format!("{y:04}{m:02}{d:02}-{original_stem}")
-        }
-        _ => original_stem.to_string(), // "{original_name}" or unknown
-    };
-
-    // Content hash for dedup check.
-    let content_hash = compute_md5(&data);
-
-    // Dedup: check if an asset with this content hash already exists.
-    if let Ok(vault) = state.vault.read() {
-        for existing in vault.asset_index.all() {
-            if existing.content_hash == content_hash && !existing.content_hash.is_empty() {
-                // Found a duplicate — return the existing file's path.
-                return Ok(SaveAttachmentResult {
-                    rel_path: existing.rel_path.clone(),
-                    abs_path: existing.abs_path.clone(),
-                    name: existing.file_name.clone(),
-                });
+        let raw_target = &content[target_start..j];
+        let trimmed = raw_target.trim();
+        if strip_last_ext(trimmed).eq_ignore_ascii_case(old_target) {
+            out.push_str(&content[last..i]);
+            out.push_str(&content[i..target_start]); // keep `![[` / `[[`
+            out.push_str(new_target);
+            if let Some(ext) = Path::new(trimmed).extension().and_then(|e| e.to_str()) {
+                out.push('.');
+                out.push_str(ext);
             }
+            let trailing = &content[target_start + trimmed.len()..j];
+            out.push_str(trailing);
+            last = j;
+            i = j;
+        } else {
+            i = j; // skip past this target, keep scanning
         }
     }
-
-    // Collision handling: append -1, -2, … until we find a free name.
-    let mut final_name = format!("{base_name}.{ext}");
-    let mut final_path = sub_dir.join(&final_name);
-    let mut counter = 1u32;
-    while final_path.exists() {
-        final_name = format!("{base_name}-{counter}.{ext}");
-        final_path = sub_dir.join(&final_name);
-        counter += 1;
-    }
-
-    // Register self-write BEFORE writing so the watcher stays silent.
-    let abs_path = final_path.to_string_lossy().to_string();
-    register_self_writes(&state, &[final_path.clone()]);
-
-    std::fs::write(&final_path, &data).map_err(|e| {
-        if let Ok(mut guard) = state.self_writes.lock() {
-            guard.remove(&final_path);
-        }
-        AppError::Io(format!("failed to write attachment: {e}"))
-    })?;
-
-    // Rel path is relative to vault root.
-    let rel_path = final_path
-        .strip_prefix(&vault_root)
-        .unwrap_or(&final_path)
-        .to_string_lossy()
-        .to_string();
-
-    // Update the asset index.
-    if let Ok(mut vault) = state.vault.write() {
-        vault.asset_index.upsert(AssetInfo {
-            rel_path: rel_path.clone(),
-            abs_path: abs_path.clone(),
-            file_name: final_name.clone(),
-            file_type: infer_file_type(&final_name),
-            mime_type: infer_mime_type(&final_name).to_string(),
-            size_bytes: data.len() as u64,
-            content_hash,
-            width: None,
-            height: None,
-            embeds_by: Vec::new(),
-            linked_by: Vec::new(),
-        });
-
-        // Register note→asset embed if caller provided a source note. Use the
-        // full `rel_path` (with extension) — it resolves via exact match, and
-        // the pasted note writes `![[rel_path]]` verbatim.
-        if let Some(note) = &note_path {
-            vault
-                .asset_index
-                .register_embeds(note, std::slice::from_ref(&rel_path));
-        }
-    }
-
-    Ok(SaveAttachmentResult {
-        rel_path,
-        abs_path,
-        name: final_name,
-    })
-}
-
-/// Infer extension from the last `.` segment of a name, if it looks like a
-/// real extension (1–8 lowercase alphanum chars).
-fn infer_ext_from_name(name: &str) -> Option<&'static str> {
-    let ext = Path::new(name).extension()?.to_str()?;
-    // Match known extensions and return a static string literal (not a
-    // borrow of `name`).
-    match ext.to_ascii_lowercase().as_str() {
-        "png" => Some("png"),
-        "jpg" | "jpeg" => Some("jpg"),
-        "gif" => Some("gif"),
-        "webp" => Some("webp"),
-        "svg" => Some("svg"),
-        "bmp" => Some("bmp"),
-        "pdf" => Some("pdf"),
-        "mp3" => Some("mp3"),
-        "wav" => Some("wav"),
-        "mp4" => Some("mp4"),
-        "mov" => Some("mov"),
-        "webm" => Some("webm"),
-        "ico" => Some("ico"),
-        _ => None,
-    }
-}
-
-/// Try to guess extension from file magic bytes.
-fn infer_ext_from_data(data: &[u8]) -> Option<&'static str> {
-    if data.len() < 8 {
-        return None;
-    }
-    if data.starts_with(b"\x89PNG\r\n\x1a\n") {
-        return Some("png");
-    }
-    if data.starts_with(b"\xff\xd8\xff") {
-        return Some("jpg");
-    }
-    if data.starts_with(b"GIF87a") || data.starts_with(b"GIF89a") {
-        return Some("gif");
-    }
-    if data.starts_with(b"RIFF") && data.len() > 12 && &data[8..12] == b"WEBP" {
-        return Some("webp");
-    }
-    if data.starts_with(b"%PDF") {
-        return Some("pdf");
-    }
-    if data.starts_with(b"\x00\x00\x00") && data.len() > 12 && &data[4..8] == b"ftyp" {
-        // MP4 / MOV / HEIC etc — default to mp4
-        return Some("mp4");
-    }
-    None
-}
-
-/// Strip the file extension from a name, if present and known.
-fn strip_ext_from_name(name: &str) -> &str {
-    let stem = Path::new(name)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(name);
-    if stem.len() == name.len() {
-        name
-    } else {
-        stem
-    }
-}
-
-/// Convert an epoch-day count to a civil (year, month, day) triple using the
-/// Howard Hinnant civil date algorithm (no `chrono` dependency).
-fn date_from_days(days: i64) -> (i32, u32, u32) {
-    let z = days + 719468;
-    let era = z.div_euclid(146097);
-    let doe = z - era * 146097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let yr = if m <= 2 { y + 1 } else { y };
-    (yr as i32, m as u32, d as u32)
-}
-
-/// Return today's date as (year, month, day).
-fn current_date() -> (i32, u32, u32) {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    date_from_days((secs / 86400) as i64)
-}
-
-/// Return a file's last-modified date as (year, month, day), falling back to
-/// today when the mtime is unavailable. Used for `by_date` organization.
-fn file_mtime_date(path: &std::path::Path) -> (i32, u32, u32) {
-    use std::time::UNIX_EPOCH;
-    let mtime = std::fs::metadata(path)
-        .and_then(|m| m.modified())
-        .ok()
-        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() / 86400_u64);
-    match mtime {
-        Some(days) => date_from_days(days as i64),
-        None => current_date(),
-    }
+    out.push_str(&content[last..]);
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn temp_vault() -> (std::path::PathBuf, crate::app_state::AppState) {
         use std::time::{SystemTime, UNIX_EPOCH};
         let n = SystemTime::now()
@@ -855,14 +409,6 @@ mod tests {
         }
         *state.vault_path.write().unwrap() = Some(root.to_string_lossy().to_string());
         (root, state)
-    }
-
-    #[test]
-    fn current_date_returns_plausible_values() {
-        let (y, m, d) = super::current_date();
-        assert!((2024..=2030).contains(&y), "year should be around now: {y}");
-        assert!((1..=12).contains(&m), "month should be 1..=12: {m}");
-        assert!((1..=31).contains(&d), "day should be 1..=31: {d}");
     }
 
     #[test]
@@ -980,6 +526,7 @@ mod tests {
         assert_eq!(res.files_moved, 0, "no files should move");
         assert!(png_path.exists(), "asset unchanged");
     }
+
     #[test]
     fn rewrite_asset_embeds_boundary() {
         let content = concat!(
@@ -1008,63 +555,6 @@ mod tests {
             out.contains("![[_attachments/images/foo.png#anchor]]"),
             "anchor preserved: {out}"
         );
-    }
-
-    /// Cleanup must never delete a referenced asset (even a byte-identical
-    /// duplicate), and must keep one copy per unreferenced duplicate group.
-    #[test]
-    fn cleanup_preserves_referenced_duplicates_and_keeps_one_copy() {
-        use basalt_vault::asset_index::AssetInfo;
-
-        let (root, state) = temp_vault();
-        let b_str = root.join("b.md").to_string_lossy().to_string();
-
-        let add_asset = |name: &str, hash: &str, embeds_by: Vec<String>| {
-            let abs = root.join(name).to_string_lossy().to_string();
-            std::fs::write(root.join(name), [0x89u8]).unwrap();
-            state.vault.write().unwrap().asset_index.upsert(AssetInfo {
-                rel_path: name.into(),
-                abs_path: abs,
-                file_name: name.into(),
-                file_type: basalt_vault::asset_index::FileType::Image,
-                mime_type: "image/png".into(),
-                size_bytes: 1,
-                content_hash: hash.into(),
-                width: None,
-                height: None,
-                embeds_by,
-                linked_by: vec![],
-            });
-        };
-
-        // Referenced asset + an unreferenced identical copy.
-        add_asset("ref.png", "H", vec![b_str.clone()]);
-        add_asset("refdup.png", "H", vec![]);
-        // Unique orphan.
-        add_asset("orphan.png", "O", vec![]);
-        // Unreferenced duplicate pair — exactly one copy must survive.
-        add_asset("k1.png", "K", vec![]);
-        add_asset("k2.png", "K", vec![]);
-
-        let res = cleanup_assets_impl(&state).unwrap();
-
-        assert!(root.join("ref.png").exists(), "referenced asset kept");
-        assert!(
-            !root.join("refdup.png").exists(),
-            "unreferenced duplicate of referenced content deleted"
-        );
-        assert!(!root.join("orphan.png").exists(), "unique orphan deleted");
-        assert!(
-            root.join("k1.png").exists(),
-            "keeper of unreferenced dup group kept"
-        );
-        assert!(
-            !root.join("k2.png").exists(),
-            "extra unreferenced dup deleted"
-        );
-
-        assert_eq!(res.orphans_deleted, 1, "only the unique orphan");
-        assert_eq!(res.duplicates_deleted, 2, "refdup + k2");
     }
 
     /// `{note_name}-{n}` naming must match save_attachment's scheme: base is
