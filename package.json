@@ -19,7 +19,7 @@
     "build:wasm:frontmatter": "bash scripts/build-frontmatter-wasm.sh",
     "verify:wasm": "node crates/basalt-wasm/graph-wasm/verify.mjs",
     "build:app": "bun run --cwd apps/tauri tauri build --no-bundle",
-    "install:local": "bun run --cwd apps/tauri tauri build --no-bundle && cp target/release/tauri ~/.local/bin/basalt && update-desktop-database ~/.local/share/applications"
+    "install:local": "bun run --cwd apps/tauri tauri build --no-bundle && install -m 755 target/release/tauri ~/.local/bin/basalt && update-desktop-database ~/.local/share/applications"
   },
   "devDependencies": {
     "bun-types": "latest",
