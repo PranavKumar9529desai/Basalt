@@ -4,6 +4,7 @@ use basalt_graph::StringArena;
 use basalt_parser::extract_metadata;
 use basalt_types::FileMetadata;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Vault {
@@ -97,6 +98,35 @@ impl Vault {
         let id = self.arena.get_id(path)?;
         self.graph.metadata_cache.get(&id)
     }
+
+    /// Note names + paths whose filename starts with `prefix`, ranked by usage
+    /// (most-backlinked first, then name) — feeds the wikilink autocomplete.
+    /// Usage = number of notes that link to the target (Obsidian's "linked"
+    /// ordering intent): frequently-cited notes surface before rarely-cited ones.
+    pub fn link_suggestions(&self, prefix: &str) -> Vec<(String, String)> {
+        let prefix_lower = prefix.to_lowercase();
+        let mut out: Vec<(String, String, u64)> = self
+            .note_paths()
+            .into_iter()
+            .filter(|p| p.ends_with(".md"))
+            .filter_map(|path_str| {
+                let name = Path::new(&path_str).file_name()?.to_str()?.to_string();
+                if !name.to_lowercase().starts_with(&prefix_lower) {
+                    return None;
+                }
+                let usage = self
+                    .arena
+                    .get_id(&path_str)
+                    .and_then(|id| self.graph.get_back_links(id))
+                    .map_or(0, |s| s.len()) as u64;
+                Some((name, path_str, usage))
+            })
+            .collect();
+        out.sort_by(|a, b| {
+            b.2.cmp(&a.2).then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+        });
+        out.into_iter().map(|(name, path, _)| (name, path)).collect()
+    }
 }
 
 #[cfg(test)]
@@ -135,5 +165,34 @@ mod tests {
             .expect("b.md should have forward links");
         assert!(fwd_b.contains(&id_a), "b.md should link to a.md");
         assert!(fwd_b.contains(&id_c), "b.md should link to c.md");
+    }
+
+    #[test]
+    fn link_suggestions_rank_by_backlink_count_then_name() {
+        let mut vault = Vault::new();
+        // `target.md` is linked by two notes; `other.md` by one; `unused.md` by none.
+        vault.add_document("target.md", "body");
+        vault.add_document("other.md", "body");
+        vault.add_document("unused.md", "body");
+        vault.add_document("alpha.md", "[[target.md]]");
+        vault.add_document("beta.md", "[[target.md]]");
+        vault.add_document("gamma.md", "[[other.md]]");
+
+        // Prefix `t` matches only `target.md`.
+        let suggestions = vault.link_suggestions("t");
+        assert_eq!(
+            suggestions,
+            vec![("target.md".to_string(), "target.md".to_string())],
+            "single prefix match still surfaces"
+        );
+
+        // Broad prefix: most-backlinked first, ties broken alphabetically.
+        let suggestions = vault.link_suggestions("");
+        let names: Vec<&str> = suggestions.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["target.md", "other.md", "alpha.md", "beta.md", "gamma.md", "unused.md"],
+            "usage (backlink count) desc, then name asc"
+        );
     }
 }

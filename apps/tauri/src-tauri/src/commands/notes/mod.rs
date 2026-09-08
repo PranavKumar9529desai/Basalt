@@ -51,7 +51,8 @@ pub struct LinkSuggestion {
     pub path: String,
 }
 
-/// Return note names and paths whose filename starts with `prefix`.
+/// Return note names and paths whose filename starts with `prefix`, ranked by
+/// usage (most-backlinked first, then name).
 #[tauri::command]
 pub fn autocomplete_links(
     prefix: String,
@@ -62,24 +63,11 @@ pub fn autocomplete_links(
         .read()
         .map_err(|_| AppError::LockPoisoned("vault"))?;
 
-    let out = vault
-        .note_paths()
+    Ok(vault
+        .link_suggestions(&prefix)
         .into_iter()
-        .filter(|p| p.ends_with(".md"))
-        .filter_map(|path_str| {
-            let name = Path::new(&path_str).file_name()?.to_str()?;
-            if name.to_lowercase().starts_with(&prefix.to_lowercase()) {
-                Some(LinkSuggestion {
-                    name: name.to_string(),
-                    path: path_str.to_string(),
-                })
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    Ok(out)
+        .map(|(name, path)| LinkSuggestion { name, path })
+        .collect())
 }
 
 /// Return all tags in the vault that start with `prefix`.
