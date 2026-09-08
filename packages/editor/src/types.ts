@@ -90,6 +90,9 @@ export interface EditorConfig {
   onFetchLinks?: FetchLinksFn;
   onFetchTags?: FetchTagsFn;
   onOpenLink?: (link: string) => void;
+  /** Called when a `#tag` pill is clicked — the feature layer opens search
+   *  prefilled with `tag:<tag>`. */
+  onOpenTag?: (tag: string) => void;
   /** Open an external http(s) link in the system browser (warehouse of the
    * reading-mode link handler). Default: links are not opened (no-op). */
   openExternalLink?: OpenExternalLinkFn;
@@ -143,4 +146,11 @@ export const resolveAssetFacet = Facet.define<
 export const openExternalLinkFacet = Facet.define<
   OpenExternalLinkFn | undefined,
   OpenExternalLinkFn | undefined
+>({ combine: (values) => values[0] });
+
+/** Open a tag (`#tag` pill click) — the feature layer opens search prefilled
+ * with `tag:<tag>`. Injected so `packages/editor` stays pure. */
+export const openTagFacet = Facet.define<
+  ((tag: string) => void) | undefined,
+  ((tag: string) => void) | undefined
 >({ combine: (values) => values[0] });

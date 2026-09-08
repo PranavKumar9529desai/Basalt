@@ -3,6 +3,7 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLink,
+  IconTag,
   IconSearch,
   IconSettings,
   IconSitemap,
@@ -55,6 +56,12 @@ export function Ribbon({
       id: "backlinks",
       icon: <IconLink size={20} stroke={1.5} />,
       label: "Backlinks",
+      onClick: onToggleRightSidebar,
+    },
+    {
+      id: "tags",
+      icon: <IconTag size={20} stroke={1.5} />,
+      label: "Tags",
       onClick: onToggleRightSidebar,
     },
     {

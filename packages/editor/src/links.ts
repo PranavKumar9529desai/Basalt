@@ -6,8 +6,7 @@ import {
   normalizeWikiLinkTarget,
   targetFromWikiLinkNode,
 } from "./syntax/wiki-links";
-import { openExternalLinkFacet } from "./types";
-
+import { openTagFacet, openExternalLinkFacet } from "./types";
 /**
  * ViewPlugin that intercepts clicks on wikilinks, markdown links, and
  * `.cm-table-link[data-name]` widgets in reading mode, navigating via
@@ -35,6 +34,18 @@ export function readingLinkHandler(): Extension {
         }
       }
 
+      // Tag pill: `.cm-live-tag` spans exactly `#tag` — strip the `#` (tags
+      // are plain text, not tree nodes, so the span carries the answer).
+      const tagSpan = target.closest?.(".cm-live-tag");
+      if (tagSpan) {
+        const text = (tagSpan.textContent ?? "").trim();
+        const tag = text.startsWith("#") ? text.slice(1) : text;
+        if (tag) {
+          view.state.facet(openTagFacet)?.(tag);
+          return true;
+        }
+      }
+
       // Wikilink: .cm-live-wikilink spans. Resolve the span's doc position to
       // a WikiLink syntax node and slice the brackets via its syntax offsets.
       const wikiSpan = target.closest?.(".cm-live-wikilink");
@@ -46,7 +57,6 @@ export function readingLinkHandler(): Extension {
           return true;
         }
       }
-
       // Markdown link: <a> elements with href
       const anchor = target.closest?.("a");
       if (anchor) {

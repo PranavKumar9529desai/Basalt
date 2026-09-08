@@ -4,9 +4,10 @@ import { useCallback, useMemo } from "react";
 import { classifyMediaExtension, extensionOf } from "@workspace/editor";
 
 import { useTabsStore } from "../features/tabs";
+import { useSearchStore } from "../features/search";
 import type { FlatTreeNode } from "../features/vault";
-import type { AppContextValue } from "./AppProvider";
 import { isLinux, mediaUrlFor } from "./mediaServer";
+import type { AppContextValue } from "./AppProvider";
 
 /**
  * Part E stem resolution: when the target is extension-less (e.g. `asset-png`)
@@ -96,6 +97,9 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
       getTabInfo,
       onTabStructureChanged,
       openPinned,
+      openSearch: (query: string) => {
+        void useSearchStore.getState().openSearchWithQuery(query);
+      },
       renameNote: ws.renameNote,
       resolveAsset: ws.vaultPath
         ? (target: string) => {

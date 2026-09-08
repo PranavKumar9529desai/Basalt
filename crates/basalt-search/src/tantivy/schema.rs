@@ -20,11 +20,18 @@ pub fn build_schema() -> (
     // STRING = indexed as a single raw token (no stemming) + stored; enables exact-match deletion
     let path_field = builder.add_text_field("path", STRING | STORED);
     let title_field = builder.add_text_field("title", stored_text.clone());
-    // `STORED` so snippet/highlight generation reads the body from the mmap'd
-    // index (in-process) instead of hitting the filesystem on every query.
     let body_field = builder.add_text_field("body", stored_text.clone());
-    let tags_field = builder.add_text_field("tags", stored_text);
-
+    // Tags keep their identity: whitespace-split, NO stemming or punctuation
+    // splitting (`project/2026` is ONE token, `ideas` stays `ideas`) — the
+    // `tag:` operator must match the tag as written, not a stemmed variant.
+    let tag_text = TextOptions::default()
+        .set_indexing_options(
+            TextFieldIndexing::default()
+                .set_tokenizer("basalt_tag")
+                .set_index_option(IndexRecordOption::WithFreqsAndPositions),
+        )
+        .set_stored();
+    let tags_field = builder.add_text_field("tags", tag_text);
     (
         builder.build(),
         path_field,

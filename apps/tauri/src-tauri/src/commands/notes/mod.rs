@@ -102,6 +102,30 @@ pub fn autocomplete_tags(prefix: String, state: State<AppState>) -> AppResult<Ve
 }
 
 #[derive(Serialize)]
+pub struct TagCount {
+    /// Tag name as written in notes (no leading `#`).
+    pub tag: String,
+    /// Number of notes carrying this tag.
+    pub count: u64,
+}
+
+/// Every tag in the vault with its note count, sorted by count descending
+/// then name — feeds the Tags pane.
+#[tauri::command]
+pub fn get_tag_counts(state: State<AppState>) -> AppResult<Vec<TagCount>> {
+    let vault = state
+        .vault
+        .read()
+        .map_err(|_| AppError::LockPoisoned("vault"))?;
+
+    Ok(vault
+        .tag_counts()
+        .into_iter()
+        .map(|(tag, count)| TagCount { tag, count })
+        .collect())
+}
+
+#[derive(Serialize)]
 pub struct CreateNoteResult {
     /// Absolute path of the newly created file.
     pub path: String,

@@ -76,6 +76,9 @@ export interface LeafServices {
   /** Resolve an embed target (`![[target]]`) to a loadable asset URL.
    *  Returns `null` when the target is not a resolvable file. */
   resolveAsset?: (target: string) => string | null;
+  /** Open search with a pre-filled query (tag pills, future operators).
+   * Optional — leaves must tolerate absent search. */
+  openSearch?: (query: string) => void;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

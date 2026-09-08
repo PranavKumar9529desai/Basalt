@@ -1,4 +1,5 @@
 export { BacklinksSidebar } from "./components/BacklinksSidebar";
+export { TagsSidebar } from "./components/TagsSidebar";
 export { FileTree } from "./components/FileTree";
 export { VaultSplash } from "./components/VaultSplash";
 export type { UseVaultControllerReturn } from "./hooks/useVaultController";

@@ -64,6 +64,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "moveRowUp",
   "openExternalLinkFacet",
   "openLinkFacet",
+  "openTagFacet",
   "notifyViewOfSizeChange",
   "previewExtensions",
   "readingExtensions",

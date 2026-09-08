@@ -71,6 +71,14 @@ export interface BacklinkEntry {
   mentions: BacklinkMention[];
 }
 
+/** Mirrors `notes::TagCount` — one row in the Tags pane. */
+export interface TagEntry {
+  /** Tag name as written in notes (no leading `#`). */
+  tag: string;
+  /** Number of notes carrying this tag. */
+  count: number;
+}
+
 export type SaveStatus = "saved" | "saving" | "unsaved" | "conflict";
 
 /**

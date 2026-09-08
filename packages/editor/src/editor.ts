@@ -17,6 +17,7 @@ import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
 import { BASE_EDITOR_THEME } from "./styling/base";
 import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { clickableLinksPlugin } from "./syntax/wiki-links";
+import { clickableTagsPlugin } from "./syntax/tags";
 import { createBasaltGrammar } from "./syntax/registry";
 import {
   frontmatterBlockWidgetGroup,
@@ -52,7 +53,7 @@ import {
   type BlockWidgetSpec,
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
-import { openExternalLinkFacet, resolveAssetFacet } from "./types";
+import { openExternalLinkFacet, openTagFacet, resolveAssetFacet } from "./types";
 import { renderModeReading } from "./preview/render-mode";
 import { readingLinkHandler } from "./links";
 
@@ -178,7 +179,7 @@ export function createEditorExtensionGroups(
       SUGGESTIONS_THEME,
       createSuggestionsPlugin(onFetchLinks, onFetchTags),
     ],
-    links: [clickableLinksPlugin(onOpenLink)],
+    links: [clickableLinksPlugin(onOpenLink), clickableTagsPlugin(config.onOpenTag)],
     blockWidgets: [
       ...frontmatterBlockWidgetGroup({
         parseFrontmatter: config.parseFrontmatter,
@@ -255,6 +256,7 @@ export function previewExtensions(): Extension[] {
 export function readingExtensions(config: {
   runQuery?: EditorConfig["runQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
+  onOpenTag?: EditorConfig["onOpenTag"];
   openExternalLink?: EditorConfig["openExternalLink"];
   resolveAsset?: EditorConfig["resolveAsset"];
   parseFrontmatter?: EditorConfig["parseFrontmatter"];
@@ -279,6 +281,8 @@ export function readingExtensions(config: {
     }),
     // Embed asset resolution facet.
     resolveAssetFacet.of(config.resolveAsset),
+    // Tag pills — open search prefilled with tag:<tag>.
+    openTagFacet.of(config.onOpenTag),
     // External http/https links — system browser via injected opener.
     openExternalLinkFacet.of(config.openExternalLink),
     // Reading-mode embed: resolves ![[file]] to actual media.
@@ -296,6 +300,7 @@ export function readingExtensions(config: {
 export function readingModeExtras(config: {
   runQuery?: EditorConfig["runQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
+  onOpenTag?: EditorConfig["onOpenTag"];
   openExternalLink?: EditorConfig["openExternalLink"];
   resolveAsset?: EditorConfig["resolveAsset"];
   parseFrontmatter?: EditorConfig["parseFrontmatter"];
@@ -309,6 +314,7 @@ export function readingModeExtras(config: {
       onOpenLink: config.onOpenLink,
     }),
     resolveAssetFacet.of(config.resolveAsset),
+    openTagFacet.of(config.onOpenTag),
     openExternalLinkFacet.of(config.openExternalLink),
     EMBED_MEDIA_THEME,
     embedMediaPlugin,

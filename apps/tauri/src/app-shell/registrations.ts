@@ -4,12 +4,14 @@ import {
   IconTable,
   IconFolder,
   IconLink,
+  IconTag,
   IconPaperclip,
 } from "@tabler/icons-react";
 import { TableControls } from "./views/TableControls";
 import { leafRegistry, viewRegistry } from "@workspace/views";
 import { EditorView } from "../features/editor";
 import { Backlinks } from "./views/Backlinks";
+import { Tags } from "./views/Tags";
 import { AssetsView } from "./views/AssetsView";
 
 import { FileExplorerHeaderActions, FileExplorer } from "./views/FileExplorer";
@@ -47,6 +49,14 @@ viewRegistry.register({
   icon: IconLink,
   side: "right",
   component: Backlinks,
+  section: true,
+});
+viewRegistry.register({
+  type: "tags",
+  name: "Tags",
+  icon: IconTag,
+  side: "right",
+  component: Tags,
   section: true,
 });
 

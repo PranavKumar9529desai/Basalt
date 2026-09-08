@@ -63,6 +63,7 @@ impl TantivyIndex {
 
         let mut index = Index::open_or_create(mmap_dir, schema.clone())?;
 
+
         // Schema mismatch detection: if the on-disk schema differs from the current
         // build_schema(), wipe the directory and recreate from scratch.
         let current_schema = index.schema();
@@ -74,6 +75,22 @@ impl TantivyIndex {
             std::fs::remove_dir_all(dir)?;
             std::fs::create_dir_all(dir)?;
             index = Index::create_in_dir(dir, schema)?;
+        }
+
+        // Tags fields reference "basalt_tag" by name — must be registered on the
+        // FINAL index instance (the schema-mismatch path above recreates the
+        // Index, which has its own tokenizer manager) before any doc is
+        // added/searched. Whitespace-only split, no stemming: tag identity
+        // survives (`project/2026` stays one token, `ideas` stays `ideas`) so
+        // the `tag:` operator matches what the author wrote.
+        if index.tokenizers().get("basalt_tag").is_none() {
+            index.tokenizers().register(
+                "basalt_tag",
+                tantivy::tokenizer::TextAnalyzer::builder(
+                    tantivy::tokenizer::SimpleTokenizer::default(),
+                )
+                .build(),
+            );
         }
 
         let reader = index
@@ -143,6 +160,10 @@ impl TantivyIndex {
     /// — "packag" finds "package", "ne" finds "new"/"next"/"note" etc. All words
     /// must appear (AND), each word is OR'd across title (3× boost), body, and tags.
     ///
+    /// A `tag:`-prefixed word (lowercase or not) is scoped to the tags field
+    /// only — `tag:proj` finds notes tagged `project` without matching body
+    /// text. Tag words AND with each other and with any plain words.
+    ///
     /// Returns the top `limit` documents with line-level matches built from the
     /// stored `body` field (a cheap in-process mmap read — no filesystem access)
     /// plus the total number of matching documents via tantivy's `Count` collector.
@@ -159,34 +180,58 @@ impl TantivyIndex {
             return Ok((vec![], 0));
         }
 
-        // For each word: build a prefix query per field, OR across fields, AND words together.
-        let word_queries: Vec<(Occur, Box<dyn Query>)> = words
-            .iter()
-            .map(|word| {
-                let title_term = Term::from_field_text(self.title_field, word);
-                let body_term = Term::from_field_text(self.body_field, word);
-                let tags_term = Term::from_field_text(self.tags_field, word);
+        // `tag:x` words scope to the tags field; everything else keeps the
+        // cross-field full-text behavior. Split before building clauses.
+        let (tag_words, fulltext): (Vec<&String>, Vec<&String>) =
+            words.iter().partition(|w| w.starts_with("tag:"));
 
-                let title_q: Box<dyn Query> = Box::new(BoostQuery::new(
-                    Box::new(FuzzyTermQuery::new_prefix(title_term, 0, true)),
-                    3.0,
-                ));
-                let body_q: Box<dyn Query> =
-                    Box::new(FuzzyTermQuery::new_prefix(body_term, 0, true));
-                let tags_q: Box<dyn Query> =
-                    Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true));
+        let mut clauses: Vec<(Occur, Box<dyn Query>)> = Vec::new();
 
-                let field_or: Box<dyn Query> = Box::new(BooleanQuery::new(vec![
-                    (Occur::Should, title_q),
-                    (Occur::Should, body_q),
-                    (Occur::Should, tags_q),
-                ]));
+        for tag_word in &tag_words {
+            let Some(tag) = tag_word.strip_prefix("tag:") else {
+                continue;
+            };
+            if tag.is_empty() {
+                continue;
+            }
+            let tags_term = Term::from_field_text(self.tags_field, tag);
+            clauses.push((
+                Occur::Must,
+                Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true)),
+            ));
+        }
 
-                (Occur::Must, field_or)
-            })
-            .collect();
+        // For each full-text word: build a prefix query per field, OR across
+        // fields, AND words together.
+        for word in &fulltext {
+            let title_term = Term::from_field_text(self.title_field, word);
+            let body_term = Term::from_field_text(self.body_field, word);
+            let tags_term = Term::from_field_text(self.tags_field, word);
 
-        let query = BooleanQuery::new(word_queries);
+            let title_q: Box<dyn Query> = Box::new(BoostQuery::new(
+                Box::new(FuzzyTermQuery::new_prefix(title_term, 0, true)),
+                3.0,
+            ));
+            let body_q: Box<dyn Query> =
+                Box::new(FuzzyTermQuery::new_prefix(body_term, 0, true));
+            let tags_q: Box<dyn Query> =
+                Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true));
+
+            let field_or: Box<dyn Query> = Box::new(BooleanQuery::new(vec![
+                (Occur::Should, title_q),
+                (Occur::Should, body_q),
+                (Occur::Should, tags_q),
+            ]));
+
+            clauses.push((Occur::Must, field_or));
+        }
+
+        if clauses.is_empty() {
+            // Only empty `tag:` words — nothing to match.
+            return Ok((vec![], 0));
+        }
+
+        let query = BooleanQuery::new(clauses);
         // Single pass: collect the top `limit` docs for display AND the exact
         // match count. Counting happens during the same traversal, so `Count`
         // adds ~nothing over a plain TopDocs search.
@@ -194,7 +239,15 @@ impl TantivyIndex {
             searcher.search(&query, &(TopDocs::with_limit(limit), Count))?;
         let total_docs = total_docs as u64;
 
-        let terms: Vec<&str> = words.iter().map(|w| w.as_str()).collect();
+        // Excerpt matching uses the words WITHOUT the `tag:` prefix — the
+        // tag itself is what should highlight in the body snippet.
+        let mut terms: Vec<&str> = Vec::new();
+        for tag_word in &tag_words {
+            terms.push(tag_word.strip_prefix("tag:").unwrap_or(tag_word));
+        }
+        for w in &fulltext {
+            terms.push(w);
+        }
         // Build the case-insensitive matcher once for the whole query, then reuse
         // it across every result doc (avoids rebuilding the AhoCorasick automaton
         // per document — ADR-030 §2.5).
@@ -298,5 +351,82 @@ mod tests {
             results.is_empty(),
             "removed doc should not appear in results"
         );
+    }
+
+    /// Three docs sharing tag words in different combinations: the `tag:`
+    /// operator must scope to the tags field and AND across words.
+    fn indexed_tag_fixture() -> (tempfile::TempDir, TantivyIndex) {
+        let dir = tempdir().unwrap();
+        let mut idx = TantivyIndex::open_or_create(dir.path()).unwrap();
+        idx.update_document(
+            "/vault/project.md",
+            "project plan",
+            "Build the plan",
+            "project",
+        )
+        .unwrap();
+        idx.update_document(
+            "/vault/ideas.md",
+            "ideas",
+            "project ideas here",
+            "project ideas",
+        )
+        .unwrap();
+        idx.update_document("/vault/other.md", "other", "unrelated note", "misc")
+            .unwrap();
+        idx.commit().unwrap();
+        (dir, idx)
+    }
+
+    #[test]
+    fn test_tag_operator_scopes_to_tag_field() {
+        let (dir, idx) = indexed_tag_fixture();
+        // `tag:project` matches tagged docs even though "project" also appears
+        // in ideas.md's BODY — scoping must exclude the plain-text hit.
+        let (results, _) = idx.search("tag:project", 10).unwrap();
+        let mut paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
+        // BM25 order is score-based, not insertion — compare as sets.
+        paths.sort_unstable();
+        assert_eq!(paths, vec!["/vault/ideas.md", "/vault/project.md"]);
+        let _ = dir;
+    }
+
+    #[test]
+    fn test_tag_operator_requires_tag_not_body() {
+        let (dir, idx) = indexed_tag_fixture();
+        // ideas.md's body contains "project" but only project.md carries the
+        // `ideas` TAG. Looking up tag:ideas must NOT return other.md.
+        let (results, _) = idx.search("tag:ideas", 10).unwrap();
+        let paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
+        assert_eq!(paths, vec!["/vault/ideas.md"]);
+        let _ = dir;
+    }
+
+    #[test]
+    fn test_tag_operator_ands_with_fulltext() {
+        let (dir, idx) = indexed_tag_fixture();
+        let (results, _) = idx.search("tag:project plan", 10).unwrap();
+        let paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
+        assert_eq!(paths, vec!["/vault/project.md"]);
+        let _ = dir;
+    }
+
+    #[test]
+    fn test_tag_operator_multiple_tags_are_and() {
+        let (dir, idx) = indexed_tag_fixture();
+        let (results, _) = idx.search("tag:project tag:ideas", 10).unwrap();
+        let paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
+        assert_eq!(paths, vec!["/vault/ideas.md"]);
+        let _ = dir;
+    }
+
+    #[test]
+    fn test_tag_operator_prefix_and_case() {
+        let (dir, idx) = indexed_tag_fixture();
+        let (results, _) = idx.search("TAG:Proj", 10).unwrap();
+        let mut paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
+        paths.sort_unstable();
+        assert_eq!(paths, vec!["/vault/ideas.md", "/vault/project.md"]);
+        let _ = dir;
     }
 }

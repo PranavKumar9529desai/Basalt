@@ -122,6 +122,7 @@ export class EditorController {
       onFetchLinks: options.io.onFetchLinks,
       onFetchTags: options.io.onFetchTags,
       onOpenLink: this.handleOpenLink,
+      onOpenTag: this.handleOpenTag,
       onPasteImage: options.io.onPasteImage,
       parseFrontmatter: options.io.parseFrontmatter,
       editFrontmatter,
@@ -161,6 +162,11 @@ export class EditorController {
     );
   };
 
+  /** `#tag` pill click — open search with `tag:<tag>` (shell-provided
+   *  LeafServices seam; the tantivy `tag:` operator matches tag identity). */
+  handleOpenTag = (tag: string) => {
+    this.services.openSearch?.(`tag:${tag}`);
+  };
   /** Open an external http(s) link in the system browser (Tauri opener plugin),
    * injected into the reading-mode link handler — never `window.open` in the
    * WebView. */
@@ -193,6 +199,7 @@ export class EditorController {
           readingModeExtras({
             runQuery: this.io.runQuery,
             onOpenLink: this.handleOpenLink,
+            onOpenTag: this.handleOpenTag,
             openExternalLink: this.openExternalLink,
             resolveAsset: this.services.resolveAsset,
             parseFrontmatter: this.io.parseFrontmatter,
@@ -205,6 +212,7 @@ export class EditorController {
         onFetchLinks: this.io.onFetchLinks,
         onFetchTags: this.io.onFetchTags,
         onOpenLink: this.handleOpenLink,
+        onOpenTag: this.handleOpenTag,
         onPasteImage: this.io.onPasteImage,
         parseFrontmatter: this.io.parseFrontmatter,
         editFrontmatter,

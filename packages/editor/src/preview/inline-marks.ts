@@ -43,6 +43,9 @@ export const INLINE_MARKS_THEME = EditorView.baseTheme({
     fontWeight: "500",
     lineHeight: "1.4",
   },
+  ".cm-live-tag:hover": {
+    cursor: "pointer",
+  },
   ".cm-live-strong": {
     fontWeight: "700",
   },

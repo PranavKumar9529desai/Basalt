@@ -29,6 +29,8 @@ interface SearchStore {
   previewError: string | null;
 
   openSearch: () => void;
+  /** Open search with a pre-filled query (tag clicks, link suggestions). */
+  openSearchWithQuery: (query: string) => Promise<void>;
   closeSearch: () => void;
   setSearchQuery: (query: string) => void;
   runSearch: (query: string) => Promise<void>;
@@ -85,6 +87,25 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
     nextSearchSeq();
     nextPreviewSeq();
     set({ isSearchOpen: false, isPreviewLoading: false });
+  },
+  openSearchWithQuery: async (query) => {
+    nextSearchSeq();
+    nextPreviewSeq();
+    // Same reset openSearch performs, but keeping the caller's query instead
+    // of clearing it — tag-click prefills must survive the open.
+    set({
+      isSearchOpen: true,
+      searchQuery: query,
+      searchResults: [],
+      searchSelectedIndex: 0,
+      isSearchLoading: false,
+      searchError: null,
+      previewPath: null,
+      previewText: null,
+      isPreviewLoading: false,
+      previewError: null,
+    });
+    await get().runSearch(query);
   },
 
   setSearchQuery: (query) =>

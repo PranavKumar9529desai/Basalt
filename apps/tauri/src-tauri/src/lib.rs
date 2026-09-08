@@ -34,7 +34,8 @@ pub fn process_uptime_ms() -> Option<u64> {
 use commands::{
     autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
     create_untitled_canvas, create_untitled_note, delete_file, delete_paths, get_asset_audit,
-    get_assets, get_backlinks, get_graph, get_settings, get_vault_tree, get_workspace,
+    get_assets, get_backlinks, get_graph, get_settings, get_tag_counts, get_vault_tree,
+    get_workspace,
     list_templates, media_server_url, move_paths, open_canvas, open_daily_note, open_file,
     open_files, open_vault_dialog, parse_canvas, parse_frontmatter, read_template, reindex_vault,
     rename_note, rename_path, reorganize_assets,
@@ -98,6 +99,7 @@ pub fn run() {
             get_graph,
             autocomplete_links,
             autocomplete_tags,
+            get_tag_counts,
             get_workspace,
             set_workspace_key,
             create_note,

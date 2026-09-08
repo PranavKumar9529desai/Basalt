@@ -74,6 +74,23 @@ impl Vault {
         tags.dedup();
         tags
     }
+    /// Every tag with the number of notes carrying it, sorted by count
+    /// descending then name — feeds the Tags pane.
+    pub fn tag_counts(&self) -> Vec<(String, u64)> {
+        let mut counts: std::collections::HashMap<&str, u64> =
+            std::collections::HashMap::new();
+        for meta in self.graph.metadata_cache.values() {
+            for tag in &meta.tags {
+                *counts.entry(tag.as_str()).or_insert(0) += 1;
+            }
+        }
+        let mut out: Vec<(String, u64)> = counts
+            .into_iter()
+            .map(|(tag, count)| (tag.to_string(), count))
+            .collect();
+        out.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        out
+    }
 
     /// Metadata for the document at `path`, if it is cached.
     pub fn metadata(&self, path: &str) -> Option<&FileMetadata> {

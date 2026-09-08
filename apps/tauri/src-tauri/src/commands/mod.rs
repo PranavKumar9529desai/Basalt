@@ -23,7 +23,7 @@ pub use files::{open_file, open_files, save_file, save_files};
 
 pub use notes::{
     autocomplete_links, autocomplete_tags, create_note, create_untitled_note, get_backlinks,
-    rename_note,
+    get_tag_counts, rename_note,
 };
 
 pub use folders::{create_folder, delete_file, delete_paths, move_paths, rename_path};
