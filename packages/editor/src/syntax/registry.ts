@@ -1,5 +1,5 @@
 import { Table, type MarkdownConfig } from "@lezer/markdown";
-import { markdownMath } from "@codemirror/lang-markdown";
+import { mathMarkdownExtension } from "./math";
 import { yamlFrontmatterExtension } from "./frontmatter";
 import { highlightExtension } from "./highlight";
 import { EMBED_MARK, wikiLinkExtension } from "./wiki-links";
@@ -100,11 +100,11 @@ export const basaltSyntaxManifests: SyntaxManifest[] = [
   {
     id: "math",
     description:
-      "Inline $...$ and block $$...$$ LaTeX math — markdownMath() produces InlineMath/BlockMath nodes.",
+      "Inline $...$ and block $$...$$ LaTeX math — custom Lezer MarkdownConfig producing InlineMath/BlockMath nodes.",
     nodeNames: ["InlineMath", "BlockMath"],
-    grammar: [markdownMath()],
-    // MathMark = the $ delimiter tokens; live-preview hides them when rendering
-    hiddenMarks: ["MathMark"],
+    grammar: [mathMarkdownExtension],
+    // InlineMathMark/BlockMathMark = the $ delimiter tokens; live-preview hides them
+    hiddenMarks: ["InlineMathMark", "BlockMathMark"],
     fixtures: [
       "$E = mc^2$ is inline math",
       "$$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$",
