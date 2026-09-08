@@ -37,6 +37,13 @@ import {
   tableBlockSpec,
   TABLE_BLOCK_THEME,
 } from "./block-widgets/table-widget";
+import {
+  mermaidBlockSpec,
+  defaultMermaidTheme,
+} from "./block-widgets/mermaid-widget";
+import { MERMAID_WIDGET_THEME } from "./block-widgets/mermaid-theme";
+import { mathBlockSpec } from "./block-widgets/math-widget";
+import { MATH_WIDGET_THEME } from "./block-widgets/math-theme";
 import { tableRawModeField } from "./block-widgets/table-state";
 import { CODE_TOGGLE_BUTTON_THEME } from "./block-widgets/code-toggle-button";
 import { embedRawModeField } from "./input/embed-state";
@@ -96,6 +103,13 @@ function commonBlockWidgetExtensions(config?: {
     tableRawModeField,
     embedRawModeField,
     CODE_TOGGLE_BUTTON_THEME,
+    // Mermaid diagram block widget + theme + default dark theme facet
+    blockWidgetSpecsFacet.of(mermaidBlockSpec as BlockWidgetSpec),
+    MERMAID_WIDGET_THEME,
+    defaultMermaidTheme,
+    // Math (KaTeX) block widget + theme
+    blockWidgetSpecsFacet.of(mathBlockSpec as BlockWidgetSpec),
+    MATH_WIDGET_THEME,
   ];
   if (config?.runQuery || config?.onOpenLink) {
     // DQL query block widget — renders ```dql code blocks as live table/list/task views.

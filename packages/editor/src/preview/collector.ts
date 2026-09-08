@@ -32,6 +32,7 @@ import { handleInlineNode } from "./inline-marks";
 import { handleListNode } from "./lists";
 import { handleMarkHidingNode } from "./mark-hiding";
 import { handleEmbedNode } from "./embeds";
+import { handleInlineMathNode } from "../block-widgets/math-widget";
 import { handleTableNode } from "./tables";
 import type { DecorationCollector, DecorationContext } from "./types";
 import { isInCodeBlock, sortCodeBlockRanges } from "./types";
@@ -283,6 +284,8 @@ export function buildPreviewState(
       handleMarkHidingNode(node, ctx, collector);
       // ![[embed]] -> compact chip off the active line; raw syntax revealed on it.
       handleEmbedNode(node, ctx, collector);
+      // Inline LaTeX math $...$ -> rendered KaTeX widget off active line
+      handleInlineMathNode(node, ctx, collector);
     },
   });
 

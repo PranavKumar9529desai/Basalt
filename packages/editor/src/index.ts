@@ -107,6 +107,21 @@ export {
   TableBlockWidget,
 } from "./block-widgets/table-widget";
 export {
+  mermaidBlockSpec,
+  clearMermaidCache,
+  mermaidThemeFacet,
+  defaultMermaidTheme,
+} from "./block-widgets/mermaid-widget";
+export { MERMAID_WIDGET_THEME } from "./block-widgets/mermaid-theme";
+export {
+  mathBlockSpec,
+  MathInlineWidget,
+  handleInlineMathNode,
+  clearMathCache,
+} from "./block-widgets/math-widget";
+export { MATH_WIDGET_THEME } from "./block-widgets/math-theme";
+export { mathMarkdownExtension } from "./syntax/math";
+export {
   setTableRawMode,
   tableRawModeField,
   isTableInRawMode,
