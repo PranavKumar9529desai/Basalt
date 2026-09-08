@@ -1,4 +1,5 @@
 import { Table, type MarkdownConfig } from "@lezer/markdown";
+import { markdownMath } from "@codemirror/lang-markdown";
 import { yamlFrontmatterExtension } from "./frontmatter";
 import { highlightExtension } from "./highlight";
 import { EMBED_MARK, wikiLinkExtension } from "./wiki-links";
@@ -95,6 +96,26 @@ export const basaltSyntaxManifests: SyntaxManifest[] = [
       "```dql query blocks — ride the base FencedCode node (semantics via the info string).",
     nodeNames: ["FencedCode"],
     fixtures: ['```dql\nTABLE FROM "docs"\n```'],
+  },
+  {
+    id: "math",
+    description:
+      "Inline $...$ and block $$...$$ LaTeX math — markdownMath() produces InlineMath/BlockMath nodes.",
+    nodeNames: ["InlineMath", "BlockMath"],
+    grammar: [markdownMath()],
+    // MathMark = the $ delimiter tokens; live-preview hides them when rendering
+    hiddenMarks: ["MathMark"],
+    fixtures: [
+      "$E = mc^2$ is inline math",
+      "$$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$",
+    ],
+  },
+  {
+    id: "mermaid",
+    description:
+      "```mermaid diagram blocks — ride the base FencedCode node (semantics via the info string).",
+    nodeNames: ["FencedCode"],
+    fixtures: ["```mermaid\ngraph TD\n  A-->B\n```"],
   },
 ];
 

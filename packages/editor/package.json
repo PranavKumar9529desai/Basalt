@@ -23,10 +23,13 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.2",
-    "dompurify": "^3.4.14"
+    "dompurify": "^3.4.14",
+    "katex": "^0.16.11",
+    "mermaid": "^11.4.0"
   },
   "devDependencies": {
     "@types/dompurify": "^3.2.0",
+    "@types/katex": "^0.16.7",
     "@types/react": "catalog:default",
     "@types/react-dom": "catalog:default",
     "jsdom": "^30.0.1",
