@@ -5,6 +5,7 @@ import "./App.css";
 import "../../../packages/ui/src/styles/globals.css";
 import "../../../packages/ui/src/styles/editor.css";
 import { ThemeProvider } from "./app-shell/ThemeProvider";
+import { AppearanceEffects } from "./features/settings";
 import { ttiMark } from "./shared/tti";
 
 // TTI: first executable mark. Note: ES module imports hoist above this, so
@@ -27,6 +28,7 @@ declare module "@tanstack/react-router" {
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
+      <AppearanceEffects />
       <RouterProvider router={router} />
     </ThemeProvider>
   </React.StrictMode>,

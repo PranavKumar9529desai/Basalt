@@ -36,7 +36,7 @@ export function SettingsModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
       <button
         type="button"
         aria-hidden="true"
@@ -50,7 +50,7 @@ export function SettingsModal() {
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
-        className="relative flex w-[85vw] h-[85vh] overflow-hidden rounded-xl bg-[var(--sat-surface-1)] shadow-2xl"
+        className="relative flex h-[85vh] w-[85vw] min-h-[480px] min-w-[720px] max-h-[85vh] max-w-[1100px] overflow-hidden rounded-xl bg-[var(--sat-surface-1)] shadow-2xl"
       >
         <SettingsNav />
         <SettingsPanel />
@@ -58,10 +58,10 @@ export function SettingsModal() {
           variant="ghost"
           size="icon-sm"
           onClick={close}
-          className="absolute right-3 top-3 text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+          className="absolute right-3.5 top-3.5 text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
           aria-label="Close settings"
         >
-          <IconX size={14} />
+          <IconX size={16} />
         </Button>
       </div>
     </div>

@@ -25,6 +25,8 @@ interface PreparedBinding {
   /** True when a when clause failed to compile — never matches. */
   broken: boolean;
 }
+const OVERRIDES_STORAGE_KEY = "basalt.hotkey-overrides";
+
 
 export class KeybindingService {
   private bindings: Keybinding[];
@@ -32,15 +34,21 @@ export class KeybindingService {
   private actions = new Map<string, () => void>();
   /** Parsed + compiled cache; rebuilt only when bindings change. */
   private prepared: PreparedBinding[];
+  /** Custom per-command hotkey overrides, persisted to localStorage. */
+  private customBindings = new Map<string, string>();
+  /** Commands whose keybinding is explicitly removed. */
+  private unbound = new Set<string>();
+
 
   constructor() {
     this.bindings = KEYBINDINGS.map((b) => ({ ...b }));
     this.prepared = [];
+    this.loadOverrides();
     this.rebuild();
   }
 
   private rebuild(): void {
-    this.prepared = this.bindings.map((b) => {
+    this.prepared = this.getBindings().map((b) => {
       const evaluate = b.when ? parseWhen(b.when) : null;
       const broken =
         b.when !== undefined && b.when.trim() !== "" && evaluate === null;
@@ -58,6 +66,7 @@ export class KeybindingService {
     });
   }
 
+
   register(binding: Keybinding): void {
     this.bindings.push(binding);
     this.rebuild();
@@ -66,6 +75,130 @@ export class KeybindingService {
   unregister(key: string): void {
     this.bindings = this.bindings.filter((b) => b.key !== key);
     this.rebuild();
+  }
+
+  /**
+   * Effective bindings: defaults with per-command custom overrides applied,
+   * unbound commands removed. Used by the matcher and the Hotkeys UI.
+   */
+  getBindings(): Keybinding[] {
+    return this.bindings
+      .filter((b) => !b.command || !this.unbound.has(b.command))
+      .map((b) =>
+        b.command && this.customBindings.has(b.command)
+          ? { ...b, key: this.customBindings.get(b.command)! }
+          : b,
+      );
+  }
+
+  /** Effective hotkey bound to a command, or undefined when unbound. */
+  bindingForCommand(commandId: string): Keybinding | undefined {
+    return this.getBindings().find((b) => b.command === commandId);
+  }
+
+  /**
+   * Command whose effective binding collides with `key` (same key + same
+   * modifiers), excluding `excludeCommand`. Undefined = free.
+   */
+  conflictsWith(key: string, excludeCommand?: string): string | undefined {
+    const candidate = parseHotkey(key);
+    if (!candidate.key) return undefined;
+    for (const b of this.getBindings()) {
+      if (!b.command || b.command === excludeCommand) continue;
+      const other = parseHotkey(b.key);
+      if (
+        other.key === candidate.key &&
+        other.cmdOrCtrl === candidate.cmdOrCtrl &&
+        other.shift === candidate.shift &&
+        other.alt === candidate.alt
+      ) {
+        return b.command;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Replace a command's keybinding. Validates the hotkey, persists the
+   * override, rebuilds the matcher cache, and reports conflicts (which
+   * are allowed — resolution is most-specific-first).
+   */
+  setCustomBinding(
+    commandId: string,
+    key: string,
+  ): { ok: true; conflict?: string } | { ok: false; error: string } {
+    if (!parseHotkey(key).key) {
+      return { ok: false, error: `Invalid hotkey "${key}".` };
+    }
+    this.customBindings.set(commandId, key);
+    this.unbound.delete(commandId);
+    this.persistOverrides();
+    this.rebuild();
+    const conflict = this.conflictsWith(key, commandId);
+    return conflict ? { ok: true, conflict } : { ok: true };
+  }
+
+  /** Remove a command's keybinding entirely (no default fallback). */
+  unbind(commandId: string): void {
+    if (!this.unbound.has(commandId) && !this.customBindings.has(commandId)) {
+      return;
+    }
+    this.unbound.add(commandId);
+    this.customBindings.delete(commandId);
+    this.persistOverrides();
+    this.rebuild();
+  }
+
+  /** Restore a command to its default keybinding. */
+  resetBinding(commandId: string): void {
+    if (!this.unbound.has(commandId) && !this.customBindings.has(commandId)) {
+      return;
+    }
+    this.unbound.delete(commandId);
+    this.customBindings.delete(commandId);
+    this.persistOverrides();
+    this.rebuild();
+  }
+
+  /** True when the command deviates from its default keybinding. */
+  hasCustomBinding(commandId: string): boolean {
+    return this.unbound.has(commandId) || this.customBindings.has(commandId);
+  }
+
+  private loadOverrides(): void {
+    try {
+      const raw =
+        typeof localStorage === "undefined"
+          ? null
+          : localStorage.getItem(OVERRIDES_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw) as {
+        overrides?: Record<string, string>;
+        unbound?: string[];
+      };
+      for (const [id, key] of Object.entries(data.overrides ?? {})) {
+        if (typeof key === "string" && parseHotkey(key).key) {
+          this.customBindings.set(id, key);
+        }
+      }
+      for (const id of data.unbound ?? []) this.unbound.add(id);
+    } catch {
+      // Corrupt override storage is ignored; defaults apply.
+    }
+  }
+
+  private persistOverrides(): void {
+    try {
+      localStorage.setItem(
+        OVERRIDES_STORAGE_KEY,
+        JSON.stringify({
+          overrides: Object.fromEntries(this.customBindings),
+          unbound: Array.from(this.unbound),
+        }),
+      );
+    } catch {
+      // Storage unavailable — in-memory overrides still apply this session.
+    }
   }
 
   registerAction(name: string, handler: () => void): void {

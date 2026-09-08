@@ -41,6 +41,47 @@ const DEFAULTS = {
   dailyNoteDateFormat: "YYYY-MM-DD" as string,
   /** Template file to apply to new daily notes; empty = blank note. */
   dailyNoteTemplate: "" as string,
+  /** Auto-update to the latest stable release (General). */
+  autoUpdates: true as boolean,
+  /** Auto-update to early access builds (General). */
+  earlyAccess: false as boolean,
+  /** Display language code (General). */
+  language: "en" as string,
+  /** Accent color override; empty = follow the active theme (Appearance). */
+  accentColor: "" as string,
+  /** Interface font family override; empty = token default (Appearance). */
+  fontFamily: "" as string,
+  /** Base interface font size in px (Appearance). */
+  fontSize: 14 as number,
+  /** Interface zoom percentage (Appearance). */
+  zoomLevel: 100 as number,
+  /** Default view mode for new tabs (Editor). */
+  defaultViewMode: "live-preview" as "live-preview" | "reading",
+  /** Center and limit text line width for reading comfort (Editor). */
+  readableLineLength: true as boolean,
+  /** CommonMark strict line break rules (Editor). */
+  strictLineBreaks: false as boolean,
+  /** Show line numbers in the editor gutter (Editor). */
+  showLineNumbers: true as boolean,
+  /** Allow collapsing sections underneath Markdown headings (Editor). */
+  foldHeading: true as boolean,
+  /** Auto-close brackets and markdown formatting pairs (Editor). */
+  autoPairBrackets: true as boolean,
+  /** Indentation unit: 2 spaces, 4 spaces, or a tab (Editor). */
+  tabSize: "2" as "2" | "4" | "tab",
+  /** Vim modal editing keybindings (Editor). */
+  vimMode: false as boolean,
+  /** Where newly created notes are saved (Files & links). */
+  defaultNoteLocation: "vault-root" as
+    | "vault-root"
+    | "same-folder"
+    | "specified-folder",
+  /** Format used for new internal links (Files & links). */
+  newLinkFormat: "wikilink" as "wikilink" | "markdown",
+  /** Update internal links when a note is renamed or moved (Files & links). */
+  autoUpdateLinks: true as boolean,
+  /** Per-core-plugin enabled state (Core plugins manager). Absent = enabled. */
+  enabledPlugins: {} as Record<string, boolean>,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;
@@ -105,6 +146,19 @@ export function setSetting<K extends SettingsKey>(
   });
 }
 
+/** String-keyed read — used by declarative SettingsFields (keys are string literals). */
+export function readSetting(key: string): unknown {
+  return useSettingsStore.getState().values[key];
+}
+
+/** String-keyed write — persists like `setSetting`, used by SettingsFields. */
+export function writeSetting(key: string, value: unknown) {
+  useSettingsStore.getState().set(key, value);
+  invoke("set_setting", { key, value }).catch((err) => {
+    console.error(`Failed to persist setting "${key}":`, err);
+  });
+}
+
 /** Settings whose value is a plain string — the only kind the settings UI edits. */
 export type StringSettingKey = {
   [K in SettingsKey]: SettingsValues[K] extends string ? K : never;
@@ -126,49 +180,3 @@ export function initSettings(backend: Record<string, unknown> | undefined) {
   useSettingsStore.setState({ values: merged });
 }
 
-/**
- * Declarative settings-field metadata (ADR-036). The generic `SettingsFields`
- * component renders one row per spec — plugins describe their settings here
- * instead of hand-building forms.
- */
-export interface SettingSpec {
-  key: SettingsKey;
-  label: string;
-  description: string;
-  placeholder?: string;
-}
-
-export const SETTING_SPECS: Record<string, SettingSpec[]> = {
-  templates: [
-    {
-      key: "templateFolder",
-      label: "Template folder",
-      description:
-        "Folder containing template notes, relative to the vault root. Any Markdown file in it becomes insertable.",
-      placeholder: "Templates",
-    },
-  ],
-  dailies: [
-    {
-      key: "dailyNotesFolder",
-      label: "Daily notes folder",
-      description:
-        "Where new daily notes are created. Use a nested path (e.g. Journal/2026) to organize by month or year.",
-      placeholder: "Daily",
-    },
-    {
-      key: "dailyNoteDateFormat",
-      label: "Date format",
-      description:
-        "File-name pattern for daily notes. Moment-style tokens (YYYY, MMM, DD); slashes create subfolders.",
-      placeholder: "YYYY-MM-DD",
-    },
-    {
-      key: "dailyNoteTemplate",
-      label: "Template",
-      description:
-        "Template file (in the template folder) applied when a new daily note is created. Leave empty for a blank note.",
-      placeholder: "Empty — start with a blank note",
-    },
-  ],
-};

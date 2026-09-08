@@ -118,3 +118,80 @@ describe("KeybindingService — when-clause resolution", () => {
     expect(service.resolve(ctrlKey("7"))).toBeNull();
   });
 });
+
+describe("KeybindingService — custom bindings (Hotkeys section)", () => {
+  let service: KeybindingService;
+
+  function registerHotkeyCmd(id: string) {
+    commandService.register({ id, name: id, callback: () => {} });
+  }
+
+  beforeEach(() => {
+    // Stub localStorage so override persistence round-trips like the webview.
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => void store.clear(),
+    });
+    service = new KeybindingService();
+    registerHotkeyCmd("hotkey:one");
+    registerHotkeyCmd("hotkey:two");
+  });
+
+  afterEach(() => {
+    commandService.unregister("hotkey:one");
+    commandService.unregister("hotkey:two");
+    vi.unstubAllGlobals();
+  });
+
+  it("assigns a custom binding and the matcher resolves the new key", () => {
+    service.register({ key: "CmdOrCtrl+J", command: "hotkey:one" });
+    const result = service.setCustomBinding("hotkey:one", "CmdOrCtrl+K");
+
+    expect(result).toEqual({ ok: true });
+    expect(service.bindingForCommand("hotkey:one")?.key).toBe("CmdOrCtrl+K");
+    expect(service.handleKeydown(ctrlKey("k"))).toBe(true);
+    expect(service.handleKeydown(ctrlKey("j"))).toBe(false);
+  });
+
+  it("rejects a hotkey with no key portion", () => {
+    expect(service.setCustomBinding("hotkey:one", "CmdOrCtrl+")).toEqual({
+      ok: false,
+      error: 'Invalid hotkey "CmdOrCtrl+".',
+    });
+  });
+
+  it("reports conflicts between equal modifier/key combinations", () => {
+    service.register({ key: "CmdOrCtrl+J", command: "hotkey:one" });
+    service.register({ key: "CmdOrCtrl+K", command: "hotkey:two" });
+
+    const result = service.setCustomBinding("hotkey:two", "CmdOrCtrl+J");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.conflict).toBe("hotkey:one");
+    }
+  });
+
+  it("unbind removes the binding; reset restores the default", () => {
+    service.register({ key: "CmdOrCtrl+J", command: "hotkey:one" });
+    service.setCustomBinding("hotkey:one", "CmdOrCtrl+K");
+
+    service.unbind("hotkey:one");
+    expect(service.bindingForCommand("hotkey:one")).toBeUndefined();
+    expect(service.handleKeydown(ctrlKey("k"))).toBe(false);
+
+    service.resetBinding("hotkey:one");
+    expect(service.bindingForCommand("hotkey:one")?.key).toBe("CmdOrCtrl+J");
+  });
+
+  it("persists overrides so a fresh service instance restores them", () => {
+    // `search:open` ships a default binding (CmdOrCtrl+F) in keybindings.json,
+    // so it exists on every fresh service instance.
+    service.setCustomBinding("search:open", "CmdOrCtrl+K");
+
+    const reloaded = new KeybindingService();
+    expect(reloaded.bindingForCommand("search:open")?.key).toBe("CmdOrCtrl+K");
+  });
+});

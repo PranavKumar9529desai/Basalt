@@ -7,6 +7,40 @@
 
 ---
 
+## Settings system (ADR-037) — COMPLETE
+
+**Status:** Registry-driven settings modal implemented per ADR-037 + the UI
+spec (`docs/specs/settings-ui-and-architecture.md`, checklist §7 fully ticked).
+Branch `main`, uncommitted.
+
+- **Registry + nav:** `settingsRegistry` (orders + `pluginEnabled` predicates)
+  drives a 240px `SettingsNav` sidebar — OPTIONS / CORE PLUGINS / COMMUNITY
+  PLUGINS groups, icons, active pill, Deep Search with per-section match-count
+  badges; modal store holds `isOpen/activeSection/searchQuery`.
+- **Sections:** general / appearance / editor / files-links / templates /
+  dailies are declarative `SettingItemSpec[]` (rendered via `SettingsFields`,
+  matched substrings highlighted); hotkeys = virtualized command list with
+  one-shot key recorder, conflict detection, reset/unbind, persistence;
+  `CorePluginsSection` manager (8 plugins, gear → plugin tab, enable toggle
+  gates tab visibility); `CommunityPluginsSection` empty state (host not built).
+- **Keybindings service:** overrides + unbound sets, `setCustomBinding`/
+  `unbind`/`resetBinding`/`conflictsWith`, persisted to localStorage
+  `basalt.hotkey-overrides` (5 new tests).
+- **Effects:** `AppearanceEffects` (mounted in `main.tsx`) applies accent color,
+  font family, font size, zoom to `--sat-*` tokens / `html` style.
+- **Persistence:** unchanged Rust `get_settings`/`set_setting` multi-tier store.
+
+**Verify:** oxlint clean, `apps/tauri` tsc clean, vitest 319/319 (app) + 31/31
+(keybindings, 5 new). GUI smoke not run (native Tauri window).
+
+**Known follow-ups (out of scope by design):** editor settings (vim mode etc.)
+persist but are not yet consumed by the editor; `enabledPlugins` gates
+settings-tab visibility only — real plugin lifecycle lands with the plugin
+host (ADR-018 Phase 5, ADR-036 follow-up); community plugin install/listing
+waits for the host; account/license rows are `deferred()` placeholders.
+
+---
+
 ## File decomposition (ADR-038) — COMPLETE (merged to main)
 
 **Status:** All five phases done, merged to `main` via fast-forward at `bf5ba88`,
