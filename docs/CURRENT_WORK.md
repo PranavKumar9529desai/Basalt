@@ -7,12 +7,12 @@
 
 ---
 
-## File decomposition (ADR-038) — COMPLETE
+## File decomposition (ADR-038) — COMPLETE (merged to main)
 
-**Branch:** `feat/adr38-file-decomposition` (from `main` @ `4aa5b2f`)
-**Status:** All five phases done, one commit per phase, zero behavior/API change —
-import surfaces frozen (entry barrels re-export identical symbols; outside consumers
-untouched). User's ADR-037 settings WIP (`src/features/settings/**`, `docs/adr/037*`,
+**Status:** All five phases done, merged to `main` via fast-forward at `bf5ba88`,
+one commit per phase, zero behavior/API change — import surfaces frozen (entry
+barrels re-export identical symbols; outside consumers untouched). User's
+ADR-037 settings WIP (`src/features/settings/**`, `docs/adr/037*`,
 `docs/specs/`) was never staged into these commits.
 
 - **Phase 1** `3e8036b` — zero-risk relocations: `table-widget.ts` → `table-parse/html/theme`,
