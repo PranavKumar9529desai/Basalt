@@ -3,12 +3,13 @@
  *
  * Cross-feature orchestration (shared layer): the drop target is decided at
  * pointerup by hit-testing the element under the cursor, then routed to the
- * owning feature — an editor pane (wikilink at the caret). The receiver is
- * looked up at execution time, never captured.
+ * owning feature — an editor pane (wikilink at the caret) or the canvas (a
+ * new file node). Receivers are looked up at execution time, never captured.
  */
 import type { EditorView } from "@codemirror/view";
 import { editorControllerRegistry } from "../../features/editor";
 import type { DraggedFile } from "../../features/vault";
+import { canvasFileDropAt } from "../../features/canvas";
 
 /** CM6's root view element carries the `.cm-editor` class; matching it back
  *  to the registry entry whose view owns that element resolves the pane. */
@@ -51,6 +52,10 @@ export function dispatchFileDrop(
       return true;
     }
     return false;
+  }
+
+  if (el.closest(".react-flow")) {
+    return canvasFileDropAt(x, y, file.path);
   }
 
   return false;

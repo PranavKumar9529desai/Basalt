@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -26,6 +26,8 @@ import GhostCardNode from "./nodes/GhostCardNode";
 import CanvasEdge from "./edges/CanvasEdge";
 import GuidelineLines from "./components/GuidelineLines";
 import { CanvasContext } from "./CanvasContext";
+import { registerCanvasFileDrop } from "./lib/canvasDrop";
+import type { CanvasXYNode } from "./lib/mapper";
 
 import { useCanvasState } from "./lib/useCanvasState";
 import { useCanvasPersistence } from "./lib/useCanvasPersistence";
@@ -46,9 +48,9 @@ const edgeTypes = {
   bezier: CanvasEdge,
 };
 
-function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
+function CanvasFlow({ tab, paneId }: LeafProps) {
   const reactFlowInstance = useReactFlow();
-
+  const containerRef = useRef<HTMLDivElement>(null);
   const { saveCanvasNow, triggerSave, loadCanvas, nodesRef, edgesRef } =
     useCanvasPersistence({ tab, reactFlowInstance });
   const { guidelines: guidelineState, setGuidelines, clearGuidelines } =
@@ -105,6 +107,29 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     saveCanvasNow,
   });
 
+  // File-tree drags run on pointer events (WebKitGTK fires no HTML5
+  // dragstart), so the shared fileDnd layer routes drops here by pane.
+  useEffect(() => {
+    const dom = containerRef.current;
+    if (!dom) return;
+    return registerCanvasFileDrop(paneId, dom, ({ x, y, filePath }) => {
+      const pos = reactFlowInstance.screenToFlowPosition({ x, y });
+      const newNode: CanvasXYNode = {
+        id: `file-${Date.now()}`,
+        type: "canvasFile",
+        position: { x: pos.x - 150, y: pos.y - 110 },
+        style: { width: 300, height: 220 },
+        data: { file: filePath },
+      };
+      setNodes((nds) => {
+        const next = [...nds, newNode];
+        nodesRef.current = next;
+        saveCanvasNow();
+        return next;
+      });
+    });
+  }, [paneId, reactFlowInstance, setNodes, nodesRef, saveCanvasNow]);
+
   const [ctxMenu, setCtxMenu] = useState<{
     target: ContextTarget;
     anchor: { x: number; y: number };
@@ -140,6 +165,7 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
       value={{ updateText, updateUrl, saveNow: saveCanvasNow }}
     >
       <div
+        ref={containerRef}
         className="relative h-full w-full bg-[var(--sat-surface-0)]"
         onContextMenu={handleContextMenu}
         onDoubleClick={handleDoubleClick}
@@ -233,11 +259,10 @@ function CanvasFlow({ tab }: { tab: LeafProps["tab"] }) {
     </CanvasContext.Provider>
   );
 }
-
-export function CanvasView({ tab }: LeafProps) {
+export function CanvasView({ tab, paneId }: LeafProps) {
   return (
     <ReactFlowProvider>
-      <CanvasFlow tab={tab} />
+      <CanvasFlow tab={tab} paneId={paneId} />
     </ReactFlowProvider>
   );
 }
