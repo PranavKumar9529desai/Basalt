@@ -42,6 +42,7 @@ export function FileTree({
   onBackgroundContextMenu,
   onCommitEdit,
   onCancelEdit,
+  onDragStart,
   className,
 }: FileTreeProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -90,6 +91,7 @@ export function FileTree({
                 onContextMenu={onContextMenu}
                 onCommitEdit={onCommitEdit}
                 onCancelEdit={onCancelEdit}
+                onDragStart={onDragStart}
                 style={{
                   position: "absolute",
                   top: 0,

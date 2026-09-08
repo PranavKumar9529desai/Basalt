@@ -2,6 +2,7 @@ import { SidebarActionButtons } from "@workspace/ui/components/sidebar";
 import { IconFilePlus, IconFolderPlus } from "@tabler/icons-react";
 import { FileTree } from "../../features/vault";
 import { useAppContext } from "../../shared";
+import { FileDragGhost, useFileDrag } from "../../shared/fileDnd";
 
 /**
  * File explorer view — the left dock's registered view.
@@ -11,24 +12,29 @@ import { useAppContext } from "../../shared";
 export function FileExplorer() {
   const { visibleNodes, openFolders, controller, mutations, selection } =
     useAppContext();
+  const { isDraggingFile, handleFilePointerDown } = useFileDrag();
 
   return (
-    <FileTree
-      visibleNodes={visibleNodes}
-      openFolders={openFolders}
-      selectedIds={selection.selectedIds}
-      cutIds={controller.cutIds}
-      onFileClick={controller.onTreeFileClick}
-      onFolderToggle={controller.onTreeFolderToggle}
-      onContextMenu={controller.onTreeContextMenu}
-      onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
-      ghostNode={mutations.ghostNode}
-      onCommitEdit={controller.handleCommitEdit}
-      onCancelEdit={controller.handleCancelEdit}
-      renamingNode={mutations.renamingNode}
-      onCommitRename={controller.handleCommitRename}
-      onCancelRename={controller.handleCancelRename}
-    />
+    <>
+      <FileTree
+        visibleNodes={visibleNodes}
+        openFolders={openFolders}
+        selectedIds={selection.selectedIds}
+        cutIds={controller.cutIds}
+        onFileClick={controller.onTreeFileClick}
+        onFolderToggle={controller.onTreeFolderToggle}
+        onContextMenu={controller.onTreeContextMenu}
+        onBackgroundContextMenu={controller.onTreeBackgroundContextMenu}
+        ghostNode={mutations.ghostNode}
+        onCommitEdit={controller.handleCommitEdit}
+        onCancelEdit={controller.handleCancelEdit}
+        renamingNode={mutations.renamingNode}
+        onCommitRename={controller.handleCommitRename}
+        onCancelRename={controller.handleCancelRename}
+        onDragStart={handleFilePointerDown}
+      />
+      {isDraggingFile && <FileDragGhost />}
+    </>
   );
 }
 

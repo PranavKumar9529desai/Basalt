@@ -20,5 +20,8 @@ export interface FileTreeProps {
   onCommitEdit?: (node: FileNode, newName: string) => void;
   /** Called when the user cancels an inline edit (Escape or blur with empty). */
   onCancelEdit?: (node: FileNode) => void;
+  /** Called on primary pointerdown over a file row (not folders). The caller
+   *  decides whether the press becomes a drag (threshold) or stays a click. */
+  onDragStart?: (node: FileNode, e: React.PointerEvent) => void;
   className?: string;
 }

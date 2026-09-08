@@ -34,6 +34,16 @@ export interface FlatTreeNode {
   childCount: number;
 }
 
+/** Payload carried by a file-tree drag (drop into editor/canvas/other). */
+export interface DraggedFile {
+  /** Absolute path on disk. */
+  path: string;
+  /** Path relative to the vault root (no leading slash). */
+  relPath: string;
+  /** Display name — last path segment, e.g. `"intro.md"`. */
+  name: string;
+}
+
 /** Returned by `autocomplete_links` — used for wikilink completion only. */
 export interface LinkSuggestion {
   name: string;

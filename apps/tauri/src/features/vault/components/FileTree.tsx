@@ -19,15 +19,16 @@ export interface FileTreeProps {
   onCommitEdit?: (node: FileNode, newName: string) => void;
   /** Called when the user cancels an inline edit (Escape). */
   onCancelEdit?: (node: FileNode) => void;
-  /**
-   * Node currently in inline rename mode — rendered as an editing row in
-   * place (stem shown for notes; folders keep their name).
-   */
+  /** Node currently in inline rename mode — rendered as an editing row in
+   *  place (stem shown for notes; folders keep their name). */
   renamingNode?: (FileNode & { path?: string }) | null;
   /** Called when the user commits an inline rename (Enter/blur). */
   onCommitRename?: (node: FileNode, newName: string) => void;
   /** Called when the user cancels an inline rename (Escape / empty commit). */
   onCancelRename?: (node: FileNode) => void;
+  /** Called on primary pointerdown over a file row. The caller decides whether
+   *  the press becomes a drag (threshold) or stays a click. */
+  onDragStart?: (node: FlatTreeNode, e: React.PointerEvent) => void;
 }
 
 /**
@@ -52,6 +53,7 @@ export function FileTree({
   renamingNode,
   onCommitRename,
   onCancelRename,
+  onDragStart,
 }: FileTreeProps) {
   // Map Tauri-specific nodes to the dumb UI primitives
   const mappedNodes: FileNode[] = visibleNodes.map(
@@ -134,6 +136,10 @@ export function FileTree({
     const original = visibleNodes.find((n) => n.path === fileNode.id);
     if (original) onContextMenu(original, e);
   };
+  const handleDragStart = (fileNode: FileNode, e: React.PointerEvent) => {
+    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    if (original) onDragStart?.(original, e);
+  };
 
   // Route inline edits by which node is editing: the ghost node commits
   // through the creation flow, the renaming node through the rename flow.
@@ -163,6 +169,7 @@ export function FileTree({
       onBackgroundContextMenu={onBackgroundContextMenu}
       onCommitEdit={handleCommit}
       onCancelEdit={handleCancel}
+      onDragStart={handleDragStart}
     />
   );
 }

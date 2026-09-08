@@ -218,6 +218,9 @@ interface FileTreeNodeProps {
   onContextMenu?: (node: FileNode, e: React.MouseEvent) => void;
   onCommitEdit?: (node: FileNode, newName: string) => void;
   onCancelEdit?: (node: FileNode) => void;
+  /** Called on primary pointerdown over a file row (not folders). The caller
+   *  decides whether the press becomes a drag (threshold) or stays a click. */
+  onDragStart?: (node: FileNode, e: React.PointerEvent) => void;
   /** Passed from the virtualizer so the row sits at the correct scroll offset. */
   style: React.CSSProperties;
 }
@@ -232,6 +235,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
     onContextMenu,
     onCommitEdit,
     onCancelEdit,
+    onDragStart,
     style,
   }) => {
     const isFolder = node.isFolder;
@@ -264,6 +268,13 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
         onContextMenu(node, e);
       }
     };
+    /** Arm a potential drag on primary press over a file row. Plain clicks
+     *  stay clicks (the caller's threshold decides); only file rows drag. */
+    const handlePointerDown = (e: React.PointerEvent) => {
+      if (isEditing || isFolder) return;
+      if (e.button !== 0) return;
+      onDragStart?.(node, e);
+    };
 
     return (
       <div
@@ -293,6 +304,7 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
           aria-expanded={isFolder ? isOpen : undefined}
           onClick={handleClick}
           onContextMenu={handleContextMenu}
+          onPointerDown={handlePointerDown}
           onKeyDown={(e) => {
             if (isEditing) return;
             if (e.key === "Enter" || e.key === " ") {

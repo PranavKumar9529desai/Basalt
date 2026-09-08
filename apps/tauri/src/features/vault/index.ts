@@ -10,6 +10,7 @@ export { findNoteByName, useVaultTree } from "./hooks/useVaultTree";
 export type {
   BootResult,
   CreateNoteResult,
+  DraggedFile,
   FileChangeEvent,
   FlatTreeNode,
   LinkSuggestion,

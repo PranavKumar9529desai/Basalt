@@ -32,6 +32,12 @@ class EditorControllerRegistry {
     return this.controllers.get(paneId);
   }
 
+  /** Visit every registered controller (e.g. resolve the editor under a
+   *  screen point at drop time). */
+  forEach(fn: (controller: EditorController, paneId: string) => void): void {
+    this.controllers.forEach((controller, paneId) => fn(controller, paneId));
+  }
+
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
