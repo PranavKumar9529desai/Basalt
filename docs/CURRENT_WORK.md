@@ -7,6 +7,69 @@
 
 ---
 
+
+## File drag-and-drop (tree → editor, tree → canvas) — COMPLETE + survey
+
+**Branch:** `feat/adr039-mermaid-math` (on top of user's ADR-039 WIP)
+**Status:** Two commits landed; remaining DnD surfaces surveyed below.
+
+### Commits
+
+- `9a6b25a` `feat(dnd): drag notes from the file tree into the editor` —
+  tree file rows arm a pointer-drag (WebKitGTK fires no HTML5 `dragstart`;
+  same reason tab drags use pointers); past the 5px threshold a floating
+  ghost follows the cursor; dropping over a CM6 pane inserts `[[stem]]` at
+  the caret. Source: `packages/ui` `FileTreeNode` `onDragStart` prop; vault
+  adapter maps `FileNode → FlatTreeNode` + `DraggedFile`;
+  `shared/fileDnd/` (state, `useFileDrag`, ghost, `dispatchFileDrop`);
+  `EditorControllerRegistry.forEach` to resolve the pane under the cursor.
+- `96a346c` `feat(dnd): drop file-tree notes onto the canvas as file nodes` —
+  `features/canvas/lib/canvasDrop.ts` per-pane registry (keyed
+  register/unregister, rect hit-test); `CanvasView` threads `paneId` +
+  `containerRef`, converts the screen point via
+  `reactFlowInstance.screenToFlowPosition`, creates a `canvasFile` node at
+  the drop (same shape as picker/native-drop paths); `drop.ts` routes
+  `.react-flow` hits there.
+
+### Verification
+
+8 new tests (3 drag-state, 2 editor-drop, 3 canvas-drop registry).
+`bun run lint` clean; `bunx tsc --noEmit` reports only the PRE-EXISTING
+ADR-039 WIP error in `packages/editor/src/syntax/registry.ts` (`markdownMath`
+not exported by `@codemirror/lang-markdown` — user's uncommitted work, proven
+by stash test to fail identically without our changes); full app suite 290
+pass, the same 5 editor/search suites crash on that WIP import (0 test
+failures). GUI smoke not run (native Tauri window).
+
+### DnD surface survey — where else we need it
+
+Priorities for Obsidian parity, reusing `shared/fileDnd` (source-agnostic:
+any row/list can arm `useFileDrag` with a `DraggedFile`; `dispatchFileDrop`
+already routes editor + canvas):
+
+1. **Tree → folder to move** (HIGH value, MEDIUM cost). Today moving a note
+   is context-menu → rename/move dialog. Drop a file row onto a folder row
+   (or between rows) → Rust `folders::move_rename` (exists). Needs a
+   tree-internal drop target + hover affordance; DISABLES HTML5-native
+   tree-drag conflicts.
+2. **Search results → editor `[[wikilink]]`** (HIGH value, LOW cost). Search
+   result rows already know the note path; arm drag →
+   `dispatchFileDrop` works unchanged. Same for backlinks and graph nodes.
+3. **Tree tab → pane/tab bar to open there** (MEDIUM, MEDIUM). Drag a note
+   onto a tab pill or pane body to open it in that pane (split semantics).
+   Reuses tab DnD drop targets partially.
+4. **OS file/URL → editor embed/link** (MEDIUM, LOW). Native HTML5 drops
+   INTO the app do fire on Linux; a CM6 `domEventHandlers.drop` can insert
+   `![[embed]]`/link. Paste-image already proves the insert path.
+5. **OS file → canvas** (MEDIUM, LOW). Canvas `onDrop` already handles this
+   (native event) — verify/unchanged.
+6. Deferred: editor → tree drag-out (renderer complexity, low value); canvas
+   node → editor link (context menu suffices).
+
+Not committed here: nothing beyond the two feature commits; user's ADR-039
+WIP (AGENTS.md, `packages/editor/*`, `packages/theme/*`, `packages/ui
+globals.css`, `scratch/`, `scripts/generate-brand-assets.py`) untouched.
+
 ## Settings system (ADR-037) — COMPLETE
 
 **Status:** Registry-driven settings modal implemented per ADR-037 + the UI
