@@ -50,6 +50,27 @@ export interface LinkSuggestion {
   path: string;
 }
 
+/**
+ * Mirrors `basalt_vault::BacklinkMention` — one line in a backlinking note
+ * that contains a link resolving to the active note.
+ */
+export interface BacklinkMention {
+  /** 1-based line number, matching the editor's line convention. */
+  line: number;
+  /** Trimmed excerpt of the line, ellipsized around the match. */
+  excerpt: string;
+}
+
+/**
+ * Mirrors `basalt_vault::BacklinkContext` — a backlinking note plus the
+ * concrete mentions of the active note inside it.
+ */
+export interface BacklinkEntry {
+  path: string;
+  name: string;
+  mentions: BacklinkMention[];
+}
+
 export type SaveStatus = "saved" | "saving" | "unsaved" | "conflict";
 
 /**

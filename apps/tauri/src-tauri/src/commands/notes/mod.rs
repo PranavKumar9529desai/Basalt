@@ -11,7 +11,7 @@ use crate::error::{AppError, AppResult};
 
 use super::common::{canonical_md_path, resolve_parent_dir, write_markdown_note};
 use basalt_vault::path_utils::resolve_creation_path;
-
+use basalt_vault::BacklinkContext;
 mod rename;
 mod rename_attachments;
 pub use rename::rename_note;
@@ -27,17 +27,22 @@ pub struct RenameNoteResult {
     pub updated_files: Vec<String>,
 }
 
-/// Return the paths of all notes that link to the given file.
+
+/// Return the notes that link to `path` with the concrete mention lines
+/// (line number + excerpt) inside each one. Resolution matches Obsidian: bare
+/// name, vault-relative path, `.md` variants, arbitrary casing, and declared
+/// aliases all count.
 #[tauri::command]
-pub fn get_backlinks(path: String, state: State<AppState>) -> AppResult<Vec<String>> {
+pub fn get_backlinks(path: String, state: State<AppState>) -> AppResult<Vec<BacklinkContext>> {
     let abs = canonical_md_path(&path)?;
+    let abs_str = abs.to_str().unwrap_or_default();
 
     let vault = state
         .vault
         .read()
         .map_err(|_| AppError::LockPoisoned("vault"))?;
 
-    Ok(vault.backlinks_for(abs.to_str().unwrap_or_default()))
+    Ok(vault.backlink_contexts(abs_str))
 }
 
 #[derive(Serialize)]

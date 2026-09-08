@@ -1,3 +1,4 @@
+import type { BacklinkEntry } from "../types";
 import { create } from "zustand";
 
 /**
@@ -10,9 +11,9 @@ export interface ActiveNoteStore {
   /** The note (path + name) that the active tab has loaded. */
   activeNote: { path: string; name: string } | null;
   /** Backlinks for the active note — shown in the right sidebar. */
-  activeNoteBacklinks: string[];
+  activeNoteBacklinks: BacklinkEntry[];
   setActiveNote: (note: { path: string; name: string } | null) => void;
-  setActiveNoteBacklinks: (paths: string[]) => void;
+  setActiveNoteBacklinks: (entries: BacklinkEntry[]) => void;
   /** Live editor stats — consumed by the status bar. */
   chars: number;
   words: number;
@@ -23,7 +24,7 @@ export const useActiveNoteStore = create<ActiveNoteStore>()((set) => ({
   activeNote: null,
   activeNoteBacklinks: [],
   setActiveNote: (note) => set({ activeNote: note }),
-  setActiveNoteBacklinks: (paths) => set({ activeNoteBacklinks: paths }),
+  setActiveNoteBacklinks: (entries) => set({ activeNoteBacklinks: entries }),
   chars: 0,
   words: 0,
   setStats: (stats) => set({ chars: stats.chars, words: stats.words }),

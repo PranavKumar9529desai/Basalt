@@ -1,28 +1,42 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, type FC } from "react";
-import type { LinkSuggestion } from "../types";
+import { useMemo, useRef, useState, type FC } from "react";
+import type { BacklinkEntry } from "../types";
 
 interface BacklinksSidebarProps {
-  backlinks: string[];
-  onOpenNote: (note: LinkSuggestion) => void;
+  /** Notes that link to the active note, each with its mention lines. */
+  backlinks: BacklinkEntry[];
+  /** Open a backlinking note, optionally jumping to a mention line. */
+  onOpenNote: (path: string, line?: number) => void;
 }
 
-function pathToLinkSuggestion(path: string): LinkSuggestion {
-  const name = path.split("/").pop() ?? path;
-  return { name, path };
-}
-
+/**
+ * Right-dock backlinks panel. Mirrors Obsidian's shape: one row per
+ * backlinking note, with each mention's excerpt below it. Entries that link
+ * only via frontmatter (graph edges with no prose mentions) render a muted
+ * hint instead of excerpts. List is virtualized; mentions per entry are
+ * capped at 5 by the Rust side, so they render flat.
+ */
 export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
   backlinks,
   onOpenNote,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [filter, setFilter] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? backlinks.filter((e) => e.name.toLowerCase().includes(q)) : backlinks;
+  }, [backlinks, filter]);
+
+  // An entry's height: heading (~28px) + one 26px row per mention + padding.
+  const estimateSize = (index: number) =>
+    30 + Math.max(1, filtered[index].mentions.length) * 26 + 6;
 
   const rowVirtualizer = useVirtualizer({
-    count: backlinks.length,
+    count: filtered.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 34,
-    overscan: 10,
+    estimateSize,
+    overscan: 6,
     paddingStart: 4,
     paddingEnd: 4,
   });
@@ -61,10 +75,26 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
             {backlinks.length}
           </span>
         )}
+        {backlinks.length > 1 && (
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter"
+            aria-label="Filter backlinks"
+            className="
+              w-24 text-xs px-2 py-1 rounded
+              bg-[var(--sat-surface-1)]
+              text-[var(--sat-text-primary)]
+              placeholder:text-[var(--sat-text-muted)]
+              border border-[var(--sat-layout-border)]
+              focus:outline-none focus:border-[var(--sat-accent-primary)]
+            "
+          />
+        )}
       </div>
 
       {/* List */}
-      <div ref={parentRef} className="flex-1 overflow-auto py-1">
+      <div ref={parentRef} className="flex-1 overflow-auto py-1" data-testid="backlinks-list">
         {backlinks.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
             <svg
@@ -94,6 +124,10 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
               No notes link here yet.
             </p>
           </div>
+        ) : filtered.length === 0 ? (
+          <p className="px-4 py-3 text-xs text-[var(--sat-text-muted)]">
+            No matches for “{filter}”.
+          </p>
         ) : (
           <div
             style={{
@@ -102,11 +136,10 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
             }}
           >
             {rowVirtualizer.getVirtualItems().map((vItem) => {
-              const path = backlinks[vItem.index];
-              const note = pathToLinkSuggestion(path);
+              const entry = filtered[vItem.index];
               return (
                 <div
-                  key={path}
+                  key={entry.path}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -115,43 +148,53 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                     transform: `translateY(${vItem.start}px)`,
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => onOpenNote(note)}
-                    title={path}
-                    className="
-                      w-full text-left
-                      flex items-center gap-2
-                      px-3 py-1.5
-                      text-sm text-[var(--sat-text-primary)]
-                      hover:bg-[var(--sat-surface-3)]
-                      transition-colors truncate
-                    "
-                  >
-                    {/* File icon */}
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                      className="shrink-0 text-[var(--sat-text-muted)]"
+                  <div className="px-3 pb-1.5">
+                    {/* Note heading — opens the note itself */}
+                    <button
+                      type="button"
+                      onClick={() => onOpenNote(entry.path)}
+                      title={entry.path}
+                      className="
+                        group flex items-baseline gap-2 w-full text-left
+                        text-sm font-medium text-[var(--sat-text-primary)]
+                        hover:text-[var(--sat-accent-primary)]
+                        transition-colors py-0.5
+                      "
                     >
-                      <path
-                        d="M9.5 1.5H3.5A1 1 0 0 0 2.5 2.5V13.5A1 1 0 0 0 3.5 14.5H12.5A1 1 0 0 0 13.5 13.5V5.5L9.5 1.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        fill="none"
-                      />
-                      <path
-                        d="M9.5 1.5V5.5H13.5"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="truncate">{note.name}</span>
-                  </button>
+                      <span className="truncate">{entry.name}</span>
+                      <span className="text-[10px] font-normal text-[var(--sat-text-muted)] tabular-nums shrink-0">
+                        {entry.mentions.length}
+                      </span>
+                    </button>
+
+                    {entry.mentions.length === 0 ? (
+                      <p className="pl-1 text-[11px] italic text-[var(--sat-text-muted)] leading-5">
+                        Linked in frontmatter
+                      </p>
+                    ) : (
+                      <ul>
+                        {entry.mentions.map((m) => (
+                          <li key={m.line}>
+                            <button
+                              type="button"
+                              onClick={() => onOpenNote(entry.path, m.line)}
+                              title={`Line ${m.line}`}
+                              className="
+                                w-full text-left truncate
+                                text-xs leading-6
+                                text-[var(--sat-text-secondary)]
+                                hover:bg-[var(--sat-surface-3)]
+                                hover:text-[var(--sat-text-primary)]
+                                rounded px-1.5 transition-colors
+                              "
+                            >
+                              {m.excerpt}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               );
             })}

@@ -12,7 +12,7 @@ export function Backlinks() {
   return (
     <BacklinksSidebar
       backlinks={activeNoteBacklinks}
-      onOpenNote={({ path }) => openNote(path)}
+      onOpenNote={(path, line) => openNote(path, line)}
     />
   );
 }

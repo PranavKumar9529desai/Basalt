@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
 import type { QueryResult } from "@workspace/editor";
 import { useActiveNoteStore } from "../store";
-import type { LinkSuggestion, SaveStatus } from "../types";
+import type { BacklinkEntry, LinkSuggestion, SaveStatus } from "../types";
 
 import { parseFrontmatter } from "../lib/frontmatter";
 
@@ -31,7 +31,7 @@ export function useNoteIO() {
 
   const refreshBacklinks = useCallback(async (path: string) => {
     try {
-      const links = await invoke<string[]>("get_backlinks", { path });
+      const links = await invoke<BacklinkEntry[]>("get_backlinks", { path });
       useActiveNoteStore.getState().setActiveNoteBacklinks(links);
     } catch (err) {
       console.error("[useNoteIO] get_backlinks failed:", err);

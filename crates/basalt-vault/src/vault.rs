@@ -61,19 +61,6 @@ impl Vault {
         self.graph.metadata_cache.len()
     }
 
-    /// Absolute paths of the notes that link to `path`.
-    pub fn backlinks_for(&self, path: &str) -> Vec<String> {
-        let Some(doc_id) = self.arena.get_id(path) else {
-            return Vec::new();
-        };
-        let Some(backlinks) = self.graph.get_back_links(doc_id) else {
-            return Vec::new();
-        };
-        backlinks
-            .iter()
-            .filter_map(|id| self.arena.get_string(*id).cloned())
-            .collect()
-    }
 
     /// All distinct frontmatter/in-body tags across the vault, sorted.
     pub fn all_tags(&self) -> Vec<String> {

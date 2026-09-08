@@ -127,24 +127,24 @@ impl NoteRename {
 
 /// Normalize a raw wikilink target the way the graph resolver does: strip
 /// surrounding whitespace, lowercase, drop a trailing `.md` extension.
-fn normalize_target(target: &str) -> String {
+pub fn normalize_target(target: &str) -> String {
     let trimmed = target.trim();
     let lower = trimmed.to_lowercase();
     let stem = lower.strip_suffix(".md").unwrap_or(&lower);
     stem.trim_end().to_string()
 }
 
-struct WikilinkSpec {
+pub struct WikilinkSpec {
     /// Byte offsets of the *target* portion inside `[[...]]` (before any
     /// `|` alias or `#` anchor), including the path prefix and trailing
     /// whitespace trimmed at the tail.
-    target_from: usize,
-    target_to: usize,
+    pub target_from: usize,
+    pub target_to: usize,
 }
 
 /// Scan `text` for every `[[...]]` occurrence and return the byte range of
 /// each one's target (content before the first `|` or `#`, tail-trimmed).
-fn scan_wikilinks(text: &str) -> Vec<WikilinkSpec> {
+pub fn scan_wikilinks(text: &str) -> Vec<WikilinkSpec> {
     let bytes = text.as_bytes();
     let mut out = Vec::new();
     let mut i = 0;
