@@ -7,6 +7,41 @@
 
 ---
 
+## Branch merge — `feat/adr039-mermaid-math` → `main` (2026-09-08)
+
+**Status:** Merged. The branch carried every feature workstream since the
+ADR-038 gate; all landed on `main` in one fast-forward (see commits below).
+Check the post-merge gate (`bun run lint && bunx tsc --noEmit`, app vitest,
+`cargo test --workspace`, clippy `-D warnings`) before further work.
+
+### What merged (bottom → top)
+
+- **File DnD** (`9a6b25a`, `96a346c`, `f2ecfb1`) — tree → editor `[[wikilink]]`
+  at caret; tree → canvas file node; pointer-events machinery in
+  `shared/fileDnd/` (WebKitGTK fires no HTML5 `dragstart`).
+- **ADR-039 math/mermaid** (`c1a129f`…`b856177`) — mermaid + KaTeX widget
+  registry, strict securityLevel, content-keyed cache, phase-5 test gate.
+- **Backlinks** (`49b35bf`) — context snippets + link resolution + panel.
+- **Brand/typography** (`f7636b4`) — typography architecture + volcanic theme
+  + asset suite.
+- **Tags** (`e514979`) — Tags dock + tantivy `tag:` operator + clickable
+  `#tag` pills → prefilled search. Includes a mid-refactor restore of the
+  `get_graph`/`autocomplete_links`/`autocomplete_tags` invoke registrations
+  (TS still calls all three).
+
+### Gate evidence (pre-merge, working tree)
+
+tsc + oxlint clean; app vitest 335/335 (+ TagsSidebar 5/5, packages/editor
+274/274); `cargo test --workspace` green (basalt_vault 46, tauri_lib 53,
+basalt_types 8, tables suites); clippy `-D warnings` clean. One QuickSwitcher
+timeout on a shared-CPU run proved to be load flake (passes in 1.7 s solo).
+
+### Remaining known debt
+
+- Rust batched IPC; plugin host (ADR-018 Phase 5) — both still `⏳ Not
+  started` on the status table.
+- Untracked agent scratch (brand assets) was never committed into the branch.
+
 
 ## File drag-and-drop (tree → editor, tree → canvas) — COMPLETE + survey
 
