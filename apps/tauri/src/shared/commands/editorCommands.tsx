@@ -16,6 +16,7 @@
  * tableCommands.tsx; dev/benchmark harnesses in devBenchmarks.ts.
  */
 import { selectAll } from "@codemirror/commands";
+import { openSearchPanel } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
 import {
   IconBold,
@@ -27,7 +28,9 @@ import {
   IconH3,
   IconItalic,
   IconLink,
+  IconReplace,
   IconScissors,
+  IconSearch,
   IconSelect,
   IconStrikethrough,
 } from "@tabler/icons-react";
@@ -199,6 +202,33 @@ const editorCommands = [
     callback: () => {
       const view = getActiveView();
       if (view) applyToLineStart(view, "### ");
+    },
+  },
+  {
+    id: "editor:find",
+    name: "Find…",
+    category: "Editor",
+    icon: <IconSearch size={16} />,
+    callback: () => {
+      const view = getActiveView();
+      if (view) openSearchPanel(view);
+    },
+  },
+  {
+    id: "editor:replace",
+    name: "Replace…",
+    category: "Editor",
+    icon: <IconReplace size={16} />,
+    callback: () => {
+      const view = getActiveView();
+      if (!view) return;
+      // The default panel hosts find + replace; focus the replace field.
+      openSearchPanel(view);
+      const replace = view.dom.querySelector<HTMLInputElement>(
+        '.cm-search input[name="replace"]',
+      );
+      replace?.focus();
+      replace?.select();
     },
   },
   {

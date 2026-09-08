@@ -15,6 +15,7 @@ import {
 import { TASK_CHECKBOX_THEME, taskListPlugin } from "./input/task-list";
 import { LIVE_PREVIEW_THEME, livePreviewPlugin } from "./preview/live-preview";
 import { BASE_EDITOR_THEME } from "./styling/base";
+import { SEARCH_PANEL_THEME } from "./styling/search-panel";
 import { codeSyntaxHighlightingExtension } from "./syntax/code-highlight-style";
 import { clickableLinksPlugin } from "./syntax/wiki-links";
 import { clickableTagsPlugin } from "./syntax/tags";
@@ -54,6 +55,7 @@ import {
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
 import { openExternalLinkFacet, openTagFacet, resolveAssetFacet } from "./types";
+import { search } from "@codemirror/search";
 import { renderModeReading } from "./preview/render-mode";
 import { readingLinkHandler } from "./links";
 
@@ -143,7 +145,6 @@ export function createEditorExtensionGroups(
   if (includeDefaultTheme) {
     themeStack.push(BASE_EDITOR_THEME);
   }
-
   return {
     base: [
       markdown({
@@ -153,6 +154,10 @@ export function createEditorExtensionGroups(
       }),
       ...themeStack,
       EditorView.lineWrapping,
+      // Find & Replace (Cmd+F / Cmd+H): panel lives outside the mode
+      // compartment so it works in edit AND reading mode.
+      search({ top: true }),
+      SEARCH_PANEL_THEME,
     ],
     syntax: [codeSyntaxHighlightingExtension()],
     input: [
