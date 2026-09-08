@@ -94,4 +94,10 @@ describe("highlightExtension", () => {
     );
     expect(marks).toEqual(["==", "=="]);
   });
+
+  it("parses nested inline elements like math and wikilinks inside highlights", () => {
+    const { tree } = parseMarkdown("==important $E = mc^2$ formula==");
+    expect(nodesOfType(tree, "Highlight")).toHaveLength(1);
+    expect(nodesOfType(tree, "InlineMath")).toHaveLength(1);
+  });
 });

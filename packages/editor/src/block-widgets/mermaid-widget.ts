@@ -114,6 +114,7 @@ class MermaidWidget extends WidgetType {
           // click handlers, javascript: URIs, and HTML labels. Mermaid internally
           // runs DOMPurify on its output at this level. Never set to 'loose'.
           securityLevel: "strict",
+          suppressErrorRendering: true,
           theme: this.theme as "dark" | "default" | "base" | "forest" | "neutral",
         });
         mermaidInitialized = true;
@@ -139,6 +140,14 @@ class MermaidWidget extends WidgetType {
       // can reflow the document around the newly rendered SVG.
       notifyViewOfSizeChange(container, view);
     } catch (err) {
+      // Clean up any stray error elements Mermaid may have injected into document.body
+      if (typeof document !== "undefined") {
+        const stray = document.querySelectorAll(
+          `[id^="dcm-mermaid-"], [id^="cm-mermaid-"].error-icon, .mermaid-error`,
+        );
+        stray.forEach((el) => el.remove());
+      }
+
       if (!container.isConnected) return;
       placeholder.remove();
       const errDiv = document.createElement("div");
