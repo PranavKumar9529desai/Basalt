@@ -29,11 +29,13 @@ function nodeRef(from: number, to: number, name: string): SyntaxNodeRef {
 describe("HIDE_MARKS", () => {
   it("contains the expected marker node types", () => {
     expect([...HIDE_MARKS].sort()).toEqual([
+      "BlockMathMark",
       "CodeMark",
       "EmbedMark",
       "EmphasisMark",
       "HeaderMark",
       "HighlightMark",
+      "InlineMathMark",
       "LinkMark",
       "QuoteMark",
       "StrikethroughMark",

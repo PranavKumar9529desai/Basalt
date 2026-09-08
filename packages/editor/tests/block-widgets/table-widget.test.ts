@@ -32,9 +32,10 @@ function tableWidgetHtml(state: EditorState): HTMLElement | null {
   };
   let found: HTMLElement | null = null;
   preview.decorations.between(0, state.doc.length, (_from, _to, deco) => {
-    const widget = (deco as { widget?: { toDOM?: () => HTMLElement } }).widget;
+    const widget = (deco as { widget?: { toDOM?: (view?: EditorView) => HTMLElement } }).widget;
     if (widget?.toDOM && widget.constructor.name === "TableBlockWidget") {
-      found = widget.toDOM();
+      const mockView = new EditorView({ state });
+      found = widget.toDOM(mockView);
     }
   });
   return found;

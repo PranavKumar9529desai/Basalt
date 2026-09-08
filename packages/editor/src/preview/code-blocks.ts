@@ -248,7 +248,7 @@ export function handleCodeBlockNode(
   if (name === "FencedCode") {
     const langMatch = startLine.text.match(/^```([^\s]*)/);
     const lang = langMatch ? langMatch[1].toLowerCase() : "";
-    if (lang === "dql" || lang === "dataview") {
+    if (lang === "dql" || lang === "dataview" || lang === "mermaid") {
       addCodeLineClasses(startRenderLine, endRenderLine, doc, collector);
       return false;
     }

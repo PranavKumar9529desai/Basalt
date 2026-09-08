@@ -1,5 +1,5 @@
 import type { EditorState } from "@codemirror/state";
-import { WidgetType } from "@codemirror/view";
+import { type EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
@@ -63,7 +63,7 @@ class MathBlockWidget extends WidgetType {
     return this.latex === other.latex;
   }
 
-  toDOM(): HTMLElement {
+  toDOM(_view?: EditorView): HTMLElement {
     const container = document.createElement("div");
     container.className = "cm-math-block";
 
@@ -179,7 +179,7 @@ export class MathInlineWidget extends WidgetType {
     return this.latex === other.latex;
   }
 
-  toDOM(): HTMLElement {
+  toDOM(_view?: EditorView): HTMLElement {
     const span = document.createElement("span");
     span.className = "cm-math-inline";
 
@@ -207,7 +207,7 @@ export class MathInlineWidget extends WidgetType {
         span.innerHTML = html;
       } catch {
         // Fallback: show raw source in error style
-        span.innerHTML = `<span class="cm-math-error">\$${escapeHtml(latex)}\$</span>`;
+        span.innerHTML = `<span class="cm-math-error">$${escapeHtml(latex)}$</span>`;
       }
     });
 

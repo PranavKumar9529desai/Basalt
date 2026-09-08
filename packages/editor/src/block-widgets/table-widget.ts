@@ -205,14 +205,18 @@ export class TableBlockWidget extends WidgetType {
     // 1. Top-Right Code Toggle Button (Live Preview only)
     let codeBtn: HTMLElement | undefined;
     if (this.model.isLive && this.view) {
-      codeBtn = createCodeToggleButton(this.view, (view) => {
-        const lineFrom = view.state.doc.lineAt(this.model.from).from;
-        const lineTo = view.state.doc.lineAt(this.model.to).to;
-        view.dispatch({
-          effects: setTableRawMode.of({ from: lineFrom, to: lineTo }),
-          selection: { anchor: this.model.from },
-        });
-      });
+      codeBtn = createCodeToggleButton(
+        this.view,
+        (view) => {
+          const lineFrom = view.state.doc.lineAt(this.model.from).from;
+          const lineTo = view.state.doc.lineAt(this.model.to).to;
+          view.dispatch({
+            effects: setTableRawMode.of({ from: lineFrom, to: lineTo }),
+            selection: { anchor: this.model.from },
+          });
+        },
+        { className: "cm-table-btn-code" },
+      );
     }
 
     // 2. Build <table> DOM
