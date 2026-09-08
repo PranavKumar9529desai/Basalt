@@ -18,9 +18,6 @@ import type { GraphColorMode } from "../components/GraphControls";
 import { createInteractions, type HoverState, type MenuState, type Ref } from "./interactions";
 import {
   ARROW_EDGE_CAP,
-  LABEL_CAP,
-  LABEL_SCALE,
-  NODE_R,
   buildArrows,
   centerView,
   fitView,
@@ -29,13 +26,15 @@ import {
   type ViewTransform,
 } from "./geometry";
 import {
-  colorFor,
+  buildColorArray,
   FALLBACK_COLORS,
   readThemeColors,
   type ColorContext,
   type ThemeColors,
 } from "./themeColors";
-import { basename, buildVisible } from "./filters";
+import { buildVisible } from "./filters";
+import { drawOverlayLabels } from "./labels";
+import { snapshotToGraphData } from "./graphData";
 import { buildSubset, localSubset } from "./localGraph";
 import type { GraphFrame, GraphSnapshot, GraphWorkerMessage } from "./graphWorker";
 
@@ -77,47 +76,6 @@ export interface GraphEngine {
   closeMenu: () => void;
 }
 
-interface GraphData {
-  paths: string[];
-  tags: string[][];
-  attach: boolean[];
-  isTag: boolean[];
-  edges: Uint32Array;
-  edgeWeights: Float32Array;
-  cluster: Uint32Array;
-  clusterCount: number;
-  adj: number[][];
-  scaleInputs: Float32Array;
-}
-
-/** Shape the `get_graph` snapshot into the engine's full-graph arrays. */
-function snapshotToGraphData(g: GraphSnapshot): GraphData {
-  const paths = g.nodes.map((n) => n.path);
-  const tags = g.nodes.map((n) => n.tags);
-  const attach = g.nodes.map((n) => n.is_attachment);
-  const isTag = g.nodes.map((n) => n.is_tag);
-  const edges = Uint32Array.from(g.edges);
-  const edgeWeights = Float32Array.from(g.edge_weights ?? []);
-  const cluster = Uint32Array.from(g.nodes.map((n) => n.cluster));
-  const clusterCount = new Set(cluster).size;
-  const adj: number[][] = Array.from({ length: g.nodes.length }, () => []);
-  for (let e = 0; e < g.edges.length; e += 2) {
-    const u = g.edges[e];
-    const v = g.edges[e + 1];
-    adj[u].push(v);
-    adj[v].push(u);
-  }
-  // Sizing importance = number of *note* neighbors. Notes size by link
-  // degree; the Rust-emitted tag nodes size by their note count. Tag→tag
-  // (parent/child) edges don't inflate either.
-  const scaleInputs = new Float32Array(g.nodes.length);
-  for (let i = 0; i < g.nodes.length; i++) {
-    let d = 0;
-    for (const j of adj[i]) if (!isTag[j]) d++;
-    scaleInputs[i] = d;
-  }
-  return { paths, tags, attach, isTag, edges, edgeWeights, cluster, clusterCount, adj, scaleInputs };
-}
 
 export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
   const { openNoteRef, setQuery, controls } = opts;
@@ -210,14 +168,7 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
     const map = activeMapRef.current;
     if (!renderer || !map.length) return;
     const cctx = colorContext();
-    const cols = new Float32Array(map.length * 3);
-    for (let i = 0; i < map.length; i++) {
-      const c = colorFor(map[i], cctx);
-      cols[i * 3] = c[0];
-      cols[i * 3 + 1] = c[1];
-      cols[i * 3 + 2] = c[2];
-    }
-    renderer.setColors(cols);
+    renderer.setColors(buildColorArray(map, cctx));
     if (flagsRef.current.length === map.length) {
       flagsRef.current.fill(0);
       flagsDirtyRef.current = true;
@@ -393,15 +344,8 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
 
       // Rebuild renderer color + reset hover flags for the new subset.
       renderer.setSizes(subset.sizes);
-            const cctx = colorContextRef.current();
-      const cols = new Float32Array(map.length * 3);
-      for (let i = 0; i < map.length; i++) {
-        const c2 = colorFor(map[i], cctx);
-        cols[i * 3] = c2[0];
-        cols[i * 3 + 1] = c2[1];
-        cols[i * 3 + 2] = c2[2];
-      }
-      renderer.setColors(cols);
+      const cctx = colorContextRef.current();
+      renderer.setColors(buildColorArray(map, cctx));
       renderer.setEdges(Uint32Array.from(subset.edges), subset.edges.length / 2);
       renderer.setEdgeWeights(Float32Array.from(subset.edgeWeights));
       if (flagsRef.current.length !== map.length) {
@@ -527,11 +471,7 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
             );
             renderer.setSizes(sizesRef.current);
             const cctx = colorContextRef.current();
-            renderer.setColors(
-              new Float32Array(
-                activeMapRef.current.flatMap((full) => colorFor(full, cctx)),
-              ),
-            );
+            renderer.setColors(buildColorArray(activeMapRef.current, cctx));
             renderer.setEdges(
               activeEdgesRef.current,
               activeEdgesRef.current.length / 2,
@@ -577,39 +517,25 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
           // Bin nodes in screen space for O(local) hover hit-testing; reused while idle.
           gridRef.current.build(p, count, project);
         }
-        // Labels on the transparent 2D overlay (only when zoomed past LABEL_SCALE).
-        const w = glCanvas.clientWidth || 800;
-        const h = glCanvas.clientHeight || 600;
-        labelCtx.clearRect(0, 0, w, h);
-        const hov = hoverRef.current;
-        const neighbors = hov >= 0 ? activeAdjRef.current[hov] : null;
-        // Set for O(1) membership below — `neighbors.includes(i)` inside the
-        // per-node label loop would be O(n·deg) on every mouse move.
-        const neighborSet = neighbors ? new Set(neighbors) : null;
-        const hoverMode = hov >= 0;
-        // On hover, the focused node's neighborhood is always labeled (Obsidian
-        // behavior); outside hover, labels appear once the user zooms in.
-        // LABEL_CAP stays as a hard safety bound either way.
-        const showLabels =
-          count < LABEL_CAP && (hoverMode || v.scale > LABEL_SCALE);
-        if (showLabels) {
-          labelCtx.font = "10px system-ui, sans-serif";
-          labelCtx.fillStyle = themeColorsRef.current.label;
-          for (let i = 0; i < count; i++) {
-            if (i * 2 + 1 >= p.length) break;
-            const full = map[i];
-            const [px, py] = project(p[i * 2], p[i * 2 + 1]);
-            const related =
-              hoverMode && (i === hov || (neighborSet && neighborSet.has(i)));
-            if (hoverMode && !related) continue;
-            labelCtx.globalAlpha = 1;
-            const lbl = isTagRef.current[full]
-              ? `#${pathsRef.current[full] ?? ""}`
-              : basename(pathsRef.current[full] ?? "");
-            labelCtx.fillText(lbl, px + NODE_R + 2, py + 3);
-          }
-          labelCtx.globalAlpha = 1;
-        }
+        // Labels on the transparent 2D overlay (only when zoomed past
+        // LABEL_SCALE); the hovered node's neighborhood is always labeled.
+        drawOverlayLabels(labelCtx, {
+          canvasW: glCanvas.clientWidth || 800,
+          canvasH: glCanvas.clientHeight || 600,
+          positions: p,
+          count,
+          map,
+          hoverIndex: hoverRef.current,
+          neighbors:
+            hoverRef.current >= 0
+              ? activeAdjRef.current[hoverRef.current]
+              : null,
+          project,
+          isTag: isTagRef.current,
+          paths: pathsRef.current,
+          labelColor: themeColorsRef.current.label,
+          scale: v.scale,
+        });
         dirtyRef.current = false;
       }
       raf = requestAnimationFrame(draw);

@@ -15,7 +15,7 @@ export interface ThemeColors {
 }
 
 export const FALLBACK_COLORS: ThemeColors = {
-  note: [0.54, 0.58, 0.6],
+  note: [1, 0.416, 0],
   attachment: [0.54, 0.58, 0.6],
   tag: [
     [0.3, 0.76, 1],
@@ -25,7 +25,7 @@ export const FALLBACK_COLORS: ThemeColors = {
     [0.34, 0.65, 1],
     [0.9, 0.93, 0.95],
   ],
-  tagFill: [0.25, 0.73, 0.31],
+  tagFill: [1, 0.416, 0],
   edge: [0.54, 0.58, 0.6],
   label: "#c9d1d9",
   hoverFill: [0.3, 0.76, 1],
@@ -57,7 +57,7 @@ export function readThemeColors(): ThemeColors {
     return tmp.fillStyle;
   };
   return {
-    note: resolve("--sat-graph-node", "#8b949e"),
+    note: resolve("--sat-graph-node", "#ff6a00"),
     attachment: resolve("--sat-graph-attachment", "#8b949e"),
     tag: [
       resolve("--sat-accent-primary", "#4cc2ff"),
@@ -67,7 +67,7 @@ export function readThemeColors(): ThemeColors {
       resolve("--sat-state-info", "#58a6ff"),
       resolve("--sat-text-primary", "#e6edf3"),
     ],
-    tagFill: resolve("--sat-graph-tag", "#3fb950"),
+    tagFill: resolve("--sat-graph-tag", "#ff6a00"),
     edge: resolve("--sat-graph-edge", "#8b949e"),
     label: resolveCss("--sat-graph-label", "#e6edf3"),
     hoverFill: resolve("--sat-graph-hover-fill", "#4cc2ff"),
@@ -124,4 +124,21 @@ export function colorFor(full: number, ctx: ColorContext): [number, number, numb
     }
   }
   return tc.note;
+}
+
+/** Drawn RGB triples for every node in a (subset) index map — the shared
+ * color-array build used by recolor, rebuild, and renderer resource
+ * recreation. */
+export function buildColorArray(
+  map: number[],
+  colorContext: ColorContext,
+): Float32Array {
+  const cols = new Float32Array(map.length * 3);
+  for (let i = 0; i < map.length; i++) {
+    const c = colorFor(map[i], colorContext);
+    cols[i * 3] = c[0];
+    cols[i * 3 + 1] = c[1];
+    cols[i * 3 + 2] = c[2];
+  }
+  return cols;
 }

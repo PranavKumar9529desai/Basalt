@@ -2,6 +2,7 @@ import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
   type ContextMenuState,
+  type EditorExtensionGroups,
   type FrontmatterModel,
   type QueryResult,
   contextMenuExtension,
@@ -118,18 +119,7 @@ export class EditorController {
         this.scheduleStats();
       },
     });
-    const groups = createEditorExtensionGroups({
-      onFetchLinks: options.io.onFetchLinks,
-      onFetchTags: options.io.onFetchTags,
-      onOpenLink: this.handleOpenLink,
-      onOpenTag: this.handleOpenTag,
-      onPasteImage: options.io.onPasteImage,
-      parseFrontmatter: options.io.parseFrontmatter,
-      editFrontmatter,
-      runQuery: options.io.runQuery,
-      resolveAsset: this.services.resolveAsset,
-      onTableCursorChange: options.onTableCursorChange,
-    });
+    const groups = this.editGroups(options.onTableCursorChange);
     // Shared extensions live outside the compartment — present in both modes.
     // The compartment holds mode-specific extensions (edit or reading).
     const sharedExtensions: Extension[] = [
@@ -153,6 +143,27 @@ export class EditorController {
     this.initialState = EditorState.create({
       doc: "",
       extensions: this.extensions,
+    });
+  }
+
+  /** Edit-mode extension groups. The constructor wires two callback-only
+   * extras on top (context menu, table-cursor reporting); the reading →
+   * edit mode switch rebuilds the plain groups, so those extras are
+   * constructor- (and initial-mount-) only by design. */
+  private editGroups(
+    onTableCursorChange?: EditorControllerOptions["onTableCursorChange"],
+  ): EditorExtensionGroups {
+    return createEditorExtensionGroups({
+      onFetchLinks: this.io.onFetchLinks,
+      onFetchTags: this.io.onFetchTags,
+      onOpenLink: this.handleOpenLink,
+      onOpenTag: this.handleOpenTag,
+      onPasteImage: this.io.onPasteImage,
+      parseFrontmatter: this.io.parseFrontmatter,
+      editFrontmatter,
+      runQuery: this.io.runQuery,
+      resolveAsset: this.services.resolveAsset,
+      onTableCursorChange,
     });
   }
 
@@ -208,17 +219,7 @@ export class EditorController {
       });
     } else {
       // Revert to edit mode — rebuild edit extensions from the groups.
-      const groups = createEditorExtensionGroups({
-        onFetchLinks: this.io.onFetchLinks,
-        onFetchTags: this.io.onFetchTags,
-        onOpenLink: this.handleOpenLink,
-        onOpenTag: this.handleOpenTag,
-        onPasteImage: this.io.onPasteImage,
-        parseFrontmatter: this.io.parseFrontmatter,
-        editFrontmatter,
-        runQuery: this.io.runQuery,
-        resolveAsset: this.services.resolveAsset,
-      });
+      const groups = this.editGroups();
       view.dispatch({
         effects: this.modeCompartment.reconfigure([
           ...groups.input,
