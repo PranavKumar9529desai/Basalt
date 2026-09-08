@@ -7,11 +7,11 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react";
-import CommunityPluginsSection from "./components/sections/CommunityPluginsSection";
+import CommunityPluginsSection from "../components/sections/CommunityPluginsSection";
 import CorePluginsSection, {
   CORE_PLUGINS,
-} from "./components/sections/CorePluginsSection";
-import HotkeysSection from "./components/sections/HotkeysSection";
+} from "../components/sections/CorePluginsSection";
+import HotkeysSection from "../components/sections/HotkeysSection";
 import { settingsRegistry } from "./registry";
 import { getSetting } from "./settings-data";
 import {
@@ -21,7 +21,7 @@ import {
   FILES_LINKS_SPECS,
   GENERAL_SPECS,
   TEMPLATES_SPECS,
-} from "./specs";
+} from "../specs";
 
 /**
  * Boot-time settings section registrations (ADR-037 §1 / spec §7.2).

@@ -13,13 +13,13 @@ import { Table } from "@lezer/markdown";
 import {
   livePreviewField,
   livePreviewPlugin,
-} from "../src/preview/live-preview";
-import { renderModeReading } from "../src/preview/render-mode";
-import { registerBlockWidget } from "../src/block-widgets/registry";
-import { tableBlockSpec } from "../src/block-widgets/table-widget";
-import { dqlBlockSpec } from "../src/block-widgets/dql-widget";
-import { setTableRawMode } from "../src/block-widgets/table-state";
-import { wikiLinkExtension } from "../src/syntax/wiki-links";
+} from "../../src/preview/live-preview";
+import { renderModeReading } from "../../src/preview/render-mode";
+import { registerBlockWidget } from "../../src/block-widgets/registry";
+import { tableBlockSpec } from "../../src/block-widgets/table-widget";
+import { dqlBlockSpec } from "../../src/block-widgets/dql-widget";
+import { setTableRawMode } from "../../src/block-widgets/table-state";
+import { wikiLinkExtension } from "../../src/syntax/wiki-links";
 
 function stateFor(
   doc: string,

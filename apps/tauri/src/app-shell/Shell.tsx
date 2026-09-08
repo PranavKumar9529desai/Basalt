@@ -45,6 +45,7 @@ import {
   useAppContext,
   useLeafServices,
   useShellCommands,
+  useGestures,
   ViewHeader,
   startEditorContextSync,
 } from "../shared";
@@ -118,6 +119,7 @@ function WorkspaceShell({
   const handleTabPinToggle = togglePinTab;
 
   useShellCommands(ws);
+  useGestures();
   const leafServices = useLeafServices(ws);
   const { openNote, findNote } = ws;
 

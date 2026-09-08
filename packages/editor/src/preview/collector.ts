@@ -17,7 +17,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { editorBenchmarkState } from "../benchmark";
+import { editorBenchmarkState } from "../perf/benchmark";
 import { renderModeFacet } from "./render-mode";
 import { handleBlockquoteNode } from "./blockquotes";
 import { handleCalloutNode } from "./callouts";

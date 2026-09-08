@@ -10,7 +10,7 @@
 // `graph_reheat` / `graph_set_position`.
 //
 // This module is loaded ONLY as a worker entry (`new Worker(new URL(...))` in
-// lib/useGraphEngine.ts) — main-thread code imports its message types with
+// hooks/useGraphEngine.ts) — main-thread code imports its message types with
 // `import type`, which the compiler erases.
 import init from "../components/graph_sim.wasm?init";
 

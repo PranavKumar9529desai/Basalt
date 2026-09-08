@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import type { FlatTreeNode } from "../features/vault";
 import type { TabModel } from "../features/tabs";
-import type { TabClickOpenBehavior } from "../features/settings/settings-data";
+import type { TabClickOpenBehavior } from "../features/settings/lib/settings-data";
 import type { UseVaultMutationsReturn } from "../features/vault/hooks/useVaultMutations";
 import type { UseVaultControllerReturn } from "../features/vault/hooks/useVaultController";
 import type { TabsState } from "../features/tabs/store/types";

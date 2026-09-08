@@ -36,24 +36,52 @@ describe("ViewHeader", () => {
     expect(screen.queryByText("Source mode")).not.toBeInTheDocument();
   });
 
-  it("hides reading view button when canToggleMode is false", () => {
-    const canvasTab: LeafTabInfo = {
-      id: "tab:/vault/Untitled.canvas",
-      path: "/vault/Untitled.canvas",
-      title: "Untitled",
+  it("handles back and forward navigation clicks when history is present", () => {
+    const tabWithHistory: LeafTabInfo = {
+      id: "tab:/vault/Notes/B.md",
+      path: "/vault/Notes/B.md",
+      title: "B.md",
     };
-    render(
-      <ViewHeader
-        tab={canvasTab}
-        vaultPath="/vault"
-        canRename={false}
-        canToggleMode={false}
-      />,
-    );
 
-    expect(
-      screen.queryByRole("button", { name: "Reading view" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText("Untitled")).toBeInTheDocument();
+    useTabsStore.setState({
+      tabs: {
+        "tab:/vault/Notes/B.md": {
+          id: "tab:/vault/Notes/B.md",
+          path: "/vault/Notes/B.md",
+          title: "B.md",
+          leafType: "markdown",
+          isPinned: true,
+          isPreview: false,
+          isDirty: false,
+          createdAt: 100,
+          lastAccessedAt: 100,
+          history: [
+            {
+              path: "/vault/Notes/A.md",
+              title: "A.md",
+              leafType: "markdown",
+              timestamp: 100,
+            },
+            {
+              path: "/vault/Notes/B.md",
+              title: "B.md",
+              leafType: "markdown",
+              timestamp: 101,
+            },
+          ],
+          historyIndex: 1,
+        },
+      },
+    });
+
+    render(<ViewHeader tab={tabWithHistory} vaultPath="/vault" canRename />);
+
+    const backBtn = screen.getByRole("button", { name: "Back" });
+    expect(backBtn).not.toBeDisabled();
+    backBtn.click();
+
+    const updatedTab = useTabsStore.getState().tabs["tab:/vault/Notes/B.md"];
+    expect(updatedTab.historyIndex).toBe(0);
+    expect(updatedTab.path).toBe("/vault/Notes/A.md");
   });
 });

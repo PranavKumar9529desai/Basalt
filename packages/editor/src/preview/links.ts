@@ -1,12 +1,12 @@
 import type { Extension } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
-import { openLinkFacet } from "./block-widgets/dql-widget";
+import { openLinkFacet } from "../block-widgets/dql-widget";
 import {
   normalizeWikiLinkTarget,
   targetFromWikiLinkNode,
-} from "./syntax/wiki-links";
-import { openTagFacet, openExternalLinkFacet } from "./types";
+} from "../syntax/wiki-links";
+import { openTagFacet, openExternalLinkFacet } from "../types";
 /**
  * ViewPlugin that intercepts clicks on wikilinks, markdown links, and
  * `.cm-table-link[data-name]` widgets in reading mode, navigating via

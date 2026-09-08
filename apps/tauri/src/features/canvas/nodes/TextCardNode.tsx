@@ -3,7 +3,7 @@ import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
-import { useCanvas } from "../CanvasContext";
+import { useCanvas } from "../components/CanvasContext";
 import { CanvasCardEditor } from "../components/CanvasCardEditor";
 
 function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {

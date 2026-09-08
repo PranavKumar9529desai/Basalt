@@ -20,7 +20,7 @@ import { GraphContextMenu } from "./GraphContextMenu";
 import {
   useGraphEngine,
   type GraphEngineControls,
-} from "../lib/useGraphEngine";
+} from "../hooks/useGraphEngine";
 import { usePersistedGraphState } from "../lib/persistedState";
 import { basename } from "../lib/filters";
 
@@ -100,9 +100,9 @@ export function Graph({ tab }: LeafProps) {
     viewRef,
     (saved) => {
       setQuery(saved.query ?? "");
-      setLocal(Boolean(saved.local));
+      setLocal(false);
       setLocalDepth(Math.max(1, Math.min(5, saved.localDepth ?? 2)));
-      setLocalRoot(saved.localRoot ?? null);
+      setLocalRoot(null);
       setShowOrphans(saved.showOrphans ?? true);
       setShowAttach(saved.showAttach ?? true);
       setColorMode(saved.colorMode ?? "single");

@@ -12,7 +12,7 @@
 
 import { StateEffect, type StateField } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
-import { editorBenchmarkState } from "../benchmark";
+import { editorBenchmarkState } from "../perf/benchmark";
 import { LAZY_DOC_THRESHOLD, type PreviewState } from "./collector";
 
 /** Force a synchronous full rebuild from the current state. */

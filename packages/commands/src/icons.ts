@@ -1,4 +1,6 @@
 import {
+  IconArrowLeft,
+  IconArrowRight,
   IconBook,
   IconCalendarEvent,
   IconFilePlus,
@@ -21,6 +23,8 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 const ICONS: Record<string, ComponentType<{ size?: number }>> = {
+  IconArrowLeft,
+  IconArrowRight,
   IconBook,
   IconCalendarEvent,
   IconFilePlus,

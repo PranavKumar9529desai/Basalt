@@ -36,9 +36,9 @@ export function buildPersistedState(
 ): PersistedGraphState {
   return {
     query: values.query,
-    local: values.local,
+    local: false,
     localDepth: values.localDepth,
-    localRoot: values.localRoot,
+    localRoot: null,
     showOrphans: values.showOrphans,
     showAttach: values.showAttach,
     colorMode: values.colorMode,

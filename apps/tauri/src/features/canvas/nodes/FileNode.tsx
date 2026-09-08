@@ -16,7 +16,7 @@ import { useLeafServices } from "@workspace/views";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
-import { useCanvas } from "../CanvasContext";
+import { useCanvas } from "../components/CanvasContext";
 import { CanvasCardEditor } from "../components/CanvasCardEditor";
 
 function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {

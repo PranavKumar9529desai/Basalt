@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SettingSectionDef, SettingsGroup } from "./types";
+import type { SettingSectionDef, SettingsGroup } from "../types";
 
 /**
  * SettingsRegistry — dynamic settings-tab registry (ADR-037 §1).

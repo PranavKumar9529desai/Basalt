@@ -7,8 +7,8 @@ import {
 import { Button } from "@workspace/ui/components/ui/button";
 import { useCallback, useEffect, useRef } from "react";
 
-import { insertTemplate } from "./commands";
-import { filterTemplates, useTemplatePickerStore } from "./picker-store";
+import { insertTemplate } from "../commands";
+import { filterTemplates, useTemplatePickerStore } from "../picker-store";
 
 function TemplateRow({
   name,

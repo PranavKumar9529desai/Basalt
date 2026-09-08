@@ -8,7 +8,7 @@ import {
   frontmatterValuesEqual,
   isNullValue,
   valueType,
-} from "../../src/frontmatter-utils";
+} from "../../src/frontmatter/utils";
 import type { FrontmatterValue } from "../../src/types";
 
 describe("isNullValue", () => {

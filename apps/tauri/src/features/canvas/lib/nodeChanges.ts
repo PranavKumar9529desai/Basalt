@@ -1,6 +1,6 @@
 import type { NodeChange } from "@xyflow/react";
 import type { CanvasXYNode } from "./mapper";
-import type { GuidelinesState } from "./useCanvasGuidelines";
+import type { GuidelinesState } from "../hooks/useCanvasGuidelines";
 import { getSmartGuidelines } from "./guidelines";
 
 export interface SnapResult {

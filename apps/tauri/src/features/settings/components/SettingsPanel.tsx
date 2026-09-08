@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { ScrollArea } from "@workspace/ui/components/ui/scroll-area";
-import { useEnabledSections } from "../registry";
+import { useEnabledSections } from "../lib/registry";
 import { useSettingsModalStore } from "../store";
 import { SettingsFields } from "./layout/SettingsFields";
 

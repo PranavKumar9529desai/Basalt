@@ -5,9 +5,9 @@ import type {
   FrontmatterFetch,
   FrontmatterModel,
   FrontmatterValue,
-} from "./types";
-import { createFrontmatterIcon } from "./frontmatter-icons";
-import { frontmatterValuesEqual, isNullValue } from "./frontmatter-utils";
+} from "../types";
+import { createFrontmatterIcon } from "./icons";
+import { frontmatterValuesEqual, isNullValue } from "./utils";
 
 /** Narrow a `FrontmatterValue` to a specific internally-tagged variant. */
 function hasType<T extends FrontmatterValue["type"]>(

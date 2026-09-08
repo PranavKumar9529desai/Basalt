@@ -1,7 +1,7 @@
 // Local-graph mode (ADR-038 §3 graph split): BFS reachability from a root
 // note, plus the subset re-map (full idx -> subset idx) the engine feeds to
 // the renderer and the wasm worker.
-import { computeNodeSize } from "../nodeScale";
+import { computeNodeSize } from "./nodeScale";
 
 /** Set of full indices reachable from `root` within `depth` hops. */
 export function bfsReachable(

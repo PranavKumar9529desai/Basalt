@@ -97,6 +97,7 @@ export const createOpenSlice: StateCreator<
       const paneId =
         resolveInsertPaneId(state.root, state.activePaneId) ??
         state.activePaneId;
+      let inheritedHistory: import("../../types").NavigationHistoryEntry[] | undefined;
       const root = mapLeaf(state.root, paneId, (leaf) => {
         const group = leaf.tabGroup;
         let tabIds = group.tabIds;
@@ -106,6 +107,10 @@ export const createOpenSlice: StateCreator<
         if (previewTabId) {
           const preview = tabs[previewTabId];
           if (preview && !preview.isDirty) {
+            if (preview.history) {
+              const prevIdx = preview.historyIndex ?? (preview.history.length - 1);
+              inheritedHistory = preview.history.slice(0, prevIdx + 1);
+            }
             delete tabs[preview.id];
             tabIds = tabIds.filter((id) => id !== previewTabId);
             previewTabId = null;
@@ -133,17 +138,32 @@ export const createOpenSlice: StateCreator<
         };
       });
 
+      const leafType = leafRegistry.leafTypeForPath(note.path) ?? "markdown";
+      const title = note.title ?? label(note.path);
+      const newEntry = {
+        path: note.path,
+        title,
+        leafType,
+        viewMode: "edit" as const,
+        line: note.line,
+        timestamp,
+      };
+      const history = inheritedHistory ? [...inheritedHistory, newEntry] : [newEntry];
+      const historyIndex = history.length - 1;
+
       tabs[incomingTabId] = {
         id: incomingTabId,
         path: note.path,
-        title: note.title ?? label(note.path),
-        leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+        title,
+        leafType,
         viewMode: "edit",
         isPinned: false,
         isPreview: true,
         isDirty: false,
         createdAt: timestamp,
         lastAccessedAt: timestamp,
+        history,
+        historyIndex,
         line: note.line,
         focusOnOpen: note.focusOnOpen,
         renameOnOpen: note.renameOnOpen,
@@ -201,17 +221,30 @@ export const createOpenSlice: StateCreator<
     set((state) => {
       const tabs = { ...state.tabs };
       const timestamp = nowMs();
+      const leafType = leafRegistry.leafTypeForPath(note.path) ?? "markdown";
+      const title = note.title ?? label(note.path);
+      const initialEntry = {
+        path: note.path,
+        title,
+        leafType,
+        viewMode: "edit" as const,
+        line: note.line,
+        timestamp,
+      };
+
       tabs[incomingTabId] = {
         id: incomingTabId,
         path: note.path,
-        title: note.title ?? label(note.path),
-        leafType: leafRegistry.leafTypeForPath(note.path) ?? "markdown",
+        title,
+        leafType,
         viewMode: "edit",
         isPinned: true,
         isPreview: false,
         isDirty: false,
         createdAt: timestamp,
         lastAccessedAt: timestamp,
+        history: [initialEntry],
+        historyIndex: 0,
         line: note.line,
         focusOnOpen: note.focusOnOpen,
         renameOnOpen: note.renameOnOpen,
@@ -274,10 +307,19 @@ export const createOpenSlice: StateCreator<
     set((state) => {
       const tabs = { ...state.tabs };
       const timestamp = nowMs();
+      const title = options?.title ?? leafType;
+      const initialEntry = {
+        path,
+        title,
+        leafType,
+        viewMode: "edit" as const,
+        timestamp,
+      };
+
       tabs[incomingTabId] = {
         id: incomingTabId,
         path,
-        title: options?.title ?? leafType,
+        title,
         leafType,
         viewMode: "edit",
         isPinned: true,
@@ -285,6 +327,8 @@ export const createOpenSlice: StateCreator<
         isDirty: false,
         createdAt: timestamp,
         lastAccessedAt: timestamp,
+        history: [initialEntry],
+        historyIndex: 0,
       };
 
       const paneId =

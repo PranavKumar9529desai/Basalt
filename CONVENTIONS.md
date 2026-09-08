@@ -86,6 +86,21 @@ Rules for every new component, hook, store, and file:
    idea must not survive inside a name (`TabGroupFrame` → `TabListFrame`).
 5. **ADR references are footnotes, not explanations** (§8.3).
 
+### 1.7 Domain-foldered modules → file names don't repeat the folder
+
+When a domain earns its own folder, filenames don't repeat the folder name:
+
+```
+frontmatter/widget.ts            ✅
+frontmatter/frontmatter-widget.ts ❌ redundant
+```
+
+Package modules follow a `{concern}-{role}` pattern (`table-source.ts`,
+`table-mutations.ts`, `table-render.ts`); each block widget ships its theme as
+`*-theme.ts` (`frontmatter-theme.ts`, `math-theme.ts`, `mermaid-theme.ts`).
+Cross the §2.4 module budget and split by role — never by growing the folder.
+
+
 ---
 
 ## 2. Three-Layer Architecture (Simplified)
@@ -160,6 +175,7 @@ Exception: a feature may import **types only** from another feature's `types.ts`
 | Barrel exports per index | 15  | Beyond that, the feature is too broad |
 | Lines per component      | 200 | Beyond that, extract sub-components   |
 | Lines per hook           | 150 | Beyond that, split concerns           |
+| Lines per package module     | 300 | Beyond that, split by role (`table-widget` → `-render`/`-chrome`) |
 
 ---
 

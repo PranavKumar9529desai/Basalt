@@ -5,104 +5,35 @@
 // Table node's `from`/`to` in the CM6 document). All functions are pure:
 // input string → output string + new cursor offset. No CM6 dependency.
 //
-// Used by:
-//   - table-navigation.ts keybindings (Mod-Shift-ArrowUp/Down)
-//   - apps/tauri context menu commands (registered via commandService)
+// Split layout: the table model + parse/serialize live in table-source.ts,
+// column operations in table-columns.ts; this module re-exports them so the
+// public surface (used by table-navigation.ts keybindings, the table widget,
+// and apps/tauri context menu commands) is unchanged.
 // ---------------------------------------------------------------------------
+import {
+  padCells,
+  parseTableSource,
+  serializeTableSource,
+  type MutationResult,
+  type TableSource,
+} from "./table-source";
 
-export interface TableSource {
-  /** Raw lines: header, delimiter, body rows. */
-  lines: string[];
-  /** Cell content per row (header + body), excluding delimiter. */
-  rows: string[][];
-  /** Column alignments parsed from the delimiter row. */
-  alignments: ("left" | "center" | "right" | "none")[];
-  /** Number of columns (from header). */
-  colCount: number;
-}
-
-// ---------------------------------------------------------------------------
-// Parsing
-// ---------------------------------------------------------------------------
-
-function splitCells(line: string): string[] {
-  const trimmed = line.replace(/^\|/, "").replace(/\|$/, "");
-  return trimmed.split("|").map((c) => c.trim());
-}
-
-function detectAlignment(cell: string): "left" | "center" | "right" | "none" {
-  const t = cell.trim();
-  const left = t.startsWith(":");
-  const right = t.endsWith(":");
-  if (left && right) return "center";
-  if (right) return "right";
-  if (left) return "left";
-  return "none";
-}
-
-function alignmentChar(a: "left" | "center" | "right" | "none"): string {
-  switch (a) {
-    case "left":
-      return ":---";
-    case "center":
-      return ":---:";
-    case "right":
-      return "---:";
-    case "none":
-      return "---";
-  }
-}
-
-/** Parse raw table markdown into a structured representation. */
-export function parseTableSource(raw: string): TableSource | null {
-  const lines = raw.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return null;
-
-  const headers = splitCells(lines[0]);
-  if (headers.length === 0) return null;
-
-  const alignments = splitCells(lines[1]).map(detectAlignment);
-  while (alignments.length < headers.length) alignments.push("none");
-
-  const rows: string[][] = [headers];
-  for (let i = 2; i < lines.length; i++) {
-    rows.push(splitCells(lines[i]));
-  }
-
-  return { lines, rows, alignments, colCount: headers.length };
-}
-
-function padCells(cells: string[], colCount: number): string[] {
-  const result = [...cells];
-  while (result.length < colCount) result.push("");
-  return result.slice(0, colCount);
-}
-
-/** Serialize a TableSource back to markdown text. */
-export function serializeTableSource(model: TableSource): string {
-  const { rows, alignments, colCount } = model;
-
-  const headerLine = "| " + padCells(rows[0], colCount).join(" | ") + " |";
-  const delimLine =
-    "| " + padCells(alignments.map(alignmentChar), colCount).join(" | ") + " |";
-
-  const bodyLines = rows
-    .slice(1)
-    .map((r) => "| " + padCells(r, colCount).join(" | ") + " |");
-
-  return [headerLine, delimLine, ...bodyLines].join("\n");
-}
+export {
+  parseTableSource,
+  serializeTableSource,
+  type MutationResult,
+  type TableSource,
+} from "./table-source";
+export {
+  deleteColumn,
+  insertColumnLeft,
+  insertColumnRight,
+} from "./table-columns";
 
 // ---------------------------------------------------------------------------
 // Mutations — each returns { text, cursor } where cursor is an offset within
 // the new text (0-based), suitable for positioning after the change.
 // ---------------------------------------------------------------------------
-
-export interface MutationResult {
-  text: string;
-  /** Cursor offset within the new table text (0-based). */
-  cursor: number;
-}
 
 function emptyRow(colCount: number): string[] {
   return Array.from({ length: colCount }, () => "");
@@ -206,139 +137,6 @@ export function deleteRow(raw: string, rowIdx: number): MutationResult | null {
     cursor += lines[i].length + 1;
   }
   cursor += 2;
-
-  return { text, cursor };
-}
-
-// --- Insert column ---
-
-/** Insert an empty column to the left of the given column index. */
-export function insertColumnLeft(
-  raw: string,
-  colIdx: number,
-): MutationResult | null {
-  const model = parseTableSource(raw);
-  if (!model) return null;
-  if (colIdx < 0 || colIdx >= model.colCount) return null;
-
-  const newRows = model.rows.map((row) => {
-    const copy = [...row];
-    copy.splice(colIdx, 0, "");
-    return copy;
-  });
-  const newAlignments = [...model.alignments];
-  newAlignments.splice(colIdx, 0, "none");
-  const newModel: TableSource = {
-    ...model,
-    rows: newRows,
-    alignments: newAlignments,
-    colCount: model.colCount + 1,
-  };
-  const text = serializeTableSource(newModel);
-
-  let cursor = 0;
-  const lines = text.split("\n");
-  const headerLine = lines[0];
-  // Count pipes to find the position after colIdx-th pipe.
-  let pipeCount = 0;
-  for (let i = 0; i < headerLine.length; i++) {
-    if (headerLine[i] === "|") {
-      if (pipeCount === colIdx) {
-        cursor = i + 2; // after "| "
-        break;
-      }
-      pipeCount++;
-    }
-  }
-  if (cursor === 0) cursor = 2; // fallback
-
-  return { text, cursor };
-}
-
-/** Insert an empty column to the right of the given column index. */
-export function insertColumnRight(
-  raw: string,
-  colIdx: number,
-): MutationResult | null {
-  const model = parseTableSource(raw);
-  if (!model) return null;
-  if (colIdx < 0 || colIdx >= model.colCount) return null;
-
-  const newRows = model.rows.map((row) => {
-    const copy = [...row];
-    copy.splice(colIdx + 1, 0, "");
-    return copy;
-  });
-  const newAlignments = [...model.alignments];
-  newAlignments.splice(colIdx + 1, 0, "none");
-  const newModel: TableSource = {
-    ...model,
-    rows: newRows,
-    alignments: newAlignments,
-    colCount: model.colCount + 1,
-  };
-  const text = serializeTableSource(newModel);
-
-  // Cursor lands in the new column (now at colIdx+1).
-  let cursor = 0;
-  const lines = text.split("\n");
-  const headerLine = lines[0];
-  let pipeCount = 0;
-  for (let i = 0; i < headerLine.length; i++) {
-    if (headerLine[i] === "|") {
-      if (pipeCount === colIdx + 1) {
-        cursor = i + 2;
-        break;
-      }
-      pipeCount++;
-    }
-  }
-  if (cursor === 0) cursor = 2;
-
-  return { text, cursor };
-}
-
-/** Delete the column at the given index. Can't delete the last column. */
-export function deleteColumn(
-  raw: string,
-  colIdx: number,
-): MutationResult | null {
-  const model = parseTableSource(raw);
-  if (!model) return null;
-  if (colIdx < 0 || colIdx >= model.colCount) return null;
-  if (model.colCount <= 1) return null;
-
-  const newRows = model.rows.map((row) => {
-    const copy = [...row];
-    copy.splice(colIdx, 1);
-    return copy;
-  });
-  const newAlignments = [...model.alignments];
-  newAlignments.splice(colIdx, 1);
-  const newModel: TableSource = {
-    ...model,
-    rows: newRows,
-    alignments: newAlignments,
-    colCount: model.colCount - 1,
-  };
-  const text = serializeTableSource(newModel);
-
-  // Cursor lands in the column to the right (clamped).
-  const targetCol = Math.min(colIdx, newModel.colCount - 1);
-  let cursor = 0;
-  const lines = text.split("\n");
-  const headerLine = lines[0];
-  let pipeCount = 0;
-  for (let i = 0; i < headerLine.length; i++) {
-    if (headerLine[i] === "|") {
-      if (pipeCount === targetCol) {
-        cursor = i + 2;
-        break;
-      }
-      pipeCount++;
-    }
-  }
-  if (cursor === 0) cursor = 2;
 
   return { text, cursor };
 }

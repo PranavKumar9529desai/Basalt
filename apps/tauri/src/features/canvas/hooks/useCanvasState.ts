@@ -10,14 +10,14 @@ import {
   type OnNodesChange,
   type ReactFlowInstance,
 } from "@xyflow/react";
-import { createGhostHandlers } from "./connections";
-import { createNodeCreators } from "./createNodes";
-import type { CanvasXYNode } from "./mapper";
+import { createGhostHandlers } from "../lib/connections";
+import { createNodeCreators } from "../lib/createNodes";
+import type { CanvasXYNode } from "../lib/mapper";
 import {
   applySnapChanges,
   shouldTriggerSave,
   syncDimensions,
-} from "./nodeChanges";
+} from "../lib/nodeChanges";
 import type { GuidelinesState } from "./useCanvasGuidelines";
 
 export interface UseCanvasStateOptions {

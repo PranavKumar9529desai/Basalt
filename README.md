@@ -9,7 +9,7 @@ Four layers, dependencies flow downward only. See [`AGENTS.md`](./AGENTS.md) and
 
 ```
 packages/              ← Primitives (no Tauri, no business state, no IPC)
-├── ui/                ← Visual components (shadcn / Base UI, Tailwind + --sat-*)
+├── canvas/             ← Legacy canvas viewport primitive (deprecated — ADR-035)
 ├── editor/            ← CodeMirror 6 markdown editor extensions & theme
 ├── views/             ← View & leaf registries + leaf services (ADR-018)
 ├── commands/          ← CommandService — global command registry

@@ -190,9 +190,18 @@ mod tests {
     use super::*;
     use std::fs;
 
+    fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let pid = std::process::id();
+        std::env::temp_dir().join(format!("{}_{}_{}", prefix, pid, nanos))
+    }
+
     #[test]
     fn test_index_directory() {
-        let temp_dir = std::env::temp_dir().join("basalt_test_dummy");
+        let temp_dir = unique_temp_dir("basalt_test_dummy");
         let _ = fs::remove_dir_all(&temp_dir); // clean up before
         fs::create_dir_all(&temp_dir).unwrap();
 
@@ -217,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_index_directory_populates_asset_index() {
-        let temp_dir = std::env::temp_dir().join("basalt_test_asset_idx");
+        let temp_dir = unique_temp_dir("basalt_test_asset_idx");
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 
@@ -248,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_incremental_reindex_cleans_deleted_assets() {
-        let temp_dir = std::env::temp_dir().join("basalt_test_reidx_asset");
+        let temp_dir = unique_temp_dir("basalt_test_reidx_asset");
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Edge } from "@xyflow/react";
-import type { CanvasXYNode } from "./mapper";
+import type { CanvasXYNode } from "../lib/mapper";
 
 export interface UseCanvasSelectionOptions {
   setNodes: Dispatch<SetStateAction<CanvasXYNode[]>>;

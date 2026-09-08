@@ -81,6 +81,15 @@ export interface TabsState {
    * and dirty state is preserved. */
   updateTabPaths: (moves: Array<{ from: string; to: string }>) => void;
 
+  // Navigation History Actions (Obsidian Parity)
+  navigateBack: (tabId?: TabId) => void;
+  navigateForward: (tabId?: TabId) => void;
+  navigateToHistoryIndex: (tabId: TabId, index: number) => void;
+  pushTabHistory: (
+    tabId: TabId,
+    entry: Omit<import("../types").NavigationHistoryEntry, "timestamp">,
+  ) => void;
+
   // Split Pane Layout Tree actions (ADR-032 Phase 3)
   splitActivePane: (direction: "horizontal" | "vertical") => void;
   closePane: (paneId: PaneId) => void;

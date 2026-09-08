@@ -1,4 +1,4 @@
-import type { FrontmatterValue } from "./types";
+import type { FrontmatterValue } from "../types";
 
 export type FrontmatterType = FrontmatterValue["type"];
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSettingsStore, writeSetting } from "../../settings-data";
+import { useSettingsStore, writeSetting } from "../../lib/settings-data";
 import type { SettingItemSpec } from "../../types";
 import {
   SettingButton,

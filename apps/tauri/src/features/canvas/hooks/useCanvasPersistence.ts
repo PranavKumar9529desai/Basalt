@@ -7,7 +7,7 @@ import {
   mapToCanvasDocument,
   mapToXYFlow,
   type CanvasXYNode,
-} from "./mapper";
+} from "../lib/mapper";
 
 export interface UseCanvasPersistenceOptions {
   tab: LeafProps["tab"];

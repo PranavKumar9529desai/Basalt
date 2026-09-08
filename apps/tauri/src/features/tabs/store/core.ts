@@ -10,6 +10,10 @@ import {
   createPersistenceSyncSlice,
   type PersistenceSyncSlice,
 } from "./core/persistenceSync";
+import {
+  createNavigationSlice,
+  type NavigationSlice,
+} from "./core/navigation";
 
 /**
  * Core slice — all tab state mutations across one store, composed from the
@@ -23,6 +27,7 @@ export interface CoreSlice
   extends OpenCloseSlice,
     PanesSlice,
     PinSlice,
+    NavigationSlice,
     PersistenceSyncSlice {}
 
 export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
@@ -33,5 +38,6 @@ export const createCoreSlice: StateCreator<TabsState, [], [], CoreSlice> = (
   ...createOpenCloseSlice(set, get, api),
   ...createPanesSlice(set, get, api),
   ...createPinSlice(set, get, api),
+  ...createNavigationSlice(set, get, api),
   ...createPersistenceSyncSlice(set, get, api),
 });

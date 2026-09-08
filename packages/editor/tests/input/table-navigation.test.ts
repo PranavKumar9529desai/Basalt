@@ -15,7 +15,7 @@ import {
   tabForward,
   tabBackward,
   enterInTable,
-} from "../src/input/table-navigation";
+} from "../../src/input/table-navigation";
 
 if (typeof Range !== "undefined" && !Range.prototype.getClientRects) {
   Range.prototype.getClientRects = () => [] as unknown as DOMRectList;

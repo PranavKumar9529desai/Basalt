@@ -1,13 +1,13 @@
 // Pointer interaction layer for the graph canvas (ADR-038 §3 graph split):
 // click/drag/zoom/hover handlers + hit testing over the spatial grid. The
-// engine (lib/useGraphEngine) owns the refs/state and builds these handlers
+// engine (hooks/useGraphEngine) owns the refs/state and builds these handlers
 // once per mount via `createInteractions`.
 import { basename } from "./filters";
 import { noteExcerpt } from "./excerpt";
 import { zoomAt } from "./geometry";
 import type { GraphFrame } from "./graphWorker";
 import type { GraphRenderer } from "@workspace/graph";
-import type { SpatialGrid } from "../spatialGrid";
+import type { SpatialGrid } from "./spatialGrid";
 
 /** Mutable reference slot (usable with React's stable `useRef` objects). */
 export interface Ref<T> {

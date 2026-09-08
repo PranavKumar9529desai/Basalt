@@ -116,7 +116,9 @@ type ThemeBuild = {
 };
 
 function loadThemes(baseMap: Dict): ThemeBuild[] {
-  const files = readdirSync(THEME_DIR).filter((f) => f.endsWith(".json"));
+  const files = readdirSync(THEME_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .sort();
   return files.map((file) => {
     const full = path.join(THEME_DIR, file);
     const raw = readJson(full);

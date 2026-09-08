@@ -64,8 +64,8 @@
   },
   "graph": {
     "background": "{editor.background}",
-    "node": "{text.muted}",
-    "tag": "{state.success}",
+    "node": "{accent.primary}",
+    "tag": "{accent.primary}",
     "attachment": "{text.muted}",
     "edge": "{text.muted}",
     "label": "{text.primary}",

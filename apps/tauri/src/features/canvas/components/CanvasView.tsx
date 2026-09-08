@@ -15,26 +15,26 @@ import type { LeafProps } from "@workspace/views";
 
 import { CanvasToolbar } from "./CanvasToolbar";
 import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
-import { NotePickerModal } from "./components/NotePickerModal";
-import { AssetPickerModal } from "./components/AssetPickerModal";
+import { NotePickerModal } from "../components/NotePickerModal";
+import { AssetPickerModal } from "../components/AssetPickerModal";
 
-import TextCardNode from "./nodes/TextCardNode";
-import FileNode from "./nodes/FileNode";
-import GroupNode from "./nodes/GroupNode";
-import LinkNode from "./nodes/LinkNode";
-import GhostCardNode from "./nodes/GhostCardNode";
-import CanvasEdge from "./edges/CanvasEdge";
-import GuidelineLines from "./components/GuidelineLines";
+import TextCardNode from "../nodes/TextCardNode";
+import FileNode from "../nodes/FileNode";
+import GroupNode from "../nodes/GroupNode";
+import LinkNode from "../nodes/LinkNode";
+import GhostCardNode from "../nodes/GhostCardNode";
+import CanvasEdge from "../edges/CanvasEdge";
+import GuidelineLines from "../components/GuidelineLines";
 import { CanvasContext } from "./CanvasContext";
-import { registerCanvasFileDrop } from "./lib/canvasDrop";
-import type { CanvasXYNode } from "./lib/mapper";
+import { registerCanvasFileDrop } from "../lib/canvasDrop";
+import type { CanvasXYNode } from "../lib/mapper";
 
-import { useCanvasState } from "./lib/useCanvasState";
-import { useCanvasPersistence } from "./lib/useCanvasPersistence";
-import { useCanvasGuidelines } from "./lib/useCanvasGuidelines";
-import { useCanvasKeyboard } from "./lib/useCanvasKeyboard";
-import { useCanvasSelection } from "./lib/useCanvasSelection";
-import { useCanvasModals } from "./lib/useCanvasModals";
+import { useCanvasState } from "../hooks/useCanvasState";
+import { useCanvasPersistence } from "../hooks/useCanvasPersistence";
+import { useCanvasGuidelines } from "../hooks/useCanvasGuidelines";
+import { useCanvasKeyboard } from "../hooks/useCanvasKeyboard";
+import { useCanvasSelection } from "../hooks/useCanvasSelection";
+import { useCanvasModals } from "../hooks/useCanvasModals";
 
 const nodeTypes = {
   canvasText: TextCardNode,

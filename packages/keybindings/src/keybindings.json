@@ -40,5 +40,11 @@
     "key": "CmdOrCtrl+Shift+G",
     "command": "canvas:group-selection",
     "when": "canvasFocused"
-  }
+  },
+  { "key": "Alt+ArrowLeft", "command": "tabs:navigate-back" },
+  { "key": "Alt+ArrowRight", "command": "tabs:navigate-forward" },
+  { "key": "CmdOrCtrl+[", "command": "tabs:navigate-back" },
+  { "key": "CmdOrCtrl+]", "command": "tabs:navigate-forward" },
+  { "key": "CmdOrCtrl+Alt+ArrowLeft", "command": "tabs:navigate-back" },
+  { "key": "CmdOrCtrl+Alt+ArrowRight", "command": "tabs:navigate-forward" }
 ]

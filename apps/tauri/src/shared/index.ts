@@ -20,3 +20,4 @@ export {
   resolveActiveTab,
   startEditorContextSync,
 } from "./activeEditor";
+export { useGestures, gestureService } from "./gestures";

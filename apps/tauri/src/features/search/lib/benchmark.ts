@@ -19,8 +19,8 @@
  * the editor benchmark briefly swaps in a synthetic document.
  */
 import { flushSync } from "react-dom";
-import { useSearchStore } from "./store";
-import type { FileMatch, Highlight, LineMatch } from "./types";
+import { useSearchStore } from "../store";
+import type { FileMatch, Highlight, LineMatch } from "../types";
 
 // Deterministic synthetic data (mulberry32 — same PRNG as the editor harness)
 function mulberry32(seed: number): () => number {

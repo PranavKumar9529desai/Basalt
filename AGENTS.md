@@ -67,7 +67,7 @@ The bar is Obsidian, and then beat it: sub-16ms input latency, <800ms TTI, <150m
 | **PDF export (ADR-031)**                                            | ✅ Complete — `features/export`: reading-mode snapshot via `readingExtensions()` into a print `@page` pipeline; page size/orientation/font, theme + no-theme, include toggles                   |
 | **Infinite canvas (ADR-035)**                                       | ✅ Complete — `@xyflow/react` leaf over `basalt-canvas` (JSON Canvas v1.0), custom nodes/edges, alignment guidelines; legacy viewport primitive deprecated (dir `packages/canvas`)       |
 | **Templates + Daily notes core plugins (ADR-036)**                   | ✅ Complete — `features/templates` (picker, TS date/template expansion) + `commands/{templates,dailies}` (Rust list/read/open-or-create), settings sections, ribbon + palette entries        |
-| **File decomposition (ADR-038)**                                     | ✅ Complete — 5 phases, one commit each (`3e8036b` · `3147787` · `d40231b` · `1c6d21c` · phase-5 gate); pure structure, import surfaces frozen, entry barrels re-export identical symbols             |
+| **File decomposition (ADR-038)**                                     | ✅ Complete — 5 phases, one commit each (`3e8036b` · `3147787` · `d40231b` · `1c6d21c` · phase-5 gate); pure structure, import surfaces frozen, entry barrels re-export identical symbols; **2026-09-08 pass:** `packages/editor` module splits (`table-*` role modules, per-widget `*-theme.ts`, `frontmatter/` + `perf/` folders)             |
 | **File DnD (tree → editor, tree → canvas)**                        | ✅ Complete — pointer-drag notes insert `[[wikilink]]` at caret or spawn a canvas file node; surfaces survey in `CURRENT_WORK.md`                                                              |
 | **Backlinks panel (ADR-039 branch)**                               | ✅ Complete — context snippets + link resolution + rich panel                                                                                                                                |
 | **Mermaid + KaTeX math (ADR-039)**                                 | ✅ Complete — lazy mermaid/katex via widget registry, strict securityLevel, content-keyed cache (phase 5 gate)                                                                                |
@@ -292,6 +292,15 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [034-embed-rendering](docs/adr/034-embed-rendering.md)                                   | ADR-034: Embed Rendering — Real Media in Every Surface                      |
 | [035-infinite-canvas](docs/adr/035-infinite-canvas.md)                                   | ADR-035: Infinite Canvas — Spatial Note Layout                              |
 | [036-core-plugin-architecture](docs/adr/036-core-plugin-architecture.md)                  | ADR-036: Core Plugin Architecture — Self-Contained First-Party Plugins      |
+| [037-settings-system-architecture](docs/adr/037-settings-system-architecture.md)          | ADR-037: Settings System Architecture — Registry-Driven Settings Modal      |
+| [038-file-decomposition-structural-clarity](docs/adr/038-file-decomposition-structural-clarity.md) | ADR-038: File Decomposition for Structural Clarity                          |
+| [039-mermaid-math-rendering](docs/adr/039-mermaid-math-rendering.md)                     | ADR-039: Mermaid Diagrams + KaTeX Math Rendering                            |
+| [040-editor-typing-latency-optimization](docs/adr/040-editor-typing-latency-optimization.md) | ADR-040: Editor Typing Latency & Live-Preview Pipeline Optimization         |
+| [041-zero-ast-parser-simd-optimization](docs/adr/041-zero-ast-parser-simd-optimization.md) | ADR-041: Markdown & Frontmatter Zero-AST Scanner + SIMD Optimization        |
+| [042-vault-parallel-indexing-and-binary-cache](docs/adr/042-vault-parallel-indexing-and-binary-cache.md) | ADR-042: Vault Parallel Indexing & Binary Cache Architecture                 |
+| [043-full-text-and-fuzzy-search-architecture](docs/adr/043-full-text-and-fuzzy-search-architecture.md) | ADR-043: Full-Text & Fuzzy Search Engine Architecture                       |
+| [044-graph-view-layout-and-wasm-simulation](docs/adr/044-graph-view-layout-and-wasm-simulation.md) | ADR-044: Graph View Layout & WASM Force Simulation                          |
+| [045-dql-query-engine-execution-and-optimization](docs/adr/045-dql-query-engine-execution-and-optimization.md) | ADR-045: DQL Query Engine Execution & Optimization                          |
 
 <!-- ADR_INDEX_END -->
 
@@ -316,7 +325,7 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | Add shared Rust domain types          | `crates/basalt-types/`                     |
 | Add graph/backlinks compute           | `crates/basalt-graph/`                     |
 | Add canvas/viewport business logic    | `apps/tauri/src/features/canvas/`          |
-| Add canvas viewport primitive         | `packages/canvas-viewport/`                |
+| Add canvas viewport primitive         | `packages/canvas/`                         |
 | Add canvas compute (Rust)             | `crates/basalt-canvas/`                    |
 | Add search/indexing compute           | `crates/basalt-search/`                    |
 

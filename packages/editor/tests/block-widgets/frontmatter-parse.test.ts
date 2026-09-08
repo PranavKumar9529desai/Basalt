@@ -14,8 +14,8 @@ import { ensureSyntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { basaltMarkdownExtensions } from "../_helpers/parse-markdown";
-import { frontmatterBlockWidget } from "../../src/block-widgets/frontmatter";
-import { frontmatterParserFacet } from "../../src/block-widgets/frontmatter";
+import { frontmatterBlockWidget } from "../../src/block-widgets/frontmatter-block";
+import { frontmatterParserFacet } from "../../src/block-widgets/frontmatter-block";
 import type { FrontmatterModel, ParseFrontmatterFn } from "../../src/types";
 
 function frontmatterNode(doc: string): { from: number; to: number } | null {

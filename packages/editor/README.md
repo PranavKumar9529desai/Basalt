@@ -175,7 +175,7 @@ reading-mode plugin.
 `scanEmbedWikiLinks` and creates `Decoration.replace` widgets backed by
 `EmbedMediaWidget`. This plugin runs independently of the live-preview walk.
 
-**Table cells** — `renderInlineCell()` (`block-widgets/table-widget.ts`)
+**Table cells** — `renderInlineCell()` (`block-widgets/table-html.ts`)
 handles `![[…]]` inside rich table cells, using `classifyMediaExtension`
 from `input/embed-utils.ts` to route to `embedMediaHtml`.
 
@@ -277,44 +277,43 @@ src/
 │   └── index.ts
 ├── preview/             # Live preview visual decoration system
 │   ├── live-preview.ts  # Orchestrator: StateField + ViewPlugin
-│   ├── blockquotes.ts
-│   ├── callouts.ts
-│   ├── code-blocks.ts
-│   ├── embeds.ts        # ![[embed]] chips (active-line reveal, WYSIWYM)
-│   ├── frontmatter.ts
-│   ├── headings.ts
-│   ├── inline-marks.ts
-│   ├── lists.ts
-│   ├── mark-hiding.ts
-│   ├── tables.ts
-│   ├── render-mode.ts     # renderModeFacet — live/reading/source mode switch
-│   └── types.ts         # DecorationCollector, DecorationContext
+│   ├── links.ts         # Reading-mode link click handler
+│   ├── callout-data.ts  # Callout alias/icon/color lookup tables
+│   ├── blockquotes.ts / callouts.ts / code-blocks.ts / embeds.ts
+│   ├── frontmatter.ts / headings.ts / inline-marks.ts / lists.ts
+│   ├── mark-hiding.ts / tables.ts / render-mode.ts / types.ts
 ├── input/               # User interaction & input handling
-│   ├── backticks.ts     # Triple backtick key binding
-│   ├── context-menu.ts  # Right-click state capture
-│   ├── suggestions.ts   # [[link]] / #tag autocomplete
-│   ├── task-list.ts     # Clickable checkboxes
+│   ├── table-source.ts       # Table model + parse/serialize (pure)
+│   ├── table-mutations.ts    # Row/cell table mutations
+│   ├── table-columns.ts      # Column table mutations
+│   ├── table-navigation.ts   # tableNavigationKeymap
+│   ├── backticks.ts / context-menu.ts / suggestions.ts / task-list.ts
 │   ├── embed-media.ts   # EmbedMediaWidget + reading-mode plugin (ADR-034)
-│   ├── embed-utils.ts   # classifyMediaExtension, scanEmbedWikiLinks
-│   ├── paste-image.ts   # Image paste handler
+│   ├── embed-utils.ts / paste-image.ts
 │   └── index.ts
 ├── styling/             # CodeMirror editor visual theme (NOT SAT tokens)
 │   ├── base.ts          # EditorView.theme() + HighlightStyle
 │   ├── highlight-override.ts
 │   └── index.ts
 ├── block-widgets/       # Decoration/block widget collection
-│   ├── frontmatter.ts   # YAML frontmatter widget
-│   ├── table-widget.ts  # Rich table rendering + cell embeds
+│   ├── frontmatter-block.ts  # YAML frontmatter block widget + facets
+│   ├── table-widget.ts       # Rich table widget — lifecycle + BlockWidgetSpec
+│   ├── table-render.ts       # Table DOM builder + cell events
+│   ├── table-chrome.ts       # Table interactive chrome (ghost col/row, zones)
+│   ├── table-{parse,html,theme,state}.ts  # Table model, HTML, theme, raw mode
 │   ├── dql-widget.ts    # DQL query block
 │   ├── html-block.ts    # HTML block widget
 │   ├── utils.ts         # Block-widget helpers
 │   └── registry.ts
+├── frontmatter/         # Frontmatter Properties widget domain
+│   ├── widget.ts        # FrontmatterWidget (CM6 WidgetType) + value editing
+│   ├── utils.ts         # Value-type helpers
+│   └── icons.ts         # Field-type icons
+├── perf/                # Performance observability
+│   ├── benchmark.ts     # runTypingBenchmark() — editor perf harness
+│   └── watchdog.ts      # Main-thread watchdog (dev)
 ├── syntax/code-highlight-style.ts  # Per-language code highlight overrides
-├── frontmatter-widget.ts  # YAML frontmatter widget
-├── frontmatter-utils.ts   # Frontmatter helpers
-├── frontmatter-icons.ts   # Frontmatter field icons
 ├── scroll-header.ts     # Adapter that slots a React title into .cm-scroller (ADR-023)
-├── benchmark.ts         # runTypingBenchmark() — editor perf harness
 ├── editor.ts            # createEditorExtensions() — the main factory
 ├── types.ts             # EditorConfig, FetchLinksFn, FetchTagsFn
 └── index.ts             # Public API barrel

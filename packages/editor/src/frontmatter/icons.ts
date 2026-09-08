@@ -1,5 +1,5 @@
-import type { FrontmatterEntry } from "./types";
-import { valueType } from "./frontmatter-utils";
+import type { FrontmatterEntry } from "../types";
+import { valueType } from "./utils";
 
 export type FrontmatterIconName =
   | "file-text"

@@ -2,7 +2,7 @@ import { memo } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
-import { useCanvas } from "../CanvasContext";
+import { useCanvas } from "../components/CanvasContext";
 
 function GroupNode({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();

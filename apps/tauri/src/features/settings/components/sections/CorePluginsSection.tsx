@@ -11,8 +11,8 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
-import { useEnabledSections } from "../../registry";
-import { setSetting, useSetting } from "../../settings-data";
+import { useEnabledSections } from "../../lib/registry";
+import { setSetting, useSetting } from "../../lib/settings-data";
 import { useSettingsModalStore } from "../../store";
 import { SettingToggle } from "../controls";
 import { SettingItem } from "../layout/SettingItem";

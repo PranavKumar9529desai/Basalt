@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { cn } from "@workspace/ui/lib/utils";
 import { CORE_SPECS, specMatches } from "../specs";
-import { useEnabledSections } from "../registry";
+import { useEnabledSections } from "../lib/registry";
 import { useSettingsModalStore } from "../store";
 import type { SettingsGroup } from "../types";
 import { SettingsSearch } from "./layout/SettingsSearch";

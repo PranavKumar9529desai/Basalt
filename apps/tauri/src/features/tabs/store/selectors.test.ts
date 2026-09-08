@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TabId, TabModel } from "./types";
+import type { TabId, TabModel } from "../types";
 
 import { getTabByPath } from "./selectors";
 

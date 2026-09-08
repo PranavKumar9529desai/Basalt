@@ -18,6 +18,15 @@ export interface OpenableTabInput {
   renameOnOpen?: boolean;
 }
 
+export interface NavigationHistoryEntry {
+  path: string;
+  title: string;
+  leafType: string;
+  viewMode?: NoteViewMode;
+  line?: number;
+  timestamp: number;
+}
+
 export interface TabModel {
   id: TabId;
   path: string;
@@ -31,6 +40,10 @@ export interface TabModel {
   isDirty: boolean;
   createdAt: number;
   lastAccessedAt: number;
+  /** Per-tab navigation history stack (Obsidian parity). */
+  history?: NavigationHistoryEntry[];
+  /** Current index in the history stack. */
+  historyIndex?: number;
   /** Transient: line to reveal once on open. Not persisted. */
   line?: number;
   /** Transient: focus the note body once when the tab opens. Not persisted. */
@@ -89,6 +102,8 @@ export interface SerializedTab {
   isDirty: boolean;
   createdAt: number;
   lastAccessedAt: number;
+  history?: NavigationHistoryEntry[];
+  historyIndex?: number;
 }
 
 export interface SerializedTabPane {

@@ -45,7 +45,7 @@
 
 import { StateEffect, StateField } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { editorBenchmarkState } from "../benchmark";
+import { editorBenchmarkState } from "../perf/benchmark";
 import { BLOCKQUOTES_THEME } from "./blockquotes";
 import { CALLOUTS_THEME } from "./callouts";
 import { CODE_BLOCKS_THEME } from "./code-blocks";

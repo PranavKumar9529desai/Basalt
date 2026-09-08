@@ -15,7 +15,7 @@ import {
   setSearchQuery,
 } from "@codemirror/search";
 import { SearchQuery } from "@codemirror/search";
-import { createEditorExtensions } from "../src/editor";
+import { createEditorExtensions } from "../../src/editor";
 
 function buildView(doc: string): { view: EditorView; parent: HTMLDivElement } {
   const parent = document.createElement("div");

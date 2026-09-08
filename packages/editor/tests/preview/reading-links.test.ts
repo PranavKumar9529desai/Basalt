@@ -10,11 +10,11 @@ import { syntaxTree } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
-import { readingExtensions } from "../src/editor";
+import { readingExtensions } from "../../src/editor";
 import {
   targetFromWikiLinkNode,
   wikiLinkExtension,
-} from "../src/syntax/wiki-links";
+} from "../../src/syntax/wiki-links";
 
 function buildView(openExternalLink?: (url: string) => void) {
   const parent = document.createElement("div");

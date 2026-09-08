@@ -20,7 +20,7 @@ import {
 } from "../../src/preview/live-preview";
 import { renderModeFacet } from "../../src/preview/render-mode";
 import { basaltMarkdownExtensions } from "../_helpers/parse-markdown";
-import { frontmatterBlockWidgetGroup } from "../../src/block-widgets/frontmatter";
+import { frontmatterBlockWidgetGroup } from "../../src/block-widgets/frontmatter-block";
 import type { FrontmatterModel, ParseFrontmatterFn } from "../../src/types";
 import { dumpDecorations, type DecorationReport } from "../_helpers/dump-decos";
 

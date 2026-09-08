@@ -18,16 +18,16 @@ import {
   clearQueryCache,
   DqlResultWidget,
   runQueryFacet,
-} from "../src/block-widgets/dql-widget";
-import type { QueryResult } from "../src/block-widgets/dql-widget";
-import { EmbedMediaWidget } from "../src/input/embed-media";
-import { wikiLinkExtension } from "../src/syntax/wiki-links";
+} from "../../src/block-widgets/dql-widget";
+import type { QueryResult } from "../../src/block-widgets/dql-widget";
+import { EmbedMediaWidget } from "../../src/input/embed-media";
+import { wikiLinkExtension } from "../../src/syntax/wiki-links";
 import {
   livePreviewField,
   livePreviewPlugin,
-} from "../src/preview/live-preview";
-import { blockWidgetSpecsFacet } from "../src/block-widgets/registry";
-import { dqlBlockSpec } from "../src/block-widgets/dql-widget";
+} from "../../src/preview/live-preview";
+import { blockWidgetSpecsFacet } from "../../src/block-widgets/registry";
+import { dqlBlockSpec } from "../../src/block-widgets/dql-widget";
 
 function mockView(): {
   view: EditorView;

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCoreSlice } from "./core";
 import { createPersistenceSlice } from "./persistence";
-import { ROOT_PANE_ID } from "../constants";
+import { ROOT_PANE_ID } from "../lib/constants";
 import type { TabId, TabModel, LayoutNode } from "../types";
 import type { TabsWorkspaceSnapshotV2 } from "../types";
 import type { TabsState } from "./types";

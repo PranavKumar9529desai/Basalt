@@ -1,4 +1,4 @@
-import type { TabId, TabModel } from "./types";
+import type { TabId, TabModel } from "../types";
 
 /**
  * Look up a tab model by file path within an ordered set of tab ids (a

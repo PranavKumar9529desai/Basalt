@@ -1,5 +1,5 @@
 import "./commands";
-export { CanvasView } from "./CanvasView";
+export { CanvasView } from "./components/CanvasView";
 export {
   canvasFileDropAt,
   registerCanvasFileDrop,

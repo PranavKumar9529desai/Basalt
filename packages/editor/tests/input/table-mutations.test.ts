@@ -14,7 +14,7 @@ import {
   moveRowUp,
   moveRowDown,
   updateCellText,
-} from "../src/input/table-mutations";
+} from "../../src/input/table-mutations";
 
 // Serializer normalizes delimiter row to "| --- | --- |" format.
 const TABLE = "| A | B |\n|---|---|\n| 1 | 2 |";

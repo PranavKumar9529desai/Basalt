@@ -123,8 +123,8 @@
   --sat-editor-popover-active-text: #ffffff;
   --sat-editor-task-accent: #ff6a00;
   --sat-graph-background: #0d0e12;
-  --sat-graph-node: #8a8f9e;
-  --sat-graph-tag: #22c55e;
+  --sat-graph-node: #ff6a00;
+  --sat-graph-tag: #ff6a00;
   --sat-graph-attachment: #8a8f9e;
   --sat-graph-edge: #8a8f9e;
   --sat-graph-label: #f2f4f8;

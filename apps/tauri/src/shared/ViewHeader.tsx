@@ -17,6 +17,7 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from "@workspace/ui/components/ui/context-menu";
+import { cn } from "@workspace/ui/lib/utils";
 import type { LeafTabInfo } from "@workspace/views";
 import { useRef, useState } from "react";
 import { useRenameSignalStore } from "../features/editor/store/renameSignal";
@@ -48,12 +49,30 @@ export function ViewHeader({
   canToggleMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [backMenuOpen, setBackMenuOpen] = useState(false);
+  const [forwardMenuOpen, setForwardMenuOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const backBtnRef = useRef<HTMLButtonElement>(null);
+  const forwardBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Pin state read reactively so the label flips without a shell-wide
-  // re-render (pin toggles are rare; this selector is the only subscription).
+  // Pin & history state read reactively so header buttons update with store changes
   const isPinned = useTabsStore((s) => s.tabs[tab.id]?.isPinned ?? false);
   const viewMode = useTabsStore((s) => s.tabs[tab.id]?.viewMode ?? "edit");
+  const liveTab = useTabsStore((s) => s.tabs[tab.id]);
+
+  const history = liveTab?.history ?? [];
+  const historyIndex = liveTab?.historyIndex ?? 0;
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < history.length - 1;
+
+  const previousEntries = history
+    .slice(0, historyIndex)
+    .map((entry, idx) => ({ entry, actualIndex: idx }))
+    .reverse();
+
+  const forwardEntries = history
+    .slice(historyIndex + 1)
+    .map((entry, idx) => ({ entry, actualIndex: historyIndex + 1 + idx }));
 
   const displayTitle = (() => {
     if (tab.path === "view://graph") return "Graph view";
@@ -85,29 +104,140 @@ export function ViewHeader({
     commandService.execute("editor:toggle-view-mode");
   };
 
+  const handleBackClick = () => {
+    if (canGoBack) {
+      useTabsStore.getState().navigateBack(tab.id);
+    }
+  };
+
+  const handleForwardClick = () => {
+    if (canGoForward) {
+      useTabsStore.getState().navigateForward(tab.id);
+    }
+  };
+
   return (
     <div className="relative flex h-9 shrink-0 items-center gap-2 bg-[var(--sat-surface-1)] px-2">
       <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Back"
-          title="TODO: wire workspace back navigation"
-          className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-        >
-          <IconChevronLeft size={14} />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Forward"
-          title="TODO: wire workspace forward navigation"
-          className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-        >
-          <IconChevronRight size={14} />
-        </Button>
+        <ContextMenu open={backMenuOpen} onOpenChange={setBackMenuOpen}>
+          <Button
+            ref={backBtnRef}
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Back"
+            title={
+              canGoBack
+                ? `Back (${history[historyIndex - 1]?.title ?? "Previous note"})`
+                : "Back"
+            }
+            disabled={!canGoBack}
+            onClick={handleBackClick}
+            onContextMenu={(e) => {
+              if (previousEntries.length > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                setBackMenuOpen(true);
+              }
+            }}
+            className={cn(
+              "text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]",
+              !canGoBack && "opacity-40 pointer-events-none",
+            )}
+          >
+            <IconChevronLeft size={14} />
+          </Button>
+          {backMenuOpen && (
+            <ContextMenuContent
+              anchor={backBtnRef.current ?? undefined}
+              side="bottom"
+              align="start"
+              className="p-1 max-w-xs"
+            >
+              {previousEntries.map(({ entry, actualIndex }) => (
+                <ContextMenuItem
+                  key={`${entry.path}-${actualIndex}`}
+                  onClick={() => {
+                    useTabsStore
+                      .getState()
+                      .navigateToHistoryIndex(tab.id, actualIndex);
+                    setBackMenuOpen(false);
+                  }}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <span className="font-medium text-xs truncate max-w-full">
+                    {entry.title}
+                  </span>
+                  <span className="text-[10px] text-[var(--sat-text-muted)] truncate max-w-full">
+                    {vaultPath && entry.path.startsWith(`${vaultPath}/`)
+                      ? entry.path.slice(vaultPath.length + 1)
+                      : entry.path}
+                  </span>
+                </ContextMenuItem>
+              ))}
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
+
+        <ContextMenu open={forwardMenuOpen} onOpenChange={setForwardMenuOpen}>
+          <Button
+            ref={forwardBtnRef}
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Forward"
+            title={
+              canGoForward
+                ? `Forward (${history[historyIndex + 1]?.title ?? "Next note"})`
+                : "Forward"
+            }
+            disabled={!canGoForward}
+            onClick={handleForwardClick}
+            onContextMenu={(e) => {
+              if (forwardEntries.length > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                setForwardMenuOpen(true);
+              }
+            }}
+            className={cn(
+              "text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]",
+              !canGoForward && "opacity-40 pointer-events-none",
+            )}
+          >
+            <IconChevronRight size={14} />
+          </Button>
+          {forwardMenuOpen && (
+            <ContextMenuContent
+              anchor={forwardBtnRef.current ?? undefined}
+              side="bottom"
+              align="start"
+              className="p-1 max-w-xs"
+            >
+              {forwardEntries.map(({ entry, actualIndex }) => (
+                <ContextMenuItem
+                  key={`${entry.path}-${actualIndex}`}
+                  onClick={() => {
+                    useTabsStore
+                      .getState()
+                      .navigateToHistoryIndex(tab.id, actualIndex);
+                    setForwardMenuOpen(false);
+                  }}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <span className="font-medium text-xs truncate max-w-full">
+                    {entry.title}
+                  </span>
+                  <span className="text-[10px] text-[var(--sat-text-muted)] truncate max-w-full">
+                    {vaultPath && entry.path.startsWith(`${vaultPath}/`)
+                      ? entry.path.slice(vaultPath.length + 1)
+                      : entry.path}
+                  </span>
+                </ContextMenuItem>
+              ))}
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
       </div>
 
       <div className="pointer-events-none absolute left-1/2 flex max-w-[42vw] -translate-x-1/2 items-center justify-center">

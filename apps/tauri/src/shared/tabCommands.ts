@@ -89,3 +89,61 @@ commandService.registerCommand("pane:close", () => {
   const { activePaneId } = useTabsStore.getState();
   useTabsStore.getState().closePane(activePaneId);
 });
+
+commandService.registerCommand(
+  "tabs:navigate-back",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().navigateBack(tab.id);
+    }
+  },
+  () => {
+    const tab = resolveActiveTab();
+    return Boolean(tab && (tab.historyIndex ?? 0) > 0);
+  },
+);
+
+commandService.registerCommand(
+  "app:navigate-back",
+  () => {
+    commandService.execute("tabs:navigate-back");
+  },
+  () => {
+    const tab = resolveActiveTab();
+    return Boolean(tab && (tab.historyIndex ?? 0) > 0);
+  },
+);
+
+commandService.registerCommand(
+  "tabs:navigate-forward",
+  () => {
+    const tab = resolveActiveTab();
+    if (tab) {
+      useTabsStore.getState().navigateForward(tab.id);
+    }
+  },
+  () => {
+    const tab = resolveActiveTab();
+    return Boolean(
+      tab &&
+        tab.history &&
+        (tab.historyIndex ?? 0) < tab.history.length - 1,
+    );
+  },
+);
+
+commandService.registerCommand(
+  "app:navigate-forward",
+  () => {
+    commandService.execute("tabs:navigate-forward");
+  },
+  () => {
+    const tab = resolveActiveTab();
+    return Boolean(
+      tab &&
+        tab.history &&
+        (tab.historyIndex ?? 0) < tab.history.length - 1,
+    );
+  },
+);

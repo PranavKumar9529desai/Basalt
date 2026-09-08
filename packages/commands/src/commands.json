@@ -48,6 +48,18 @@
     "icon": "IconPinned"
   },
   {
+    "id": "tabs:navigate-back",
+    "name": "Navigate Back",
+    "category": "Tabs",
+    "icon": "IconArrowLeft"
+  },
+  {
+    "id": "tabs:navigate-forward",
+    "name": "Navigate Forward",
+    "category": "Tabs",
+    "icon": "IconArrowRight"
+  },
+  {
     "id": "search:open",
     "name": "Search Vault",
     "category": "Search",

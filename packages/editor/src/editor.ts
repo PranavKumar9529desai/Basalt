@@ -23,7 +23,7 @@ import { createBasaltGrammar } from "./syntax/registry";
 import {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
-} from "./block-widgets/frontmatter";
+} from "./block-widgets/frontmatter-block";
 import {
   htmlBlockSpec,
   HTML_BLOCK_THEME,
@@ -57,7 +57,7 @@ import type { EditorConfig } from "./types";
 import { openExternalLinkFacet, openTagFacet, resolveAssetFacet } from "./types";
 import { search } from "@codemirror/search";
 import { renderModeReading } from "./preview/render-mode";
-import { readingLinkHandler } from "./links";
+import { readingLinkHandler } from "./preview/links";
 
 /** The ONE grammar list for the editor (ADR-033) — folded from the syntax
  * registry's manifests. Consumed by edit, reading, and preview surfaces. */

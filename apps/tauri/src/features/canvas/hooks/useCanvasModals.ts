@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
-import type { CanvasXYNode } from "./mapper";
+import type { CanvasXYNode } from "../lib/mapper";
 
 export interface UseCanvasModalsOptions {
   reactFlowInstance: ReactFlowInstance;

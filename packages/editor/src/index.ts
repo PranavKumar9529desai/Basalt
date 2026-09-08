@@ -10,14 +10,14 @@ export type {
   IsolationVariant,
   TypingBenchmarkOptions,
   TypingBenchmarkSample,
-} from "./benchmark";
+} from "./perf/benchmark";
 export {
   editorBenchmarkState,
   formatBenchmarkReport,
   generateMarkdownDoc,
   runIsolationBenchmark,
   runTypingBenchmark,
-} from "./benchmark";
+} from "./perf/benchmark";
 export type { EditorExtensionGroups } from "./editor";
 export {
   createEditorExtensionGroups,
@@ -95,7 +95,7 @@ export {
   frontmatterBlockWidgetGroup,
   frontmatterDimMode,
   FRONTMATTER_WIDGET_THEME,
-} from "./block-widgets/frontmatter";
+} from "./block-widgets/frontmatter-block";
 
 export {
   createCodeToggleButton,
@@ -142,10 +142,10 @@ export { handleTagsInLine } from "./preview/inline-marks";
 export type { RenderMode } from "./preview/render-mode";
 export { renderModeFacet, renderModeReading } from "./preview/render-mode";
 export { classifyMediaExtension, extensionOf } from "./input/embed-utils";
-export type { WatchdogEvent, WatchdogStats } from "./watchdog";
+export type { WatchdogEvent, WatchdogStats } from "./perf/watchdog";
 export {
   startWatchdog,
   stopWatchdog,
   getWatchdogStats,
   formatWatchdogReport,
-} from "./watchdog";
+} from "./perf/watchdog";

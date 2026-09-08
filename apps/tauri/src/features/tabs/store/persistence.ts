@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import { ROOT_PANE_ID } from "../constants";
+import { ROOT_PANE_ID } from "../lib/constants";
 import type {
   TabPaneId,
   TabPane,
@@ -63,6 +63,8 @@ export const createPersistenceSlice: StateCreator<
       isDirty: tab.isDirty,
       createdAt: tab.createdAt,
       lastAccessedAt: tab.lastAccessedAt,
+      history: tab.history,
+      historyIndex: tab.historyIndex,
     }));
 
     return {
@@ -75,17 +77,34 @@ export const createPersistenceSlice: StateCreator<
 
   hydrateFromWorkspaceSnapshot: (snapshot) => {
     const tabs = Object.fromEntries(
-      snapshot.tabs.map((tab) => [
-        tab.id,
-        {
-          ...tab,
-          leafType:
-            (tab as { leafType?: string }).leafType ??
-            (tab as { viewType?: string }).viewType ??
-            "markdown",
-          viewMode: tab.viewMode === "reading" ? "reading" : "edit",
-        },
-      ]),
+      snapshot.tabs.map((tab) => {
+        const leafType =
+          (tab as { leafType?: string }).leafType ??
+          (tab as { viewType?: string }).viewType ??
+          "markdown";
+        const viewMode = tab.viewMode === "reading" ? ("reading" as const) : ("edit" as const);
+        const history = tab.history ?? [
+          {
+            path: tab.path,
+            title: tab.title,
+            leafType,
+            viewMode,
+            timestamp: tab.lastAccessedAt ?? tab.createdAt ?? Date.now(),
+          },
+        ];
+        const historyIndex = typeof tab.historyIndex === "number" ? tab.historyIndex : history.length - 1;
+
+        return [
+          tab.id,
+          {
+            ...tab,
+            leafType,
+            viewMode,
+            history,
+            historyIndex,
+          },
+        ];
+      }),
     ) as Record<TabId, import("../types").TabModel>;
 
     if (snapshot.version === 2) {

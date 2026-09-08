@@ -13,9 +13,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { GraphRenderer } from "@workspace/graph";
-import { SpatialGrid } from "../spatialGrid";
+import { SpatialGrid } from "../lib/spatialGrid";
 import type { GraphColorMode } from "../components/GraphControls";
-import { createInteractions, type HoverState, type MenuState, type Ref } from "./interactions";
+import { createInteractions, type HoverState, type MenuState, type Ref } from "../lib/interactions";
 import {
   ARROW_EDGE_CAP,
   buildArrows,
@@ -24,19 +24,19 @@ import {
   toScreen,
   toWorld,
   type ViewTransform,
-} from "./geometry";
+} from "../lib/geometry";
 import {
   buildColorArray,
   FALLBACK_COLORS,
   readThemeColors,
   type ColorContext,
   type ThemeColors,
-} from "./themeColors";
-import { buildVisible } from "./filters";
-import { drawOverlayLabels } from "./labels";
-import { snapshotToGraphData } from "./graphData";
-import { buildSubset, localSubset } from "./localGraph";
-import type { GraphFrame, GraphSnapshot, GraphWorkerMessage } from "./graphWorker";
+} from "../lib/themeColors";
+import { buildVisible } from "../lib/filters";
+import { drawOverlayLabels } from "../lib/labels";
+import { snapshotToGraphData } from "../lib/graphData";
+import { buildSubset, localSubset } from "../lib/localGraph";
+import type { GraphFrame, GraphSnapshot, GraphWorkerMessage } from "../lib/graphWorker";
 
 /** Live mirror of the leaf controls, written during render so the mount-only
  * engine reads current values without re-mounting. */

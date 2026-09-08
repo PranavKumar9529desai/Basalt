@@ -1,9 +1,9 @@
 import "./commands";
-import "./registrations";
+import "./lib/registrations";
 
-export { AppearanceEffects } from "./appearance-effects";
+export { AppearanceEffects } from "./lib/appearance-effects";
 export { SettingsModal } from "./components/SettingsModal";
-export { settingsRegistry, useEnabledSections, useSections } from "./registry";
+export { settingsRegistry, useEnabledSections, useSections } from "./lib/registry";
 export { useSettingsModalStore } from "./store";
 export {
   getSetting,
@@ -11,8 +11,8 @@ export {
   setSetting,
   useSetting,
   useSettingsStore,
-} from "./settings-data";
-export type { TabClickOpenBehavior } from "./settings-data";
+} from "./lib/settings-data";
+export type { TabClickOpenBehavior } from "./lib/settings-data";
 export type {
   SettingButtonSpec,
   SettingControlType,

@@ -2,4 +2,4 @@
 // force-layout compute is `crates/basalt-graph` (wasm). This is the only legal
 // import surface for other layers (see AGENTS.md).
 export { Graph } from "./components/Graph";
-export { SpatialGrid } from "./spatialGrid";
+export { SpatialGrid } from "./lib/spatialGrid";

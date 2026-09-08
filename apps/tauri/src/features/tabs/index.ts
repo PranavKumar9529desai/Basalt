@@ -5,7 +5,7 @@ export { SplitPane } from "./components/SplitPane";
 export { TabDragGhost } from "./components/TabDragGhost";
 export { useTabDnD } from "./hooks/useTabDnD";
 export { useTabPersistence } from "./hooks/useTabPersistence";
-export { getTabByPath } from "./selectors";
+export { getTabByPath } from "./store/selectors";
 export type { CloseTabOptions, OpenTabOptions, TabsState } from "./store";
 export { useTabsStore } from "./store";
 export type {
