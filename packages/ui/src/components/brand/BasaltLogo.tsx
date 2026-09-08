@@ -4,7 +4,7 @@ import { BasaltMark, type MarkSize } from "./BasaltMark";
 import { BasaltWordmark, type WordmarkSize, type WordmarkVariant } from "./BasaltWordmark";
 
 export type LogoLayout = "horizontal" | "vertical";
-export type LogoSize = "sm" | "md" | "lg" | "xl";
+export type LogoSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 export interface BasaltLogoProps extends HTMLAttributes<HTMLDivElement> {
   /** Alignment: horizontal lockup (side-by-side) or vertical lockup (stacked) */
@@ -19,11 +19,20 @@ export interface BasaltLogoProps extends HTMLAttributes<HTMLDivElement> {
   variant?: WordmarkVariant;
 }
 
-const MARK_SIZES: Record<LogoSize, MarkSize> = {
+const HORIZONTAL_MARK_SIZES: Record<LogoSize, MarkSize> = {
   sm: "sm",
   md: "md",
   lg: "lg",
   xl: "xl",
+  "2xl": "2xl",
+};
+
+const VERTICAL_MARK_SIZES: Record<LogoSize, MarkSize> = {
+  sm: "md",
+  md: "xl",
+  lg: "2xl",
+  xl: "3xl",
+  "2xl": "4xl",
 };
 
 const WORDMARK_SIZES: Record<LogoSize, WordmarkSize> = {
@@ -31,6 +40,7 @@ const WORDMARK_SIZES: Record<LogoSize, WordmarkSize> = {
   md: "md",
   lg: "lg",
   xl: "xl",
+  "2xl": "2xl",
 };
 
 /**
@@ -56,7 +66,10 @@ export const BasaltLogo: FC<BasaltLogoProps> = ({
       )}
       {...props}
     >
-      <BasaltMark size={MARK_SIZES[size]} glow={glow} />
+      <BasaltMark
+        size={isVertical ? VERTICAL_MARK_SIZES[size] : HORIZONTAL_MARK_SIZES[size]}
+        glow={glow}
+      />
       {showWordmark && (
         <BasaltWordmark
           size={WORDMARK_SIZES[size]}

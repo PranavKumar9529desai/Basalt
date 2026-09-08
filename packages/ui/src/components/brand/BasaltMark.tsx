@@ -2,7 +2,7 @@ import type { FC, SVGProps } from "react";
 import { useId } from "react";
 import { cn } from "../../lib/utils";
 
-export type MarkSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+export type MarkSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 
 export interface BasaltMarkProps extends SVGProps<SVGSVGElement> {
   /** Size preset for square mark */
@@ -18,6 +18,8 @@ const SIZE_CLASSES: Record<MarkSize, string> = {
   lg: "w-12 h-12",
   xl: "w-16 h-16",
   "2xl": "w-24 h-24",
+  "3xl": "w-32 h-32",
+  "4xl": "w-40 h-40",
 };
 
 /**

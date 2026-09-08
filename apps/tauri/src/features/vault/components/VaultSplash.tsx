@@ -15,10 +15,10 @@ export const VaultSplash: FC<VaultSplashProps> = ({
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-10 select-none">
       {/* Brand Hero */}
-      <div className="flex flex-col items-center gap-3">
-        <BasaltLogo layout="vertical" size="xl" />
-        <p className="text-xs tracking-wider uppercase text-[var(--sat-text-muted)] font-mono">
-          Obsidian-Class Markdown Workspace
+      <div className="flex flex-col items-center gap-4">
+        <BasaltLogo layout="vertical" size="2xl" />
+        <p className="text-xs tracking-widest uppercase text-[var(--sat-text-muted)] font-mono opacity-80">
+          High-Performance Markdown Workspace
         </p>
       </div>
 
