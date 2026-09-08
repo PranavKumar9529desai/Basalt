@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { BasaltLogo } from "@workspace/ui/components/brand";
 
 interface VaultSplashProps {
   isIndexing: boolean;
@@ -12,7 +13,15 @@ export const VaultSplash: FC<VaultSplashProps> = ({
   onOpenVault,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-8">
+    <div className="flex flex-col items-center justify-center flex-1 gap-10 select-none">
+      {/* Brand Hero */}
+      <div className="flex flex-col items-center gap-3">
+        <BasaltLogo layout="vertical" size="xl" />
+        <p className="text-xs tracking-wider uppercase text-[var(--sat-text-muted)] font-mono">
+          Obsidian-Class Markdown Workspace
+        </p>
+      </div>
+
       {/* Action */}
       <button
         type="button"

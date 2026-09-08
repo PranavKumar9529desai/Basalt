@@ -9,6 +9,7 @@ import {
   IconTemplate,
 } from "@tabler/icons-react";
 import { commandService } from "@workspace/commands";
+import { BasaltMark } from "@workspace/ui/components/brand";
 import { Ribbon as RibbonUI } from "@workspace/ui/components/ribbon";
 import { useSearchStore } from "../features/search";
 import { useSettingsModalStore } from "../features/settings";
@@ -83,6 +84,12 @@ export function Ribbon({
   ];
 
   const bottomItems = [
+    {
+      id: "brand",
+      icon: <BasaltMark size="xs" className="w-5 h-5 opacity-80 hover:opacity-100 transition-opacity" />,
+      label: "Basalt",
+      onClick: openSettings,
+    },
     {
       id: "settings",
       icon: <IconSettings size={20} stroke={1.5} />,
