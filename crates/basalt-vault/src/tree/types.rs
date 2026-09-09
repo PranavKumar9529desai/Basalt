@@ -11,7 +11,7 @@ pub enum NodeKind {
 /// A single row in the pre-order DFS flat tree that Rust builds and the
 /// frontend renders directly.  The frontend never needs to construct or sort
 /// the tree — it only tracks which folders the user has opened.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FlatTreeNode {
     /// Display name (the last path segment, e.g. `"api.md"` or `"docs"`).

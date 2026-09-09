@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use basalt_vault::{build_flat_tree, indexer::index_directory, VaultCache};
+use basalt_vault::{fast_scan_flat_tree, indexer::index_directory, VaultCache};
 use serde::Serialize;
 use tauri::State;
 
@@ -60,9 +60,11 @@ pub fn reindex_vault(state: State<AppState>, app: tauri::AppHandle) -> AppResult
     Ok(VaultSummary { note_count })
 }
 
-/// Return the current vault's flat tree, freshly built from the in-memory
-/// index.  The frontend calls this after any `vault://file-changed` event to
-/// keep the sidebar in sync without a full restart.
+/// Return the current vault's flat tree via a direct filesystem scan. Pure
+/// disk walk (ADR-046 Tier 1): the tree never depends on vault population or
+/// graph state, so refreshes are correct during background indexing. The
+/// frontend calls this after any `vault://file-changed` event to keep the
+/// sidebar in sync without a full restart.
 #[tauri::command]
 pub fn get_vault_tree(state: State<AppState>) -> AppResult<Vec<basalt_vault::FlatTreeNode>> {
     let vault_path = state
@@ -72,12 +74,7 @@ pub fn get_vault_tree(state: State<AppState>) -> AppResult<Vec<basalt_vault::Fla
         .clone()
         .ok_or(AppError::NoVault)?;
 
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-
-    Ok(build_flat_tree(&vault, Path::new(&vault_path)))
+    Ok(fast_scan_flat_tree(Path::new(&vault_path)))
 }
 
 /// Open the native folder-picker dialog and return the chosen path (or null).
