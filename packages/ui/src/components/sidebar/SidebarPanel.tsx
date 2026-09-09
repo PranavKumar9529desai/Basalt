@@ -78,7 +78,7 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
       ref={panelRef}
       style={{ width: `${width}px` }}
       className={cn(
-        "group relative flex flex-col shrink-0 h-full bg-[var(--sat-surface-2)]",
+        "group relative flex flex-col shrink-0 h-full min-h-0 overflow-hidden bg-[var(--sat-surface-2)]",
         side === "right"
           ? "border-l border-[var(--sat-layout-border)]"
           : "border-r border-[var(--sat-layout-border)]",

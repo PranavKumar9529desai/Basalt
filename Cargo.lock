@@ -4458,6 +4458,7 @@ dependencies = [
  "basalt-vault",
  "http-range",
  "mimalloc",
+ "rayon",
  "serde",
  "serde_json",
  "smallvec",

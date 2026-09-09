@@ -5,6 +5,7 @@ import {
 } from "@workspace/ui/components/file-tree";
 import { lazy, Suspense } from "react";
 import type { PreviewDeps } from "../features/search";
+import { IndexingProgressToast } from "../features/vault";
 
 // Overlay modals are lazy (ADR-020 move 3): none are visible at first paint,
 // so their code (search UI, settings UI, dialog primitives) must not be in
@@ -112,6 +113,8 @@ export function Overlays({
         <ExportDialog previewDeps={previewDeps} />
         <TemplatePicker />
       </Suspense>
+
+      <IndexingProgressToast />
     </>
   );
 }

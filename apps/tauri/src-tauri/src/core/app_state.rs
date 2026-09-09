@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, RwLock};
 
 use basalt_search::SearchState;
@@ -19,6 +20,9 @@ pub struct AppState {
     /// time-based. Future listeners (graph, plugins) get the same
     /// guarantee: `vault://file-changed` means "someone else wrote this".
     pub self_writes: Arc<Mutex<HashSet<PathBuf>>>,
+    /// Generation counter for background search indexing tasks.
+    /// Used to cancel obsolete indexing loops when switching vaults.
+    pub indexing_generation: Arc<AtomicU64>,
 }
 
 impl Default for AppState {
@@ -29,6 +33,7 @@ impl Default for AppState {
             watcher: RwLock::new(None),
             search: Arc::new(RwLock::new(None)),
             self_writes: Arc::new(Mutex::new(HashSet::new())),
+            indexing_generation: Arc::new(AtomicU64::new(0)),
         }
     }
 }

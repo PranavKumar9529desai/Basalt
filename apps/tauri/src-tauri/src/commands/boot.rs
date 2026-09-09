@@ -49,7 +49,7 @@ fn phase(timings: &mut HashMap<String, u64>, name: &str, start: Instant) {
     timings.insert(name.to_string(), start.elapsed().as_micros() as u64);
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct BootResult {
     /// Absolute path of the vault that was loaded, if any.
     pub vault_path: Option<String>,
@@ -150,66 +150,61 @@ fn perform_boot(state: &AppState, app: &AppHandle) -> AppResult<BootResult> {
     phase(&mut timings, "rust:watcher_setup", t);
 
     // Drop the old IndexWriter up front so its tantivy lockfile is released
-    // before the worker below builds the new SearchState.
+    // before building the new SearchState.
     if let Ok(mut search_guard) = state.search.write() {
         *search_guard = None;
     }
 
-    // Search init runs CONCURRENTLY with tree + workspace build (ADR-020 move
-    // 1b): it only needs `state.vault`, loaded above — no data dependency with
-    // the rest of boot. Non-fatal either way.
-    let search_timings: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
-    let (tree, workspace) = std::thread::scope(|s| -> AppResult<(_, _)> {
-        s.spawn(|| {
-            use crate::cache::search_index_dir;
-            use basalt_search::SearchState;
+    // Fast search init (<10ms): open tantivy index + nucleo scorer immediately.
+    // Stale or unindexed documents are scheduled for progressive background indexing.
+    let t = Instant::now();
+    let index_dir = crate::cache::search_index_dir(app, &vault_path);
+    let paths: Vec<String> = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
+        vault
+            .arena
+            .all_strings()
+            .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
+            .cloned()
+            .collect()
+    };
 
-            let t = Instant::now();
-            let index_dir = search_index_dir(app, &vault_path);
-            let search_state = if let Ok(vault_guard) = state.vault.read() {
-                match SearchState::open_or_create(&index_dir, &vault_guard, &known_mtimes) {
-                    Ok(s2) => Some(s2),
-                    Err(e) => {
-                        eprintln!("[boot] search index failed: {e}");
-                        None
-                    }
-                }
-            } else {
-                eprintln!("[boot] vault lock poisoned; skipping search init");
-                None
-            };
-            // Brief write lock: swap in the new SearchState.
-            if let Ok(mut search_guard) = state.search.write() {
-                *search_guard = search_state;
+    let search_state = match basalt_search::SearchState::open_fast(&index_dir, paths.clone()) {
+        Ok(s) => {
+            let stale_paths = s.filter_stale_paths(&paths, &known_mtimes);
+            if !stale_paths.is_empty() {
+                crate::core::search_indexer::start_background_indexing(state, app, stale_paths);
             }
-            if let Ok(mut tm) = search_timings.lock() {
-                phase(&mut tm, "rust:search_init", t);
-            }
-        });
-
-        let t = Instant::now();
-        let tree = {
-            let vault = state
-                .vault
-                .read()
-                .map_err(|_| AppError::LockPoisoned("vault"))?;
-            build_flat_tree(&vault, Path::new(&vault_path))
-        };
-        phase(&mut timings, "rust:build_flat_tree", t);
-
-        let t = Instant::now();
-        let workspace = load_workspace(&vault_path);
-        phase(&mut timings, "rust:load_workspace", t);
-
-        Ok((tree, workspace))
-    })?;
-
-    // Merge the concurrent search phase into the timings map, then close out.
-    if let Ok(tm) = search_timings.lock() {
-        for (k, v) in tm.iter() {
-            timings.insert(k.clone(), *v);
+            Some(s)
         }
+        Err(e) => {
+            eprintln!("[boot] fast search init failed: {e}");
+            None
+        }
+    };
+
+    if let Ok(mut search_guard) = state.search.write() {
+        *search_guard = search_state;
     }
+    phase(&mut timings, "rust:search_init_fast", t);
+
+    let t = Instant::now();
+    let tree = {
+        let vault = state
+            .vault
+            .read()
+            .map_err(|_| AppError::LockPoisoned("vault"))?;
+        build_flat_tree(&vault, Path::new(&vault_path))
+    };
+    phase(&mut timings, "rust:build_flat_tree", t);
+
+    let t = Instant::now();
+    let workspace = load_workspace(&vault_path);
+    phase(&mut timings, "rust:load_workspace", t);
+
     phase(&mut timings, "rust:boot_total", boot_start);
 
     Ok(BootResult {
@@ -260,8 +255,7 @@ pub fn set_vault(
     start_watcher(&state, &vault_path, &app)?;
     start_search_flusher(&state);
 
-    // Initialise the search index (non-fatal — vault still works if this fails).
-    // Minimise search write lock scope: brief None, build outside, brief swap.
+    // Initialise the search index fast (<10ms) and spawn background indexing.
     {
         use crate::cache::search_index_dir;
         use basalt_search::SearchState;
@@ -272,18 +266,32 @@ pub fn set_vault(
             *search_guard = None;
         }
 
+        let paths: Vec<String> = {
+            let vault = state
+                .vault
+                .read()
+                .map_err(|_| AppError::LockPoisoned("vault"))?;
+            vault
+                .arena
+                .all_strings()
+                .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
+                .cloned()
+                .collect()
+        };
+
         let empty_mtimes = std::collections::HashMap::new();
-        let search_state = if let Ok(vault_guard) = state.vault.read() {
-            match SearchState::open_or_create(&index_dir, &vault_guard, &empty_mtimes) {
-                Ok(s) => Some(s),
-                Err(e) => {
-                    eprintln!("[set_vault] search index failed: {e}");
-                    None
+        let search_state = match SearchState::open_fast(&index_dir, paths.clone()) {
+            Ok(s) => {
+                let stale_paths = s.filter_stale_paths(&paths, &empty_mtimes);
+                if !stale_paths.is_empty() {
+                    crate::core::search_indexer::start_background_indexing(&state, &app, stale_paths);
                 }
+                Some(s)
             }
-        } else {
-            eprintln!("[set_vault] vault lock poisoned; skipping search init");
-            None
+            Err(e) => {
+                eprintln!("[set_vault] search index fast open failed: {e}");
+                None
+            }
         };
 
         if let Ok(mut search_guard) = state.search.write() {
@@ -302,7 +310,7 @@ pub fn set_vault(
     let config = load_config(&app);
     let workspace = crate::workspace::load_workspace(&vault_path);
 
-    Ok(BootResult {
+    let boot_result = BootResult {
         vault_path: Some(vault_path),
         note_count,
         status: "full_index".into(),
@@ -311,5 +319,12 @@ pub fn set_vault(
         workspace,
         // set_vault is user-initiated, not on the TTI path — no phases yet.
         timings: HashMap::new(),
-    })
+    };
+
+    // Cache the result in PREBOOT so immediate router.invalidate() resolves in 0ms without re-indexing
+    if let Ok(mut guard) = preboot_mutex().lock() {
+        *guard = Some(boot_result.clone());
+    }
+
+    Ok(boot_result)
 }

@@ -2,6 +2,7 @@ import {
   type FileNode,
   FileTree as FileTreeUI,
 } from "@workspace/ui/components/file-tree";
+import { useMemo } from "react";
 import type { FlatTreeNode } from "../types";
 
 export interface FileTreeProps {
@@ -55,89 +56,101 @@ export function FileTree({
   onCancelRename,
   onDragStart,
 }: FileTreeProps) {
-  // Map Tauri-specific nodes to the dumb UI primitives
-  const mappedNodes: FileNode[] = visibleNodes.map(
-    (node) =>
-      ({
-        id: node.path,
-        name: node.name,
-        isFolder: node.kind === "folder",
-        isOpen: openFolders.has(node.relPath),
-        depth: node.depth,
-        childCount: node.childCount,
-        isCut: cutIds?.has(node.path) ?? false,
-      }) satisfies FileNode,
-  );
-
-  // The renaming node replaces its row in place with an editing input. Notes
-  // show their stem (the backend re-appends .md); folders show their name.
-  if (renamingNode) {
-    const index = mappedNodes.findIndex((n) => n.id === renamingNode.id);
-    if (index !== -1) {
-      const isFolder = renamingNode.isFolder;
-      mappedNodes[index] = {
-        ...mappedNodes[index],
-        isEditing: true,
-        name: isFolder
-          ? renamingNode.name
-          : renamingNode.name.replace(/\.(md|canvas)$/i, ""),
-      };
+  // O(1) map for instant node resolution on click/interaction (critical for 25k+ notes)
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, FlatTreeNode>();
+    for (const node of visibleNodes) {
+      map.set(node.path, node);
     }
-  }
+    return map;
+  }, [visibleNodes]);
 
-  // Insert the ghost node directly under its intended parent
-  if (ghostNode) {
-    const parentRel = ghostNode.parentRelPath ?? "";
+  // Map Tauri-specific nodes to the dumb UI primitives with memoization
+  const mappedNodes: FileNode[] = useMemo(() => {
+    const list: FileNode[] = visibleNodes.map(
+      (node) =>
+        ({
+          id: node.path,
+          name: node.name,
+          isFolder: node.kind === "folder",
+          isOpen: openFolders.has(node.relPath),
+          depth: node.depth,
+          childCount: node.childCount,
+          isCut: cutIds?.has(node.path) ?? false,
+        }) satisfies FileNode,
+    );
 
-    // Default insertion: start of list
-    let insertAt = 0;
-
-    if (parentRel) {
-      // Find the parent in the visible list
-      const parentIndex = visibleNodes.findIndex(
-        (n) => n.relPath === parentRel,
-      );
-      if (parentIndex !== -1) {
-        const parentPath = visibleNodes[parentIndex].path;
-        const mappedParentIndex = mappedNodes.findIndex(
-          (n) => n.id === parentPath,
-        );
-        insertAt =
-          mappedParentIndex === -1 ? mappedNodes.length : mappedParentIndex + 1;
-      } else {
-        insertAt = mappedNodes.length;
+    // The renaming node replaces its row in place with an editing input. Notes
+    // show their stem (the backend re-appends .md); folders show their name.
+    if (renamingNode) {
+      const index = list.findIndex((n) => n.id === renamingNode.id);
+      if (index !== -1) {
+        const isFolder = renamingNode.isFolder;
+        list[index] = {
+          ...list[index],
+          isEditing: true,
+          name: isFolder
+            ? renamingNode.name
+            : renamingNode.name.replace(/\.(md|canvas)$/i, ""),
+        };
       }
-    } else {
-      // Root-level: place after the last root item for a natural order
-      const lastRootIndex = [...mappedNodes]
-        .map((n, idx) => (n.depth === 0 ? idx : -1))
-        .filter((idx) => idx !== -1)
-        .pop();
-      insertAt = lastRootIndex !== undefined ? lastRootIndex + 1 : 0;
     }
 
-    mappedNodes.splice(insertAt, 0, ghostNode);
-  }
+    // Insert the ghost node directly under its intended parent
+    if (ghostNode) {
+      const parentRel = ghostNode.parentRelPath ?? "";
+      let insertAt = 0;
+
+      if (parentRel) {
+        const parentIndex = visibleNodes.findIndex(
+          (n) => n.relPath === parentRel,
+        );
+        if (parentIndex !== -1) {
+          const parentPath = visibleNodes[parentIndex].path;
+          const mappedParentIndex = list.findIndex(
+            (n) => n.id === parentPath,
+          );
+          insertAt =
+            mappedParentIndex === -1 ? list.length : mappedParentIndex + 1;
+        } else {
+          insertAt = list.length;
+        }
+      } else {
+        // Find last root item with a fast reverse loop
+        let lastRootIndex = -1;
+        for (let i = list.length - 1; i >= 0; i--) {
+          if (list[i].depth === 0) {
+            lastRootIndex = i;
+            break;
+          }
+        }
+        insertAt = lastRootIndex !== -1 ? lastRootIndex + 1 : 0;
+      }
+
+      list.splice(insertAt, 0, ghostNode);
+    }
+
+    return list;
+  }, [visibleNodes, openFolders, cutIds, renamingNode, ghostNode]);
 
   const handleSelect = (fileNode: FileNode, e: React.UIEvent) => {
-    // Re-lookup the original `FlatTreeNode` from `visibleNodes` by path
-    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    const original = nodeMap.get(fileNode.id);
     if (original) onFileClick(original, e);
   };
 
   const handleToggle = (fileNode: FileNode, e: React.UIEvent) => {
-    // Re-lookup to pass the relPath to Tauri
-    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    const original = nodeMap.get(fileNode.id);
     if (original) onFolderToggle(original, e);
   };
 
   const handleContextMenu = (fileNode: FileNode, e: React.MouseEvent) => {
     if (!onContextMenu) return;
-    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    const original = nodeMap.get(fileNode.id);
     if (original) onContextMenu(original, e);
   };
+
   const handleDragStart = (fileNode: FileNode, e: React.PointerEvent) => {
-    const original = visibleNodes.find((n) => n.path === fileNode.id);
+    const original = nodeMap.get(fileNode.id);
     if (original) onDragStart?.(original, e);
   };
 

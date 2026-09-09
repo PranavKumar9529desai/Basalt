@@ -7,6 +7,33 @@
 
 ---
 
+## ADR-046 — Two-Tier Boot & Decoupled Indexing — DECIDED, READY TO IMPLEMENT
+
+**Status:** ADR-046 moved Proposed → Accepted (2026-09-09). Architecture
+validated against Obsidian's documented internals (layout renders before
+async MetadataCache parse; cache rebuild only when out of sync). Plan
+reviewed with user; three refinements over the ADR-as-drafted are in the
+final text:
+
+1. **Warm cache stays synchronous** (Mode 1): bincode load + incremental
+   reindex (~470ms) untouched — two-tier only on cold/corrupt cache.
+2. **Progressive vault population** (Mode 2 Tier 2): single fused worker,
+   parse once → feed both `NoteGraph` + Tantivy; `state.vault` mutated
+   batch-by-batch, so graph/backlinks/tags show partial-but-growing data
+   during indexing (Obsidian parity), not empty spinners.
+3. **`get_vault_tree` moves to `fast_scan_flat_tree`**: tree refreshes never
+   depend on vault population state. `reindex_vault` kept as force-rebuild,
+   re-pointed at the same two-tier path. Retire `search_indexer.rs`'s
+   independent disk-reading loop into `core/indexing.rs` (fused worker).
+
+Implementation order (ADR §7): `fast_scan_flat_tree` in
+`crates/basalt-vault/src/tree/build.rs` (no Vault dep) → `commands/boot.rs`
+two-tier split + `BootResult.indexing` → fused progressive worker
+(`src-tauri/src/core/indexing.rs`) → frontend partial-data surfaces (search
+banner, graph progress state, toast already exists). Gates: boot ≤60ms cold /
+≤20ms warm on `temp_vault_1`, tree parity test, full Rust + TS suites.
+Not started: batched IPC, plugin host (ADR-018 Phase 5) — status table.
+
 ## Branch merge — `feat/adr039-mermaid-math` → `main` (2026-09-08)
 
 **Status:** Merged. The branch carried every feature workstream since the

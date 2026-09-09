@@ -13,6 +13,7 @@
     "./components/input-dialog": "./src/components/input-dialog/index.ts",
     "./components/confirm-dialog": "./src/components/confirm-dialog/index.ts",
     "./components/palette-shell": "./src/components/palette-shell/index.ts",
+    "./components/indexing-toast": "./src/components/indexing-toast/index.ts",
     "./components/brand": "./src/components/brand/index.ts",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",

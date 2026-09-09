@@ -33,6 +33,25 @@ pub fn reindex_vault(state: State<AppState>, app: tauri::AppHandle) -> AppResult
     let cache = VaultCache::build(&vault_path, vault);
     let cache_file = cache_path(&app, &vault_path);
     let _ = cache.save(&cache_file);
+    let paths: Vec<String> = cache
+        .vault
+        .arena
+        .all_strings()
+        .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
+        .cloned()
+        .collect();
+
+    let index_dir = crate::cache::search_index_dir(&app, &vault_path);
+    if let Ok(mut search_guard) = state.search.write() {
+        if let Ok(s) = basalt_search::SearchState::open_fast(&index_dir, paths.clone()) {
+            let stale_paths = s.filter_stale_paths(&paths, &std::collections::HashMap::new());
+            if !stale_paths.is_empty() {
+                crate::core::search_indexer::start_background_indexing(&state, &app, stale_paths);
+            }
+            *search_guard = Some(s);
+        }
+    }
+
     *state
         .vault
         .write()

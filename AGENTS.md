@@ -302,6 +302,8 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [043-full-text-and-fuzzy-search-architecture](docs/adr/043-full-text-and-fuzzy-search-architecture.md) | ADR-043: Full-Text & Fuzzy Search Engine Architecture                       |
 | [044-graph-view-layout-and-wasm-simulation](docs/adr/044-graph-view-layout-and-wasm-simulation.md) | ADR-044: Graph View Layout & WASM Force Simulation                          |
 | [045-dql-query-engine-execution-and-optimization](docs/adr/045-dql-query-engine-execution-and-optimization.md) | ADR-045: DQL Query Engine Execution & Optimization                          |
+| [046-instant-two-tier-boot-and-decoupled-indexing](docs/adr/046-instant-two-tier-boot-and-decoupled-indexing.md) | ADR-046: Instant Two-Tier Boot & Decoupled Indexing Architecture            |
+
 
 <!-- ADR_INDEX_END -->
 

@@ -37,4 +37,5 @@ http-range = "0.1"
 # Drop-in high-performance global allocator: reduces RSS memory by 25-40%, eliminates lock contention
 mimalloc = { version = "0.1", default-features = false }
 smallvec = { version = "1.16", features = ["serde"] }
+rayon = "1.11"
 

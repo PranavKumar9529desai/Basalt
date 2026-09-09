@@ -44,13 +44,16 @@ impl NoteGraph {
 
         // Remove old forward links for this document (incl. prior tag edges)
         // and clean each target's back_links to us.
-        if let Some(old_links) = self.forward_links.get(&doc_id) {
+        let had_old_links = if let Some(old_links) = self.forward_links.get(&doc_id) {
             for &link_id in old_links {
                 if let Some(back_links) = self.back_links.get_mut(&link_id) {
                     remove_sorted(back_links, doc_id);
                 }
             }
-        }
+            true
+        } else {
+            false
+        };
 
         let mut new_links: SmallVec<[NodeId; 8]> = SmallVec::new();
         for link in &metadata.links {
@@ -110,7 +113,10 @@ impl NoteGraph {
         self.metadata_cache.insert(doc_id, metadata);
 
         // Drop tag nodes that are no longer anchored to any note.
-        self.prune_orphan_tags();
+        // Only run if an existing note was updated; adding a fresh note can never orphan tags.
+        if had_old_links {
+            self.prune_orphan_tags();
+        }
     }
 
     pub fn remove_document(&mut self, id: &str, arena: &mut StringArena) {
@@ -146,7 +152,7 @@ impl NoteGraph {
     /// A tag node is anchored if a note exactly carries it, or any of its
     /// descendant tag nodes is anchored (so the tag tree stays intact as long
     /// as at least one note uses some tag under it).
-    fn prune_orphan_tags(&mut self) {
+    pub fn prune_orphan_tags(&mut self) {
         // Live = has a direct note reference (a back_link that is not a tag node).
         let mut live: HashSet<NodeId> = HashSet::new();
         let mut worklist: Vec<NodeId> = Vec::new();

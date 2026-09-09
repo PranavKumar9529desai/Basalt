@@ -118,3 +118,17 @@ export interface CreateNoteResult {
   path: string;
   name: string;
 }
+
+/** Payload emitted on `vault://indexing-progress` Tauri event. */
+export interface IndexingProgressPayload {
+  total: number;
+  indexed: number;
+  percentage: number;
+  phase: string;
+}
+
+/** Payload emitted on `vault://indexing-complete` Tauri event. */
+export interface IndexingCompletePayload {
+  total: number;
+  duration_ms: number;
+}

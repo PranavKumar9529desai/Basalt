@@ -84,6 +84,7 @@ pub fn index_directory(path: &Path) -> Vault {
     for (md_path, meta) in parsed {
         vault.add_document_metadata(&md_path, meta);
     }
+    vault.graph.prune_orphan_tags();
 
     vault
 }

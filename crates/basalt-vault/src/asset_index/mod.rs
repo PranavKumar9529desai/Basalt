@@ -71,6 +71,9 @@ impl AssetIndex {
     /// Register a note's embed targets.  Each `target` string is resolved
     /// against the asset index by basename and rel_path.
     pub fn register_embeds(&mut self, note_abs_path: &str, targets: &[String]) {
+        if self.assets.is_empty() || targets.is_empty() {
+            return;
+        }
         for target in targets {
             if let Some(asset) = self.resolve_asset(target) {
                 let asset_path = asset.abs_path.clone();
@@ -86,6 +89,9 @@ impl AssetIndex {
     /// Register a note's wikilink targets (non-embed).  Same resolution
     /// logic as embeds but populates `linked_by`.
     pub fn register_links(&mut self, note_abs_path: &str, targets: &[String]) {
+        if self.assets.is_empty() || targets.is_empty() {
+            return;
+        }
         for target in targets {
             if let Some(asset) = self.resolve_asset(target) {
                 let asset_path = asset.abs_path.clone();
@@ -176,6 +182,9 @@ impl AssetIndex {
     /// referenced — without it every `![[image]]` looks orphaned.
     pub fn resolve_asset(&self, target: &str) -> Option<&AssetInfo> {
         let target = target.trim();
+        if self.assets.is_empty() || target.is_empty() {
+            return None;
+        }
 
         // 1. Exact rel_path match (case-insensitive)
         for asset in self.assets.values() {
