@@ -551,7 +551,7 @@ mod tests {
 
         // Simulate file corruption: overwrite files in dir with random/garbage bytes.
         for entry in std::fs::read_dir(dir.path()).unwrap().flatten() {
-            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+            if entry.file_type().is_ok_and(|ft| ft.is_file()) {
                 let _ = std::fs::write(entry.path(), b"GARBAGE_CORRUPTED_BYTES_HERE");
             }
         }
