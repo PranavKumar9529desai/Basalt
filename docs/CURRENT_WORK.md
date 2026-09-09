@@ -7,6 +7,22 @@
 
 ---
 
+## Rust Crate Hygiene & Deslop Refactoring (2026-09-09) — COMPLETE ✅
+
+All 8 phases completed with dedicated commits, verified against full workspace test suite and clippy zero-warning gate:
+
+1. **Phase 0** (`f704e2f`): Conventions prevention layer (§12.8–§12.12 in `CONVENTIONS.md`).
+2. **Phase 1** (`21b5e6d`): Shared path utilities consolidated in `basalt-types` (`crates/basalt-types/src/path_utils.rs`); deleted duplicate `crates/basalt-vault/src/utils.rs`.
+3. **Phase 2** (`52979ba`): `TypedValue` comparison operations and temporal parsing moved to `basalt-types` (type owns its operations); `chrono` moved to `basalt-types`.
+4. **Phase 3** (`ce4fca1`): Unified YAML frontmatter fence parsing across crates on `fm_bounds` / `frontmatter_body_offset`.
+5. **Phase 4** (`991cd3b`): Consolidated wikilink parsing in `basalt-parser` (`parse_obsidian_link`, `extract_target`).
+6. **Phase 5** (`fb094d1`): Error style normalized (lowercase without periods, eliminated double prefix in `DqlError::Parse`).
+7. **Phase 6** (`82fab98`): Isolated `basalt-graph` scope by moving `fuzzy_match` and `search_commands` to `basalt-search`.
+8. **Phase 7** (`c30c1c6`): Internal cleanup (generic `HeapNode<const DESC: bool>`, `register_relationship` in `asset_index`).
+9. **Phase 8**: Full verification gate passed (`cargo test --workspace` [286+ tests pass], `cargo clippy --workspace --all-targets -- -D warnings` [0 warnings], `bun run lint` [0 warnings/errors], `tsc --noEmit` [clean]).
+
+---
+
 ## Benchmark & ADR-040-046 gate verification - ACTIVE
 
 **Status:** ADR-040-046 implementation is in the tree (source-verified
