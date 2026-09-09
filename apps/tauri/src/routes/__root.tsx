@@ -2,7 +2,6 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { KeybindingListener, KeybindingProvider } from "@workspace/keybindings";
 import { TooltipProvider } from "@workspace/ui/components/ui/tooltip";
 import { CommandPalette } from "../features/editor";
-import { StatusBar } from "../app-shell";
 
 export const Route = createRootRoute({
   component: () => (
@@ -15,8 +14,6 @@ export const Route = createRootRoute({
           <div className="flex flex-1 min-h-0">
             <Outlet />
           </div>
-          {/* Status bar — always visible */}
-          <StatusBar />
         </div>
       </TooltipProvider>
     </KeybindingProvider>

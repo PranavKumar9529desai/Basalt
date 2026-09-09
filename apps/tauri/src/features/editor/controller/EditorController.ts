@@ -14,14 +14,9 @@ import type { LeafServices, LeafTabInfo } from "@workspace/views";
 import type { LinkSuggestion, SaveStatus } from "../../vault/types";
 import { pruneClosedTabCaches, evictLruStates } from "../lib/pruneCache";
 import { editFrontmatter, initFrontmatterWasm } from "../lib/frontmatter";
-import { useActiveNoteStore } from "../store/activeNote";
 import { AUTOSAVE_DEBOUNCE_MS } from "../lib/saveManager";
-import { computeStats } from "../lib/stats";
 import { openExternalUrl, openLinkedNote } from "./lib/linkFetch";
 import { createDocChangedListener } from "./lib/viewEvents";
-
-/** Debounce for word/char stats — computed from the CM doc, never per keystroke. */
-const STATS_DEBOUNCE_MS = 500;
 
 /**
  * The note I/O surface the controller talks to — a structural subset of
@@ -68,8 +63,8 @@ export interface EditorControllerOptions {
  *   tabs' entries prevents closed documents (full text + undo history) from
  *   lingering until a remount; dirty ones are flush-saved first so a forced
  *   close never loses edits.
- * - Saves and stats always read the cache's current state, never a stale
- *   snapshot, so a save can't "succeed" while persisting pre-edit content.
+ * - Saves always read the cache's current state, never a stale snapshot, so
+ *   a save can't "succeed" while persisting pre-edit content.
  *
  * The extension list is built exactly once, here in the constructor. Every
  * state the controller creates afterwards (initial, per-tab, conflict reload)
@@ -93,7 +88,6 @@ export class EditorController {
   private scrollRef = new Map<string, number>();
   private dirtyRef = new Set<string>();
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
-  private statsTimer: ReturnType<typeof setTimeout> | null = null;
   private modeCompartment = new Compartment();
   private currentMode: "edit" | "reading" = "edit";
   private extensions: Extension[];
@@ -108,15 +102,14 @@ export class EditorController {
     const updateListener = createDocChangedListener({
       getCurrentTab: () => this.currentTab,
       onEdit: (tabId, state) => {
-        // Sync the per-tab cache with the edited state. Saves and stats read
-        // from the cache — without this they'd write/compute against the
-        // pre-edit doc (save "succeeds" but persists stale content).
+        // Sync the per-tab cache with the edited state. Saves read from the
+        // cache — without this they'd write against the pre-edit doc (save
+        // "succeeds" but persists stale content).
         this.statesRef.set(tabId, state);
         this.dirtyRef.add(tabId);
         this.services.markTabDirty(tabId, true);
         this.io.setSaveStatus("unsaved");
         this.scheduleSave();
-        this.scheduleStats();
       },
     });
     const groups = this.editGroups(options.onTableCursorChange);
@@ -336,19 +329,6 @@ export class EditorController {
     }, AUTOSAVE_DEBOUNCE_MS);
   }
 
-  scheduleStats() {
-    if (this.statsTimer) clearTimeout(this.statsTimer);
-    this.statsTimer = setTimeout(() => {
-      this.statsTimer = null;
-      const t = this.currentTab;
-      const state =
-        this.view?.state ?? (t ? this.statesRef.get(t.id) : undefined);
-      if (!state) return;
-      useActiveNoteStore
-        .getState()
-        .setStats(computeStats(state.doc.toString()));
-    }, STATS_DEBOUNCE_MS);
-  }
 
   /**
    * Persist one tab. The live tab is the source of truth for the path: a
@@ -464,10 +444,6 @@ export class EditorController {
   /** Release the view and timers (unmount). */
   destroy() {
     this.cancelScheduledSave();
-    if (this.statsTimer) {
-      clearTimeout(this.statsTimer);
-      this.statsTimer = null;
-    }
     this.view?.destroy();
     this.view = null;
   }
