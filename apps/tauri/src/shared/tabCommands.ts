@@ -104,16 +104,6 @@ commandService.registerCommand(
   },
 );
 
-commandService.registerCommand(
-  "app:navigate-back",
-  () => {
-    commandService.execute("tabs:navigate-back");
-  },
-  () => {
-    const tab = resolveActiveTab();
-    return Boolean(tab && (tab.historyIndex ?? 0) > 0);
-  },
-);
 
 commandService.registerCommand(
   "tabs:navigate-forward",
@@ -133,17 +123,3 @@ commandService.registerCommand(
   },
 );
 
-commandService.registerCommand(
-  "app:navigate-forward",
-  () => {
-    commandService.execute("tabs:navigate-forward");
-  },
-  () => {
-    const tab = resolveActiveTab();
-    return Boolean(
-      tab &&
-        tab.history &&
-        (tab.historyIndex ?? 0) < tab.history.length - 1,
-    );
-  },
-);
