@@ -74,7 +74,12 @@ pub fn build_page_rows_projected(
     needs_tags: bool,
     needs_links: bool,
 ) -> Vec<PageRow> {
-    let mut pages = Vec::new();
+    let capacity = if source.is_none() {
+        graph.metadata_cache.len()
+    } else {
+        64
+    };
+    let mut pages = Vec::with_capacity(capacity);
     for (node_id, meta) in &graph.metadata_cache {
         let path_str = arena.get_string(*node_id).map(|s| s.as_str()).unwrap_or("");
         let folder_str = path_str

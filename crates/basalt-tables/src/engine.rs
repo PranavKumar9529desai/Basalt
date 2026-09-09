@@ -62,7 +62,7 @@ impl WorkRow {
 /// Helper node for bounded Max-Heap in ASC Top-K selection.
 struct AscHeapNode {
     key: TypedValue,
-    idx: usize,
+    row: WorkRow,
 }
 
 impl PartialEq for AscHeapNode {
@@ -88,7 +88,7 @@ impl Ord for AscHeapNode {
 /// Helper node for bounded Min-Heap in DESC Top-K selection.
 struct DescHeapNode {
     key: TypedValue,
-    idx: usize,
+    row: WorkRow,
 }
 
 impl PartialEq for DescHeapNode {
@@ -163,49 +163,43 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
                     if k == 0 {
                         rows.clear();
                     } else if rows.len() > k {
-                        // Top-K Selection: O(N log k) instead of O(N log N)
-                        let chosen_indices: Vec<usize> = match direction {
+                        // Top-K Selection: O(N log k) streaming heap selection
+                        rows = match direction {
                             SortDirection::Asc => {
                                 let mut heap: BinaryHeap<AscHeapNode> = BinaryHeap::with_capacity(k + 1);
-                                for (idx, row) in rows.iter().enumerate() {
+                                for row in rows {
                                     let key = field_value(field, &row.ctx());
                                     if heap.len() < k {
-                                        heap.push(AscHeapNode { key, idx });
+                                        heap.push(AscHeapNode { key, row });
                                     } else if let Some(top) = heap.peek() {
                                         if compare_typed(&key, &top.key) == Ordering::Less {
                                             heap.pop();
-                                            heap.push(AscHeapNode { key, idx });
+                                            heap.push(AscHeapNode { key, row });
                                         }
                                     }
                                 }
                                 let mut nodes: Vec<AscHeapNode> = heap.into_vec();
                                 nodes.sort_by(|a, b| compare_typed(&a.key, &b.key));
-                                nodes.into_iter().map(|n| n.idx).collect()
+                                nodes.into_iter().map(|n| n.row).collect()
                             }
                             SortDirection::Desc => {
                                 let mut heap: BinaryHeap<DescHeapNode> = BinaryHeap::with_capacity(k + 1);
-                                for (idx, row) in rows.iter().enumerate() {
+                                for row in rows {
                                     let key = field_value(field, &row.ctx());
                                     if heap.len() < k {
-                                        heap.push(DescHeapNode { key, idx });
+                                        heap.push(DescHeapNode { key, row });
                                     } else if let Some(top) = heap.peek() {
                                         if compare_typed(&key, &top.key) == Ordering::Greater {
                                             heap.pop();
-                                            heap.push(DescHeapNode { key, idx });
+                                            heap.push(DescHeapNode { key, row });
                                         }
                                     }
                                 }
                                 let mut nodes: Vec<DescHeapNode> = heap.into_vec();
                                 nodes.sort_by(|a, b| compare_typed(&b.key, &a.key));
-                                nodes.into_iter().map(|n| n.idx).collect()
+                                nodes.into_iter().map(|n| n.row).collect()
                             }
                         };
-
-                        let mut row_slots: Vec<Option<WorkRow>> = rows.into_iter().map(Some).collect();
-                        rows = chosen_indices
-                            .into_iter()
-                            .filter_map(|idx| row_slots[idx].take())
-                            .collect();
                     } else {
                         // rows.len() <= k: just sort all rows with Schwartzian Transform
                         let mut sort_keys: Vec<(TypedValue, usize)> = rows
