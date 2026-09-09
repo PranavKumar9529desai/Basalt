@@ -34,8 +34,12 @@ import { handleMarkHidingNode } from "./mark-hiding";
 import { handleEmbedNode } from "./embeds";
 import { handleInlineMathNode } from "../block-widgets/math-widget";
 import { handleTableNode } from "./tables";
-import type { DecorationCollector, DecorationContext } from "./types";
-import { isInCodeBlock, sortCodeBlockRanges } from "./types";
+import type {
+  CodeBlockCursor,
+  DecorationCollector,
+  DecorationContext,
+} from "./types";
+import { isInCodeBlockMonotonic, sortCodeBlockRanges } from "./types";
 
 /**
  * Docs at or below this size rebuild their preview synchronously per
@@ -45,6 +49,13 @@ import { isInCodeBlock, sortCodeBlockRanges } from "./types";
  * update path, and the scheduler.
  */
 export const LAZY_DOC_THRESHOLD = 48 * 1024;
+
+/**
+ * Hysteresis window (ADR-040) preventing keystroke jitter near the 48KB threshold.
+ * A document above LAZY_DOC_THRESHOLD remains in lazy mode until it drops below
+ * (LAZY_DOC_THRESHOLD - LAZY_DOC_HYSTERESIS).
+ */
+export const LAZY_DOC_HYSTERESIS = 4 * 1024;
 
 /**
  * Forced-parse budget for `ensureSyntaxTree`, doc-size adaptive (see
@@ -82,6 +93,26 @@ export const HR_THEME = EditorView.baseTheme({
   },
 });
 
+const lineDecoCache = new Map<string, Decoration>();
+function getLineDeco(className: string): Decoration {
+  let deco = lineDecoCache.get(className);
+  if (!deco) {
+    deco = Decoration.line({ class: className });
+    lineDecoCache.set(className, deco);
+  }
+  return deco;
+}
+
+const markDecoCache = new Map<string, Decoration>();
+function getMarkDeco(className: string): Decoration {
+  let deco = markDecoCache.get(className);
+  if (!deco) {
+    deco = Decoration.mark({ class: className });
+    markDecoCache.set(className, deco);
+  }
+  return deco;
+}
+
 export function makeCollector() {
   const widgets: Range<Decoration>[] = [];
   // Multi-line block-widget replaces (HTML, frontmatter) are re-exposed as
@@ -92,10 +123,10 @@ export function makeCollector() {
 
   const collector: DecorationCollector = {
     addLineClass(pos, className) {
-      widgets.push(Decoration.line({ class: className }).range(pos, pos));
+      widgets.push(getLineDeco(className).range(pos, pos));
     },
     addMark(from, to, className) {
-      widgets.push(Decoration.mark({ class: className }).range(from, to));
+      widgets.push(getMarkDeco(className).range(from, to));
     },
     addReplace(from, to, widget, block = false, atomic = false) {
       const deco = Decoration.replace({ widget, block });
@@ -107,6 +138,7 @@ export function makeCollector() {
       widgets.push(Decoration.widget({ widget, side: 1 }).range(pos, pos));
     },
   };
+
 
   function finish(): DecorationSet {
     return Decoration.set(widgets, true);
@@ -209,83 +241,176 @@ export function buildPreviewState(
   let frontmatterFound = false;
   let frontmatterWidgeted = false;
 
+  const codeBlockCursor: CodeBlockCursor = { index: 0 };
+  let heading7Candidates: number[] | undefined = undefined;
+
   tree.iterate({
     enter(node) {
-      // Code blocks: ranges recorded FIRST (pre-order ⇒ parents before
-      // children, so the binary-search skip below stays valid mid-walk),
-      // then line classes + header/footer block widgets. Children skipped.
-      if (handleCodeBlockNode(node, 0, doc.length, ctx, collector)) {
-        return false;
-      }
+      const name = node.type.name;
 
-      if (isInCodeBlock(node.from, ctx.codeBlockRanges)) {
-        return false;
-      }
-
-      // Heading line classes
-      handleHeadingNode(node, ctx, collector);
-
-      // Try callout first — if it matches, skip plain blockquote styling
-      if (!handleCalloutNode(node, ctx, collector)) {
-        handleBlockquoteNode(node, 0, doc.length, ctx, collector);
-      }
-
-      // List item depth classes + bullet/number widgets
-      handleListNode(node, ctx, collector);
-
-      // Block widgets + frontmatter presentation (ADR-022 rule 14): every
-      // registered block widget replaces/dims/none-s its matched blocks from
-      // this single walk. Widget models are collected per-view for external
-      // reads (properties panel). Dispatched BEFORE the table handler so a
-      // registered table block widget can replace the whole table; otherwise
-      // handleTableNode's short-circuit below would swallow Table nodes and the
-      // rich table widget would never render.
-      const handled = handleBlockWidgetsNode(
-        node,
-        ctx,
-        collector,
-        models,
-        specs,
-      );
-      if (handled.found) frontmatterFound = true;
-      if (handled.widgeted) frontmatterWidgeted = true;
-
-      // Table row/delimiter line classes; skip children regardless (the block
-      // widget path above has already had a chance to replace the whole table).
-      if (handleTableNode(node, ctx, collector)) {
-        return false;
-      }
-
-      // If a block widget matched this node but produced no replacement (cursor
-      // inside the block), still skip children to prevent mark-hiding from
-      // hiding code fence tokens (CodeMark — closing ```). Normal code blocks
-      // never reach here because handleCodeBlockNode returns true first.
+      // 1. O(1) Fast-skip leaf & container nodes that never contribute decorations
       if (
-        handled.found &&
-        !handled.widgeted &&
-        node.type.name === "FencedCode"
+        name === "Text" ||
+        name === "Document" ||
+        name === "BulletList" ||
+        name === "OrderedList"
+      ) {
+        return;
+      }
+
+      // Track potential heading-7 lines when encountering Paragraph nodes (ADR-040)
+      if (name === "Paragraph") {
+        const firstChar = doc.sliceString(node.from, node.from + 1);
+        if (firstChar === "#" || firstChar === " ") {
+          const sample = doc.sliceString(
+            node.from,
+            Math.min(node.to, node.from + 11),
+          );
+          if (sample.includes("#######")) {
+            (heading7Candidates ??= []).push(doc.lineAt(node.from).number);
+          }
+        }
+        return;
+      }
+
+      // 2. Code blocks: record ranges, line classes, header/footer widgets
+      if (name === "FencedCode" || name === "CodeBlock") {
+        if (handleCodeBlockNode(node, 0, doc.length, ctx, collector)) {
+          return false;
+        }
+        // DQL / mermaid code blocks returned false: let registered block widgets handle them
+        const handled = handleBlockWidgetsNode(
+          node,
+          ctx,
+          collector,
+          models,
+          specs,
+        );
+        if (handled.found) frontmatterFound = true;
+        if (handled.widgeted) frontmatterWidgeted = true;
+        if (handled.found) {
+          return false;
+        }
+        return;
+      }
+
+      // 3. Monotonic code block containment check (O(log N) -> amortized O(1), ADR-040)
+      if (
+        ctx.codeBlockRanges.length > 0 &&
+        isInCodeBlockMonotonic(node.from, ctx.codeBlockRanges, codeBlockCursor)
       ) {
         return false;
       }
 
-      // Horizontal rule: replace with <hr> widget when cursor is off the line
-      if (node.type.name === "HorizontalRule") {
-        const line = doc.lineAt(node.from);
-        const onActiveLine = ctx.activeLine?.number === line.number;
-        if (!onActiveLine) {
-          collector.addReplace(line.from, line.to, new HorizontalRuleWidget());
-        }
-      }
+      // 4. Fast category dispatch switch (ADR-040)
+      switch (name) {
+        case "ATXHeading1":
+        case "ATXHeading2":
+        case "ATXHeading3":
+        case "ATXHeading4":
+        case "ATXHeading5":
+        case "ATXHeading6":
+        case "ATXHeading7":
+        case "SetextHeading1":
+        case "SetextHeading2":
+          handleHeadingNode(node, ctx, collector);
+          return;
 
-      // Inline marks (inline code, wikilinks) + WYSIWYG mark hiding —
-      // formerly a separate viewport-only pass with its own full-tree
-      // pre-scan; fused here per ADR-019 rule 2.
-      handleInlineNode(node, collector);
-      handleMarkHidingNode(node, ctx, collector);
-      // ![[embed]] -> compact chip off the active line; raw syntax revealed on it.
-      handleEmbedNode(node, ctx, collector);
-      // Inline LaTeX math $...$ -> rendered KaTeX widget off active line
-      handleInlineMathNode(node, ctx, collector);
+        case "Blockquote":
+          if (!handleCalloutNode(node, ctx, collector)) {
+            handleBlockquoteNode(node, 0, doc.length, ctx, collector);
+          }
+          return;
+
+        case "ListItem":
+          handleListNode(node, ctx, collector);
+          return;
+
+        case "ListMark":
+          handleListNode(node, ctx, collector);
+          return;
+
+        case "Table": {
+          const handled = handleBlockWidgetsNode(
+            node,
+            ctx,
+            collector,
+            models,
+            specs,
+          );
+          if (handled.found) frontmatterFound = true;
+          if (handled.widgeted) frontmatterWidgeted = true;
+          if (handleTableNode(node, ctx, collector)) {
+            return false;
+          }
+          return;
+        }
+
+        case "HorizontalRule": {
+          const line = doc.lineAt(node.from);
+          const onActiveLine = ctx.activeLine?.number === line.number;
+          if (!onActiveLine) {
+            collector.addReplace(line.from, line.to, new HorizontalRuleWidget());
+          }
+          return;
+        }
+
+        case "HTMLBlock":
+        case "YAMLFrontMatter":
+        case "Frontmatter":
+        case "BlockMath": {
+          const handled = handleBlockWidgetsNode(
+            node,
+            ctx,
+            collector,
+            models,
+            specs,
+          );
+          if (handled.found) frontmatterFound = true;
+          if (handled.widgeted) frontmatterWidgeted = true;
+          return false;
+        }
+
+        case "WikiLink":
+          if (handleEmbedNode(node, ctx, collector)) {
+            return false;
+          }
+          handleInlineNode(node, collector);
+          return;
+
+        case "InlineMath":
+          if (handleInlineMathNode(node, ctx, collector)) {
+            return false;
+          }
+          return;
+
+        case "InlineCode":
+        case "Highlight":
+        case "Strikethrough":
+        case "HTMLTag":
+        case "StrongEmphasis":
+        case "Emphasis":
+          handleInlineNode(node, collector);
+          return;
+
+        case "HeaderMark":
+        case "QuoteMark":
+        case "LinkMark":
+        case "EmphasisMark":
+        case "CodeMark":
+        case "HighlightMark":
+        case "StrikethroughMark":
+        case "WikiLinkMark":
+        case "EmbedMark":
+        case "InlineMathMark":
+        case "BlockMathMark":
+          handleMarkHidingNode(node, ctx, collector);
+          return;
+
+        default:
+          handleMarkHidingNode(node, ctx, collector);
+          return;
+      }
     },
   });
 
@@ -296,8 +421,8 @@ export function buildPreviewState(
     handleFrontmatterFallback(ctx, collector);
   }
 
-  // Heading-7 line classes (post-walk)
-  handleHeading7Lines(0, doc.length, ctx, collector);
+  // Heading-7 line classes (bypasses full-doc line scans if no candidate markers exist)
+  handleHeading7Lines(0, doc.length, ctx, collector, heading7Candidates ?? []);
 
   // Pre-order traversal emits ranges in document order, but the binary-search
   // contract of isInCodeBlock deserves a cheap defensive sort.
