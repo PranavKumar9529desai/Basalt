@@ -23,6 +23,38 @@ All 8 phases completed with dedicated commits, verified against full workspace t
 
 ---
 
+## Frontend & Packages Hygiene & Deslop Refactoring (2026-09-09) — COMPLETE ✅
+
+**Branch:** `refactor/frontend-packages-hygiene`
+
+All 5 phases completed with dedicated commits, verified against full frontend & packages test suites and zero-warning linter gate:
+
+1. **Phase 1** (`37891ee`): Shared Path Utilities Consolidation:
+   - Implemented canonical path helpers in `packages/ui/src/lib/paths.ts` (`basename`, `stemOf`, `isMarkdownPath`, `isCanvasPath`, `isDocumentPath`, `normalizePath`) with unit tests (`paths.test.ts`, 14 tests).
+   - Re-exported from `@workspace/ui` root and migrated 10+ call sites across `canvas`, `graph`, `search`, `tabs`, `vault`, `shared`, and `packages/ui`.
+2. **Phase 2** (`a4661d6`): Dead Package & Code Cleanup:
+   - Deleted deprecated legacy `packages/canvas` (superseded by `@xyflow/react` per ADR-035).
+   - Cleaned package dependencies and regenerated `bun.lock`.
+3. **Phase 3** (`e1958e6`): Feature Layout & File Organization:
+   - Standardized command registrations into `features/<name>/lib/commands.ts` across `canvas`, `search`, `settings`, `templates`, and `export`.
+   - Relocated non-component context definitions (`CanvasContext.ts`) from `components/` into `lib/`.
+4. **Phase 4** (`4987cda`): Export & Naming Normalization:
+   - Converted settings section components (`CommunityPluginsSection`, `CorePluginsSection`, `HotkeysSection`) from default exports to named exports.
+   - Converted canvas nodes, edges, and helpers (`GuidelineLines`, `CanvasEdge`, `CardHandles`, `GhostCardNode`, `GroupNode`, `LinkNode`, `TextCardNode`, `FileNode`) to named exports (`export const Component = memo(...)`).
+   - Removed duplicate default exports and fixed import references across consumers.
+5. **Phase 5** (`a50eb78`): Codify Conventions & Agent Rules:
+   - Updated `CONVENTIONS.md`: Added §1.8 (Standard Feature Layout), §2.5 (Downward-Only Layer Direction), §4.4 (Component Named Exports), and §13 (Shared Frontend Utilities `@workspace/ui`).
+   - Updated `AGENTS.md` and `apps/tauri/AGENTS.md`: Codified downward-only layer dependencies, named exports, and shared path utility rules.
+6. **Full Verification Gate**:
+   - `oxlint`: 0 warnings, 0 errors across 488 files.
+   - `apps/tauri`: 44 test files, 345 passing tests.
+   - `packages/ui`: 1 test file, 14 passing tests.
+   - `packages/editor`: 34 test files, 280 passing tests.
+   - `cargo test --workspace`: all suites passing (basalt_vault 52, tauri_lib 54, basalt_types 8, etc.).
+   - `tsc --noEmit`: Clean.
+
+---
+
 ## Benchmark & ADR-040-046 gate verification - ACTIVE
 
 **Status:** ADR-040-046 implementation is in the tree (source-verified
