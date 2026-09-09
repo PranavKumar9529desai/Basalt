@@ -36,12 +36,9 @@ fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
 }
 
 #[inline]
-fn extract_target(link_content: &str) -> &str {
+pub fn extract_target(link_content: &str) -> &str {
     link_content
-        .split('|')
-        .next()
-        .unwrap_or("")
-        .split('#')
+        .split(['|', '#'])
         .next()
         .unwrap_or("")
         .trim()

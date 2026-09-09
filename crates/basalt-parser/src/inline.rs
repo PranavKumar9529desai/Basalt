@@ -84,7 +84,8 @@ fn handle_embed<'a>(input: &'a str, e: usize, nodes: &mut Vec<MarkdownNode>) -> 
     }
 }
 
-fn parse_obsidian_link(content: &str) -> (String, Option<String>, Option<String>) {
+/// Parse raw link content inside `[[...]]` into `(target, alias, hash)`.
+pub fn parse_obsidian_link(content: &str) -> (String, Option<String>, Option<String>) {
     let mut target = content;
     let mut alias = None;
     let mut hash = None;
