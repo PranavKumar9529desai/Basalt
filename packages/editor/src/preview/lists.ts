@@ -74,6 +74,22 @@ export class ListNumberWidget extends WidgetType {
   }
 }
 
+const BULLET_WIDGETS = [
+  new ListBulletWidget(0),
+  new ListBulletWidget(1),
+  new ListBulletWidget(2),
+  new ListBulletWidget(3),
+];
+
+const NUMBER_WIDGETS = Array.from({ length: 64 }, (_, i) => new ListNumberWidget(i));
+
+const DEPTH_CLASSES = [
+  "cm-live-list-depth-0",
+  "cm-live-list-depth-1",
+  "cm-live-list-depth-2",
+  "cm-live-list-depth-3",
+];
+
 function listDepth(node: SyntaxNodeRef): number {
   let depth = 0;
   let cur = node.node.parent;
@@ -98,7 +114,7 @@ export function handleListNode(
     const doc = ctx.state.doc;
     const itemLine = doc.lineAt(node.from);
     const depth = listDepth(node);
-    const depthClass = `cm-live-list-depth-${Math.min(depth, 3)}`;
+    const depthClass = DEPTH_CLASSES[Math.min(depth, 3)];
 
     const endLine = doc.lineAt(node.to);
     let line = itemLine;
@@ -132,7 +148,8 @@ export function handleListNode(
           ctx.state.doc.sliceString(node.to, node.to + 1) === " "
             ? node.to + 1
             : node.to;
-        collector.addReplace(node.from, markEnd, new ListNumberWidget(number));
+        const widget = number < NUMBER_WIDGETS.length ? NUMBER_WIDGETS[number] : new ListNumberWidget(number);
+        collector.addReplace(node.from, markEnd, widget);
       } else {
         const depth = listDepth(node);
         const markEnd =
@@ -140,7 +157,8 @@ export function handleListNode(
           ctx.state.doc.sliceString(node.to, node.to + 1) === " "
             ? node.to + 1
             : node.to;
-        collector.addReplace(node.from, markEnd, new ListBulletWidget(depth));
+        const widget = BULLET_WIDGETS[Math.min(depth, 3)];
+        collector.addReplace(node.from, markEnd, widget);
       }
     }
 
