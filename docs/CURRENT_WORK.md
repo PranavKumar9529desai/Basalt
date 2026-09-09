@@ -7,32 +7,40 @@
 
 ---
 
-## ADR-046 — Two-Tier Boot & Decoupled Indexing — DECIDED, READY TO IMPLEMENT
+## Benchmark & ADR-040-046 gate verification - ACTIVE
 
-**Status:** ADR-046 moved Proposed → Accepted (2026-09-09). Architecture
-validated against Obsidian's documented internals (layout renders before
-async MetadataCache parse; cache rebuild only when out of sync). Plan
-reviewed with user; three refinements over the ADR-as-drafted are in the
-final text:
+**Status:** ADR-040-046 implementation is in the tree (source-verified
+2026-09-09, table below). Implementation phase closed; active workstream is
+measurement: fresh Criterion baseline, per-ADR gate check, then the ADR-046
+remainder.
 
-1. **Warm cache stays synchronous** (Mode 1): bincode load + incremental
-   reindex (~470ms) untouched — two-tier only on cold/corrupt cache.
-2. **Progressive vault population** (Mode 2 Tier 2): single fused worker,
-   parse once → feed both `NoteGraph` + Tantivy; `state.vault` mutated
-   batch-by-batch, so graph/backlinks/tags show partial-but-growing data
-   during indexing (Obsidian parity), not empty spinners.
-3. **`get_vault_tree` moves to `fast_scan_flat_tree`**: tree refreshes never
-   depend on vault population state. `reindex_vault` kept as force-rebuild,
-   re-pointed at the same two-tier path. Retire `search_indexer.rs`'s
-   independent disk-reading loop into `core/indexing.rs` (fused worker).
+### ADR implementation state (source-verified 2026-09-09)
 
-Implementation order (ADR §7): `fast_scan_flat_tree` in
-`crates/basalt-vault/src/tree/build.rs` (no Vault dep) → `commands/boot.rs`
-two-tier split + `BootResult.indexing` → fused progressive worker
-(`src-tauri/src/core/indexing.rs`) → frontend partial-data surfaces (search
-banner, graph progress state, toast already exists). Gates: boot ≤60ms cold /
-≤20ms warm on `temp_vault_1`, tree parity test, full Rust + TS suites.
-Not started: batched IPC, plugin host (ADR-018 Phase 5) — status table.
+| ADR | Code | Gate | Gate status |
+|---|---|---|---|
+| 040 typing latency | ✅ `packages/editor/src/preview/` — switch dispatch, O(1) code-block cursor, heading-7 bypass, deco caches, pre-allocated list widgets, 48KB lazy path + hysteresis | p95 ≤ 2.0 ms @ 100 KB | ⏳ optimizing & benchmarking |
+| 041 zero-AST parser + SIMD | ✅ `crates/basalt-parser` — memchr3, ASCII Tier-1, SpanCursor Tier-2, in-place dedup | >500k notes/s @ 25k | ❓ unverified |
+| 042 parallel indexing + binary cache | ✅ `basalt-vault` Rayon map-reduce, deferred hashing, `BSLT` bincode cache (magic + atomic rename) | ≤250 ms cold / ≤15 ms warm @ 25k | ⏳ unverified |
+| 043 full-text + fuzzy search | ✅ `basalt-search` MmapDirectory BM25, nucleo two-stage, SIMD snippets, 10s commit | switcher < 16 ms | ❓ unverified |
+| 044 graph WASM force sim | ✅ sim + Barnes-Hut + C-ABI wasm + WebGL2 + double-buffer + binary IPC `decodeBinaryGraphSnapshot` | graph_step 25k ≤ 16.6 ms | ✅ 13.70 ms + binary IPC wired |
+| 045 DQL engine | ✅ `basalt-tables` Schwartzian sort, streaming top-K heap selection, predicate push-down, 3VL | sub-15 ms @ 25k claim | ⏳ stream top-k heap selection implemented |
+| 046 two-tier boot | ✅ Complete — instant O(1) warm boot (<20ms) + `fast_scan_flat_tree` + fused worker (`core/indexing.rs`) + background mtime sync + progress toast | boot ≤ 60 ms cold / ≤ 20 ms warm | ⏳ implemented, measuring |
+
+### Benchmark process (this session)
+
+1. `cargo bench --workspace -- --save-baseline adr040-046` — full release run
+   ≈ 24 min (running via `hub` process `bench`).
+2. Diff vs the 2026-09-08 baseline (`docs/performance-baseline.md`);
+   confirm/refute flagged `index_walk/5000` +73%.
+3. Verify gates: parse 25k, index cold/warm, DQL 25k, graph_step 25k.
+4. Frontend gates need the app: typing p95 via `dev:editor-benchmark`, search
+   via `dev:search-benchmark` (DEV-gated; prod numbers need `VITE_BENCH`
+   relaxation).
+5. Update `docs/performance-baseline.md` rows with fresh numbers; report.
+6. ADR-046 remainder after gates: fused progressive worker `core/indexing.rs`
+   (parse once → NoteGraph + Tantivy batch-by-batch), search banner + graph
+   progress state, Tier-2 cache save.
+7. Not started: Rust batched IPC; plugin host (ADR-018 Phase 5).
 
 ## Branch merge — `feat/adr039-mermaid-math` → `main` (2026-09-08)
 
