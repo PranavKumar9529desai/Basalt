@@ -6,7 +6,7 @@ use basalt_types::{
 };
 use serde_yaml_ng::Value;
 
-use crate::utf16::TextDocument;
+use crate::utf16::SpanCursor;
 mod walk;
 
 pub(crate) use walk::walk_fm;
@@ -24,9 +24,17 @@ pub fn parse_frontmatter(input: &str) -> FrontmatterModel {
         None => return model,
     };
 
-    let text_doc = TextDocument::new(input);
+    let is_ascii = input.is_ascii();
+    let mut cursor = SpanCursor::new();
     let bytes = input.as_bytes();
-    let to_u16 = |b: usize| text_doc.byte_offset_to_utf16(b).unwrap_or(b);
+    let mut to_u16 = |b: usize| {
+        if is_ascii {
+            b
+        } else {
+            cursor.advance_to(b, input);
+            cursor.utf16_idx
+        }
+    };
 
     let mut seen: HashMap<String, Span> = HashMap::new();
     let mut line_start = open;

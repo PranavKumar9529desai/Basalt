@@ -7,6 +7,7 @@ edition = "2021"
 basalt-types = { path = "../basalt-types" }
 pulldown-cmark = "0.13.0"
 ropey = "1.6.1"
+memchr = "2.8"
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.9.0"
 nom = "7"

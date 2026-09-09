@@ -15,4 +15,4 @@ pub use link_rewrite::{
 pub use metadata::extract_metadata;
 pub use parser::{process_markdown, ProcessedMarkdown};
 pub use query::{parse_query, ParseError};
-pub use utf16::TextDocument;
+pub use utf16::{SpanCursor, TextDocument};
