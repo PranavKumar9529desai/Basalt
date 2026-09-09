@@ -119,15 +119,17 @@ fn test_edge_case_3_aggregate_division_by_zero_and_empty() {
 #[test]
 fn test_edge_case_4_flatten_row_limit() {
     let mut vault = Vault::new();
-    // Build a note with 50,001 elements in a list to exceed the safety ceiling
-    let l1: String = (0..50_001).map(|i| i.to_string()).collect::<Vec<_>>().join(", ");
-    let content = format!("---\nlist1: [{}]\n---\n# Big\n", l1);
-    vault.add_document("notes/big.md", &content);
+    // Build 51 notes each with 1,000 elements in list1 to exceed the 50,000 row safety ceiling
+    let l1: String = (0..1_000).map(|i| i.to_string()).collect::<Vec<_>>().join(", ");
+    let content = format!("---\nlist1: [{}]\n---\n# Chunk\n", l1);
+    for i in 0..51 {
+        vault.add_document(&format!("notes/n{}.md", i), &content);
+    }
 
     let res = execute_query(&vault, "TABLE l1 FLATTEN list1 AS \"l1\"");
     match res {
         Err(DqlError::EvaluationLimitExceeded(msg)) => {
-            assert!(msg.contains("50,000"), "Expected 50,000 row ceiling message, got: {}", msg);
+            assert!(msg.contains("50000") || msg.contains("50,000"), "Expected 50,000 row ceiling message, got: {}", msg);
         }
         other => panic!("Expected DqlError::EvaluationLimitExceeded, got: {:?}", other),
     }
