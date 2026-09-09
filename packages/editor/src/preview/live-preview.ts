@@ -55,7 +55,12 @@ import { LISTS_THEME } from "./lists";
 import { MARK_HIDING_THEME } from "./mark-hiding";
 import { EMBED_PREVIEW_THEME } from "./embeds";
 import { TABLES_THEME } from "./tables";
-import { buildPreviewState, HR_THEME, LAZY_DOC_THRESHOLD } from "./collector";
+import {
+  buildPreviewState,
+  HR_THEME,
+  LAZY_DOC_HYSTERESIS,
+  LAZY_DOC_THRESHOLD,
+} from "./collector";
 import type { PreviewState } from "./collector";
 import { rebuildPreview, previewScheduler } from "./scheduler";
 import { tagMarksPlugin } from "./tag-marks";
@@ -105,8 +110,13 @@ export const livePreviewField = StateField.define<PreviewState>({
       }
     }
 
+    const wasLazy = tr.startState.doc.length > LAZY_DOC_THRESHOLD;
+    const threshold = wasLazy
+      ? LAZY_DOC_THRESHOLD - LAZY_DOC_HYSTERESIS
+      : LAZY_DOC_THRESHOLD;
+
     const lazy =
-      tr.state.doc.length > LAZY_DOC_THRESHOLD &&
+      tr.state.doc.length > threshold &&
       !forced &&
       !focusChanged &&
       // Explicit selection moves (clicks, arrows) rebuild synchronously even
@@ -114,6 +124,7 @@ export const livePreviewField = StateField.define<PreviewState>({
       // and they are off the keystroke path. Pure-change transactions
       // (typing) have no explicit selection and take the lazy path.
       !tr.selection;
+
 
     const path = lazy ? (tr.docChanged ? "lazy-map" : "no-op") : "full-rebuild";
     if (path !== "no-op" && import.meta.env.DEV && editorBenchmarkState.debug) {

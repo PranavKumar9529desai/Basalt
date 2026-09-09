@@ -59,9 +59,50 @@ export function isInCodeBlock(
   return false;
 }
 
+/** Cursor used for amortized O(1) monotonic code-block range resolution (ADR-040). */
+export interface CodeBlockCursor {
+  index: number;
+}
+
+/**
+ * Check if a position falls inside any known code block range using a forward-advancing
+ * monotonic cursor (ADR-040).
+ *
+ * When traversing in document order, `pos` is monotonically non-decreasing. The cursor
+ * advances forward without backtracking, reducing containment checks from O(log N) to
+ * amortized O(1).
+ */
+export function isInCodeBlockMonotonic(
+  pos: number,
+  ranges: { from: number; to: number }[],
+  cursor: CodeBlockCursor,
+): boolean {
+  const len = ranges.length;
+  if (len === 0) return false;
+
+  let idx = cursor.index;
+  // If pos went backwards due to non-sequential traversal, reset cursor
+  if (idx > 0 && (idx >= len || pos < ranges[idx - 1].to)) {
+    cursor.index = 0;
+    idx = 0;
+  }
+
+  while (idx < len && ranges[idx].to < pos) {
+    idx++;
+  }
+  cursor.index = idx;
+
+  if (idx < len) {
+    const r = ranges[idx];
+    return pos >= r.from && pos <= r.to;
+  }
+  return false;
+}
+
 /** Sort an array of `{ from, to }` ranges in-place by `from` (ascending). */
 export function sortCodeBlockRanges(
   ranges: { from: number; to: number }[],
 ): void {
   ranges.sort((a, b) => a.from - b.from);
 }
+

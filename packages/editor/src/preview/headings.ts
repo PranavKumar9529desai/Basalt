@@ -37,15 +37,42 @@ export function handleHeadingNode(
 /**
  * Scans visible lines for 7-hash headings (not supported by Lezer grammar).
  * Must be called AFTER the shared tree walk so codeBlockRanges are populated.
+ * When candidateLines is provided (ADR-040), only those candidate line numbers
+ * are checked, bypassing the full-document scan.
  */
 export function handleHeading7Lines(
   rangeFrom: number,
   rangeTo: number,
   ctx: DecorationContext,
   collector: DecorationCollector,
+  candidateLines?: readonly number[],
 ): void {
   const { state, activeLine, codeBlockRanges } = ctx;
   if (state.doc.length === 0) return;
+
+  if (candidateLines !== undefined) {
+    if (candidateLines.length === 0) return;
+    for (const lineNum of candidateLines) {
+      if (lineNum < 1 || lineNum > state.doc.lines) continue;
+      const line = state.doc.line(lineNum);
+      if (line.from < rangeFrom || line.to > rangeTo) continue;
+      const text = line.text;
+      if (text.includes("#######")) {
+        const match = HEADING_7_RE.exec(text);
+        if (match && !isInCodeBlock(line.from, codeBlockRanges)) {
+          collector.addLineClass(line.from, "cm-live-heading-7");
+
+          if (!activeLine || line.number !== activeLine.number) {
+            const markerStart = line.from;
+            const markerEnd = markerStart + match[1].length;
+            collector.addMark(markerStart, markerEnd, "cm-live-hide");
+          }
+        }
+      }
+    }
+    return;
+  }
+
   const startLine = state.doc.lineAt(rangeFrom);
   const endLine = state.doc.lineAt(Math.min(rangeTo, state.doc.length));
 
@@ -70,3 +97,4 @@ export function handleHeading7Lines(
     line = state.doc.lineAt(line.to + 1);
   }
 }
+
