@@ -18,4 +18,7 @@ pub use convert::{QueryColumn, QueryColumnType, QueryResult};
 pub use path_utils::{
     is_canvas_path, is_document_path, is_md_path, mtime_secs, stem_lower, stem_of,
 };
-pub use value::{yaml_to_typed, yaml_to_typed_pairs, TypedValue};
+pub use value::{
+    compare_typed, parse_date_ts, parse_datetime_ts, type_tier, yaml_to_typed,
+    yaml_to_typed_pairs, TypedValue,
+};

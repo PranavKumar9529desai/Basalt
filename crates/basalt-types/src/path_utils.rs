@@ -69,7 +69,7 @@ mod tests {
         assert_eq!(stem_of("/vault/notes/borrow-checker.md"), Some("borrow-checker"));
         assert_eq!(stem_of("file.canvas"), Some("file"));
         assert_eq!(stem_of("/a/b/c.txt"), Some("c"));
-        assert_eq!(stem_of(""), Some(""));
+        assert_eq!(stem_of(""), None);
     }
 
     #[test]

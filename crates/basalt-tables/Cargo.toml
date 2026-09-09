@@ -10,7 +10,6 @@ basalt-vault = { path = "../basalt-vault" }
 basalt-graph = { path = "../basalt-graph" }
 thiserror = "2"
 serde_yaml_ng = "0.9"
-chrono = "0.4"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
