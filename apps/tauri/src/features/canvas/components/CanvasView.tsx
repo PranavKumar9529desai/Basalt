@@ -25,7 +25,7 @@ import LinkNode from "../nodes/LinkNode";
 import GhostCardNode from "../nodes/GhostCardNode";
 import CanvasEdge from "../edges/CanvasEdge";
 import GuidelineLines from "../components/GuidelineLines";
-import { CanvasContext } from "./CanvasContext";
+import { CanvasContext } from "../lib/CanvasContext";
 import { registerCanvasFileDrop } from "../lib/canvasDrop";
 import type { CanvasXYNode } from "../lib/mapper";
 

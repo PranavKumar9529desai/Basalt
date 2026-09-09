@@ -177,4 +177,9 @@ export async function runSearch(query: string) {
 1. **Criterion Benchmark**: Run `cargo bench -p basalt-search --bench search_query` verifying $\le 5\text{ms}$ query latency on the 25k tier.
 2. **Frontend Paint Benchmark**: Run `dev:search-benchmark` verifying all interaction phases (`open-cold`, `install`, `nav-same-file`, `nav-cross-file`) pass with $p95 \le 16.67\text{ms}$.
 3. **Highlight Accuracy Tests**: Verify highlight spans against multi-byte Unicode strings (`résumé`, Japanese titles) and verify overlapping highlight interval merging.
-4. **Workspace Tests**: All 16 `basalt-search` tests and search frontend vitest suites must pass clean.
+4. **Workspace Tests**: All 34 `basalt-search` tests and search frontend vitest suites must pass clean.
+
+> **Gate status (2026-09-09):** Implementation complete (MmapDirectory BM25,
+> nucleo two-stage scoring, SIMD snippet prefilter, 10s commit delay).
+> Criterion gate ($\le 5\text{ms}$ query @ 25k) and frontend gate
+> **not yet measured** — pending benchmark run.

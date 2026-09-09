@@ -190,4 +190,9 @@ pub back_links: HashMap<NodeId, SmallVec<[NodeId; 8]>>,
 1. **Criterion Benchmark**: Run `cargo bench -p basalt-vault --bench index_walk` verifying $\le 250\text{ms}$ on 25k notes.
 2. **Cache Roundtrip Benchmark**: Run `cargo bench -p basalt-vault --bench cache_roundtrip` verifying $\le 15\text{ms}$ save/load on 25k notes.
 3. **Crash Recovery Test**: Simulate aborted writes and verify the atomic rename leaves previous cache valid.
-4. **Workspace Tests**: All 46 `basalt-vault` tests must pass clean.
+4. **Workspace Tests**: All 52 `basalt-vault` tests must pass clean.
+
+> **Gate status (2026-09-09):** Implementation complete (Rayon map-reduce,
+> deferred hashing, `BSLT` bincode cache with magic + atomic rename).
+> Criterion gates ($\le 250\text{ms}$ cold / $\le 15\text{ms}$ warm @ 25k)
+> **not yet measured** — pending benchmark run.

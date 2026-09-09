@@ -209,3 +209,7 @@ canvas.addEventListener("webglcontextrestored", () => {
 3. **Memory Profile**: Verify zero garbage collection allocation spikes in the Web Worker during active physics ticks.
 4. **Context Loss Simulation**: Trigger `WEBGL_lose_context` extension in tests to verify seamless GPU buffer rehydration without crashing.
 5. **Workspace Tests**: All 8 `basalt-graph` tests must pass clean.
+
+> **Gate status (2026-09-09):** ✅ **Verified.** `graph_step` at 25k nodes
+> = **13.70 ms** (gate $\le 16.6\text{ms}$ passes). Binary IPC snapshot
+> decoding (`decodeBinaryGraphSnapshot`) wired and functional.

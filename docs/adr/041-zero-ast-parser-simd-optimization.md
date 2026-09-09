@@ -167,4 +167,9 @@ This eliminates heap reallocation and hash-table hashing costs on every parsed n
 
 1. **Criterion Benchmark**: Run `cargo bench -p basalt-parser --bench parse_metadata` verifying $>500,000$ notes/sec throughput on the 25k tier.
 2. **Span Accuracy Tests**: Verify UTF-16 coordinates across all Unicode categories: pure ASCII, emoji ZWJ sequences, CJK ideographs, and decomposed accents.
-3. **Workspace Tests**: All 82 `basalt-parser` tests must pass clean.
+3. **Workspace Tests**: All 87 `basalt-parser` tests must pass clean.
+
+> **Gate status (2026-09-09):** Implementation complete (memchr3, ASCII
+> Tier-1, SpanCursor Tier-2, in-place sort+dedup all in tree). Criterion
+> gate ($>500\text{k}$ notes/s @ 25k) **not yet measured** — pending
+> benchmark run.

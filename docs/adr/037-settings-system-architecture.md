@@ -447,25 +447,15 @@ apps/tauri/src/features/settings/
     │   ├── index.ts              # Barrel export for controls
     │   ├── SettingToggle.tsx     # Boolean switch
     │   ├── SettingDropdown.tsx   # Select dropdown
+    │   ├── SettingColor.tsx      # Accent color picker
     │   ├── SettingInput.tsx      # Text/number input
     │   ├── SettingButton.tsx     # Action button(s)
     │   └── SettingSlider.tsx     # Range slider with value display
     │
-    └── sections/                 # Sections organized by category
-        ├── options/              # Core app option pages
-        │   ├── GeneralSection.tsx
-        │   ├── AppearanceSection.tsx
-        │   ├── EditorSection.tsx
-        │   ├── FilesLinksSection.tsx
-        │   ├── HotkeysSection.tsx
-        │   ├── CorePluginsSection.tsx
-        │   └── CommunityPluginsSection.tsx
-        │
-        └── plugins/              # Core plugin settings pages
-            ├── TemplatesSection.tsx
-            ├── DailyNotesSection.tsx
-            ├── CanvasSection.tsx
-            └── BacklinksSection.tsx
+    └── sections/                 # Custom component sections (declarative specs render the rest)
+        ├── HotkeysSection.tsx    # Virtualized command list with key recorder
+        ├── CorePluginsSection.tsx # Plugin manager with enable toggles
+        └── CommunityPluginsSection.tsx # Empty state (host not built)
 ```
 
 #### File Budget & Responsibility Invariants:

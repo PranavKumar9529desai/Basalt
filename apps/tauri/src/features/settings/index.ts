@@ -1,4 +1,4 @@
-import "./commands";
+import "./lib/commands";
 import "./lib/registrations";
 
 export { AppearanceEffects } from "./lib/appearance-effects";

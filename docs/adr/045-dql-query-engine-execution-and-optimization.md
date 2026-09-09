@@ -147,6 +147,11 @@ Query performance is evaluated through native Rust Criterion benchmarks in `crat
    - `test_null_relational_logic`: Test `null > 5`, `null < 5`, `null == null`, `null != 5`.
    - `test_aggregate_empty`: Test `average([]) == TypedValue::Null`.
 
+> **Gate status (2026-09-09):** Implementation complete (Schwartzian sort,
+> streaming top-K heap selection, predicate push-down, 3VL). Criterion gate
+> (sub-15ms @ 25k) **not yet measured** — pending benchmark run. 25
+> `basalt-tables` tests pass.
+
 ---
 
 ## Consequences

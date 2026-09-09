@@ -81,7 +81,7 @@ We decouple the application startup into two strictly separated tiers, with a **
 
 ### Mode 1 — Warm Boot (cache hit): keep the synchronous incremental path
 
-Measured cost: bincode load (18ms) + `incremental_reindex` (mtime-diffed, ~450ms) ≈ **470ms to a fully populated vault + search-ready state**. No background complexity, no partially-empty graph surface, no race windows.
+Measured cost: bincode load ($\approx 161\text{ms}$) + `incremental_reindex` (mtime-diffed) ≈ **258ms to a fully populated vault + search-ready state** (empirically measured; see §7). No background complexity, no partially-empty graph surface, no race windows.
 
 **Decision:** a valid `.bincode` cache keeps the current synchronous incremental boot untouched. Two-tier (empty vault during Tier 2) buys nothing on this path; its cost — gating graph/search behind indexing — is only justified when the alternative is an 11-second freeze. This matches Obsidian: rebuild the cache only when it is missing or out of sync.
 
@@ -129,7 +129,7 @@ Immediately upon completing Tier 1, a **single fused worker thread** is spawned:
 5. **Completion**:
    - Flushes Tantivy (one final commit), then atomically saves the `.bincode` cache (`VaultCache::save` via atomic rename) so the next boot is a Mode-1 warm boot.
 
-**Fused worker placement (file structure):** the worker lives in `src-tauri/src/core/` alongside `search_indexer.rs`, under a name like `core/indexing.rs` (or a small `core/indexing/` module) — the _single_ file owning parse-once-feed-both. `search_indexer.rs`'s separate disk-reading loop is retired; its batching/yield/progress/generation-cancel patterns carry over unchanged.
+**Fused worker placement (file structure):** the worker lives in `src-tauri/src/core/indexing.rs` — the _single_ file owning parse-once-feed-both for cold boot (Mode 2 Tier 2). Its batching/yield/progress/generation-cancel patterns were derived from `search_indexer.rs`. For warm boot (Mode 1), `search_indexer.rs` remains the incremental Tantivy indexer, emitting `vault://indexing-progress` events for the same UI toast. The fused worker and the incremental indexer share identical constants (`BATCH_SIZE`, `COMMIT_INTERVAL_DOCS`, `YIELD_SLEEP_MS`) and progress event payloads — the duplication is intentional separation of concerns (cold full-index vs. warm incremental-index), not an oversight.
 
 ---
 
@@ -218,7 +218,7 @@ When a user switches vaults while background indexing is in progress:
 | Metric / Experience                    | Obsidian (Electron / Node.js)                       | Basalt Prior Architecture                       | Basalt Two-Tier Target ("Best of Best")                         |
 | :------------------------------------- | :-------------------------------------------------- | :---------------------------------------------- | :-------------------------------------------------------------- |
 | **Cold Startup Time (25k notes)**      | $\approx 2.5\text{s} - 4.5\text{s}$                 | $11.6\text{s} - 13.2\text{s}$ (Total UI freeze) | $\mathbf{\le 60\text{ms}}$ (Window + tree + editor interactive) |
-| **Warm Startup Time (25k notes)**      | $\approx 1.2\text{s} - 2.0\text{s}$                 | $\approx 450\text{ms}$ (Bincode cache parse)    | $\mathbf{\le 20\text{ms}}$ (Instant preboot cache hit)          |
+| **Warm Startup Time (25k notes)**      | $\approx 1.2\text{s} - 2.0\text{s}$                 | $\approx 258\text{ms}$ (Bincode load + reindex) | $\mathbf{\le 20\text{ms}}$ (Instant preboot cache hit)          |
 | **File Tree Rendering**                | Progressive virtual tree                            | Blocked until full 25k parse completes          | **Immediate** ($< 30\text{ms}$ fast scan)                       |
 | **Active Note Open Latency**           | $\approx 20\text{ms} - 50\text{ms}$                 | Blocked behind cold index                       | $\mathbf{\le 1.0\text{ms}}$ (Direct disk read)                  |
 | **Editor Typing Latency (100KB, p95)** | $15\text{ms} - 35\text{ms}$ (Visible caret stutter) | $3.1\text{ms} - 4.0\text{ms}$ (Passed ADR-019)  | $\mathbf{\le 2.0\text{ms}}$ (Fused walk + lazy map)             |
@@ -260,7 +260,7 @@ When a user switches vaults while background indexing is in progress:
      - Dispatch the fused background worker (Mode 2 Tier 2) with batching, 5ms yields, generation-cancel, and progress events.
 3. **Fused progressive worker (`core/indexing.rs` or `core/indexing/`)**:
    - Single file owning parse-once-feed-both: per-batch Rayon `extract_metadata` → progressive `state.vault` upsert + Tantivy writer feed.
-   - Retire `search_indexer.rs`'s independent disk-reading loop (its constants/patterns migrate into the fused worker).
+   - `search_indexer.rs` is repurposed for warm-boot incremental Tantivy indexing (same constants/patterns carry over; cold-boot full indexing moves to `core/indexing.rs`).
 4. **`apps/tauri: Indexing Toast Integration`**:
    - Wire `vault://indexing-progress` / `vault://indexing-complete` events to the already-implemented `IndexingProgressToast` in `Overlays.tsx` (exists; verify end-to-end on cold boot).
 5. **`apps/tauri: Partial-data surfaces`**:

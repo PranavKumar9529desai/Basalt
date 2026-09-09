@@ -2,9 +2,9 @@ import { EditorView } from "@codemirror/view";
 import { invoke } from "@tauri-apps/api/core";
 import { commandService } from "@workspace/commands";
 
-import { expandTemplate } from "./lib/expand-template";
-import { splitTemplateFrontmatter } from "./lib/split-frontmatter";
-import { useTemplatePickerStore } from "./picker-store";
+import { expandTemplate } from "./expand-template";
+import { splitTemplateFrontmatter } from "./split-frontmatter";
+import { useTemplatePickerStore } from "../picker-store";
 
 /**
  * Active markdown view: the focused editor if any, else the first visible

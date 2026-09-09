@@ -1,4 +1,4 @@
-import "./commands";
+import "./lib/commands";
 
 export { ExportDialog } from "./components/ExportDialog";
 export { useExportStore } from "./store";

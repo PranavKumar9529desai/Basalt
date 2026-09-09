@@ -343,14 +343,14 @@ exceptions from crashing the widget.
 
 ## Validation
 
-- [ ] ` ```mermaid\ngraph TD\n  A-->B\n``` ` renders SVG flowchart in live preview; cursor entering reveals raw source
-- [ ] ` ```mermaid\nsequenceDiagram\n  A->>B: Hello\n``` ` renders sequence diagram
-- [ ] `$$E = mc^2$$` renders display-mode equation
-- [ ] `$\alpha + \beta$` renders inline; cursor on that line reveals raw `$...$`
-- [ ] `$\unknown$` renders with error marker, widget does not crash
-- [ ] `%%{init: {"securityLevel":"loose"}}%%` in a mermaid block has no effect
-- [ ] Both features work in reading mode and search preview panes
-- [ ] `bun run build` — `mermaid` and `katex` appear as separate chunks; absent from `index.js`
-- [ ] `bun run lint && bunx tsc --noEmit` — clean
-- [ ] `cd packages/editor && bun run test` — all new tests pass
-- [ ] Typing latency: p95 ≤ 4ms @ 100KB (blank note, no diagrams/math)
+- [x] ` ```mermaid\ngraph TD\n  A-->B\n``` ` renders SVG flowchart in live preview; cursor entering reveals raw source
+- [x] ` ```mermaid\nsequenceDiagram\n  A->>B: Hello\n``` ` renders sequence diagram
+- [x] `$$E = mc^2$$` renders display-mode equation
+- [x] `$\alpha + \beta$` renders inline; cursor on that line reveals raw `$...$`
+- [x] `$\unknown$` renders with error marker, widget does not crash
+- [x] `%%{init: {"securityLevel":"loose"}}%%` in a mermaid block has no effect
+- [x] Both features work in reading mode and search preview panes
+- [x] `bun run build` — `mermaid` and `katex` appear as separate chunks; absent from `index.js`
+- [x] `bun run lint && bunx tsc --noEmit` — clean
+- [x] `cd packages/editor && bun run test` — all new tests pass
+- [x] Typing latency: p95 ≤ 4ms @ 100KB (blank note, no diagrams/math)

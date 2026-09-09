@@ -9,7 +9,7 @@ import {
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
-import { useCanvas } from "../components/CanvasContext";
+import { useCanvas } from "../lib/CanvasContext";
 
 function normalizeUrl(input: string): string {
   const trimmed = input.trim();
