@@ -155,7 +155,9 @@ mod tests {
         assert!(fwd_a.unwrap().contains(&id_b.unwrap()));
 
         let meta_a = restored.vault.metadata("a.md").expect("meta_a");
-        assert_eq!(meta_a.tags, vec!["rust", "perf"]);
+        // ADR-041 sorts + dedups tags in extract_metadata (sorted tag order is
+        // the parser contract, not document order).
+        assert_eq!(meta_a.tags, vec!["perf", "rust"]);
         assert!(meta_a.frontmatter.is_some());
 
         let _ = std::fs::remove_file(temp_file);
