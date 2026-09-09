@@ -11,6 +11,7 @@
 pub mod app_state;
 pub mod cache;
 pub mod config;
+pub mod indexing;
 pub mod search_indexer;
 pub mod watcher;
 pub mod workspace;

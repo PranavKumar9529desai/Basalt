@@ -38,4 +38,5 @@ http-range = "0.1"
 mimalloc = { version = "0.1", default-features = false }
 smallvec = { version = "1.16", features = ["serde"] }
 rayon = "1.11"
+ignore = "0.4.23"
 

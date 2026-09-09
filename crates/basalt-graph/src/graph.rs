@@ -23,7 +23,7 @@ fn remove_sorted(vec: &mut SmallVec<[NodeId; 8]>, id: NodeId) {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct NoteGraph {
     pub forward_links: HashMap<NodeId, SmallVec<[NodeId; 8]>>,
     pub back_links: HashMap<NodeId, SmallVec<[NodeId; 8]>>,

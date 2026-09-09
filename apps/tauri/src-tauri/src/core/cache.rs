@@ -32,6 +32,30 @@ pub(crate) fn cache_path(app: &tauri::AppHandle, vault_path: &str) -> PathBuf {
         .join(cache_filename(vault_path))
 }
 
+/// Fast O(1) cache load (<20ms).
+/// Populates `state.vault` directly from the binary cache without running
+/// synchronous disk scans or cache reserialization during boot.
+pub fn load_cached_vault(
+    vault_path: &str,
+    state: &AppState,
+    app: &tauri::AppHandle,
+) -> Result<(usize, std::collections::HashMap<String, u64>), String> {
+    let cache_file = cache_path(app, vault_path);
+
+    if let Some(cache) = VaultCache::load(&cache_file) {
+        let note_count = cache.vault.graph.metadata_cache.len();
+        let mtimes = cache.file_mtimes.clone();
+        *state
+            .vault
+            .write()
+            .map_err(|_| "vault lock poisoned".to_string())? = cache.vault;
+
+        return Ok((note_count, mtimes));
+    }
+
+    Err("cache missing or invalid".to_string())
+}
+
 /// Returns `(status, note_count, known_mtimes)`.
 /// `known_mtimes` is the mtime map from the cache BEFORE the incremental reindex —
 /// used by the search engine to decide which files need re-indexing.

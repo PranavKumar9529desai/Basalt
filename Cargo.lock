@@ -4457,6 +4457,7 @@ dependencies = [
  "basalt-types",
  "basalt-vault",
  "http-range",
+ "ignore",
  "mimalloc",
  "rayon",
  "serde",

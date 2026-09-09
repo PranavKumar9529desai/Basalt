@@ -32,7 +32,7 @@ impl std::fmt::Display for NodeId {
 
 /// An append-only string interner.
 /// Serializes only `id_to_string`; `string_to_id` is rebuilt on deserialize.
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct StringArena {
     id_to_string: Vec<String>,
     #[serde(skip)]

@@ -6,7 +6,7 @@ use basalt_types::FileMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Vault {
     pub arena: StringArena,
     pub graph: NoteGraph,
