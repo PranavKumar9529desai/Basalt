@@ -35,7 +35,7 @@ fn generate_note_content(index: usize, total: usize) -> String {
 fn bench_cache_roundtrip(c: &mut Criterion) {
     let mut group = c.benchmark_group("cache_roundtrip");
 
-    for &size in &[1000usize, 5000] {
+    for &size in &[1000usize, 5000, 25000] {
         let mut vault = Vault::new();
         for i in 0..size {
             let content = generate_note_content(i, size);
@@ -44,7 +44,7 @@ fn bench_cache_roundtrip(c: &mut Criterion) {
 
         let cache = VaultCache::build("/vault", vault);
         let dir = tempfile::tempdir().expect("temp dir");
-        let cache_path = dir.path().join("cache.json");
+        let cache_path = dir.path().join("cache.bincode");
 
         group.throughput(Throughput::Elements(size as u64));
 

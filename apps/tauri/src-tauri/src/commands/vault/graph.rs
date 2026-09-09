@@ -336,7 +336,7 @@ mod tests {
         vault
             .graph
             .forward_links
-            .insert(a_id, std::collections::HashSet::from([b_id]));
+            .insert(a_id, smallvec::smallvec![b_id]);
         let snap = build_graph_snapshot(&vault, &root).unwrap();
         let note_idx = |suffix: &str| {
             snap.nodes
