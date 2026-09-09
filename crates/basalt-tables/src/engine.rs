@@ -59,57 +59,38 @@ impl WorkRow {
     }
 }
 
-/// Helper node for bounded Max-Heap in ASC Top-K selection.
-struct AscHeapNode {
+/// Helper node for bounded Heap in Top-K selection.
+struct HeapNode<const DESC: bool> {
     key: TypedValue,
     row: WorkRow,
 }
 
-impl PartialEq for AscHeapNode {
+impl<const DESC: bool> PartialEq for HeapNode<DESC> {
     fn eq(&self, other: &Self) -> bool {
         compare_typed(&self.key, &other.key) == Ordering::Equal
     }
 }
 
-impl Eq for AscHeapNode {}
+impl<const DESC: bool> Eq for HeapNode<DESC> {}
 
-impl PartialOrd for AscHeapNode {
+impl<const DESC: bool> PartialOrd for HeapNode<DESC> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for AscHeapNode {
+impl<const DESC: bool> Ord for HeapNode<DESC> {
     fn cmp(&self, other: &Self) -> Ordering {
-        compare_typed(&self.key, &other.key)
+        if DESC {
+            compare_typed(&other.key, &self.key)
+        } else {
+            compare_typed(&self.key, &other.key)
+        }
     }
 }
 
-/// Helper node for bounded Min-Heap in DESC Top-K selection.
-struct DescHeapNode {
-    key: TypedValue,
-    row: WorkRow,
-}
-
-impl PartialEq for DescHeapNode {
-    fn eq(&self, other: &Self) -> bool {
-        compare_typed(&self.key, &other.key) == Ordering::Equal
-    }
-}
-
-impl Eq for DescHeapNode {}
-
-impl PartialOrd for DescHeapNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for DescHeapNode {
-    fn cmp(&self, other: &Self) -> Ordering {
-        compare_typed(&other.key, &self.key)
-    }
-}
+type AscHeapNode = HeapNode<false>;
+type DescHeapNode = HeapNode<true>;
 
 /// Execute a DQL query against the vault's indexed metadata.
 pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> {

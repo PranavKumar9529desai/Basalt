@@ -68,9 +68,10 @@ impl AssetIndex {
         self.assets.is_empty()
     }
 
-    /// Register a note's embed targets.  Each `target` string is resolved
-    /// against the asset index by basename and rel_path.
-    pub fn register_embeds(&mut self, note_abs_path: &str, targets: &[String]) {
+    fn register_relationship<F>(&mut self, note_abs_path: &str, targets: &[String], field: F)
+    where
+        F: Fn(&mut AssetInfo) -> &mut Vec<String>,
+    {
         if self.assets.is_empty() || targets.is_empty() {
             return;
         }
@@ -78,30 +79,25 @@ impl AssetIndex {
             if let Some(asset) = self.resolve_asset(target) {
                 let asset_path = asset.abs_path.clone();
                 if let Some(a) = self.assets.get_mut(&asset_path) {
-                    if !a.embeds_by.contains(&note_abs_path.to_string()) {
-                        a.embeds_by.push(note_abs_path.to_string());
+                    let list = field(a);
+                    if !list.contains(&note_abs_path.to_string()) {
+                        list.push(note_abs_path.to_string());
                     }
                 }
             }
         }
     }
 
+    /// Register a note's embed targets.  Each `target` string is resolved
+    /// against the asset index by basename and rel_path.
+    pub fn register_embeds(&mut self, note_abs_path: &str, targets: &[String]) {
+        self.register_relationship(note_abs_path, targets, |a| &mut a.embeds_by);
+    }
+
     /// Register a note's wikilink targets (non-embed).  Same resolution
     /// logic as embeds but populates `linked_by`.
     pub fn register_links(&mut self, note_abs_path: &str, targets: &[String]) {
-        if self.assets.is_empty() || targets.is_empty() {
-            return;
-        }
-        for target in targets {
-            if let Some(asset) = self.resolve_asset(target) {
-                let asset_path = asset.abs_path.clone();
-                if let Some(a) = self.assets.get_mut(&asset_path) {
-                    if !a.linked_by.contains(&note_abs_path.to_string()) {
-                        a.linked_by.push(note_abs_path.to_string());
-                    }
-                }
-            }
-        }
+        self.register_relationship(note_abs_path, targets, |a| &mut a.linked_by);
     }
 
     /// Clear all embed/link relationships (call before a full re-index).
