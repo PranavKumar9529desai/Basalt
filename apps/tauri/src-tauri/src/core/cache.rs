@@ -106,6 +106,13 @@ pub fn update_last_vault(app: &tauri::AppHandle, vault_path: &str) {
     config.last_vault = Some(vault_path.to_string());
     save_config(app, &config);
 }
+/// Returns `true` when a valid `.bincode` cache exists for `vault_path`.
+/// Used by the two-tier boot (ADR-046) to decide between Mode 1 (warm,
+/// sync incremental) and Mode 2 (cold, fast scan + background indexing).
+pub fn has_valid_cache(app: &tauri::AppHandle, vault_path: &str) -> bool {
+    let cache_file = cache_path(app, vault_path);
+    VaultCache::load(&cache_file).is_some()
+}
 
 /// Returns the directory where the tantivy search index for `vault_path` is stored.
 /// Uses the same djb2 hash as `cache_filename` so the index lives alongside the vault cache.

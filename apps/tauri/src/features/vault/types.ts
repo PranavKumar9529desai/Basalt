@@ -99,6 +99,8 @@ export interface BootResult {
   workspace: Record<string, unknown>;
   /** Rust boot phase durations in µs (TTI instrumentation, ADR-017). */
   timings: Record<string, number>;
+  /** ADR-046: true when Tier 2 background indexing is in progress. */
+  indexing: boolean;
 }
 
 /**
