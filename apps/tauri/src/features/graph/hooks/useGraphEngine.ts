@@ -229,7 +229,7 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
     const ro = new ResizeObserver(resize);
     ro.observe(glCanvas);
 
-    const worker = new Worker(new URL("./graphWorker.ts", import.meta.url), {
+    const worker = new Worker(new URL("../lib/graphWorker.ts", import.meta.url), {
       type: "module",
     });
     workerRef.current = worker;
