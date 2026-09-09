@@ -599,6 +599,16 @@ work is uncommitted atop `main`.
 
 ---
 
+## Release / CI pipeline (handoff-critical)
+
+Release workflow factors (triggers, GitHub Free cost model, macOS-tag-only
+rule, version sync, wasm regen, deliberate gaps) are codified in
+[`docs/RELEASE.md`](./RELEASE.md). **Any agent doing release or CI work MUST
+read it first** — especially: macOS builds only on `v*` tags + manual dispatch;
+never add macOS to per-push triggers; sync version across `tauri.conf.json`,
+`src-tauri/Cargo.toml`, and `apps/tauri/package.json`; regenerate + commit
+WASM before tagging.
+
 ## Previous Work (completed, for context)
 
 See git log for completed features: ADR-023 (inline title + rename), editor

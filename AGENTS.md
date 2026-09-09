@@ -21,6 +21,7 @@ decisions.
 | [`root README.md`](./README.md)                                  | Human orientation / quick start                                                  | ⚠️ on demand        |
 | [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md)                   | Working inside `apps/tauri/` (app-layer rules)                                   | ⚠️ auto via nesting |
 | [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md)                 | Starting a session — the active workstream handoff                               | ✅ every session    |
+| [`docs/RELEASE.md`](./docs/RELEASE.md)                           | Release / CI work — triggers, cost model, macOS-tag-only rule, checklist | ⚠️ on demand        |
 | [`docs/adr/018-*.md`](docs/adr/018-registry-driven-workbench.md) | Registry / shell / leaf / pane work (the architectural spine)                    | ⚠️ on demand        |
 
 Rules for keeping this lean:
