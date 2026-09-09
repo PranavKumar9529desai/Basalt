@@ -416,8 +416,11 @@ apps/tauri/src/features/settings/
 ├── index.ts                      # Public barrel: SettingsModal, useSetting, setSetting, types
 ├── types.ts                      # Domain types: SettingSectionDef, SettingItemSpec, SettingGroup
 ├── store.ts                      # Modal state: isOpen, activeSection, searchQuery, activeTab
-├── settings-data.ts              # KV store: DEFAULTS, useSetting, setSetting, initSettings
-├── registry.ts                   # Dynamic registry: settingsRegistry (register/unregister/getAll)
+├── lib/
+│   ├── settings-data.ts          # KV store: DEFAULTS, useSetting, setSetting, initSettings
+│   ├── registry.ts               # Dynamic registry: settingsRegistry (register/unregister/getAll)
+│   ├── registrations.ts          # Boot-time section registrations (side-effect import)
+│   └── appearance-effects.ts     # Applies accent/font/zoom to --sat-* tokens
 ├── commands.ts                   # Palette command wiring: app:open-settings
 │
 ├── specs/                        # Declarative specifications per domain
