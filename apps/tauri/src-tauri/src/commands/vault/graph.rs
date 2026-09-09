@@ -376,6 +376,7 @@ mod tests {
         let b_id = vault.arena.get_id(b.to_str().unwrap()).expect("b interned");
         vault
             .graph
+            .forward_links
             .entry(a_id)
             .or_default()
             .push(b_id);
