@@ -201,8 +201,10 @@ Full standards (naming, file budgets, state rules, anti-patterns) live in [`CONV
 
 - **Max 2 store files per feature** (`core.ts` + `persistence.ts`) — no mirror stores, no echo-chamber effects
 - **Max 4 hooks per feature** — no wrapper hooks that just spread sub-hooks
-- **🚫 No cross-feature imports** — wiring goes through `shared/`; types-only exception
+- **🚫 No cross-feature or upward imports** — features never import each other; features NEVER import `shared/` or `app-shell/`; wiring goes through `shared/` (types-only exception via `types.ts`)
 - **Every feature folder has `index.ts`** — the only legal import surface for other layers
+- **Standard layout**: `lib/commands.ts` for commands; `lib/` for non-component context/helpers; named exports only (no `export default`)
+- **Shared path utilities**: always use `{ basename, stemOf, isMarkdownPath, isCanvasPath, isDocumentPath, normalizePath }` from `@workspace/ui` rather than ad-hoc path parsing
 
 ---
 
