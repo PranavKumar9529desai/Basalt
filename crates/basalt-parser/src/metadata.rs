@@ -6,15 +6,11 @@ use basalt_types::{FileMetadata, Span};
 /// Returns the number of bytes to skip from `input` to reach the body
 /// (past any trailing newline), or 0 if no frontmatter is present.
 fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
-    if !input.starts_with("---\n") && !input.starts_with("---\r\n") {
-        return 0;
-    }
-    let end_idx = match input[4..].find("\n---") {
-        Some(e) => e,
+    let (open_end, close_start) = match crate::frontmatter::fm_bounds(input) {
+        Some(bounds) => bounds,
         None => return 0,
     };
-    let actual_end = end_idx + 4;
-    let frontmatter_str = &input[4..actual_end];
+    let frontmatter_str = &input[open_end..close_start];
 
     let yaml = match serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
         Ok(v) => v,
@@ -36,17 +32,7 @@ fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
         meta.aliases.extend(fm_aliases);
     }
 
-    let after_frontmatter = actual_end + 4;
-    if input.len() > after_frontmatter {
-        let mut skip = after_frontmatter;
-        let bytes = input.as_bytes();
-        if skip < bytes.len() && bytes[skip] == b'\n' {
-            skip += 1;
-        }
-        skip
-    } else {
-        0
-    }
+    crate::frontmatter::frontmatter_body_offset(input)
 }
 
 #[inline]

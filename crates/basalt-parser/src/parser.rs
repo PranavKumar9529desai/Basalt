@@ -32,27 +32,13 @@ mod tests {
         let mut markdown_content = input;
 
         // 1. Extract Frontmatter
-        if input.starts_with("---\n") || input.starts_with("---\r\n") {
-            let end_idx = input[4..].find("\n---").map(|i| i + 4);
-            if let Some(idx) = end_idx {
-                let frontmatter_str = &input[4..idx];
-                if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
-                    doc.frontmatter = Some(yaml);
-                }
-                let after_frontmatter = idx + 4;
-                // Skip the newline after `---`
-                if input.len() > after_frontmatter {
-                    if input[after_frontmatter..].starts_with("\r\n") {
-                        markdown_content = &input[after_frontmatter + 2..];
-                    } else if input[after_frontmatter..].starts_with('\n') {
-                        markdown_content = &input[after_frontmatter + 1..];
-                    } else {
-                        markdown_content = &input[after_frontmatter..];
-                    }
-                } else {
-                    markdown_content = "";
-                }
+        if let Some((open_end, close_start)) = crate::frontmatter::fm_bounds(input) {
+            let frontmatter_str = &input[open_end..close_start];
+            if let Ok(yaml) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(frontmatter_str) {
+                doc.frontmatter = Some(yaml);
             }
+            let body_offset = crate::frontmatter::frontmatter_body_offset(input);
+            markdown_content = &input[body_offset..];
         }
 
         // 2. Parse Markdown

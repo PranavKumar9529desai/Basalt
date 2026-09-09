@@ -151,7 +151,7 @@ pub fn parse_frontmatter(input: &str) -> FrontmatterModel {
 /// Returns `(open_end, close_start)` byte offsets for the frontmatter block,
 /// where `open_end` is the first byte of the first frontmatter line and
 /// `close_start` is the byte where the closing `---`/`...` begins.
-fn fm_bounds(input: &str) -> Option<(usize, usize)> {
+pub fn fm_bounds(input: &str) -> Option<(usize, usize)> {
     let open = if input.starts_with("---\n") {
         4
     } else if input.starts_with("---\r\n") {
@@ -175,6 +175,21 @@ fn fm_bounds(input: &str) -> Option<(usize, usize)> {
         search = nl + 1;
     }
     None
+}
+
+/// Returns the byte offset in `input` where the markdown body begins after frontmatter,
+/// or 0 if there is no frontmatter block.
+pub fn frontmatter_body_offset(input: &str) -> usize {
+    let (_, close_start) = match fm_bounds(input) {
+        Some(x) => x,
+        None => return 0,
+    };
+    let rest = &input[close_start..];
+    if let Some(nl) = rest.find('\n') {
+        close_start + nl + 1
+    } else {
+        input.len()
+    }
 }
 
 /// Parse a top-level `key: value` line. Returns the key, the (untrimmed)
