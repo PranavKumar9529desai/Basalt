@@ -83,6 +83,10 @@ long pole; ADR-017's "2–3 min" is stale). Mean ± ~CI, lower is better.
 
 ## Other recorded numbers (gates)
 
+- **Two-tier boot (25,003 notes, `temp_vault_1`, 2026-09-09):**
+  - Tier 1 Cold Boot Synchronous Total: **92.69 ms** (`fast_scan_flat_tree` 80.07 ms + `open_fast` 12.61 ms)
+  - Tier 1 Warm Boot Synchronous Total: **257.56 ms** (`VaultCache::load` 160.66 ms + `fast_scan_flat_tree` 80.77 ms + `open_fast` 16.13 ms)
+  - Tier 2 Background Ingestion: **521.30 ms** (Rayon parallel map-reduce, ~48,000 notes/sec, 5ms cooperative yields)
 - **Typing latency, full stack, prod, 100 KB:** p95 = **3.10 ms** (CURRENT_WORK
   2026-09-08; ADR-019 gate ≤ 4 ms). Historical pre-refactor: base 1 ms → full 12 ms
   p95.
