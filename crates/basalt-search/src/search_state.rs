@@ -276,4 +276,29 @@ mod tests {
         assert!(!results.is_empty());
         assert!(results[0].path.contains("borrow"));
     }
+
+    #[test]
+    fn test_flush_before_search_invariant() {
+        let dir = tempdir().unwrap();
+        let vault = Vault::new();
+        let mut state = SearchState::open_or_create(dir.path(), &vault, &HashMap::new()).unwrap();
+        let note_path = dir.path().join("uncommitted.md");
+        let body = "This note has uncommitted content ready for immediate search.";
+        std::fs::write(&note_path, body).unwrap();
+
+        // Update document WITHOUT calling commit() manually
+        state
+            .update_document(note_path.to_str().unwrap(), body, "draft")
+            .unwrap();
+
+        // search_content must flush pending updates automatically before searching
+        let content_results = state.search_content("uncommitted", 5);
+        assert!(!content_results.files.is_empty());
+        assert_eq!(content_results.files[0].path, note_path.to_str().unwrap());
+
+        // search_files must also see the updated document immediately
+        let file_results = state.search_files("uncommitted", 5);
+        assert!(!file_results.is_empty());
+        assert_eq!(file_results[0].path, note_path.to_str().unwrap());
+    }
 }
