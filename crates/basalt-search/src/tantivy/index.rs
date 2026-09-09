@@ -3,8 +3,8 @@ use std::path::Path;
 use super::snippets::{extract_file_matches, TermMatcher};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::directory::MmapDirectory;
-use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query};
-use tantivy::schema::Value;
+use tantivy::query::{BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, Query, TermQuery};
+use tantivy::schema::{IndexRecordOption, Value};
 use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument, Term};
 
 use basalt_types::FileMatch;
@@ -18,10 +18,6 @@ type Result<T> = std::result::Result<T, SearchError>;
 /// `body` is indexed but not stored — snippets are built by re-scanning the raw
 /// content string supplied to `update_document`.
 pub struct TantivyIndex {
-    #[expect(
-        dead_code,
-        reason = "owns the tantivy Index — dropping invalidates reader/writer"
-    )]
     index: Index,
     writer: IndexWriter,
     reader: tantivy::IndexReader,
@@ -53,7 +49,26 @@ impl TantivyIndex {
     }
 
     /// Open existing index at `dir` or create a fresh one.
+    ///
+    /// Implements ADR-043 self-healing segment file corruption handling:
+    /// If an index directory is corrupted (e.g. from a power loss or torn write),
+    /// the error is caught, the corrupt directory is wiped and cleanly rebuilt.
     pub fn open_or_create(dir: &Path) -> Result<Self> {
+        match Self::try_open_or_create(dir) {
+            Ok(idx) => Ok(idx),
+            Err(e) => {
+                eprintln!(
+                    "[search] index open failed or corrupted at {}: {e}; wiping and rebuilding cleanly",
+                    dir.display()
+                );
+                let _ = std::fs::remove_dir_all(dir);
+                let _ = std::fs::create_dir_all(dir);
+                Self::try_open_or_create(dir)
+            }
+        }
+    }
+
+    fn try_open_or_create(dir: &Path) -> Result<Self> {
         std::fs::create_dir_all(dir)?;
 
         let (schema, path_field, title_field, body_field, tags_field) = build_schema();
@@ -62,7 +77,6 @@ impl TantivyIndex {
             MmapDirectory::open(dir).map_err(|e| SearchError::Io(std::io::Error::other(e)))?;
 
         let mut index = Index::open_or_create(mmap_dir, schema.clone())?;
-
 
         // Schema mismatch detection: if the on-disk schema differs from the current
         // build_schema(), wipe the directory and recreate from scratch.
@@ -154,6 +168,19 @@ impl TantivyIndex {
         self.reader.searcher().num_docs()
     }
 
+    /// Extract the stemmed root using the index's "en_stem" tokenizer.
+    fn stem_word(&self, word: &str) -> Option<String> {
+        let mut analyzer = self.index.tokenizers().get("en_stem")?;
+        let mut stream = analyzer.token_stream(word);
+        if stream.advance() {
+            let stemmed = stream.token().text.clone();
+            if !stemmed.is_empty() && stemmed != word {
+                return Some(stemmed);
+            }
+        }
+        None
+    }
+
     /// BM25 full-text search with search-as-you-type prefix matching.
     ///
     /// Each word in the query is treated as a prefix via `FuzzyTermQuery::new_prefix`
@@ -195,33 +222,89 @@ impl TantivyIndex {
                 continue;
             }
             let tags_term = Term::from_field_text(self.tags_field, tag);
-            clauses.push((
-                Occur::Must,
-                Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true)),
-            ));
+            // 1-letter prefix explosion prevention (ADR-043):
+            let tag_q: Box<dyn Query> = if tag.chars().count() < 2 {
+                Box::new(TermQuery::new(
+                    tags_term,
+                    IndexRecordOption::WithFreqsAndPositions,
+                ))
+            } else {
+                Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true))
+            };
+            clauses.push((Occur::Must, tag_q));
         }
 
-        // For each full-text word: build a prefix query per field, OR across
-        // fields, AND words together.
+        // For each full-text word: build a prefix query per field (or TermQuery if < 2 chars),
+        // OR across fields, AND words together.
         for word in &fulltext {
             let title_term = Term::from_field_text(self.title_field, word);
             let body_term = Term::from_field_text(self.body_field, word);
             let tags_term = Term::from_field_text(self.tags_field, word);
 
-            let title_q: Box<dyn Query> = Box::new(BoostQuery::new(
-                Box::new(FuzzyTermQuery::new_prefix(title_term, 0, true)),
-                3.0,
-            ));
-            let body_q: Box<dyn Query> =
-                Box::new(FuzzyTermQuery::new_prefix(body_term, 0, true));
-            let tags_q: Box<dyn Query> =
-                Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true));
+            // 1-letter prefix explosion prevention (ADR-043):
+            let mut field_clauses: Vec<(Occur, Box<dyn Query>)> = Vec::new();
 
-            let field_or: Box<dyn Query> = Box::new(BooleanQuery::new(vec![
-                (Occur::Should, title_q),
-                (Occur::Should, body_q),
-                (Occur::Should, tags_q),
-            ]));
+            if word.chars().count() < 2 {
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(BoostQuery::new(
+                        Box::new(TermQuery::new(
+                            title_term,
+                            IndexRecordOption::WithFreqsAndPositions,
+                        )),
+                        3.0,
+                    )),
+                ));
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(TermQuery::new(
+                        body_term,
+                        IndexRecordOption::WithFreqsAndPositions,
+                    )),
+                ));
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(TermQuery::new(
+                        tags_term,
+                        IndexRecordOption::WithFreqsAndPositions,
+                    )),
+                ));
+            } else {
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(BoostQuery::new(
+                        Box::new(FuzzyTermQuery::new_prefix(title_term, 0, true)),
+                        3.0,
+                    )),
+                ));
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(FuzzyTermQuery::new_prefix(body_term, 0, true)),
+                ));
+                field_clauses.push((
+                    Occur::Should,
+                    Box::new(FuzzyTermQuery::new_prefix(tags_term, 0, true)),
+                ));
+
+                // If word stems to a shorter or different root, also match the stemmed root
+                if let Some(stemmed) = self.stem_word(word) {
+                    let stemmed_title_term = Term::from_field_text(self.title_field, &stemmed);
+                    let stemmed_body_term = Term::from_field_text(self.body_field, &stemmed);
+                    field_clauses.push((
+                        Occur::Should,
+                        Box::new(BoostQuery::new(
+                            Box::new(FuzzyTermQuery::new_prefix(stemmed_title_term, 0, true)),
+                            3.0,
+                        )),
+                    ));
+                    field_clauses.push((
+                        Occur::Should,
+                        Box::new(FuzzyTermQuery::new_prefix(stemmed_body_term, 0, true)),
+                    ));
+                }
+            }
+
+            let field_or: Box<dyn Query> = Box::new(BooleanQuery::new(field_clauses));
 
             clauses.push((Occur::Must, field_or));
         }
@@ -428,5 +511,63 @@ mod tests {
         paths.sort_unstable();
         assert_eq!(paths, vec!["/vault/ideas.md", "/vault/project.md"]);
         let _ = dir;
+    }
+
+    #[test]
+    fn test_single_char_query_no_prefix_explosion() {
+        let dir = tempdir().unwrap();
+        let mut idx = TantivyIndex::open_or_create(dir.path()).unwrap();
+        idx.update_document(
+            "/vault/note1.md",
+            "note1",
+            "A fast runner and an apple.",
+            "a",
+        )
+        .unwrap();
+        idx.update_document(
+            "/vault/note2.md",
+            "note2",
+            "Another person entirely.",
+            "b",
+        )
+        .unwrap();
+        idx.commit().unwrap();
+
+        // Single-character word query "a" should match exact "a", not prefix-expand to "another", "apple", "and".
+        let (results, _) = idx.search("a", 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].path, "/vault/note1.md");
+    }
+
+    #[test]
+    fn test_segment_corruption_auto_recovery() {
+        let dir = tempdir().unwrap();
+        {
+            let mut idx = TantivyIndex::open_or_create(dir.path()).unwrap();
+            idx.update_document("/vault/initial.md", "initial", "Initial text", "")
+                .unwrap();
+            idx.commit().unwrap();
+        }
+
+        // Simulate file corruption: overwrite files in dir with random/garbage bytes.
+        for entry in std::fs::read_dir(dir.path()).unwrap().flatten() {
+            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+                let _ = std::fs::write(entry.path(), b"GARBAGE_CORRUPTED_BYTES_HERE");
+            }
+        }
+
+        // Reopening should catch corruption, wipe directory, and create a fresh healthy index.
+        let mut recovered_idx = TantivyIndex::open_or_create(dir.path()).unwrap();
+        assert_eq!(recovered_idx.doc_count(), 0);
+
+        // Verify index is fully functional after recovery.
+        recovered_idx
+            .update_document("/vault/new.md", "new", "Fresh content after recovery", "")
+            .unwrap();
+        recovered_idx.commit().unwrap();
+
+        let (results, total) = recovered_idx.search("fresh", 10).unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(results[0].path, "/vault/new.md");
     }
 }

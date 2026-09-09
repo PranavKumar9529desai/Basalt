@@ -47,7 +47,21 @@ impl NucleoScorer {
     /// Score all items against `query` and return top `limit` results.
     /// Scores against the title (filename stem) for best UX.
     /// If `query` is empty, returns the first `limit` items with score 0.
+    /// Score all items against `query` and return top `limit` results.
+    ///
+    /// Implements ADR-043 Two-Stage Scoring:
+    /// - Stage 1 (Score Only): Evaluates candidates with `pattern.score`,
+    ///   requiring zero heap allocations.
+    /// - Bounded Top-K: Selects top `limit` elements in O(N) using
+    ///   `select_nth_unstable_by_key`, avoiding full vector sort.
+    /// - Stage 2 (Highlight Top `limit` Only): Only computes match indices
+    ///   for the top `limit` items using reusable scratch buffers, with an
+    ///   ASCII fast-path.
     pub fn search(&mut self, query: &str, limit: usize) -> Vec<FileResult> {
+        if limit == 0 {
+            return Vec::new();
+        }
+
         if query.is_empty() {
             return self
                 .items
@@ -64,50 +78,73 @@ impl NucleoScorer {
 
         let pattern = Pattern::parse(query, CaseMatching::Smart, Normalization::Smart);
         let mut char_buf: Vec<char> = Vec::new();
-        let mut scored: Vec<(u32, usize, Vec<u32>)> = Vec::new();
+        let mut scored: Vec<(u32, usize)> = Vec::with_capacity(self.items.len().min(1024));
 
+        // Stage 1: score-only filter across all candidates (zero allocations in loop).
         for (idx, (_, title)) in self.items.iter().enumerate() {
             let haystack = Utf32Str::new(title.as_str(), &mut char_buf);
-            // Score against the title stem (not the full path) — gives cleaner
-            // fuzzy scores for short queries and matches user mental model of
-            // "find file by name, not by directory". Directory context shown in UI.
-            let mut match_indices: Vec<u32> = Vec::new();
-            if let Some(score) =
-                pattern.indices(haystack, &mut self.matcher, &mut match_indices)
-            {
-                // Per-atom indices are appended unsorted (docs), may repeat.
-                match_indices.sort_unstable();
-                match_indices.dedup();
-                // Char positions -> UTF-8 byte offsets so the frontend can
-                // slice the same `title` string directly (UI works in JS
-                // strings, not char vectors).
-                let char_to_byte: Vec<u32> = title
-                    .char_indices()
-                    .map(|(byte, _)| byte as u32)
-                    .collect();
-                let byte_indices: Vec<u32> = match_indices
-                    .into_iter()
-                    .map(|i| char_to_byte[i as usize])
-                    .collect();
-                scored.push((score, idx, byte_indices));
+            if let Some(score) = pattern.score(haystack, &mut self.matcher) {
+                scored.push((score, idx));
             }
         }
 
-        scored.sort_unstable_by_key(|a| std::cmp::Reverse(a.0));
-        scored.truncate(limit);
+        if scored.is_empty() {
+            return Vec::new();
+        }
 
-        scored
-            .into_iter()
-            .map(|(score, idx, indices)| {
-                let (path, title) = &self.items[idx];
-                FileResult {
+        // Bounded Top-K: O(N) selection when candidate count exceeds limit.
+        if scored.len() > limit {
+            scored.select_nth_unstable_by_key(limit, |a| (std::cmp::Reverse(a.0), a.1));
+            scored.truncate(limit);
+        }
+        scored.sort_unstable_by_key(|a| (std::cmp::Reverse(a.0), a.1));
+
+        // Stage 2: compute highlight indices only for the top `limit` candidates.
+        let mut match_indices: Vec<u32> = Vec::new();
+        let mut results = Vec::with_capacity(scored.len());
+
+        for (score, idx) in scored {
+            let (path, title) = &self.items[idx];
+            match_indices.clear();
+            let haystack = Utf32Str::new(title.as_str(), &mut char_buf);
+            if pattern
+                .indices(haystack, &mut self.matcher, &mut match_indices)
+                .is_some()
+            {
+                match_indices.sort_unstable();
+                match_indices.dedup();
+
+                let byte_indices = if title.is_ascii() {
+                    // Fast path: for ASCII titles, char offset == byte offset.
+                    match_indices.clone()
+                } else {
+                    let char_to_byte: Vec<u32> = title
+                        .char_indices()
+                        .map(|(byte, _)| byte as u32)
+                        .collect();
+                    match_indices
+                        .iter()
+                        .filter_map(|&i| char_to_byte.get(i as usize).copied())
+                        .collect()
+                };
+
+                results.push(FileResult {
                     path: path.clone(),
                     title: title.clone(),
                     score,
-                    indices,
-                }
-            })
-            .collect()
+                    indices: byte_indices,
+                });
+            } else {
+                results.push(FileResult {
+                    path: path.clone(),
+                    title: title.clone(),
+                    score,
+                    indices: Vec::new(),
+                });
+            }
+        }
+
+        results
     }
 
     /// Add a new path with provided title (falls back to stem if title is empty).
@@ -210,5 +247,43 @@ mod tests {
                 .collect();
             assert_eq!(matched, q, "indices should spell '{q}'");
         }
+    }
+
+    #[test]
+    fn test_zero_limit_returns_empty() {
+        let paths = vec!["/vault/note.md".to_string()];
+        let mut scorer = NucleoScorer::new(paths);
+        assert!(scorer.search("note", 0).is_empty());
+        assert!(scorer.search("", 0).is_empty());
+    }
+
+    #[test]
+    fn test_bounded_top_k_selection() {
+        let paths: Vec<String> = (0..100)
+            .map(|i| format!("/vault/item_{i:03}.md"))
+            .collect();
+        let mut scorer = NucleoScorer::new(paths);
+        let results = scorer.search("item_05", 5);
+        assert!(!results.is_empty());
+        assert!(results.len() <= 5);
+        // Scores should be sorted descending.
+        for window in results.windows(2) {
+            assert!(window[0].score >= window[1].score);
+        }
+        assert_eq!(results[0].title, "item_050");
+    }
+
+    #[test]
+    fn test_non_ascii_indices_correctness() {
+        let paths = vec![
+            "/vault/café-notes.md".to_string(),
+            "/vault/resume.md".to_string(),
+        ];
+        let mut scorer = NucleoScorer::new(paths);
+        let results = scorer.search("notes", 5);
+        assert_eq!(results[0].title, "café-notes");
+        // "café-notes": 'c' (0), 'a' (1), 'f' (2), 'é' (3..5, 2 bytes), '-' (5), 'n' (6)
+        // Match for "notes" starts at byte 6.
+        assert_eq!(results[0].indices, vec![6, 7, 8, 9, 10]);
     }
 }

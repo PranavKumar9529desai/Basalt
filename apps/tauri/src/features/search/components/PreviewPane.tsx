@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   EditorState,
   Extension,
@@ -238,6 +238,104 @@ interface PreviewPaneProps {
   deps: PreviewDeps;
 }
 
+/**
+ * Lightweight instant preview rendered during rapid arrow navigation (ADR-043).
+ * Keeps keystroke response locked at 60 FPS by bypassing heavy CM6 reading extensions
+ * until the user pauses on a result.
+ */
+function LightweightPreview({
+  text,
+  matchLine,
+  highlights,
+}: {
+  text: string;
+  matchLine: number;
+  highlights: Highlight[];
+}) {
+  const lines = useMemo(() => text.split("\n"), [text]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const matchEl = containerRef.current.querySelector<HTMLElement>(
+      "[data-match-line='true']",
+    );
+    if (matchEl) {
+      matchEl.scrollIntoView({ block: "center", inline: "nearest" });
+    }
+  }, [matchLine]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-full w-full overflow-y-auto font-mono text-[11px] leading-[1.42] p-[12px_14px_16px] select-none text-[var(--sat-text-primary)]"
+      style={{ fontFamily: "var(--sat-font-mono, monospace)" }}
+    >
+      {lines.map((lineStr, idx) => {
+        const lineNo = idx + 1;
+        const isMatch = lineNo === matchLine;
+
+        if (!isMatch) {
+          return (
+            <div key={lineNo} className="flex min-w-0">
+              <span className="w-10 pr-3 text-right text-[var(--sat-text-muted)] shrink-0 select-none opacity-50">
+                {lineNo}
+              </span>
+              <span className="whitespace-pre flex-1 min-w-0">
+                {lineStr || " "}
+              </span>
+            </div>
+          );
+        }
+
+        const spans: React.ReactNode[] = [];
+        let from = 0;
+        const sortedHl = [...highlights].sort((a, b) => a.start - b.start);
+        for (const h of sortedHl) {
+          if (h.start > from) {
+            spans.push(lineStr.slice(from, h.start));
+          }
+          spans.push(
+            <mark
+              key={`${h.start}-${h.end}`}
+              style={{
+                background: "var(--sat-accent-primary)",
+                color: "var(--sat-text-inverse)",
+                borderRadius: "2px",
+              }}
+            >
+              {lineStr.slice(h.start, h.end)}
+            </mark>,
+          );
+          from = h.end;
+        }
+        if (from < lineStr.length) {
+          spans.push(lineStr.slice(from));
+        }
+
+        return (
+          <div
+            key={lineNo}
+            data-match-line="true"
+            className="flex min-w-0 rounded"
+            style={{
+              backgroundColor:
+                "color-mix(in srgb, var(--sat-accent-primary) 12%, transparent)",
+            }}
+          >
+            <span className="w-10 pr-3 text-right text-[var(--sat-accent-primary)] font-bold shrink-0 select-none">
+              {lineNo}
+            </span>
+            <span className="whitespace-pre flex-1 min-w-0 font-medium">
+              {spans.length > 0 ? spans : lineStr || " "}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PreviewPane({
   text,
   path,
@@ -247,6 +345,32 @@ export function PreviewPane({
 }: PreviewPaneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+
+  // ADR-043: Rapid navigation debouncing to maintain 60 FPS (< 16.67ms frame budget).
+  const [isSettled, setIsSettled] = useState(true);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const lastNavTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    const now = performance.now();
+    const elapsed = now - lastNavTimeRef.current;
+    lastNavTimeRef.current = now;
+
+    if (elapsed < 80) {
+      setIsSettled(false);
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = setTimeout(() => {
+        setIsSettled(true);
+      }, 80);
+    } else {
+      setIsSettled(true);
+    }
+
+    return () => clearTimeout(settleTimerRef.current);
+  }, [text, path, matchLine, highlights]);
+
   // Bound the document handed to CodeMirror to a window around the match line.
   // Keeps the synchronous parse + decoration walk O(window) so a huge file
   // can never spin the WebCore main thread past WebKitGTK's 10s watchdog.
@@ -281,6 +405,7 @@ export function PreviewPane({
   }, []);
 
   useEffect(() => {
+    if (!isSettled) return;
     const view = viewRef.current;
     if (!view) return;
     // Swap the document only when the content changed. Parsed states come from
@@ -326,7 +451,22 @@ export function PreviewPane({
         });
       });
     }
-  }, [winText, path, winMatchLine, winHighlights, deps]);
+  }, [isSettled, winText, path, winMatchLine, winHighlights, deps]);
 
-  return <div ref={hostRef} className="h-full w-full overflow-hidden" />;
+  return (
+    <div className="h-full w-full relative overflow-hidden">
+      {!isSettled && (
+        <LightweightPreview
+          text={winText}
+          matchLine={winMatchLine}
+          highlights={winHighlights}
+        />
+      )}
+      <div
+        ref={hostRef}
+        className="h-full w-full overflow-hidden"
+        style={{ display: isSettled ? "block" : "none" }}
+      />
+    </div>
+  );
 }

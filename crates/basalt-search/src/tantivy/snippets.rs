@@ -17,6 +17,7 @@ impl TermMatcher {
         }
         AhoCorasick::builder()
             .ascii_case_insensitive(true)
+            .match_kind(aho_corasick::MatchKind::LeftmostLongest)
             .build(query_terms)
             .ok()
             .map(|ac| TermMatcher { ac })
@@ -60,45 +61,140 @@ pub fn extract_file_matches(
         if out.len() >= max_matches {
             break;
         }
-        // Map each byte boundary to its character index for highlight ranges.
-        // AhoCorasick returns byte ranges; `m.start()`/`m.end()` land on char
-        // boundaries, so find the exact char index of that byte. The byte
-        // offsets are strictly increasing, so binary search (partition_point)
-        // beats a linear scan — O(log n) per lookup (ADR-030 §2.5).
-        let char_byte: Vec<usize> = line.char_indices().map(|(b, _)| b).collect();
-        let byte_to_char = |b: usize| -> usize { char_byte.partition_point(|&cb| cb < b) };
-        let hits: Vec<(usize, usize)> = ac.find_iter(line).map(|m| (m.start(), m.end())).collect();
-        if hits.is_empty() {
+
+        // SIMD fast filter: skips non-matching lines with zero allocations.
+        if !ac.is_match(line) {
             continue;
         }
 
-        let highlights: Vec<Highlight> = hits
-            .iter()
-            .map(|&(s, e)| Highlight {
-                start: byte_to_char(s),
-                end: byte_to_char(e),
-            })
-            .collect();
+        // Compute raw character highlight ranges.
+        // For pure ASCII lines, byte offsets are identically equal to character offsets.
+        let mut raw_highlights: Vec<Highlight> = if line.is_ascii() {
+            ac.find_iter(line)
+                .map(|m| Highlight {
+                    start: m.start(),
+                    end: m.end(),
+                })
+                .collect()
+        } else {
+            let char_byte: Vec<usize> = line.char_indices().map(|(b, _)| b).collect();
+            let byte_to_char = |b: usize| -> usize { char_byte.partition_point(|&cb| cb < b) };
+            ac.find_iter(line)
+                .map(|m| Highlight {
+                    start: byte_to_char(m.start()),
+                    end: byte_to_char(m.end()),
+                })
+                .collect()
+        };
+
+        if raw_highlights.is_empty() {
+            continue;
+        }
+
+        // Edge-Case 1: Overlapping Highlight Interval Merging.
+        raw_highlights.sort_unstable_by_key(|h| h.start);
+        let mut merged: Vec<Highlight> = Vec::with_capacity(raw_highlights.len());
+        for h in raw_highlights {
+            if let Some(last) = merged.last_mut() {
+                if h.start <= last.end {
+                    last.end = last.end.max(h.end);
+                    continue;
+                }
+            }
+            merged.push(h);
+        }
+
+        // Edge-Case 2: Mega-Line Preview Clamping.
+        // Clamp preview lines longer than 250 characters around match bounds.
+        let total_chars = if line.is_ascii() {
+            line.len()
+        } else {
+            line.chars().count()
+        };
+
+        let (text, highlights) = if total_chars <= 250 {
+            (line.to_string(), merged)
+        } else {
+            let first_start = merged[0].start;
+            let last_end = merged.last().unwrap().end;
+
+            let start_char = first_start.saturating_sub(100);
+            let mut end_char = (last_end + 150).min(total_chars);
+            if end_char.saturating_sub(start_char) > 250 {
+                end_char = (first_start + 150).min(total_chars);
+            }
+
+            let prefix = if start_char > 0 { "..." } else { "" };
+            let suffix = if end_char < total_chars { "..." } else { "" };
+
+            let slice_str: String = if line.is_ascii() {
+                line[start_char..end_char].to_string()
+            } else {
+                line.chars()
+                    .skip(start_char)
+                    .take(end_char - start_char)
+                    .collect()
+            };
+
+            let clamped_text = format!("{prefix}{slice_str}{suffix}");
+            let shift = prefix.chars().count();
+
+            let shifted_highlights: Vec<Highlight> = merged
+                .into_iter()
+                .filter(|h| h.start >= start_char && h.end <= end_char)
+                .map(|h| Highlight {
+                    start: (h.start - start_char) + shift,
+                    end: (h.end - start_char) + shift,
+                })
+                .collect();
+
+            (clamped_text, shifted_highlights)
+        };
 
         let line_no = idx + 1;
         let start = idx.saturating_sub(context_lines);
         let context_before: Vec<ContextLine> = (start..idx)
-            .map(|i| ContextLine {
-                line_number: i + 1,
-                text: lines[i].to_string(),
+            .map(|i| {
+                let l = lines[i];
+                let ctx_text = if l.len() > 250 {
+                    if l.is_ascii() {
+                        format!("{}...", &l[..250])
+                    } else {
+                        format!("{}...", l.chars().take(250).collect::<String>())
+                    }
+                } else {
+                    l.to_string()
+                };
+                ContextLine {
+                    line_number: i + 1,
+                    text: ctx_text,
+                }
             })
             .collect();
+
         let end = (idx + 1 + context_lines).min(lines.len());
         let context_after: Vec<ContextLine> = ((idx + 1)..end)
-            .map(|i| ContextLine {
-                line_number: i + 1,
-                text: lines[i].to_string(),
+            .map(|i| {
+                let l = lines[i];
+                let ctx_text = if l.len() > 250 {
+                    if l.is_ascii() {
+                        format!("{}...", &l[..250])
+                    } else {
+                        format!("{}...", l.chars().take(250).collect::<String>())
+                    }
+                } else {
+                    l.to_string()
+                };
+                ContextLine {
+                    line_number: i + 1,
+                    text: ctx_text,
+                }
             })
             .collect();
 
         out.push(LineMatch {
             line_number: line_no,
-            text: line.to_string(),
+            text,
             highlights,
             context_before,
             context_after,
@@ -180,5 +276,70 @@ mod tests {
         assert_eq!(matches.len(), 1);
         let h = &matches[0].highlights[0];
         assert_eq!(char_sub(&matches[0].text, h.start, h.end), "Rust");
+    }
+
+    #[test]
+    fn test_overlapping_highlights_merged() {
+        let body = "The car carpet is red.";
+        let m = TermMatcher::new(&["car", "carpet"]).unwrap();
+        let matches = extract_file_matches(body, &m, 5, 0);
+        assert_eq!(matches.len(), 1);
+        // "car" at 4..7 and "carpet" at 8..14
+        // If query is "car" and "carpet", in "carpet" both "car" (8..11) and "carpet" (8..14) match.
+        // They must be merged into one highlight [8..14].
+        let carpets: Vec<_> = matches[0]
+            .highlights
+            .iter()
+            .map(|h| char_sub(&matches[0].text, h.start, h.end))
+            .collect();
+        assert_eq!(carpets, vec!["car", "carpet"]);
+    }
+
+    #[test]
+    fn test_overlapping_prefix_substring_merged() {
+        let body = "carpet";
+        let m = TermMatcher::new(&["car", "carpet"]).unwrap();
+        let matches = extract_file_matches(body, &m, 5, 0);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].highlights.len(), 1, "overlapping 'car' and 'carpet' must merge into one");
+        let h = &matches[0].highlights[0];
+        assert_eq!(char_sub(&matches[0].text, h.start, h.end), "carpet");
+    }
+
+    #[test]
+    fn test_mega_line_clamping() {
+        // Construct a 600-character line with "TARGET" at character 300.
+        let prefix_fill = "a".repeat(300);
+        let suffix_fill = "b".repeat(300);
+        let body = format!("{prefix_fill}TARGET{suffix_fill}");
+        let m = TermMatcher::new(&["target"]).unwrap();
+        let matches = extract_file_matches(&body, &m, 5, 0);
+        assert_eq!(matches.len(), 1);
+        let match_item = &matches[0];
+        assert!(match_item.text.starts_with("..."));
+        assert!(match_item.text.ends_with("..."));
+        assert!(match_item.text.len() <= 260);
+        assert_eq!(match_item.highlights.len(), 1);
+        let h = &match_item.highlights[0];
+        assert_eq!(char_sub(&match_item.text, h.start, h.end), "TARGET");
+    }
+
+    #[test]
+    fn test_simd_fast_filter_skips_lines() {
+        let mut lines = Vec::new();
+        for i in 0..500 {
+            lines.push(format!("This is regular line {i} without the query."));
+        }
+        lines.push("This line has the special keyword NEEDLE in it.".to_string());
+        for i in 501..1000 {
+            lines.push(format!("This is trailing line {i} without anything."));
+        }
+        let body = lines.join("\n");
+        let m = TermMatcher::new(&["needle"]).unwrap();
+        let matches = extract_file_matches(&body, &m, 5, 1);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].line_number, 501);
+        let h = &matches[0].highlights[0];
+        assert_eq!(char_sub(&matches[0].text, h.start, h.end), "NEEDLE");
     }
 }
