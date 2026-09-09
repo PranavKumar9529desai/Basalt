@@ -34,9 +34,9 @@ import {
 } from "../lib/themeColors";
 import { buildVisible } from "../lib/filters";
 import { drawOverlayLabels } from "../lib/labels";
-import { snapshotToGraphData } from "../lib/graphData";
+import { decodeBinaryGraphSnapshot, snapshotToGraphData } from "../lib/graphData";
 import { buildSubset, localSubset } from "../lib/localGraph";
-import type { GraphFrame, GraphSnapshot, GraphWorkerMessage } from "../lib/graphWorker";
+import type { GraphFrame, GraphWorkerMessage } from "../lib/graphWorker";
 
 /** Live mirror of the leaf controls, written during render so the mount-only
  * engine reads current values without re-mounting. */
@@ -246,7 +246,11 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
 
     const loadSnapshot = async () => {
       try {
-        const g = await invoke<GraphSnapshot>("get_graph");
+        const buf = await invoke<ArrayBuffer>("get_graph");
+        if (!buf || buf.byteLength < 24) {
+          throw new Error("No graph data returned from vault");
+        }
+        const g = decodeBinaryGraphSnapshot(buf);
         if (g.node_count === 0) {
           throw new Error("No notes are available to graph");
         }
