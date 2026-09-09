@@ -36,12 +36,10 @@ export interface OpenSlice {
   openView: TabsState["openView"];
 }
 
-export const createOpenSlice: StateCreator<
-  TabsState,
-  [],
-  [],
-  OpenSlice
-> = (set, get) => ({
+export const createOpenSlice: StateCreator<TabsState, [], [], OpenSlice> = (
+  set,
+  get,
+) => ({
   openInPreview: (note, options) => {
     const activate = options?.activate ?? true;
     const incomingTabId = newTabId(note.path);
@@ -97,7 +95,9 @@ export const createOpenSlice: StateCreator<
       const paneId =
         resolveInsertPaneId(state.root, state.activePaneId) ??
         state.activePaneId;
-      let inheritedHistory: import("../../types").NavigationHistoryEntry[] | undefined;
+      let inheritedHistory:
+        | import("../../types").NavigationHistoryEntry[]
+        | undefined;
       const root = mapLeaf(state.root, paneId, (leaf) => {
         const group = leaf.tabGroup;
         let tabIds = group.tabIds;
@@ -108,7 +108,8 @@ export const createOpenSlice: StateCreator<
           const preview = tabs[previewTabId];
           if (preview && !preview.isDirty) {
             if (preview.history) {
-              const prevIdx = preview.historyIndex ?? (preview.history.length - 1);
+              const prevIdx =
+                preview.historyIndex ?? preview.history.length - 1;
               inheritedHistory = preview.history.slice(0, prevIdx + 1);
             }
             delete tabs[preview.id];
@@ -148,7 +149,9 @@ export const createOpenSlice: StateCreator<
         line: note.line,
         timestamp,
       };
-      const history = inheritedHistory ? [...inheritedHistory, newEntry] : [newEntry];
+      const history = inheritedHistory
+        ? [...inheritedHistory, newEntry]
+        : [newEntry];
       const historyIndex = history.length - 1;
 
       tabs[incomingTabId] = {

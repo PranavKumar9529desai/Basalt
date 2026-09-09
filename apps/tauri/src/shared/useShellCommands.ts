@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { getSetting } from "../features/settings";
 import { expandTemplate, formatDate } from "../features/templates";
 import type { AppContextValue } from "./AppProvider";
+import { stemOf } from "@workspace/ui";
 
 /**
  * Registers vault-level commands that require runtime context (controller,
@@ -24,7 +25,7 @@ export function useShellCommands(ws: AppContextValue) {
       const dateFormat = getSetting("dailyNoteDateFormat");
       const template = getSetting("dailyNoteTemplate");
       const fileName = formatDate(now, dateFormat);
-      const title = fileName.split("/").pop() ?? fileName;
+      const title = stemOf(fileName) || fileName;
 
       let content = "";
       if (template) {

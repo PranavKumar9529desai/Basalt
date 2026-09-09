@@ -53,8 +53,11 @@ function CanvasFlow({ tab, paneId }: LeafProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { saveCanvasNow, triggerSave, loadCanvas, nodesRef, edgesRef } =
     useCanvasPersistence({ tab, reactFlowInstance });
-  const { guidelines: guidelineState, setGuidelines, clearGuidelines } =
-    useCanvasGuidelines();
+  const {
+    guidelines: guidelineState,
+    setGuidelines,
+    clearGuidelines,
+  } = useCanvasGuidelines();
   const {
     nodes,
     edges,

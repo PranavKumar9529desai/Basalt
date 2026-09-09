@@ -58,7 +58,12 @@ export default function HotkeysSection() {
         const conflict = key
           ? service.conflictsWith(key, command.id)
           : undefined;
-        return { command, key, deviates: service.hasCustomBinding(command.id), conflict };
+        return {
+          command,
+          key,
+          deviates: service.hasCustomBinding(command.id),
+          conflict,
+        };
       });
   }, [query, service, version]);
 
@@ -79,7 +84,11 @@ export default function HotkeysSection() {
       if (e.shiftKey) parts.push("Shift");
       if (e.altKey) parts.push("Alt");
       const key =
-        e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+        e.key === " "
+          ? "Space"
+          : e.key.length === 1
+            ? e.key.toUpperCase()
+            : e.key;
       parts.push(key);
       const hotkey = parts.join("+");
 
@@ -137,7 +146,9 @@ export default function HotkeysSection() {
         ref={parentRef}
         className="h-[60vh] overflow-auto rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)]"
       >
-        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+        <div
+          style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+        >
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index];
             const isRecording = recording === row.command.id;
@@ -207,7 +218,9 @@ export default function HotkeysSection() {
                             onClick={() => {
                               service.resetBinding(row.command.id);
                               setVersion((v) => v + 1);
-                              setNotice(`Reset ${row.command.name} to its default.`);
+                              setNotice(
+                                `Reset ${row.command.name} to its default.`,
+                              );
                             }}
                           >
                             <IconRotate size={12} />

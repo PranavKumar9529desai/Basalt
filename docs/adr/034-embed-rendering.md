@@ -8,13 +8,13 @@
 
 All five parts shipped on `feat/adr34-embed-rendering` (base branch `main`):
 
-| Part | What shipped                                                                                                                | Key files                                                                                                                              |
-| ---- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Part | What shipped                                                                                                                | Key files                                                                                                                        |
+| ---- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | A    | Loopback HTTP media server (random port, Range/206, path-traversal guard, 64 KiB streaming) + platform-aware `resolveAsset` | `apps/tauri/src-tauri/src/commands/media.rs`, `apps/tauri/src/shared/mediaServer.ts`, `apps/tauri/src/shared/useLeafServices.ts` |
-| B    | Table cells render `![[…]]` as real `<img>/<video>/<audio>`; `.cm-table-link[data-name]` on links + media                   | `packages/editor/src/block-widgets/table-widget.ts`                                                                                    |
-| C    | Live preview renders real media in every caret state (Obsidian parity)                                                      | `packages/editor/src/preview/embeds.ts`, `packages/editor/src/input/embed-media.ts` (`buildEmbedWidget`)                               |
-| D    | Reading-mode link clicks slice `[[…]]` via syntax offsets; table links navigate                                             | `packages/editor/src/editor.ts`, `packages/editor/src/syntax/wiki-links.ts` (`targetFromWikiLinkNode`)                                 |
-| E    | Extension-less stems resolve via unique case-insensitive filename match                                                     | `apps/tauri/src/shared/useLeafServices.ts`                                                                                          |
+| B    | Table cells render `![[…]]` as real `<img>/<video>/<audio>`; `.cm-table-link[data-name]` on links + media                   | `packages/editor/src/block-widgets/table-widget.ts`                                                                              |
+| C    | Live preview renders real media in every caret state (Obsidian parity)                                                      | `packages/editor/src/preview/embeds.ts`, `packages/editor/src/input/embed-media.ts` (`buildEmbedWidget`)                         |
+| D    | Reading-mode link clicks slice `[[…]]` via syntax offsets; table links navigate                                             | `packages/editor/src/editor.ts`, `packages/editor/src/syntax/wiki-links.ts` (`targetFromWikiLinkNode`)                           |
+| E    | Extension-less stems resolve via unique case-insensitive filename match                                                     | `apps/tauri/src/shared/useLeafServices.ts`                                                                                       |
 
 Deliberate deviations from the plan above — documented for future readers:
 

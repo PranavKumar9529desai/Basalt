@@ -6,7 +6,7 @@ Accepted (2026-09-07)
 
 ## Context
 
-Basalt needs first-party features that Obsidian ships as *core plugins*:
+Basalt needs first-party features that Obsidian ships as _core plugins_:
 Templates, Daily notes, Outlines, Starred, and more. These are not panels
 (no `registerView`), not raw commands, and not shell glue — they are
 self-contained domains that contribute to several registration surfaces at
@@ -24,7 +24,7 @@ Today those surfaces exist as separate, uncoordinated seams:
 The settings modal already groups sections under `"core-plugins"` (the
 Obsidian lexicon) and currently shows "No core plugin settings yet" — the
 architecture anticipated this moment without defining what a core plugin
-*is* or where its code lives.
+_is_ or where its code lives.
 
 How do the reference applications structure this? Obsidian's answer (from
 its official plugin API): **core plugins are plugins** — a self-contained
@@ -53,14 +53,14 @@ the shell or upstream layers.**
 A plugin named `x` MAY use any subset of these contributions (a plugin =
 the set of files it actually needs, not a mandated directory):
 
-| Surface | Where it registers | Ownership |
-|---|---|---|
-| Palette command(s) | `packages/commands/src/commands.json` (metadata) + `commandService.registerCommand("x:action", cb)` | callback lives in `features/x/commands.ts` (self-contained) or in `shared/` when it must reach the workspace controller |
-| Ribbon button(s) | `app-shell/Ribbon.tsx` item | shell item calls `commandService.execute("x:action")` or a feature store action |
-| Settings section | `features/settings/store.ts` (id `"x"`, group `"core-plugins"`) + a section component | section renders the declarative `SETTING_SPECS` entries for its id via the generic `SettingsFields` component — no hand-written forms |
-| Settings keys | `DEFAULTS` in `features/settings/settings-data.ts`, namespaced `x*` (e.g. `templateFolder`, `dailyNotesFolder`) | read via `useSetting`/`getSetting`, written via `setSetting` → Rust `config.json` (flat KV, no schema) |
-| Views (optional) | `app-shell/registrations.ts` | `viewRegistry` / `leafRegistry` only |
-| Rust commands (optional) | `src-tauri/src/commands/<x>/mod.rs` + `generate_handler` in `lib.rs` | one command module dir per plugin that needs backend work; shared mutation contract lives in `commands/common.rs` |
+| Surface                  | Where it registers                                                                                              | Ownership                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette command(s)       | `packages/commands/src/commands.json` (metadata) + `commandService.registerCommand("x:action", cb)`             | callback lives in `features/x/commands.ts` (self-contained) or in `shared/` when it must reach the workspace controller               |
+| Ribbon button(s)         | `app-shell/Ribbon.tsx` item                                                                                     | shell item calls `commandService.execute("x:action")` or a feature store action                                                       |
+| Settings section         | `features/settings/store.ts` (id `"x"`, group `"core-plugins"`) + a section component                           | section renders the declarative `SETTING_SPECS` entries for its id via the generic `SettingsFields` component — no hand-written forms |
+| Settings keys            | `DEFAULTS` in `features/settings/settings-data.ts`, namespaced `x*` (e.g. `templateFolder`, `dailyNotesFolder`) | read via `useSetting`/`getSetting`, written via `setSetting` → Rust `config.json` (flat KV, no schema)                                |
+| Views (optional)         | `app-shell/registrations.ts`                                                                                    | `viewRegistry` / `leafRegistry` only                                                                                                  |
+| Rust commands (optional) | `src-tauri/src/commands/<x>/mod.rs` + `generate_handler` in `lib.rs`                                            | one command module dir per plugin that needs backend work; shared mutation contract lives in `commands/common.rs`                     |
 
 ### Conventions
 
@@ -71,7 +71,7 @@ the set of files it actually needs, not a mandated directory):
    `{{date}}`, `{{time}}`, with colon format overrides `{{date:YYYY-MM-DD}}`.
    Token set is a small Moment.js-compatible subset implemented locally in
    TypeScript (`YYYY/YY/MMMM/MMM/MM/M/DD/D/dddd/ddd/dd/d/HH/H/hh/h/mm/m/ss/s/
-   A/a` + literals) — no Moment dependency.
+A/a` + literals) — no Moment dependency.
 3. **Template expansion is a frontend concern** (one TS implementation for
    both insert-at-cursor and daily-note creation). Rust never formats dates;
    Rust commands that need content receive it already-expanded.

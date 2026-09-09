@@ -139,7 +139,6 @@ export function makeCollector() {
     },
   };
 
-
   function finish(): DecorationSet {
     return Decoration.set(widgets, true);
   }
@@ -350,7 +349,11 @@ export function buildPreviewState(
           const line = doc.lineAt(node.from);
           const onActiveLine = ctx.activeLine?.number === line.number;
           if (!onActiveLine) {
-            collector.addReplace(line.from, line.to, new HorizontalRuleWidget());
+            collector.addReplace(
+              line.from,
+              line.to,
+              new HorizontalRuleWidget(),
+            );
           }
           return;
         }

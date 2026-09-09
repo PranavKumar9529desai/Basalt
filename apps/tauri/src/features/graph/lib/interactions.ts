@@ -192,7 +192,8 @@ export function createInteractions(ctx: InteractionsContext): GraphHandlers {
           const token = ++ctx.hoverFetch.current;
           window.setTimeout(() => {
             if (token !== ctx.hoverFetch.current) return;
-            ctx.openFile(path)
+            ctx
+              .openFile(path)
               .then((text) => {
                 if (token !== ctx.hoverFetch.current) return;
                 const ex = noteExcerpt(text);

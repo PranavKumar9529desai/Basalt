@@ -46,7 +46,10 @@ export async function insertTemplate(name: string): Promise<void> {
   if (!view) return; // nothing to insert into — command stays silent
 
   const raw = await invoke<string>("read_template", { name });
-  const expanded = expandTemplate(raw, { title: getActiveNoteTitle(), now: new Date() });
+  const expanded = expandTemplate(raw, {
+    title: getActiveNoteTitle(),
+    now: new Date(),
+  });
   const { frontmatter, body } = splitTemplateFrontmatter(expanded);
 
   const doc = view.state.doc;

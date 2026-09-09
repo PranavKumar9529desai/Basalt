@@ -250,8 +250,7 @@ export const useSearchStore = create<SearchStore>()((set, get) => ({
   },
 
   switcherSelectNext: () => {
-    const { switcherSelectedIndex, switcherResults, switcherCanCreate } =
-      get();
+    const { switcherSelectedIndex, switcherResults, switcherCanCreate } = get();
     const last = switcherResults.length - 1 + (switcherCanCreate ? 1 : 0);
     if (last < 0) return;
     set({

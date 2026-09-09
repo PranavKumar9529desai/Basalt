@@ -170,6 +170,7 @@ Bidirectional mapping between `CanvasDocument` (JSON Canvas 1.0) and `@xyflow/re
 ## 6. Deprecation & Cleanup
 
 Done:
+
 - The initial WebGL2 viewport attempt (`@workspace/canvas-viewport`) is
   deprecated and removed from the active rendering path. The directory now
   lives as `packages/canvas` (its `package.json` name remains

@@ -39,7 +39,13 @@ export const highlightExtension: MarkdownConfig = {
           }
         }
 
-        return cx.addDelimiter(HighlightDelim, pos, pos + 2, hasCloserAhead, true);
+        return cx.addDelimiter(
+          HighlightDelim,
+          pos,
+          pos + 2,
+          hasCloserAhead,
+          true,
+        );
       },
       after: "Emphasis",
     },

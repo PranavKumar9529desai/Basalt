@@ -154,18 +154,17 @@ export function useVaultController(
     contextMenu.menuState.target,
   ]);
 
-  const { createNoteInstant, createCanvasInstant, startFolderInline } =
-    useMemo(
-      () =>
-        createCreateActions({
-          deriveParentContext,
-          editor,
-          mutations,
-          openFolder,
-          refreshTree,
-        }),
-      [deriveParentContext, editor, mutations, openFolder, refreshTree],
-    );
+  const { createNoteInstant, createCanvasInstant, startFolderInline } = useMemo(
+    () =>
+      createCreateActions({
+        deriveParentContext,
+        editor,
+        mutations,
+        openFolder,
+        refreshTree,
+      }),
+    [deriveParentContext, editor, mutations, openFolder, refreshTree],
+  );
 
   const {
     handleCommitEdit,

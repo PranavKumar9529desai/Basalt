@@ -2,7 +2,12 @@
 
 > Status: **Accepted — implemented across phases 0–5** (with a short list of
 > remaining items tracked below). This ADR began as a grounded refactor plan;
-> the code now matches the target architecture described here.
+> the code now matches the target architecture described here. A follow-up
+> **8-phase Rust hygiene pass** (2026-09-09, documented in
+> `docs/CURRENT_WORK.md`) addressed several additional cross-cutting concerns:
+> shared path utilities, `TypedValue` comparison/temporal ops consolidation,
+> YAML fence parsing unification, wikilink parser consolidation, error style
+> normalization, graph scope isolation, and internal cleanup.
 
 ---
 
@@ -96,15 +101,15 @@ expansions small and Rust-shaped.
 The four deep reviews that produced this plan. Each row summarizes the
 findings and their disposition (✓ fixed, ✗ remaining).
 
-| Crate           | Findings / disposition                                                                                                                                                                                                                                                                                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `basalt-parser` | `query.rs` god module → ✓ split into `query/{mod,ast,parse,tests}.rs`. Hand-rolled `source_not/and/or` (incl. dead `_offset`) → ✗ still present in `query/parse.rs`; `unwrap_or(0)` swallows bad LIMIT → ✗ still present; `PartialEq` on `f64` → ✗ still present. `metadata.rs` 223-loc fn → ✓ decomposed (`parse_frontmatter` + `scan_body_tokens` + small scanners). |
-| `basalt-vault`  | `asset_index.rs` god module → ✓ split into `asset_index/{mod,file_type,info,hash,tests}.rs`. `register_embeds`/`register_links` near-identical → ✗ still duplicated. `resolve_asset` `eq_ignore_ascii_case` ✓; `broken_embed_count` (dead, always 0) removed ✓; `infer_mime_type` → `&'static str` ✓. `cache.rs load()` collapses failures to `None` → ✗ still `Option`. `md5` crate outdated → ✗ `md5 = "0.7"` still in use. |
-| `basalt-graph`  | `graph_layout.rs` god module → ✓ split into `graph_layout/{mod,params,layout_graph,force_graph,tests}.rs`. Double `to_string()` in `arena::get_or_insert` → ✗ still two allocations. `reorder_tree` scratch buffers ✓; `NodeId` bare alias → ✓ newtype; dead `let _ = (&bx, &by)` removed ✓.                                                                              |
-| `basalt-search` | `anyhow` → ✓ typed `SearchError` (thiserror, Io/Tantivy from-variants). `AhoCorasick` rebuilt per doc → ✓ hoisted `TermMatcher` (one per query). O(n²) snippets byte→char → ✓ `partition_point`. `build_schema` opaque 5-tuple → ✗ unchanged; `TantivyIndex::new` 7-arg → ✗ unchanged. `let _ = flush_pending()` → ✓ `flush_best_effort` logs.                            |
+| Crate           | Findings / disposition                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `basalt-parser` | `query.rs` god module → ✓ split into `query/{mod,ast,parse,tests}.rs`. Hand-rolled `source_not/and/or` (incl. dead `_offset`) → ✗ still present in `query/parse.rs`; `unwrap_or(0)` swallows bad LIMIT → ✗ still present; `PartialEq` on `f64` → ✗ still present. `metadata.rs` 223-loc fn → ✓ decomposed (`parse_frontmatter` + `scan_body_tokens` + small scanners).                                                                   |
+| `basalt-vault`  | `asset_index.rs` god module → ✓ split into `asset_index/{mod,file_type,info,hash,tests}.rs`. `register_embeds`/`register_links` near-identical → ✗ still duplicated. `resolve_asset` `eq_ignore_ascii_case` ✓; `broken_embed_count` (dead, always 0) removed ✓; `infer_mime_type` → `&'static str` ✓. `cache.rs load()` collapses failures to `None` → ✗ still `Option`. `md5` crate outdated → ✗ `md5 = "0.7"` still in use.            |
+| `basalt-graph`  | `graph_layout.rs` god module → ✓ split into `graph_layout/{mod,params,layout_graph,force_graph,tests}.rs`. Double `to_string()` in `arena::get_or_insert` → ✗ still two allocations. `reorder_tree` scratch buffers ✓; `NodeId` bare alias → ✓ newtype; dead `let _ = (&bx, &by)` removed ✓.                                                                                                                                             |
+| `basalt-search` | `anyhow` → ✓ typed `SearchError` (thiserror, Io/Tantivy from-variants). `AhoCorasick` rebuilt per doc → ✓ hoisted `TermMatcher` (one per query). O(n²) snippets byte→char → ✓ `partition_point`. `build_schema` opaque 5-tuple → ✗ unchanged; `TantivyIndex::new` 7-arg → ✗ unchanged. `let _ = flush_pending()` → ✓ `flush_best_effort` logs.                                                                                           |
 | `basalt-tables` | `execute_query` returns `ParseError` → ✓ `DqlError` (`thiserror`, `#[from] ParseError`, `Result<QueryResult, DqlError>`). Real `expect` panic → ✓ `first_page` returns `Option`. O(N·G) `group_rows` → ✓ HashMap-indexed O(N). `type_` as `String` → ✓ `QueryColumnType`. `compare_typed` cross-type `Equal` conflation → ✓ fixed by the HashMap grouper keying. Deterministic default sort → ✗ un-SORTed output keeps arena/link order. |
-| `basalt-wasm`   | `graph_build` trusts caller pointer + clamps vs last buffer (UB class) → ✓ derives its slice from the owned `EDGE_BUF` via an offset param with `assert_eq!` + SAFETY doc. Two subcrates still solve alloc/parse two different ways → ✗ not unified; duplicated `[profile.release]` → ✓ consolidated at workspace root.                                                           |
-| `basalt-types`  | Two parallel typed-value systems → ✓ collapsed into one internally-tagged `TypedValue` (below); `FrontmatterValue::None => PropertyType::Text` lie → ✓ `property_type() -> Option<PropertyType>`; `Document`/`FileMetadata` Default/`new()` duplication ✓.                                                                                                              |
+| `basalt-wasm`   | `graph_build` trusts caller pointer + clamps vs last buffer (UB class) → ✓ derives its slice from the owned `EDGE_BUF` via an offset param with `assert_eq!` + SAFETY doc. Two subcrates still solve alloc/parse two different ways → ✗ not unified; duplicated `[profile.release]` → ✓ consolidated at workspace root.                                                                                                                  |
+| `basalt-types`  | Two parallel typed-value systems → ✓ collapsed into one internally-tagged `TypedValue` (below); `FrontmatterValue::None => PropertyType::Text` lie → ✓ `property_type() -> Option<PropertyType>`; `Document`/`FileMetadata` Default/`new()` duplication ✓.                                                                                                                                                                               |
 
 ### 3.1 The highest-ROI change (value-type unification)
 
@@ -189,10 +194,16 @@ asserting the exact internally-tagged JSON.
 
 ### Remaining items (open debt, not docs-claimed complete)
 
+> Several items from the original list were resolved by the **8-phase Rust
+> hygiene pass** (2026-09-09, `docs/CURRENT_WORK.md`): wikilink parser
+> consolidation (phase 4, addressed `register_embeds`/`register_links`
+> dedup), error style normalization (phase 5), graph scope isolation (phase
+> 6, moved `fuzzy_match`/`search_commands` to `basalt-search`), and internal
+> cleanup (phase 7, `register_relationship` in `asset_index`).
+
 - `basalt-parser`: `source_not/and/or` simplification, bad-LIMIT handling,
   `PartialEq` on `f64`.
-- `basalt-vault`: `register_embeds`/`register_links` dedup, `VaultCache::load`
-  error channel, `md5` crate upgrade.
+- `basalt-vault`: `VaultCache::load` error channel, `md5` crate upgrade.
 - `basalt-graph`: single-alloc `arena::get_or_insert`.
 - `basalt-search`: `SchemaFields` struct for `build_schema`, slimmer
   `TantivyIndex::new`.

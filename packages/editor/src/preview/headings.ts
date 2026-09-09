@@ -97,4 +97,3 @@ export function handleHeading7Lines(
     line = state.doc.lineAt(line.to + 1);
   }
 }
-

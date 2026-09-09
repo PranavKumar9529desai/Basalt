@@ -115,7 +115,12 @@ class MermaidWidget extends WidgetType {
           // runs DOMPurify on its output at this level. Never set to 'loose'.
           securityLevel: "strict",
           suppressErrorRendering: true,
-          theme: this.theme as "dark" | "default" | "base" | "forest" | "neutral",
+          theme: this.theme as
+            | "dark"
+            | "default"
+            | "base"
+            | "forest"
+            | "neutral",
         });
         mermaidInitialized = true;
       }
@@ -186,7 +191,10 @@ const MERMAID_LANGUAGES = new Set(["mermaid"]);
 const matches = (node: SyntaxNodeRef): boolean =>
   node.type.name === "FencedCode";
 
-const parse = (state: EditorState, node: SyntaxNodeRef): MermaidModel | null => {
+const parse = (
+  state: EditorState,
+  node: SyntaxNodeRef,
+): MermaidModel | null => {
   if (node.type.name !== "FencedCode") return null;
 
   const doc = state.doc;

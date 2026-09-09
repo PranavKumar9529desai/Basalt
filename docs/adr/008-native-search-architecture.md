@@ -60,12 +60,12 @@ These are two distinct tools with different engines, optimal for their respectiv
 
 Four fields indexed per note:
 
-| Field   | Type | Tokenizer      | Stored | Notes                                                    |
-| ------- | ---- | -------------- | ------ | -------------------------------------------------------- |
-| `path`  | TEXT | `STRING` (raw) | Yes    | Exact-match deletion key                                 |
-| `title` | TEXT | `en_stem`      | Yes    | BM25 relevance; prefix matching at query time            |
+| Field   | Type | Tokenizer      | Stored  | Notes                                                                       |
+| ------- | ---- | -------------- | ------- | --------------------------------------------------------------------------- |
+| `path`  | TEXT | `STRING` (raw) | Yes     | Exact-match deletion key                                                    |
+| `title` | TEXT | `en_stem`      | Yes     | BM25 relevance; prefix matching at query time                               |
 | `body`  | TEXT | `en_stem`      | **Yes** | STORED so snippet/highlight generation reads the body from the mmap'd index |
-| `tags`  | TEXT | `en_stem`      | Yes    | Space-separated tags from frontmatter + inline `#tag`    |
+| `tags`  | TEXT | `en_stem`      | Yes     | Space-separated tags from frontmatter + inline `#tag`                       |
 
 #### Tokenizer Strategy
 

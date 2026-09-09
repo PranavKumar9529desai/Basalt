@@ -3,7 +3,11 @@ import "./lib/registrations";
 
 export { AppearanceEffects } from "./lib/appearance-effects";
 export { SettingsModal } from "./components/SettingsModal";
-export { settingsRegistry, useEnabledSections, useSections } from "./lib/registry";
+export {
+  settingsRegistry,
+  useEnabledSections,
+  useSections,
+} from "./lib/registry";
 export { useSettingsModalStore } from "./store";
 export {
   getSetting,

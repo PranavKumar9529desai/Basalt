@@ -35,7 +35,9 @@ describe("tabs navigation slice", () => {
   });
 
   it("initializes a single history entry on openPinned", () => {
-    const id = store.getState().openPinned({ path: "notes/A.md", title: "Note A" });
+    const id = store
+      .getState()
+      .openPinned({ path: "notes/A.md", title: "Note A" });
     const tab = store.getState().tabs[id];
     expect(tab.history).toHaveLength(1);
     expect(tab.historyIndex).toBe(0);
@@ -44,10 +46,14 @@ describe("tabs navigation slice", () => {
   });
 
   it("inherits and appends history across preview tab navigation", () => {
-    const id1 = store.getState().openInPreview({ path: "notes/A.md", title: "Note A" });
+    const id1 = store
+      .getState()
+      .openInPreview({ path: "notes/A.md", title: "Note A" });
     expect(store.getState().tabs[id1].history).toHaveLength(1);
 
-    const id2 = store.getState().openInPreview({ path: "notes/B.md", title: "Note B" });
+    const id2 = store
+      .getState()
+      .openInPreview({ path: "notes/B.md", title: "Note B" });
     const tab2 = store.getState().tabs[id2];
     expect(tab2.history).toHaveLength(2);
     expect(tab2.historyIndex).toBe(1);
@@ -57,7 +63,9 @@ describe("tabs navigation slice", () => {
 
   it("navigates back and forward through tab history", () => {
     store.getState().openInPreview({ path: "notes/A.md", title: "Note A" });
-    const activeTabId = store.getState().openInPreview({ path: "notes/B.md", title: "Note B" });
+    const activeTabId = store
+      .getState()
+      .openInPreview({ path: "notes/B.md", title: "Note B" });
 
     // Navigate Back
     store.getState().navigateBack(activeTabId);
@@ -85,7 +93,9 @@ describe("tabs navigation slice", () => {
   });
 
   it("jumps to a specific history index with navigateToHistoryIndex", () => {
-    const tabId = store.getState().openPinned({ path: "notes/A.md", title: "Note A" });
+    const tabId = store
+      .getState()
+      .openPinned({ path: "notes/A.md", title: "Note A" });
     store.getState().pushTabHistory(tabId, {
       path: "notes/B.md",
       title: "Note B",
@@ -110,7 +120,9 @@ describe("tabs navigation slice", () => {
   });
 
   it("truncates forward history when pushing a new entry from an earlier index", () => {
-    const tabId = store.getState().openPinned({ path: "notes/A.md", title: "Note A" });
+    const tabId = store
+      .getState()
+      .openPinned({ path: "notes/A.md", title: "Note A" });
     store.getState().pushTabHistory(tabId, {
       path: "notes/B.md",
       title: "Note B",
@@ -135,7 +147,10 @@ describe("tabs navigation slice", () => {
 
     const tab = store.getState().tabs[tabId];
     expect(tab.history).toHaveLength(2);
-    expect(tab.history?.map((e) => e.path)).toEqual(["notes/A.md", "notes/D.md"]);
+    expect(tab.history?.map((e) => e.path)).toEqual([
+      "notes/A.md",
+      "notes/D.md",
+    ]);
     expect(tab.historyIndex).toBe(1);
   });
 });

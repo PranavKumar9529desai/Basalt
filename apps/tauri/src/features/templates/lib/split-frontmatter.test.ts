@@ -14,12 +14,16 @@ describe("splitTemplateFrontmatter", () => {
     const result = splitTemplateFrontmatter(
       "---\ntags:\n  - project\nstatus: active\n---\n\n# {{title}}\n\nbody",
     );
-    expect(result.frontmatter).toBe("---\ntags:\n  - project\nstatus: active\n---");
+    expect(result.frontmatter).toBe(
+      "---\ntags:\n  - project\nstatus: active\n---",
+    );
     expect(result.body).toBe("\n# {{title}}\n\nbody");
   });
 
   it("handles a trailing newline after the closing fence", () => {
-    const result = splitTemplateFrontmatter("---\ncreated: 2026-09-07\n---\n\n# Title\n");
+    const result = splitTemplateFrontmatter(
+      "---\ncreated: 2026-09-07\n---\n\n# Title\n",
+    );
     expect(result.frontmatter).toBe("---\ncreated: 2026-09-07\n---");
     expect(result.body).toBe("\n# Title\n");
   });

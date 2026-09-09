@@ -18,7 +18,10 @@ describe("GestureService", () => {
     service.start();
 
     // Test mouse button 3 (Back)
-    const backDown = new MouseEvent("mousedown", { button: 3, cancelable: true });
+    const backDown = new MouseEvent("mousedown", {
+      button: 3,
+      cancelable: true,
+    });
     window.dispatchEvent(backDown);
     expect(backDown.defaultPrevented).toBe(true);
 

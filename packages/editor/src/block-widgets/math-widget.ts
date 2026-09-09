@@ -3,10 +3,7 @@ import { type EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import type { BlockWidgetSpec } from "./registry";
 import { renderModeFacet } from "../preview/render-mode";
-import type {
-  DecorationCollector,
-  DecorationContext,
-} from "../preview/types";
+import type { DecorationCollector, DecorationContext } from "../preview/types";
 
 // ---------------------------------------------------------------------------
 // KaTeX CSS injection (once per session)
@@ -83,9 +80,9 @@ class MathBlockWidget extends WidgetType {
       ensureKatexCss();
       try {
         const html = katex.renderToString(latex, {
-          displayMode: true,       // block / display math
-          throwOnError: false,     // render partial output; mark errors inline
-          output: "html",          // HTML+CSS, not MathML — consistent cross-browser
+          displayMode: true, // block / display math
+          throwOnError: false, // render partial output; mark errors inline
+          output: "html", // HTML+CSS, not MathML — consistent cross-browser
           // Strict: false allows unknown macros to render as their name
           // rather than throwing. Matches Obsidian's behavior.
           strict: "ignore",
@@ -151,9 +148,7 @@ const spanMathBlock = (
   return { from: model.from, to: model.to };
 };
 
-const renderMathBlock = (
-  model: MathBlockModel,
-): MathBlockWidget | null => {
+const renderMathBlock = (model: MathBlockModel): MathBlockWidget | null => {
   if (model.inCursor) return null;
   return new MathBlockWidget(model.latex);
 };
@@ -198,7 +193,7 @@ export class MathInlineWidget extends WidgetType {
       ensureKatexCss();
       try {
         const html = katex.renderToString(latex, {
-          displayMode: false,   // inline math
+          displayMode: false, // inline math
           throwOnError: false,
           output: "html",
           strict: "ignore",

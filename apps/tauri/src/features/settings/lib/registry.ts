@@ -22,21 +22,26 @@ interface SettingsRegistryState {
   unregister: (id: string) => void;
 }
 
-export const useSettingsRegistry = create<SettingsRegistryState>()((set, get) => ({
-  sections: [],
-  register: (section) => {
-    if (get().sections.some((s) => s.id === section.id)) {
-      console.warn(
-        `Settings section "${section.id}" already registered. Overwriting.`,
-      );
-    }
-    set((state) => ({
-      sections: [...state.sections.filter((s) => s.id !== section.id), section],
-    }));
-  },
-  unregister: (id) =>
-    set((state) => ({ sections: state.sections.filter((s) => s.id !== id) })),
-}));
+export const useSettingsRegistry = create<SettingsRegistryState>()(
+  (set, get) => ({
+    sections: [],
+    register: (section) => {
+      if (get().sections.some((s) => s.id === section.id)) {
+        console.warn(
+          `Settings section "${section.id}" already registered. Overwriting.`,
+        );
+      }
+      set((state) => ({
+        sections: [
+          ...state.sections.filter((s) => s.id !== section.id),
+          section,
+        ],
+      }));
+    },
+    unregister: (id) =>
+      set((state) => ({ sections: state.sections.filter((s) => s.id !== id) })),
+  }),
+);
 
 /** Imperative API — for plugin lifecycle code (module scope, effects). */
 export const settingsRegistry = {
@@ -47,7 +52,9 @@ export const settingsRegistry = {
 };
 
 /** Sections in nav order: group first, then `order`, then registration order. */
-export function sortSections(sections: SettingSectionDef[]): SettingSectionDef[] {
+export function sortSections(
+  sections: SettingSectionDef[],
+): SettingSectionDef[] {
   const groupRank: Record<SettingsGroup, number> = {
     options: 0,
     "core-plugins": 1,
@@ -56,7 +63,10 @@ export function sortSections(sections: SettingSectionDef[]): SettingSectionDef[]
   return [...sections].sort((a, b) => {
     const g = groupRank[a.group] - groupRank[b.group];
     if (g !== 0) return g;
-    return (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    return (
+      (a.order ?? Number.MAX_SAFE_INTEGER) -
+      (b.order ?? Number.MAX_SAFE_INTEGER)
+    );
   });
 }
 

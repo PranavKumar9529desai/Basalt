@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_DATE_FORMAT, DEFAULT_TIME_FORMAT, formatDate } from "./date-format";
+import {
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIME_FORMAT,
+  formatDate,
+} from "./date-format";
 
 // 2026-09-07 is a Monday; 15:05:09 local.
 const NOW = new Date(2026, 8, 7, 15, 5, 9);

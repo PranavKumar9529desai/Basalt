@@ -15,7 +15,12 @@ import { listen } from "@tauri-apps/api/event";
 import { GraphRenderer } from "@workspace/graph";
 import { SpatialGrid } from "../lib/spatialGrid";
 import type { GraphColorMode } from "../components/GraphControls";
-import { createInteractions, type HoverState, type MenuState, type Ref } from "../lib/interactions";
+import {
+  createInteractions,
+  type HoverState,
+  type MenuState,
+  type Ref,
+} from "../lib/interactions";
 import {
   ARROW_EDGE_CAP,
   buildArrows,
@@ -34,7 +39,10 @@ import {
 } from "../lib/themeColors";
 import { buildVisible } from "../lib/filters";
 import { drawOverlayLabels } from "../lib/labels";
-import { decodeBinaryGraphSnapshot, snapshotToGraphData } from "../lib/graphData";
+import {
+  decodeBinaryGraphSnapshot,
+  snapshotToGraphData,
+} from "../lib/graphData";
 import { buildSubset, localSubset } from "../lib/localGraph";
 import type { GraphFrame, GraphWorkerMessage } from "../lib/graphWorker";
 
@@ -75,7 +83,6 @@ export interface GraphEngine {
   retry: () => void;
   closeMenu: () => void;
 }
-
 
 export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
   const { openNoteRef, setQuery, controls } = opts;
@@ -229,9 +236,12 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
     const ro = new ResizeObserver(resize);
     ro.observe(glCanvas);
 
-    const worker = new Worker(new URL("../lib/graphWorker.ts", import.meta.url), {
-      type: "module",
-    });
+    const worker = new Worker(
+      new URL("../lib/graphWorker.ts", import.meta.url),
+      {
+        type: "module",
+      },
+    );
     workerRef.current = worker;
     worker.onmessage = (e: MessageEvent<GraphWorkerMessage>) => {
       const data = e.data;
@@ -350,7 +360,10 @@ export function useGraphEngine(opts: GraphEngineOptions): GraphEngine {
       renderer.setSizes(subset.sizes);
       const cctx = colorContextRef.current();
       renderer.setColors(buildColorArray(map, cctx));
-      renderer.setEdges(Uint32Array.from(subset.edges), subset.edges.length / 2);
+      renderer.setEdges(
+        Uint32Array.from(subset.edges),
+        subset.edges.length / 2,
+      );
       renderer.setEdgeWeights(Float32Array.from(subset.edgeWeights));
       if (flagsRef.current.length !== map.length) {
         flagsRef.current = new Float32Array(map.length);

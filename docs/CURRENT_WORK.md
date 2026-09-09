@@ -32,15 +32,15 @@ remainder.
 
 ### ADR implementation state (source-verified 2026-09-09)
 
-| ADR | Code | Gate | Gate status |
-|---|---|---|---|
-| 040 typing latency | ✅ `packages/editor/src/preview/` — switch dispatch, O(1) code-block cursor, heading-7 bypass, deco caches, pre-allocated list widgets, 48KB lazy path + hysteresis | p95 ≤ 2.0 ms @ 100 KB | ⏳ optimizing & benchmarking |
-| 041 zero-AST parser + SIMD | ✅ `crates/basalt-parser` — memchr3, ASCII Tier-1, SpanCursor Tier-2, in-place dedup | >500k notes/s @ 25k | ❓ unverified |
-| 042 parallel indexing + binary cache | ✅ `basalt-vault` Rayon map-reduce, deferred hashing, `BSLT` bincode cache (magic + atomic rename) | ≤250 ms cold / ≤15 ms warm @ 25k | ⏳ unverified |
-| 043 full-text + fuzzy search | ✅ `basalt-search` MmapDirectory BM25, nucleo two-stage, SIMD snippets, 10s commit | switcher < 16 ms | ❓ unverified |
-| 044 graph WASM force sim | ✅ sim + Barnes-Hut + C-ABI wasm + WebGL2 + double-buffer + binary IPC `decodeBinaryGraphSnapshot` | graph_step 25k ≤ 16.6 ms | ✅ 13.70 ms + binary IPC wired |
-| 045 DQL engine | ✅ `basalt-tables` Schwartzian sort, streaming top-K heap selection, predicate push-down, 3VL | sub-15 ms @ 25k claim | ⏳ stream top-k heap selection implemented |
-| 046 two-tier boot | ✅ Complete — instant O(1) warm boot (<20ms) + `fast_scan_flat_tree` + fused worker (`core/indexing.rs`) + background mtime sync + progress toast | boot ≤ 60 ms cold / ≤ 20 ms warm | ⏳ implemented, measuring |
+| ADR                                  | Code                                                                                                                                                                | Gate                             | Gate status                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------ |
+| 040 typing latency                   | ✅ `packages/editor/src/preview/` — switch dispatch, O(1) code-block cursor, heading-7 bypass, deco caches, pre-allocated list widgets, 48KB lazy path + hysteresis | p95 ≤ 2.0 ms @ 100 KB            | ⏳ optimizing & benchmarking               |
+| 041 zero-AST parser + SIMD           | ✅ `crates/basalt-parser` — memchr3, ASCII Tier-1, SpanCursor Tier-2, in-place dedup                                                                                | >500k notes/s @ 25k              | ❓ unverified                              |
+| 042 parallel indexing + binary cache | ✅ `basalt-vault` Rayon map-reduce, deferred hashing, `BSLT` bincode cache (magic + atomic rename)                                                                  | ≤250 ms cold / ≤15 ms warm @ 25k | ⏳ unverified                              |
+| 043 full-text + fuzzy search         | ✅ `basalt-search` MmapDirectory BM25, nucleo two-stage, SIMD snippets, 10s commit                                                                                  | switcher < 16 ms                 | ❓ unverified                              |
+| 044 graph WASM force sim             | ✅ sim + Barnes-Hut + C-ABI wasm + WebGL2 + double-buffer + binary IPC `decodeBinaryGraphSnapshot`                                                                  | graph_step 25k ≤ 16.6 ms         | ✅ 13.70 ms + binary IPC wired             |
+| 045 DQL engine                       | ✅ `basalt-tables` Schwartzian sort, streaming top-K heap selection, predicate push-down, 3VL                                                                       | sub-15 ms @ 25k claim            | ⏳ stream top-k heap selection implemented |
+| 046 two-tier boot                    | ✅ Complete — instant O(1) warm boot (<20ms) + `fast_scan_flat_tree` + fused worker (`core/indexing.rs`) + background mtime sync + progress toast                   | boot ≤ 60 ms cold / ≤ 20 ms warm | ⏳ implemented, measuring                  |
 
 ### Benchmark process (this session)
 
@@ -74,7 +74,7 @@ Check the post-merge gate (`bun run lint && bunx tsc --noEmit`, app vitest,
   registry, strict securityLevel, content-keyed cache, phase-5 test gate.
 - **Backlinks** (`49b35bf`) — context snippets + link resolution + panel.
 - **Brand/typography** (`f7636b4`) — typography architecture + volcanic theme
-  + asset suite.
+  - asset suite.
 - **Tags** (`e514979`) — Tags dock + tantivy `tag:` operator + clickable
   `#tag` pills → prefilled search. Includes a mid-refactor restore of the
   `get_graph`/`autocomplete_links`/`autocomplete_tags` invoke registrations
@@ -90,9 +90,8 @@ timeout on a shared-CPU run proved to be load flake (passes in 1.7 s solo).
 ### Remaining known debt
 
 - Rust batched IPC; plugin host (ADR-018 Phase 5) — both still `⏳ Not
-  started` on the status table.
+started` on the status table.
 - Untracked agent scratch (brand assets) was never committed into the branch.
-
 
 ## File drag-and-drop (tree → editor, tree → canvas) — COMPLETE + survey
 
@@ -203,8 +202,8 @@ ADR-037 settings WIP (`src/features/settings/**`, `docs/adr/037*`,
   (engine 615→196; `previewScheduler(field)`/`tagMarksPlugin(field)` factories break the
   module cycle), both WebGL renderers → `shaders.ts`+`programs.ts`, `useVaultController`
   sub-hooks, `useTabDnD` internals, Rust test-blob extraction (`reorganize/rename/move_rename`
-  + shared `temp_vault` → `commands/common_tests.rs` — clears the old command-refactor
-  backlog item below).
+  - shared `temp_vault` → `commands/common_tests.rs` — clears the old command-refactor
+    backlog item below).
 - **Phase 2** `3147787` — Rust crate seams: `force_graph.rs` → `quadtree.rs`+sim,
   `basalt-canvas/lib.rs` → `types.rs`+`ser.rs` (450→188), `basalt-tables/engine.rs` →
   `grouping.rs`+`output.rs`, `basalt-types/query.rs` → `value.rs`+`convert.rs`, vault
@@ -237,7 +236,6 @@ full-stack p95 = 3.10 ms @ 100 KB (gate ≤ 4 ms, ADR-019).
 
 ---
 
-
 ## Core plugins: Templates + Daily notes — COMPLETE
 
 **Status:** First two core plugins per new [ADR-036](adr/036-core-plugin-architecture.md).
@@ -255,7 +253,7 @@ full-stack p95 = 3.10 ms @ 100 KB (gate ≤ 4 ms, ADR-019).
   (Templates/Daily notes, group `core-plugins`) via generic `SettingsFields` +
   declarative `SETTING_SPECS`; ribbon buttons + palette metadata.
 - **Verify**: `cargo test --workspace` + `cargo clippy --workspace --all-targets
-  -- -D warnings` clean; `bunx tsc --noEmit` + `bun run lint` clean; 294 vitest
+-- -D warnings` clean; `bunx tsc --noEmit` + `bun run lint` clean; 294 vitest
   (13 new) pass; `bun run build` (vite) succeeds. GUI smoke not run in this
   environment (native Tauri window; command logic covered by the Rust + TS
   unit suites above).
@@ -268,6 +266,7 @@ full-stack p95 = 3.10 ms @ 100 KB (gate ≤ 4 ms, ADR-019).
 directories (pure structure, no logic changes; ADR-030 conventions — thin
 `mod.rs`, result structs at module root, `crate::commands::common` imports in
 submodules):
+
 - `vault.rs` (511L) → `vault/{mod,graph}.rs`
 - `assets.rs` (1122L) → `assets/{mod,reorganize,save}.rs`
 - `notes.rs` (896L) → `notes/{mod,rename}.rs`
@@ -556,7 +555,7 @@ Update `app-shell/Shell.tsx` to import from `shared/` instead of local.
   `metadata`) in `crates/basalt-vault/src/vault.rs`; commands no longer reach
   into `metadata_cache`/`arena` internals.
 - **Phase 2** `86d9417` — structure: moved `src-tauri/src/{app_state,cache,
-  config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
+config,watcher,workspace}.rs` under `src/core/` (re-exported at crate root);
   `crates/basalt-wasm` still exists on `main` as a container directory holding
   the `graph-wasm` + `frontmatter-wasm` subcrates (no workspace members, built
   standalone) — NOT deleted; fixed stale `basalt-wasm` refs in

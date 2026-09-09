@@ -104,7 +104,6 @@ commandService.registerCommand(
   },
 );
 
-
 commandService.registerCommand(
   "tabs:navigate-forward",
   () => {
@@ -116,10 +115,7 @@ commandService.registerCommand(
   () => {
     const tab = resolveActiveTab();
     return Boolean(
-      tab &&
-        tab.history &&
-        (tab.historyIndex ?? 0) < tab.history.length - 1,
+      tab && tab.history && (tab.historyIndex ?? 0) < tab.history.length - 1,
     );
   },
 );
-

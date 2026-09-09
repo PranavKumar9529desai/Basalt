@@ -1,6 +1,7 @@
 import type { Dispatch, DragEvent, RefObject, SetStateAction } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
 import type { CanvasXYNode } from "./mapper";
+import { isMarkdownPath } from "@workspace/ui";
 
 export interface NodeCreatorsDeps {
   reactFlowInstance: ReactFlowInstance;
@@ -18,9 +19,10 @@ export interface NodeCreators {
 
 /** Screen-space center of the viewport, converted to flow coordinates — the
  * default position for nodes added without an explicit pointer position. */
-function flowCenter(
-  reactFlowInstance: ReactFlowInstance,
-): { x: number; y: number } {
+function flowCenter(reactFlowInstance: ReactFlowInstance): {
+  x: number;
+  y: number;
+} {
   return reactFlowInstance.screenToFlowPosition({
     x: window.innerWidth / 2,
     y: window.innerHeight / 2,
@@ -108,7 +110,7 @@ export function createNodeCreators(deps: NodeCreatorsDeps): NodeCreators {
         };
         appendNode(setNodes, nodesRef, saveCanvasNow, newLink);
         return;
-      } else if (droppedText.endsWith(".md") || droppedText.includes("/")) {
+      } else if (isMarkdownPath(droppedText) || droppedText.includes("/")) {
         const newFile: CanvasXYNode = {
           id: `file-${Date.now()}`,
           type: "canvasFile",
@@ -124,7 +126,7 @@ export function createNodeCreators(deps: NodeCreatorsDeps): NodeCreators {
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0];
       const filePath = (file as any).path || file.name;
-      const isMedia = !filePath.endsWith(".md");
+      const isMedia = !isMarkdownPath(filePath);
       const newFile: CanvasXYNode = {
         id: `file-${Date.now()}`,
         type: "canvasFile",

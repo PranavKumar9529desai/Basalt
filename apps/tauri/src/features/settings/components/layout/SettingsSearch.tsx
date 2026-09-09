@@ -12,7 +12,11 @@ export interface SettingsSearchProps {
  * Leading magnifying-glass icon, one-keystroke clearance via the X
  * button (which refocuses the input), Escape in the parent clears too.
  */
-export function SettingsSearch({ value, onChange, autoFocus }: SettingsSearchProps) {
+export function SettingsSearch({
+  value,
+  onChange,
+  autoFocus,
+}: SettingsSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (

@@ -9,9 +9,7 @@ export function resolveLinkedNote(
   linkName: string,
   services: Pick<LeafServices, "findNote">,
 ): { name: string; path: string } | undefined {
-  return (
-    services.findNote(linkName) ?? services.findNote(`${linkName}.md`)
-  );
+  return services.findNote(linkName) ?? services.findNote(`${linkName}.md`);
 }
 
 /** Open a wikilink/embed target note, or report the miss through `setStatus`

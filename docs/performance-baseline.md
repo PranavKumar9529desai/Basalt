@@ -7,14 +7,14 @@
 
 ## Measurement surfaces
 
-| # | Surface | Instrument | Runs in dev? | Runs in prod? | How to run |
-|---|---------|-----------|:---:|:---:|---|
-| 1 | **Rust backend compute** (parse, search, graph, tables, vault index) | Criterion (`cargo bench`) | — (release profile) | — (release profile) | `cargo bench --workspace` |
-| 2 | **Startup / TTI** | auto `writeTtiReport` → `tti-report.md` | ✅ | ✅ | just launch the app |
-| 3 | **Typing latency (full stack)** | `dev:editor-benchmark` | ✅ | ❌ DEV-gated | palette → `dev:editor-benchmark` |
-| 4 | **Typing latency (per-extension isolation)** | `dev:editor-benchmark-isolation` | ✅ | ❌ DEV-gated | palette → `dev:editor-benchmark-isolation` |
-| 5 | **Main-thread watchdog** (long-task detector) | `dev:watchdog` + `dev:watchdog-report` | ✅ | ❌ DEV-gated | toggle on, interact, dump report |
-| 6 | **Search modal (React → pixels)** | `dev:search-benchmark` | ✅ | ✅ (unconditionally registered) | palette → `dev:search-benchmark` |
+| #   | Surface                                                              | Instrument                              |    Runs in dev?     |          Runs in prod?          | How to run                                 |
+| --- | -------------------------------------------------------------------- | --------------------------------------- | :-----------------: | :-----------------------------: | ------------------------------------------ |
+| 1   | **Rust backend compute** (parse, search, graph, tables, vault index) | Criterion (`cargo bench`)               | — (release profile) |       — (release profile)       | `cargo bench --workspace`                  |
+| 2   | **Startup / TTI**                                                    | auto `writeTtiReport` → `tti-report.md` |         ✅          |               ✅                | just launch the app                        |
+| 3   | **Typing latency (full stack)**                                      | `dev:editor-benchmark`                  |         ✅          |          ❌ DEV-gated           | palette → `dev:editor-benchmark`           |
+| 4   | **Typing latency (per-extension isolation)**                         | `dev:editor-benchmark-isolation`        |         ✅          |          ❌ DEV-gated           | palette → `dev:editor-benchmark-isolation` |
+| 5   | **Main-thread watchdog** (long-task detector)                        | `dev:watchdog` + `dev:watchdog-report`  |         ✅          |          ❌ DEV-gated           | toggle on, interact, dump report           |
+| 6   | **Search modal (React → pixels)**                                    | `dev:search-benchmark`                  |         ✅          | ✅ (unconditionally registered) | palette → `dev:search-benchmark`           |
 
 All reports are written to `<tempdir>/basalt-reports/` (Linux: `/tmp/basalt-reports/`)
 via the `write_dev_report` Tauri command — **no devtools needed** (devtools inflate
@@ -41,7 +41,7 @@ user experience:
 - **Frontend side:** dev serves **unminified** Vite JS in **React dev mode**
   (React Compiler off), plus HMR overhead. Prod is minified + compiler-enabled.
 - Exception: the CM typing path is React-free and does no per-keystroke IPC, so
-  dev-vs-prod inflation there is small — but the isolation benchmark's *differential*
+  dev-vs-prod inflation there is small — but the isolation benchmark's _differential_
   numbers (cost added per extension) are what matter, and they transfer.
 
 ## Current Criterion baseline (release, 2026-09-08)
@@ -49,31 +49,31 @@ user experience:
 Reproduce: `cargo bench --workspace`. Full run ≈ **24 min** (fat-LTO build is the
 long pole; ADR-017's "2–3 min" is stale). Mean ± ~CI, lower is better.
 
-| Bench | Tier | Time |
-|---|---|---|
-| parse_metadata | seq 1k | 21.83 ms |
-| | parse_frontmatter 1k | 16.80 ms |
-| parse_metadata_25k | seq 25k | 517.72 ms |
-| | parse_frontmatter 25k | 344.65 ms |
-| index_walk | synthetic 50 | 1.53 ms |
-| | synthetic 500 | 15.46 ms |
-| | synthetic 5000 | 392.15 ms |
-| | real_vault 774 | 19.73 ms |
-| cache_roundtrip | save 5k | 9.28 ms |
-| | load 5k | 27.10 ms |
-| index_docs | index 5k | 55.38 ms |
-| search_query | search 5k | 0.94 ms |
-| | search 25k | 2.82 ms |
-| search_reindex | reindex 5k | 59.44 ms |
-| graph_insert | insert 5k | 304.67 ms |
-| graph_query | backlinks 5k | 0.053 ms |
-| | forward_links 5k | 0.052 ms |
-| graph_step | step 25k | 13.70 ms |
-| query_execution | list_sort_limit 25k | 103.86 ms |
-| | table_from_tag 25k | 38.88 ms |
-| aggregation | where_numeric 25k | 30.01 ms |
-| | group_by_count 25k | 33.11 ms |
-| | flatten_list_group_by 25k | 35.30 ms |
+| Bench              | Tier                      | Time      |
+| ------------------ | ------------------------- | --------- |
+| parse_metadata     | seq 1k                    | 21.83 ms  |
+|                    | parse_frontmatter 1k      | 16.80 ms  |
+| parse_metadata_25k | seq 25k                   | 517.72 ms |
+|                    | parse_frontmatter 25k     | 344.65 ms |
+| index_walk         | synthetic 50              | 1.53 ms   |
+|                    | synthetic 500             | 15.46 ms  |
+|                    | synthetic 5000            | 392.15 ms |
+|                    | real_vault 774            | 19.73 ms  |
+| cache_roundtrip    | save 5k                   | 9.28 ms   |
+|                    | load 5k                   | 27.10 ms  |
+| index_docs         | index 5k                  | 55.38 ms  |
+| search_query       | search 5k                 | 0.94 ms   |
+|                    | search 25k                | 2.82 ms   |
+| search_reindex     | reindex 5k                | 59.44 ms  |
+| graph_insert       | insert 5k                 | 304.67 ms |
+| graph_query        | backlinks 5k              | 0.053 ms  |
+|                    | forward_links 5k          | 0.052 ms  |
+| graph_step         | step 25k                  | 13.70 ms  |
+| query_execution    | list_sort_limit 25k       | 103.86 ms |
+|                    | table_from_tag 25k        | 38.88 ms  |
+| aggregation        | where_numeric 25k         | 30.01 ms  |
+|                    | group_by_count 25k        | 33.11 ms  |
+|                    | flatten_list_group_by 25k | 35.30 ms  |
 
 ### Regression signal from this run (vs last saved baseline)
 

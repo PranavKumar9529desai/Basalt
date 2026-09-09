@@ -18,7 +18,14 @@ export interface CanvasTransform {
   oy: number;
 }
 
-import { VERT_RECT, FRAG_RECT, VERT_EDGE, FRAG_EDGE, VERT_ARROW, FRAG_ARROW } from "./shaders";
+import {
+  VERT_RECT,
+  FRAG_RECT,
+  VERT_EDGE,
+  FRAG_EDGE,
+  VERT_ARROW,
+  FRAG_ARROW,
+} from "./shaders";
 import { link } from "./programs";
 
 /** The two unit-quad corners (two triangles = 6 verts) shared by every rect

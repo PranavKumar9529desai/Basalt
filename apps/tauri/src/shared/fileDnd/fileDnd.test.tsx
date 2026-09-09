@@ -38,12 +38,8 @@ const NOTE: FlatTreeNode = {
   childCount: 0,
 };
 
-const pointerEvent = (
-  type: string,
-  x: number,
-  y: number,
-  button = 0,
-) => new MouseEvent(type, { clientX: x, clientY: y, button, bubbles: true });
+const pointerEvent = (type: string, x: number, y: number, button = 0) =>
+  new MouseEvent(type, { clientX: x, clientY: y, button, bubbles: true });
 
 function hookHandlePointerDown(result: {
   current: ReturnType<typeof useFileDrag>;
@@ -130,7 +126,6 @@ describe("fileDnd editor drop", () => {
       getView: () => view,
     } as never);
   });
-
 
   afterEach(() => {
     editorRegistryMock.unregister("pane-1");

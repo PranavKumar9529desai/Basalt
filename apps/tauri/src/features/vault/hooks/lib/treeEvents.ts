@@ -1,4 +1,10 @@
-import type { Dispatch, MouseEvent as ReactMouseEvent, RefObject, SetStateAction, UIEvent } from "react";
+import type {
+  Dispatch,
+  MouseEvent as ReactMouseEvent,
+  RefObject,
+  SetStateAction,
+  UIEvent,
+} from "react";
 import type { FlatTreeNode } from "../../types";
 import type { VaultContextMenuApi } from "../useVaultContextMenu";
 import type { VaultSelectionApi } from "../useVaultSelection";

@@ -18,6 +18,7 @@ import { resolveCanvasColor } from "../lib/colors";
 import CardHandles from "./CardHandles";
 import { useCanvas } from "../components/CanvasContext";
 import { CanvasCardEditor } from "../components/CanvasCardEditor";
+import { stemOf } from "@workspace/ui";
 
 function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
@@ -86,7 +87,7 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
     services.openNote(abs);
   };
 
-  const fileName = filePath.split("/").pop()?.replace(/\.md$/, "") || filePath;
+  const fileName = stemOf(filePath) || filePath;
 
   return (
     <div className="group relative w-full h-full">

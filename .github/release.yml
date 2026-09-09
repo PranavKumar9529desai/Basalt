@@ -1,21 +1,21 @@
 changelog:
   categories:
-    - title: '🚀 Features'
+    - title: "🚀 Features"
       labels:
-        - 'feature'
-        - 'enhancement'
-    - title: '⚡ Performance & Optimization'
+        - "feature"
+        - "enhancement"
+    - title: "⚡ Performance & Optimization"
       labels:
-        - 'perf'
-        - 'performance'
-        - 'optimization'
-    - title: '🐛 Bug Fixes'
+        - "perf"
+        - "performance"
+        - "optimization"
+    - title: "🐛 Bug Fixes"
       labels:
-        - 'fix'
-        - 'bug'
-    - title: '🧹 Maintenance & Refactoring'
+        - "fix"
+        - "bug"
+    - title: "🧹 Maintenance & Refactoring"
       labels:
-        - 'chore'
-        - 'refactor'
-        - 'docs'
-        - 'ci'
+        - "chore"
+        - "refactor"
+        - "docs"
+        - "ci"

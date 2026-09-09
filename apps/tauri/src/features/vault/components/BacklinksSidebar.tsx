@@ -25,7 +25,9 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    return q ? backlinks.filter((e) => e.name.toLowerCase().includes(q)) : backlinks;
+    return q
+      ? backlinks.filter((e) => e.name.toLowerCase().includes(q))
+      : backlinks;
   }, [backlinks, filter]);
 
   // An entry's height: heading (~28px) + one 26px row per mention + padding.
@@ -94,7 +96,11 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
       </div>
 
       {/* List */}
-      <div ref={parentRef} className="flex-1 overflow-auto py-1" data-testid="backlinks-list">
+      <div
+        ref={parentRef}
+        className="flex-1 overflow-auto py-1"
+        data-testid="backlinks-list"
+      >
         {backlinks.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
             <svg

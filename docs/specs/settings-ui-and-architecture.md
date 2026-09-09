@@ -10,6 +10,7 @@
 This section documents the exact visual and spatial rules derived from the Obsidian 1.13.7 reference layout and Basalt design tokens.
 
 ### 1.1 Modal Shell Dimensions & Backdrop
+
 - **Backdrop:** `fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]`
 - **Modal Container:**
   - `w-[85vw] max-w-[1080px] min-w-[760px] h-[85vh] max-h-[820px] min-h-[520px]`
@@ -19,6 +20,7 @@ This section documents the exact visual and spatial rules derived from the Obsid
   - Ghost icon button (`IconX`, size 16), rounded, text `var(--sat-text-muted)` hover `var(--sat-text-primary)`
 
 ### 1.2 Two-Pane Layout
+
 ```
 +--------------------------+------------------------------------------------+
 |  SettingsNav (240px)     |  SettingsPanel (flex-1)                        |
@@ -48,6 +50,7 @@ This section documents the exact visual and spatial rules derived from the Obsid
 ## 2. Left Navigation (`SettingsNav.tsx`)
 
 ### 2.1 Search Input
+
 - Container: `p-3 border-b border-[var(--sat-layout-border)]`
 - Input wrapper: `relative flex items-center`
   - Leading icon: `IconSearch` (size 14), left: `left-2.5`, color: `var(--sat-text-muted)`
@@ -55,6 +58,7 @@ This section documents the exact visual and spatial rules derived from the Obsid
   - Clear button: `IconX` (size 12), right: `right-2`, visible when query is non-empty, clears query and refocuses input.
 
 ### 2.2 Category Groups
+
 Sidebar uses three uppercase groups with `text-[11px] font-semibold text-[var(--sat-text-muted)] tracking-wider px-3 pt-4 pb-1.5 select-none`:
 
 1. **`OPTIONS`**
@@ -65,8 +69,8 @@ Sidebar uses three uppercase groups with `text-[11px] font-semibold text-[var(--
      - `Editor` (`IconFileText`, size 15)
      - `Files and links` (`IconFolder`, size 15)
      - `Hotkeys` (`IconKeyboard`, size 15)
-     - `Core plugins` (`IconPuzzle`, size 15) — *Plugin manager tab*
-     - `Community plugins` (`IconUsers`, size 15) — *Community manager tab*
+     - `Core plugins` (`IconPuzzle`, size 15) — _Plugin manager tab_
+     - `Community plugins` (`IconUsers`, size 15) — _Community manager tab_
 2. **`CORE PLUGINS`**
    - Populated dynamically by active core plugins that declare settings.
    - Example items: `Backlinks` (`IconLink`), `Canvas` (`IconLayoutGrid`), `Command palette` (`IconTerminal2`), `Daily notes` (`IconCalendar`), `Quick switcher` (`IconArrowsExchange`), `Templates` (`IconClipboardList`).
@@ -76,6 +80,7 @@ Sidebar uses three uppercase groups with `text-[11px] font-semibold text-[var(--
    - Empty state: `No community plugins installed`.
 
 ### 2.3 Navigation Item Styling
+
 - Row container: `group flex items-center gap-2.5 px-3 py-1.5 mx-2 my-0.5 rounded-md cursor-pointer text-xs transition-colors select-none`
 - **Default:** `text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]`
 - **Active:** `bg-[var(--sat-accent-primary)]/12 text-[var(--sat-accent-primary)] font-medium`
@@ -87,6 +92,7 @@ Sidebar uses three uppercase groups with `text-[11px] font-semibold text-[var(--
 ## 3. Right Content Area (`SettingsPanel.tsx`)
 
 ### 3.1 Content Container & Header
+
 - Wrapper: `ScrollArea className="flex-1 h-full bg-[var(--sat-surface-1)]"`
 - Inner container: `max-w-3xl px-10 py-7 mx-auto`
 - Section Title (`h2`): `text-xl font-semibold text-[var(--sat-text-primary)] tracking-tight`
@@ -94,21 +100,22 @@ Sidebar uses three uppercase groups with `text-[11px] font-semibold text-[var(--
 - Bottom divider: `border-b border-[var(--sat-layout-border)] pb-6 mb-6`
 
 ### 3.2 Sub-Heading (`SettingHeading`)
+
 ```tsx
 <div className="mt-8 mb-2 pt-4 border-t border-[var(--sat-layout-border)] first:mt-0 first:pt-0 first:border-t-0">
   <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--sat-text-secondary)]">
     {title}
   </h3>
   {description && (
-    <p className="text-xs text-[var(--sat-text-muted)] mt-1">
-      {description}
-    </p>
+    <p className="text-xs text-[var(--sat-text-muted)] mt-1">{description}</p>
   )}
 </div>
 ```
 
 ### 3.3 Standard Setting Row (`SettingItem`)
+
 The structural building block matching Obsidian:
+
 ```tsx
 <div className="flex items-center justify-between py-3.5 border-b border-[var(--sat-layout-border)] last:border-b-0 gap-6">
   {/* Left Column: Info */}
@@ -137,15 +144,18 @@ The structural building block matching Obsidian:
 All controls must be presentational primitives from `@workspace/ui` styled exclusively via `--sat-*` tokens.
 
 ### 4.1 Toggle Switch (`SettingToggle`)
+
 - Built using Radix UI Switch primitive (`@radix-ui/react-switch`).
 - Root: `w-9 h-5 rounded-full bg-[var(--sat-surface-3)] transition-colors data-[state=checked]:bg-[var(--sat-accent-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)]`
 - Thumb: `block w-3.5 h-3.5 rounded-full bg-white transition-transform data-[state=checked]:translate-x-[18px] translate-x-[3px]`
 
 ### 4.2 Select / Dropdown (`SettingDropdown`)
+
 - Sizing: `h-8 px-2.5 min-w-[140px] text-xs rounded-md bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] text-[var(--sat-text-primary)] hover:border-[var(--sat-text-muted)] focus:ring-1 focus:ring-[var(--sat-accent-primary)]`
 - Rendered with right chevron `IconChevronDown` (size 12).
 
 ### 4.3 Action Button (`SettingButton`)
+
 - Variants:
   - Primary / CTA: `Button variant="default" size="sm"`
   - Secondary / Normal: `Button variant="outline" size="sm" className="bg-[var(--sat-surface-2)] border-[var(--sat-layout-border)] text-xs h-7 px-3"`
@@ -153,10 +163,12 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
 - Multi-button slot: Renders buttons side-by-side with `gap-2` (e.g. `[Log in] [Sign up]` or `[Activate] [Purchase]`).
 
 ### 4.4 Text & Number Inputs (`SettingInput`)
+
 - Sizing: `h-8 w-[220px] text-xs px-2.5 rounded-md bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] text-[var(--sat-text-primary)] placeholder:text-[var(--sat-text-muted)] focus:ring-1 focus:ring-[var(--sat-accent-primary)]`
 - Debounce: Text fields debounce persistence by 300ms or persist on blur.
 
 ### 4.5 Slider (`SettingSlider`)
+
 - Sizing: `w-[160px] flex items-center gap-3`
 - Track: `h-1.5 bg-[var(--sat-surface-3)] rounded-full`
 - Readout: Pill with numeric value `text-xs font-mono text-[var(--sat-text-muted)] w-8 text-right`
@@ -166,6 +178,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
 ## 5. Specification of Core Sections
 
 ### 5.1 General (`GeneralSection.tsx`)
+
 1. **Version info:**
    - Name: `Version 0.1.0`
    - Description: `Installer version: 0.1.0. Read the changelog.`
@@ -196,6 +209,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
    - Control: Buttons `[Activate] [Purchase]`
 
 ### 5.2 Appearance (`AppearanceSection.tsx`)
+
 1. **Base color scheme:**
    - Name: `Base color scheme`
    - Description: `Choose between light, dark, or follow your system preference.`
@@ -218,6 +232,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
    - Control: Slider (80% – 150%, default: 100%)
 
 ### 5.3 Editor (`EditorSection.tsx`)
+
 1. **Default view mode:**
    - Name: `Default view mode for new tabs`
    - Description: `Choose between live preview editor and reading view.`
@@ -252,6 +267,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
    - Control: Switch (key: `vimMode`, default: `false`)
 
 ### 5.4 Files & Links (`FilesLinksSection.tsx`)
+
 1. **Default location for new notes:**
    - Name: `Default location for new notes`
    - Description: `Where newly created notes are saved.`
@@ -274,6 +290,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
    - Control: Dropdown (Flat / By note / By date / By type)
 
 ### 5.5 Hotkeys (`HotkeysSection.tsx`)
+
 - Top search filter input (`Search hotkeys...`).
 - Virtualized list of all commands from `commandService.getAllCommands()`.
 - Each row contains:
@@ -283,6 +300,7 @@ All controls must be presentational primitives from `@workspace/ui` styled exclu
   - Button `Reset` / `Unbind`.
 
 ### 5.6 Core Plugins Manager (`CorePluginsSection.tsx`)
+
 - Renders a master list of all first-party core plugins:
   - `Backlinks` (Backlinks dock view and note backlinks)
   - `Canvas` (Infinite spatial note board)
@@ -356,7 +374,8 @@ export interface SettingSectionDef {
   order?: number;
   pluginId?: string;
   isEnabled?: () => boolean;
-  component?: React.LazyExoticComponent<React.ComponentType> | React.ComponentType;
+  component?:
+    React.LazyExoticComponent<React.ComponentType> | React.ComponentType;
   specs?: SettingItemSpec[];
 }
 ```

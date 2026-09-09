@@ -82,7 +82,8 @@ export const createPersistenceSlice: StateCreator<
           (tab as { leafType?: string }).leafType ??
           (tab as { viewType?: string }).viewType ??
           "markdown";
-        const viewMode = tab.viewMode === "reading" ? ("reading" as const) : ("edit" as const);
+        const viewMode =
+          tab.viewMode === "reading" ? ("reading" as const) : ("edit" as const);
         const history = tab.history ?? [
           {
             path: tab.path,
@@ -92,7 +93,10 @@ export const createPersistenceSlice: StateCreator<
             timestamp: tab.lastAccessedAt ?? tab.createdAt ?? Date.now(),
           },
         ];
-        const historyIndex = typeof tab.historyIndex === "number" ? tab.historyIndex : history.length - 1;
+        const historyIndex =
+          typeof tab.historyIndex === "number"
+            ? tab.historyIndex
+            : history.length - 1;
 
         return [
           tab.id,

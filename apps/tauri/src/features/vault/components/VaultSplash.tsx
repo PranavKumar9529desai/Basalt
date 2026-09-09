@@ -28,9 +28,7 @@ export const VaultSplash: FC<VaultSplashProps> = ({
   }, []);
 
   return (
-    <div
-      className="flex flex-col items-center justify-center flex-1 gap-10 select-none"
-    >
+    <div className="flex flex-col items-center justify-center flex-1 gap-10 select-none">
       {/* Brand Hero */}
       <div className="flex flex-col items-center gap-6">
         {/* Mark + ambient glow */}
@@ -63,7 +61,9 @@ export const VaultSplash: FC<VaultSplashProps> = ({
           className="opacity-0 transition-all duration-300"
           style={{
             transitionTimingFunction: ready ? "ease-out" : "ease-in",
-            ...(ready ? { opacity: 1, transform: "translateY(0)" } : { transform: "translateY(4px)" }),
+            ...(ready
+              ? { opacity: 1, transform: "translateY(0)" }
+              : { transform: "translateY(4px)" }),
             transitionDelay: "80ms",
           }}
         >
@@ -99,7 +99,8 @@ export const VaultSplash: FC<VaultSplashProps> = ({
         style={{
           opacity: ready ? 1 : 0,
           transform: ready ? "translateY(0)" : "translateY(6px)",
-          transition: "opacity 0.3s ease-out 200ms, transform 0.3s ease-out 200ms",
+          transition:
+            "opacity 0.3s ease-out 200ms, transform 0.3s ease-out 200ms",
         }}
       >
         {isIndexing ? (

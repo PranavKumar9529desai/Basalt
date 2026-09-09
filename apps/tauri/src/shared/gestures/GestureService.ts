@@ -57,14 +57,24 @@ export class GestureService {
         };
 
         // Capture phase to intercept before WebView / browser default navigation
-        window.addEventListener("mousedown", handleMouseEvent, { capture: true });
+        window.addEventListener("mousedown", handleMouseEvent, {
+          capture: true,
+        });
         window.addEventListener("mouseup", handleMouseEvent, { capture: true });
-        window.addEventListener("auxclick", handleMouseEvent, { capture: true });
+        window.addEventListener("auxclick", handleMouseEvent, {
+          capture: true,
+        });
 
         return () => {
-          window.removeEventListener("mousedown", handleMouseEvent, { capture: true });
-          window.removeEventListener("mouseup", handleMouseEvent, { capture: true });
-          window.removeEventListener("auxclick", handleMouseEvent, { capture: true });
+          window.removeEventListener("mousedown", handleMouseEvent, {
+            capture: true,
+          });
+          window.removeEventListener("mouseup", handleMouseEvent, {
+            capture: true,
+          });
+          window.removeEventListener("auxclick", handleMouseEvent, {
+            capture: true,
+          });
         };
       },
     });
@@ -205,7 +215,10 @@ export class GestureService {
         try {
           handler(event);
         } catch (err) {
-          console.error(`[GestureService] Error executing handler for ${event.type}:`, err);
+          console.error(
+            `[GestureService] Error executing handler for ${event.type}:`,
+            err,
+          );
         }
       }
     }

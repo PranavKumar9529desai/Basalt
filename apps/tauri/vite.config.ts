@@ -20,7 +20,8 @@ export default defineConfig(async () => ({
               sources: (filename: string) => {
                 return (
                   !filename.includes("node_modules") &&
-                  (filename.includes("/src/") || filename.includes("/packages/"))
+                  (filename.includes("/src/") ||
+                    filename.includes("/packages/"))
                 );
               },
             },

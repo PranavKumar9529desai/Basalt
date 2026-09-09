@@ -34,7 +34,8 @@ import {
  */
 
 /** Plugin-gated visibility: absent from `enabledPlugins` = enabled. */
-const pluginEnabled = (id: string) => () => getSetting("enabledPlugins")[id] !== false;
+const pluginEnabled = (id: string) => () =>
+  getSetting("enabledPlugins")[id] !== false;
 
 // ─── Options — built-in preference pages ─────────────────────────────────
 settingsRegistry.register({
@@ -73,7 +74,8 @@ settingsRegistry.register({
   group: "options",
   icon: IconFolder,
   order: 3,
-  description: "Where new notes and attachments live, and how links are written.",
+  description:
+    "Where new notes and attachments live, and how links are written.",
   specs: FILES_LINKS_SPECS,
 });
 

@@ -107,9 +107,7 @@ export function FileTree({
         );
         if (parentIndex !== -1) {
           const parentPath = visibleNodes[parentIndex].path;
-          const mappedParentIndex = list.findIndex(
-            (n) => n.id === parentPath,
-          );
+          const mappedParentIndex = list.findIndex((n) => n.id === parentPath);
           insertAt =
             mappedParentIndex === -1 ? list.length : mappedParentIndex + 1;
         } else {

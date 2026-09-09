@@ -46,8 +46,7 @@ export function drawOverlayLabels(
   ctx.clearRect(0, 0, canvasW, canvasH);
   const neighborSet = neighbors ? new Set(neighbors) : null;
   const hoverMode = hoverIndex >= 0;
-  const showLabels =
-    count < LABEL_CAP && (hoverMode || scale > LABEL_SCALE);
+  const showLabels = count < LABEL_CAP && (hoverMode || scale > LABEL_SCALE);
   if (!showLabels) return;
 
   ctx.font = "10px system-ui, sans-serif";

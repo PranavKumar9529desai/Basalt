@@ -38,9 +38,15 @@ describe("mermaidBlockSpec", () => {
 
   describe("matches", () => {
     it("matches FencedCode nodes", () => {
-      expect(mermaidBlockSpec.matches(mockNode("FencedCode", 0, 20))).toBe(true);
-      expect(mermaidBlockSpec.matches(mockNode("CodeBlock", 0, 20))).toBe(false);
-      expect(mermaidBlockSpec.matches(mockNode("Paragraph", 0, 20))).toBe(false);
+      expect(mermaidBlockSpec.matches(mockNode("FencedCode", 0, 20))).toBe(
+        true,
+      );
+      expect(mermaidBlockSpec.matches(mockNode("CodeBlock", 0, 20))).toBe(
+        false,
+      );
+      expect(mermaidBlockSpec.matches(mockNode("Paragraph", 0, 20))).toBe(
+        false,
+      );
     });
   });
 
@@ -53,7 +59,10 @@ describe("mermaidBlockSpec", () => {
         extensions: [renderModeFacet.of("live"), defaultMermaidTheme],
       });
 
-      const model = mermaidBlockSpec.parse!(state, mockNode("FencedCode", 0, 31));
+      const model = mermaidBlockSpec.parse!(
+        state,
+        mockNode("FencedCode", 0, 31),
+      );
       expect(model).not.toBeNull();
       expect(model?.diagramText).toBe("graph TD\n  A-->B");
       expect(model?.from).toBe(0);
@@ -68,7 +77,10 @@ describe("mermaidBlockSpec", () => {
         extensions: [renderModeFacet.of("live")],
       });
 
-      const model = mermaidBlockSpec.parse!(state, mockNode("FencedCode", 0, doc.length));
+      const model = mermaidBlockSpec.parse!(
+        state,
+        mockNode("FencedCode", 0, doc.length),
+      );
       expect(model).toBeNull();
     });
 
@@ -79,7 +91,10 @@ describe("mermaidBlockSpec", () => {
         extensions: [renderModeFacet.of("live")],
       });
 
-      const model = mermaidBlockSpec.parse!(state, mockNode("FencedCode", 0, doc.length));
+      const model = mermaidBlockSpec.parse!(
+        state,
+        mockNode("FencedCode", 0, doc.length),
+      );
       expect(model).toBeNull();
     });
 
@@ -91,7 +106,10 @@ describe("mermaidBlockSpec", () => {
         extensions: [renderModeFacet.of("live"), defaultMermaidTheme],
       });
 
-      const model = mermaidBlockSpec.parse!(state, mockNode("FencedCode", 0, doc.length));
+      const model = mermaidBlockSpec.parse!(
+        state,
+        mockNode("FencedCode", 0, doc.length),
+      );
       expect(model?.inCursor).toBe(true);
     });
 
@@ -103,7 +121,10 @@ describe("mermaidBlockSpec", () => {
         extensions: [renderModeFacet.of("reading"), defaultMermaidTheme],
       });
 
-      const model = mermaidBlockSpec.parse!(state, mockNode("FencedCode", 0, doc.length));
+      const model = mermaidBlockSpec.parse!(
+        state,
+        mockNode("FencedCode", 0, doc.length),
+      );
       expect(model?.inCursor).toBe(false);
     });
   });
@@ -120,7 +141,10 @@ describe("mermaidBlockSpec", () => {
       };
       const modelIn = { ...modelOut, inCursor: true };
 
-      expect(mermaidBlockSpec.span!(modelOut, state)).toEqual({ from: 0, to: 30 });
+      expect(mermaidBlockSpec.span!(modelOut, state)).toEqual({
+        from: 0,
+        to: 30,
+      });
       expect(mermaidBlockSpec.span!(modelIn, state)).toBeNull();
     });
 
@@ -210,7 +234,10 @@ describe("mermaidBlockSpec", () => {
       const doc = "```mermaid\ngraph TD\n  A-->B\n```\n\nSome text";
       const fixture = testMarkdownFixture(doc, {
         renderMode: "live",
-        extensions: [registerBlockWidget(mermaidBlockSpec), defaultMermaidTheme],
+        extensions: [
+          registerBlockWidget(mermaidBlockSpec),
+          defaultMermaidTheme,
+        ],
         selection: doc.length - 1, // cursor on 'Some text'
       });
 

@@ -11,7 +11,4 @@ export {
   PaletteCloseButton,
   type PaletteCloseButtonProps,
 } from "./PaletteCloseButton";
-export {
-  HighlightedText,
-  type HighlightedTextProps,
-} from "./HighlightedText";
+export { HighlightedText, type HighlightedTextProps } from "./HighlightedText";

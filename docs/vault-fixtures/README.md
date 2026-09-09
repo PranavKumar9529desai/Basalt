@@ -34,12 +34,12 @@ Real Obsidian vault structure:
 
 Graph shape (percentages of total note count), matching plugin defaults:
 
-| Tier   | %   | Behavior |
-|--------|-----|----------|
-| empty  | 3%  | zero-byte files |
-| orphan | 5%  | prose only, no edges |
+| Tier   | %   | Behavior                                |
+| ------ | --- | --------------------------------------- |
+| empty  | 3%  | zero-byte files                         |
+| orphan | 5%  | prose only, no edges                    |
 | leaf   | 25% | prose + links, only to other leaf notes |
-| hub    | 62% | prose + links, to leaf notes |
+| hub    | 62% | prose + links, to leaf notes            |
 
 Default yields ~5.5 wikilinks per linked note and ~90% frontmatter coverage.
 
@@ -52,21 +52,21 @@ to make benchmark runs comparable across machines and agents.
 
 All knobs are env-var overrides (same names as the plugin's settings):
 
-| Env var | Default | Meaning |
-|---------|---------|---------|
-| `VAULT_EMPTY_PCT` | 3 | empty-file share |
-| `VAULT_ORPHAN_PCT` | 5 | orphan (no-link) share |
-| `VAULT_LEAF_PCT` | 25 | leaf share |
-| `VAULT_MIN_TITLE_WORDS` / `VAULT_MAX_TITLE_WORDS` | 4 / 10 | title length |
-| `VAULT_MIN_SENTENCES` / `VAULT_MAX_SENTENCES` | 4 / 20 | sentences/paragraph |
-| `VAULT_MIN_SENTENCE_WORDS` / `VAULT_MAX_SENTENCE_WORDS` | 5 / 20 | words/sentence |
-| `VAULT_MIN_PARAGRAPHS` / `VAULT_MAX_PARAGRAPHS` | 1 / 10 | paragraphs/note |
-| `VAULT_MIN_LINKS` / `VAULT_MAX_LINKS` | 1 / 10 | wikilinks/linked-note |
-| `VAULT_MIN_TAGS` / `VAULT_MAX_TAGS` | 0 / 5 | frontmatter tags |
-| `VAULT_FRONTMATTER_PCT` | 90 | notes with frontmatter |
-| `VAULT_ALIAS_PCT` | 10 | notes with an alias |
-| `VAULT_PUBLISH_PCT` | 50 | `publish: true` rate |
-| `VAULT_SEED` | 42 | RNG seed |
+| Env var                                                 | Default | Meaning                |
+| ------------------------------------------------------- | ------- | ---------------------- |
+| `VAULT_EMPTY_PCT`                                       | 3       | empty-file share       |
+| `VAULT_ORPHAN_PCT`                                      | 5       | orphan (no-link) share |
+| `VAULT_LEAF_PCT`                                        | 25      | leaf share             |
+| `VAULT_MIN_TITLE_WORDS` / `VAULT_MAX_TITLE_WORDS`       | 4 / 10  | title length           |
+| `VAULT_MIN_SENTENCES` / `VAULT_MAX_SENTENCES`           | 4 / 20  | sentences/paragraph    |
+| `VAULT_MIN_SENTENCE_WORDS` / `VAULT_MAX_SENTENCE_WORDS` | 5 / 20  | words/sentence         |
+| `VAULT_MIN_PARAGRAPHS` / `VAULT_MAX_PARAGRAPHS`         | 1 / 10  | paragraphs/note        |
+| `VAULT_MIN_LINKS` / `VAULT_MAX_LINKS`                   | 1 / 10  | wikilinks/linked-note  |
+| `VAULT_MIN_TAGS` / `VAULT_MAX_TAGS`                     | 0 / 5   | frontmatter tags       |
+| `VAULT_FRONTMATTER_PCT`                                 | 90      | notes with frontmatter |
+| `VAULT_ALIAS_PCT`                                       | 10      | notes with an alias    |
+| `VAULT_PUBLISH_PCT`                                     | 50      | `publish: true` rate   |
+| `VAULT_SEED`                                            | 42      | RNG seed               |
 
 Example — denser linking, 50k notes:
 

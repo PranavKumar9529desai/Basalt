@@ -32,7 +32,10 @@ class TagMarksPlugin {
   }
 }
 
-function buildTagMarks(view: EditorView, field: StateField<PreviewState>): DecorationSet {
+function buildTagMarks(
+  view: EditorView,
+  field: StateField<PreviewState>,
+): DecorationSet {
   if (import.meta.env.DEV) performance.mark("basalt:buildTagMarks:start");
   const { collector, finish } = makeCollector();
   const ranges = view.state.field(field).codeBlockRanges;

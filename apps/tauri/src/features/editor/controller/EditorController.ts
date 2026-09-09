@@ -329,7 +329,6 @@ export class EditorController {
     }, AUTOSAVE_DEBOUNCE_MS);
   }
 
-
   /**
    * Persist one tab. The live tab is the source of truth for the path: a
    * move can repoint a tab's path in place (stable id), and `tabMetaRef`

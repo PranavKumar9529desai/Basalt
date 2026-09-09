@@ -44,9 +44,7 @@ describe("TagsSidebar", () => {
   it("shows the empty state when the vault has no tags", async () => {
     render(<TagsSidebar onOpenTag={() => {}} />);
 
-    expect(
-      await screen.findByText(/No tags yet/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/No tags yet/i)).toBeInTheDocument();
   });
 
   it("opens search with `tag:<tag>` when a pill is clicked", async () => {
@@ -63,17 +61,13 @@ describe("TagsSidebar", () => {
     vi.mocked(invoke).mockResolvedValue([tag("ideas", 7)]);
     render(<TagsSidebar onOpenTag={() => {}} />);
 
-    expect(
-      await waitFor(() => screen.getByText("7")),
-    ).toBeInTheDocument();
+    expect(await waitFor(() => screen.getByText("7"))).toBeInTheDocument();
   });
 
   it("surfaces an error state when the IPC call fails", async () => {
     vi.mocked(invoke).mockRejectedValue(new Error("boom"));
     render(<TagsSidebar onOpenTag={() => {}} />);
 
-    expect(
-      await screen.findByText("Could not load tags."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Could not load tags.")).toBeInTheDocument();
   });
 });

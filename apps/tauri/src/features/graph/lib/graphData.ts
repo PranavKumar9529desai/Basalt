@@ -62,7 +62,8 @@ export function snapshotToGraphData(g: GraphSnapshot): GraphData {
   const tags = g.nodes.map((n) => n.tags);
   const attach = g.nodes.map((n) => n.is_attachment);
   const isTag = g.nodes.map((n) => n.is_tag);
-  const edges = g.edges instanceof Uint32Array ? g.edges : Uint32Array.from(g.edges);
+  const edges =
+    g.edges instanceof Uint32Array ? g.edges : Uint32Array.from(g.edges);
   const edgeWeights =
     g.edge_weights instanceof Float32Array
       ? g.edge_weights
@@ -85,5 +86,16 @@ export function snapshotToGraphData(g: GraphSnapshot): GraphData {
     for (const j of adj[i]) if (!isTag[j]) d++;
     scaleInputs[i] = d;
   }
-  return { paths, tags, attach, isTag, edges, edgeWeights, cluster, clusterCount, adj, scaleInputs };
+  return {
+    paths,
+    tags,
+    attach,
+    isTag,
+    edges,
+    edgeWeights,
+    cluster,
+    clusterCount,
+    adj,
+    scaleInputs,
+  };
 }

@@ -1,19 +1,13 @@
 import type { StateCreator } from "zustand";
 import type { TabsState } from "./types";
-import {
-  createOpenCloseSlice,
-  type OpenCloseSlice,
-} from "./core/openClose";
+import { createOpenCloseSlice, type OpenCloseSlice } from "./core/openClose";
 import { createPanesSlice, type PanesSlice } from "./core/panes";
 import { createPinSlice, type PinSlice } from "./core/pin";
 import {
   createPersistenceSyncSlice,
   type PersistenceSyncSlice,
 } from "./core/persistenceSync";
-import {
-  createNavigationSlice,
-  type NavigationSlice,
-} from "./core/navigation";
+import { createNavigationSlice, type NavigationSlice } from "./core/navigation";
 
 /**
  * Core slice — all tab state mutations across one store, composed from the
@@ -24,7 +18,8 @@ import {
  * affected tab. There is no derived flat pane anymore.
  */
 export interface CoreSlice
-  extends OpenCloseSlice,
+  extends
+    OpenCloseSlice,
     PanesSlice,
     PinSlice,
     NavigationSlice,

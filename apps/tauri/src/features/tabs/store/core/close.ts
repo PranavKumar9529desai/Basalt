@@ -13,12 +13,9 @@ export interface CloseSlice {
   closeTabsToRight: TabsState["closeTabsToRight"];
 }
 
-export const createCloseSlice: StateCreator<
-  TabsState,
-  [],
-  [],
-  CloseSlice
-> = (set) => ({
+export const createCloseSlice: StateCreator<TabsState, [], [], CloseSlice> = (
+  set,
+) => ({
   closeTab: (tabId, options) => {
     const force = options?.force ?? true;
     set((state) => {

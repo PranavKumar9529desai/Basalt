@@ -22,7 +22,9 @@ export function IndexingToast({
   onDismiss,
   className,
 }: IndexingToastProps) {
-  const displayPercentage = isComplete ? 100 : Math.min(100, Math.max(0, percentage));
+  const displayPercentage = isComplete
+    ? 100
+    : Math.min(100, Math.max(0, percentage));
 
   return (
     <output

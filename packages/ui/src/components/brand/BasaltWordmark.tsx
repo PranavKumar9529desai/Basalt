@@ -59,7 +59,11 @@ export const BasaltWordmark: FC<BasaltWordmarkProps> = ({
       viewBox="0 0 1020 130"
       fill="none"
       aria-label="Basalt"
-      className={cn("w-auto inline-block select-none", SIZE_CLASSES[size], className)}
+      className={cn(
+        "w-auto inline-block select-none",
+        SIZE_CLASSES[size],
+        className,
+      )}
       style={style}
       {...props}
     >
@@ -67,7 +71,14 @@ export const BasaltWordmark: FC<BasaltWordmarkProps> = ({
         {!isMonochrome && (
           <>
             {/* Magma orange ember glow inside the apex of the first 'A' */}
-            <radialGradient id={gradientId} cx="50%" cy="10%" r="90%" fx="50%" fy="10%">
+            <radialGradient
+              id={gradientId}
+              cx="50%"
+              cy="10%"
+              r="90%"
+              fx="50%"
+              fy="10%"
+            >
               <stop offset="0%" stopColor="#ff3a00" stopOpacity="1" />
               <stop offset="35%" stopColor="#ff6a00" stopOpacity="0.95" />
               <stop offset="70%" stopColor="#ff9900" stopOpacity="0.5" />

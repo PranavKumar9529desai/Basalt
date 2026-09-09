@@ -1,4 +1,8 @@
-import { DEFAULT_DATE_FORMAT, DEFAULT_TIME_FORMAT, formatDate } from "./date-format";
+import {
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_TIME_FORMAT,
+  formatDate,
+} from "./date-format";
 
 export interface TemplateContext {
   /** Resolved note title — the `{{title}}` variable. */
@@ -22,16 +26,25 @@ const VARIABLE_RE = /\{\{\s*(date|time|title)(?::\s*([^}]+?))?\s*\}\}/g;
  * variables fall back to the context defaults.
  */
 export function expandTemplate(template: string, ctx: TemplateContext): string {
-  return template.replace(VARIABLE_RE, (match, name: string, format?: string) => {
-    switch (name) {
-      case "title":
-        return ctx.title;
-      case "date":
-        return formatDate(ctx.now, format?.trim() || ctx.dateFormat || DEFAULT_DATE_FORMAT);
-      case "time":
-        return formatDate(ctx.now, format?.trim() || ctx.timeFormat || DEFAULT_TIME_FORMAT);
-      default:
-        return match;
-    }
-  });
+  return template.replace(
+    VARIABLE_RE,
+    (match, name: string, format?: string) => {
+      switch (name) {
+        case "title":
+          return ctx.title;
+        case "date":
+          return formatDate(
+            ctx.now,
+            format?.trim() || ctx.dateFormat || DEFAULT_DATE_FORMAT,
+          );
+        case "time":
+          return formatDate(
+            ctx.now,
+            format?.trim() || ctx.timeFormat || DEFAULT_TIME_FORMAT,
+          );
+        default:
+          return match;
+      }
+    },
+  );
 }

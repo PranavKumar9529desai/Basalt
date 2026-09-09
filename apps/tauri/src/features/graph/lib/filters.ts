@@ -21,9 +21,8 @@ export function parseQuery(query: string): FilterTokens {
   return { tagToks, pathToks, textToks };
 }
 
-export function basename(p: string): string {
-  return p.split("/").pop() ?? p;
-}
+import { basename, stemOf } from "@workspace/ui";
+export { basename };
 
 export interface FilterContext {
   paths: string[];
@@ -53,7 +52,7 @@ export function buildVisible(query: string, ctx: FilterContext): number[] {
       return false;
     }
     const p = ctx.paths[i].toLowerCase();
-    const name = basename(p).replace(/\.md$/, "");
+    const name = stemOf(p);
     if (pathToks.length && !pathToks.every((tok) => p.includes(tok)))
       return false;
     if (tagToks.length) {

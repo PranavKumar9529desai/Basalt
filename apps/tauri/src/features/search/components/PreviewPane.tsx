@@ -12,6 +12,7 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { tags as t } from "@lezer/highlight";
 import { readingExtensions } from "@workspace/editor";
+import { isMarkdownPath } from "@workspace/ui";
 import type { Highlight, PreviewDeps } from "../types";
 
 // Minimal token styling mapped to the app's --sat-editor-* and --sat-syntax-*
@@ -64,7 +65,7 @@ const highlightStyle = HighlightStyle.define([
 ]);
 
 function languageForPath(path: string, deps: PreviewDeps): Extension {
-  if (path.endsWith(".md")) {
+  if (isMarkdownPath(path)) {
     return readingExtensions(deps);
   }
   const ext = path.split(".").pop()?.toLowerCase() ?? "";

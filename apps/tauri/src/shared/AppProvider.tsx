@@ -6,6 +6,7 @@ import {
   type FlatTreeNode,
 } from "../features/vault";
 import { useWorkspace } from "./useWorkspace";
+import { basename, isMarkdownPath } from "@workspace/ui";
 import { type ReactNode, createContext, useCallback, useContext } from "react";
 
 function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
@@ -62,7 +63,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
   const openNote = useCallback(
     (path: string, line?: number) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
-      const name = node?.name ?? path.split("/").pop() ?? path;
+      const name = node?.name ?? basename(path);
       const tabId = openInPreview({
         path,
         title: name,
@@ -80,7 +81,7 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     async (name: string): Promise<boolean> => {
       const q = name.trim();
       if (!q) return false;
-      const fileName = /\.md$/i.test(q) ? q : `${q}.md`;
+      const fileName = isMarkdownPath(q) ? q : `${q}.md`;
       const result = await createNote(fileName);
       if (!result) return false;
       await refreshTree();
@@ -89,7 +90,6 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
     },
     [createNote, refreshTree, openNote],
   );
-
 
   return {
     vaultPath,

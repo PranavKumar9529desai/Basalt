@@ -33,12 +33,8 @@ const GROUPS: SettingsGroup[] = [
  */
 export function SettingsNav() {
   const sections = useEnabledSections();
-  const {
-    activeSection,
-    setActiveSection,
-    searchQuery,
-    setSearchQuery,
-  } = useSettingsModalStore();
+  const { activeSection, setActiveSection, searchQuery, setSearchQuery } =
+    useSettingsModalStore();
 
   const q = searchQuery.trim().toLowerCase();
 

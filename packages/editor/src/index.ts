@@ -65,7 +65,11 @@ export type {
   ParseFrontmatterFn,
   RunQueryFn,
 } from "./types";
-export { openExternalLinkFacet, openTagFacet, resolveAssetFacet } from "./types";
+export {
+  openExternalLinkFacet,
+  openTagFacet,
+  resolveAssetFacet,
+} from "./types";
 
 export {
   dqlBlockSpec,

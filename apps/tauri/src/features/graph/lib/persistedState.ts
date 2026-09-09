@@ -90,7 +90,16 @@ export function usePersistedGraphState(
   useEffect(() => {
     if (!stateReady) return;
     const state = buildPersistedState(
-      { query, local, localDepth, localRoot, showOrphans, showAttach, colorMode, controlsOpen },
+      {
+        query,
+        local,
+        localDepth,
+        localRoot,
+        showOrphans,
+        showAttach,
+        colorMode,
+        controlsOpen,
+      },
       viewRef.current,
     );
     const timer = window.setTimeout(() => {

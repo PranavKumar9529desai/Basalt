@@ -100,7 +100,6 @@ Package modules follow a `{concern}-{role}` pattern (`table-source.ts`,
 `*-theme.ts` (`frontmatter-theme.ts`, `math-theme.ts`, `mermaid-theme.ts`).
 Cross the §2.4 module budget and split by role — never by growing the folder.
 
-
 ---
 
 ## 2. Three-Layer Architecture (Simplified)
@@ -168,14 +167,14 @@ Exception: a feature may import **types only** from another feature's `types.ts`
 
 ### 2.4 File Count Budget per Feature
 
-| Aspect                   | Max | Why                                   |
-| ------------------------ | --- | ------------------------------------- |
-| Hooks per feature        | 4   | More means too many tiny abstractions |
-| Store slices per feature | 2   | Core + persistence. Not 5 files       |
-| Barrel exports per index | 15  | Beyond that, the feature is too broad |
-| Lines per component      | 200 | Beyond that, extract sub-components   |
-| Lines per hook           | 150 | Beyond that, split concerns           |
-| Lines per package module     | 300 | Beyond that, split by role (`table-widget` → `-render`/`-chrome`) |
+| Aspect                   | Max | Why                                                               |
+| ------------------------ | --- | ----------------------------------------------------------------- |
+| Hooks per feature        | 4   | More means too many tiny abstractions                             |
+| Store slices per feature | 2   | Core + persistence. Not 5 files                                   |
+| Barrel exports per index | 15  | Beyond that, the feature is too broad                             |
+| Lines per component      | 200 | Beyond that, extract sub-components                               |
+| Lines per hook           | 150 | Beyond that, split concerns                                       |
+| Lines per package module | 300 | Beyond that, split by role (`table-widget` → `-render`/`-chrome`) |
 
 ---
 
@@ -684,17 +683,17 @@ arrow pointing downward (`basalt-types` → heavier crates, never the reverse).
 
 Canonical locations for known shared utilities:
 
-| Utility | Canonical location | Why |
-|---|---|---|
-| `stem_of(path) → Option<&str>` | `basalt-types` | Used by vault, search, tables |
-| `stem_lower(path) → Option<String>` | `basalt-types` | Used by vault, search |
-| `mtime_secs(path) → Option<u64>` | `basalt-types` | Used by vault, search |
-| `is_md_path(path) → bool` | `basalt-types` | Used by vault (5 places), search |
-| `is_canvas_path(path) → bool` | `basalt-types` | Used by vault (3 places), search |
-| `is_document_path(path) → bool` | `basalt-types` | Union of above two |
-| Frontmatter fence bounds | `basalt-parser::frontmatter` | One detector, consumed by all |
-| Wikilink `[[…]]` scanner | `basalt-parser` | One grammar, all consumers import |
-| TypedValue comparison | `basalt-types::value` | Type owns its operations (§12.9) |
+| Utility                             | Canonical location           | Why                               |
+| ----------------------------------- | ---------------------------- | --------------------------------- |
+| `stem_of(path) → Option<&str>`      | `basalt-types`               | Used by vault, search, tables     |
+| `stem_lower(path) → Option<String>` | `basalt-types`               | Used by vault, search             |
+| `mtime_secs(path) → Option<u64>`    | `basalt-types`               | Used by vault, search             |
+| `is_md_path(path) → bool`           | `basalt-types`               | Used by vault (5 places), search  |
+| `is_canvas_path(path) → bool`       | `basalt-types`               | Used by vault (3 places), search  |
+| `is_document_path(path) → bool`     | `basalt-types`               | Union of above two                |
+| Frontmatter fence bounds            | `basalt-parser::frontmatter` | One detector, consumed by all     |
+| Wikilink `[[…]]` scanner            | `basalt-parser`              | One grammar, all consumers import |
+| TypedValue comparison               | `basalt-types::value`        | Type owns its operations (§12.9)  |
 
 **Rule:** if a utility appears in 2+ crates, it belongs in `basalt-types`
 (or `basalt-parser` for parsing-specific utilities). Create it there first.
@@ -769,5 +768,5 @@ Before writing new utility code in any `crates/` crate:
 3. **If no → put it in the leaf crate** both callers depend on (`basalt-types`
    for path/collection utilities, `basalt-parser` for parsing utilities).
 4. **After writing:** run `cargo clippy --workspace --all-targets -- -D warnings
-   && cargo test --workspace` before committing.
+&& cargo test --workspace` before committing.
 5. **Error messages:** lowercase, no double-prefix, no trailing period (§12.10).

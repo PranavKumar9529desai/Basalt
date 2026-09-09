@@ -1,3 +1,5 @@
+import { isMarkdownPath, stemOf } from "@workspace/ui";
+
 /** Inline-name parsing for tree creates/renames: "a/b/New Note" → leaf name
  * + resolved parent path; a trailing "/" marks a folder. Returns null for
  * blank or path-only input. */
@@ -31,7 +33,5 @@ export function resolveRenameName(
   targetName: string,
   isFolder: boolean,
 ): string {
-  return isFolder || !targetName.toUpperCase().endsWith(".MD")
-    ? trimmed
-    : trimmed.replace(/\.md$/i, "");
+  return isFolder || !isMarkdownPath(targetName) ? trimmed : stemOf(trimmed);
 }

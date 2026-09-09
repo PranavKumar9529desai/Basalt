@@ -1,7 +1,11 @@
 import type { FC, HTMLAttributes } from "react";
 import { cn } from "../../lib/utils";
 import { BasaltMark, type MarkSize } from "./BasaltMark";
-import { BasaltWordmark, type WordmarkSize, type WordmarkVariant } from "./BasaltWordmark";
+import {
+  BasaltWordmark,
+  type WordmarkSize,
+  type WordmarkVariant,
+} from "./BasaltWordmark";
 
 export type LogoLayout = "horizontal" | "vertical";
 export type LogoSize = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -67,7 +71,9 @@ export const BasaltLogo: FC<BasaltLogoProps> = ({
       {...props}
     >
       <BasaltMark
-        size={isVertical ? VERTICAL_MARK_SIZES[size] : HORIZONTAL_MARK_SIZES[size]}
+        size={
+          isVertical ? VERTICAL_MARK_SIZES[size] : HORIZONTAL_MARK_SIZES[size]
+        }
         glow={glow}
       />
       {showWordmark && (
