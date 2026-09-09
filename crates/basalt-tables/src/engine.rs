@@ -18,7 +18,7 @@ use crate::page_row::{build_page_rows_projected, PageRow};
 #[derive(Debug, thiserror::Error)]
 pub enum DqlError {
     /// Query text failed to parse.
-    #[error("parse error: {0}")]
+    #[error("{0}")]
     Parse(#[from] basalt_parser::ParseError),
     /// Working-row evaluation limit exceeded (safety ceiling).
     #[error("evaluation limit exceeded: {0}")]

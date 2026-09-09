@@ -10,10 +10,10 @@ pub enum QueryType {
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ParseError {
     /// Trailing text that could not be parsed after a valid query.
-    #[error("Unexpected trailing text: {0}")]
+    #[error("unexpected trailing text: {0}")]
     Trailing(String),
     /// The query could not be parsed.
-    #[error("Parse error: {0}")]
+    #[error("parse error: {0}")]
     Syntax(String),
 }
 
