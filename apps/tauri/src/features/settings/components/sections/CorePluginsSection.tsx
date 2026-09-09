@@ -86,7 +86,7 @@ export const CORE_PLUGINS: CorePluginMeta[] = [
  * the registry's `isEnabled` predicate — disabling a plugin removes
  * its tab from the sidebar instantly.
  */
-export default function CorePluginsSection() {
+export function CorePluginsSection() {
   const enabled = useSetting("enabledPlugins");
   const sections = useEnabledSections();
   const setActiveSection = useSettingsModalStore((s) => s.setActiveSection);

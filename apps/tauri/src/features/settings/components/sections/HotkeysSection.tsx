@@ -22,7 +22,7 @@ interface HotkeyRow {
  * conflicts with other commands are flagged (allowed, but reported).
  * Custom bindings and unbound commands persist via the service.
  */
-export default function HotkeysSection() {
+export function HotkeysSection() {
   const service = useKeybindingService();
   const [query, setQuery] = useState("");
   const [recording, setRecording] = useState<string | null>(null);

@@ -7,11 +7,12 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react";
-import CommunityPluginsSection from "../components/sections/CommunityPluginsSection";
-import CorePluginsSection, {
+import { CommunityPluginsSection } from "../components/sections/CommunityPluginsSection";
+import {
   CORE_PLUGINS,
+  CorePluginsSection,
 } from "../components/sections/CorePluginsSection";
-import HotkeysSection from "../components/sections/HotkeysSection";
+import { HotkeysSection } from "../components/sections/HotkeysSection";
 import { settingsRegistry } from "./registry";
 import { getSetting } from "./settings-data";
 import {

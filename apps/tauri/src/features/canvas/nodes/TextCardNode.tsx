@@ -2,11 +2,11 @@ import { memo, useState, useCallback } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
-import CardHandles from "./CardHandles";
+import { CardHandles } from "./CardHandles";
 import { useCanvas } from "../lib/CanvasContext";
 import { CanvasCardEditor } from "../components/CanvasCardEditor";
 
-function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
+function TextCardNodeInner({ id, data, selected }: NodeProps<CanvasXYNode>) {
   const [isEditing, setIsEditing] = useState(false);
   const canvas = useCanvas();
   const text = (data.text as string) || "";
@@ -61,4 +61,4 @@ function TextCardNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
   );
 }
 
-export default memo(TextCardNode);
+export const TextCardNode = memo(TextCardNodeInner);

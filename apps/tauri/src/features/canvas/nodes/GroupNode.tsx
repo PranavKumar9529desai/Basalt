@@ -4,7 +4,7 @@ import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import { useCanvas } from "../lib/CanvasContext";
 
-function GroupNode({ data, selected }: NodeProps<CanvasXYNode>) {
+function GroupNodeInner({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
   const borderColor = resolveCanvasColor(
     data.color as string | undefined,
@@ -44,4 +44,4 @@ function GroupNode({ data, selected }: NodeProps<CanvasXYNode>) {
   );
 }
 
-export default memo(GroupNode);
+export const GroupNode = memo(GroupNodeInner);
