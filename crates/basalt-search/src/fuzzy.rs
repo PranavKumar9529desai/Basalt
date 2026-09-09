@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SearchResult {
     pub id: String,
     pub score: i32,
@@ -51,4 +51,29 @@ pub fn search_commands(query: &str, candidates: Vec<(String, String)>) -> Vec<Se
 
     results.sort_by_key(|a| std::cmp::Reverse(a.score));
     results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fuzzy_match_exact_and_substring() {
+        assert_eq!(fuzzy_match("test", "test"), Some(150));
+        assert_eq!(fuzzy_match("test", "my test"), Some(100));
+        assert!(fuzzy_match("tst", "test").is_some());
+        assert_eq!(fuzzy_match("xyz", "abc"), None);
+    }
+
+    #[test]
+    fn test_search_commands_orders_by_score() {
+        let candidates = vec![
+            ("1".into(), "Save File".into()),
+            ("2".into(), "Search All".into()),
+            ("3".into(), "File Search".into()),
+        ];
+        let results = search_commands("search", candidates);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].id, "2"); // starts with search
+    }
 }

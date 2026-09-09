@@ -8,7 +8,6 @@
 //!
 //! Run both profiles to compare — the dev app (`bun run dev`) uses the debug
 //! build, which is 10–20x slower than release for the non-SIMD vault build.
-use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 
@@ -41,7 +40,7 @@ fn main() {
     let index_dir = std::env::temp_dir().join("basalt-measure-search-index");
     let _ = std::fs::remove_dir_all(&index_dir);
     let t = Instant::now();
-    let fast_search = SearchState::open_fast(&index_dir, paths.clone()).expect("search fast open");
+    let _fast_search = SearchState::open_fast(&index_dir, paths.clone()).expect("search fast open");
     let search_time = t.elapsed();
     println!("  2. search open_fast:      {:>6.2} ms  ({} note paths)", search_time.as_secs_f64() * 1000.0, paths.len());
 

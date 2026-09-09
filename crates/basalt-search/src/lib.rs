@@ -1,4 +1,5 @@
 pub mod error;
+pub mod fuzzy;
 pub mod nucleo_scorer;
 pub mod search_state;
 pub mod tantivy;
@@ -7,4 +8,5 @@ pub use basalt_types::{
     ContextLine, FileMatch, FileResult, Highlight, LineMatch, SearchContentResult,
 };
 pub use error::SearchError;
+pub use fuzzy::{fuzzy_match, search_commands, SearchResult};
 pub use search_state::SearchState;
