@@ -8,8 +8,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../crates/basalt-wasm/graph-wasm"
-echo "Building graph-wasm for wasm32-unknown-unknown (release)…"
-cargo build --target wasm32-unknown-unknown --release
+echo "Building graph-wasm for wasm32-unknown-unknown (release with SIMD128)…"
+RUSTFLAGS="-C target-feature=+simd128" cargo build --target wasm32-unknown-unknown --release
 
 SRC=$(find target/wasm32-unknown-unknown/release -maxdepth 1 -name '*.wasm' | head -n1)
 if [ -z "$SRC" ]; then

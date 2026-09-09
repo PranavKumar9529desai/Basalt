@@ -211,6 +211,47 @@ pub(crate) fn build_graph_snapshot(vault: &Vault, vault_path: &Path) -> AppResul
     })
 }
 
+/// Serialize a `GraphSnapshot` to compact binary IPC bytes (ADR-044).
+///
+/// Layout:
+/// - `0..4`: `b"BGRP"` magic
+/// - `4..8`: version (1u32)
+/// - `8..12`: node_count (u32)
+/// - `12..16`: edge_count (u32, number of pairs)
+/// - `16..20`: json_meta_len (u32)
+/// - `20..24`: pad_bytes (u32) - pad to keep edges 4-byte aligned
+/// - `24..24+json_meta_len`: JSON bytes of `nodes`
+/// - `pad_bytes`: zero padding bytes
+/// - `edges`: raw u32 bytes (length = edge_count * 2 * 4)
+/// - `edge_weights`: raw f32 bytes (length = edge_count * 4)
+pub fn encode_graph_snapshot_binary(snap: &GraphSnapshot) -> AppResult<Vec<u8>> {
+    let json_bytes = serde_json::to_vec(&snap.nodes)
+        .map_err(|e| AppError::Other(format!("failed to serialize graph node metadata: {e}")))?;
+    let edge_count = (snap.edges.len() / 2) as u32;
+    let pad_bytes = ((4 - (json_bytes.len() % 4)) % 4) as u32;
+    let total_size = 24
+        + json_bytes.len()
+        + pad_bytes as usize
+        + snap.edges.len() * 4
+        + snap.edge_weights.len() * 4;
+    let mut out = Vec::with_capacity(total_size);
+    out.extend_from_slice(b"BGRP");
+    out.extend_from_slice(&1u32.to_le_bytes());
+    out.extend_from_slice(&snap.node_count.to_le_bytes());
+    out.extend_from_slice(&edge_count.to_le_bytes());
+    out.extend_from_slice(&(json_bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(&pad_bytes.to_le_bytes());
+    out.extend_from_slice(&json_bytes);
+    out.extend(std::iter::repeat_n(0u8, pad_bytes as usize));
+    for &e in &snap.edges {
+        out.extend_from_slice(&e.to_le_bytes());
+    }
+    for &w in &snap.edge_weights {
+        out.extend_from_slice(&w.to_le_bytes());
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,7 +377,9 @@ mod tests {
         vault
             .graph
             .forward_links
-            .insert(a_id, std::collections::HashSet::from([b_id]));
+            .entry(a_id)
+            .or_default()
+            .push(b_id);
         let snap = build_graph_snapshot(&vault, &root).unwrap();
         let note_idx = |suffix: &str| {
             snap.nodes
@@ -397,5 +440,50 @@ mod tests {
             "disconnected notes => distinct clusters"
         );
         let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn test_encode_graph_snapshot_binary() {
+        let snap = GraphSnapshot {
+            node_count: 2,
+            nodes: vec![
+                GraphNodeMeta {
+                    path: "a.md".to_string(),
+                    tags: vec!["tag1".to_string()],
+                    is_attachment: false,
+                    is_tag: false,
+                    cluster: 1,
+                },
+                GraphNodeMeta {
+                    path: "b.md".to_string(),
+                    tags: vec![],
+                    is_attachment: false,
+                    is_tag: false,
+                    cluster: 1,
+                },
+            ],
+            edges: vec![0, 1],
+            edge_weights: vec![1.5],
+        };
+        let bytes = encode_graph_snapshot_binary(&snap).unwrap();
+        assert_eq!(&bytes[0..4], b"BGRP");
+        let version = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        assert_eq!(version, 1);
+        let node_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        assert_eq!(node_count, 2);
+        let edge_count = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        assert_eq!(edge_count, 1);
+        let json_len = u32::from_le_bytes(bytes[16..20].try_into().unwrap()) as usize;
+        let pad = u32::from_le_bytes(bytes[20..24].try_into().unwrap()) as usize;
+        assert_eq!((json_len + pad) % 4, 0);
+
+        let edges_offset = 24 + json_len + pad;
+        let u0 = u32::from_le_bytes(bytes[edges_offset..edges_offset + 4].try_into().unwrap());
+        let v0 = u32::from_le_bytes(bytes[edges_offset + 4..edges_offset + 8].try_into().unwrap());
+        assert_eq!((u0, v0), (0, 1));
+
+        let weights_offset = edges_offset + 8;
+        let w0 = f32::from_le_bytes(bytes[weights_offset..weights_offset + 4].try_into().unwrap());
+        assert_eq!(w0, 1.5);
     }
 }

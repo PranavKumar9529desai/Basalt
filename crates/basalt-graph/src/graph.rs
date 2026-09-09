@@ -1,6 +1,7 @@
 use crate::arena::{NodeId, StringArena};
 use basalt_types::FileMetadata;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 use std::collections::{HashMap, HashSet};
 
 /// Prefix used to intern tag nodes in the `StringArena`, keeping them distinct
@@ -8,10 +9,24 @@ use std::collections::{HashMap, HashSet};
 /// filename character, so collisions with real notes are impossible.
 const TAG_PREFIX: &str = "#";
 
+#[inline]
+fn insert_sorted(vec: &mut SmallVec<[NodeId; 8]>, id: NodeId) {
+    if let Err(pos) = vec.binary_search(&id) {
+        vec.insert(pos, id);
+    }
+}
+
+#[inline]
+fn remove_sorted(vec: &mut SmallVec<[NodeId; 8]>, id: NodeId) {
+    if let Ok(pos) = vec.binary_search(&id) {
+        vec.remove(pos);
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct NoteGraph {
-    pub forward_links: HashMap<NodeId, HashSet<NodeId>>,
-    pub back_links: HashMap<NodeId, HashSet<NodeId>>,
+    pub forward_links: HashMap<NodeId, SmallVec<[NodeId; 8]>>,
+    pub back_links: HashMap<NodeId, SmallVec<[NodeId; 8]>>,
     pub metadata_cache: HashMap<NodeId, FileMetadata>,
     /// Every tag node currently present in the graph (parent and leaf nodes of
     /// the tag tree). Used to type nodes and to anchor pruning.
@@ -30,28 +45,28 @@ impl NoteGraph {
         // Remove old forward links for this document (incl. prior tag edges)
         // and clean each target's back_links to us.
         if let Some(old_links) = self.forward_links.get(&doc_id) {
-            for link_id in old_links {
-                if let Some(back_links) = self.back_links.get_mut(link_id) {
-                    back_links.remove(&doc_id);
+            for &link_id in old_links {
+                if let Some(back_links) = self.back_links.get_mut(&link_id) {
+                    remove_sorted(back_links, doc_id);
                 }
             }
         }
 
-        let mut new_links = HashSet::new();
+        let mut new_links: SmallVec<[NodeId; 8]> = SmallVec::new();
         for link in &metadata.links {
             let link_id = arena.get_or_insert(link);
-            new_links.insert(link_id);
+            new_links.push(link_id);
 
             // Add to back_links of the target
-            self.back_links.entry(link_id).or_default().insert(doc_id);
+            insert_sorted(self.back_links.entry(link_id).or_default(), doc_id);
         }
 
         // Embeds (`![[image.png]]`) create directed note→asset edges in the
         // graph so the graph view can show which notes reference which assets.
         for embed in &metadata.embeds {
             let embed_id = arena.get_or_insert(embed);
-            new_links.insert(embed_id);
-            self.back_links.entry(embed_id).or_default().insert(doc_id);
+            new_links.push(embed_id);
+            insert_sorted(self.back_links.entry(embed_id).or_default(), doc_id);
         }
 
         // Tags become first-class nodes, connected to this note. Nested tags
@@ -78,17 +93,19 @@ impl NoteGraph {
             }
             // Note links to its exact (leaf) tag node only.
             if let Some(&leaf) = chain.last() {
-                new_links.insert(leaf);
-                self.back_links.entry(leaf).or_default().insert(doc_id);
+                new_links.push(leaf);
+                insert_sorted(self.back_links.entry(leaf).or_default(), doc_id);
             }
             // Parent -> child chain edges.
             for w in chain.windows(2) {
                 let (parent, child) = (w[0], w[1]);
-                self.forward_links.entry(parent).or_default().insert(child);
-                self.back_links.entry(child).or_default().insert(parent);
+                insert_sorted(self.forward_links.entry(parent).or_default(), child);
+                insert_sorted(self.back_links.entry(child).or_default(), parent);
             }
         }
 
+        new_links.sort_unstable();
+        new_links.dedup();
         self.forward_links.insert(doc_id, new_links);
         self.metadata_cache.insert(doc_id, metadata);
 
@@ -105,7 +122,7 @@ impl NoteGraph {
             if let Some(links) = self.forward_links.remove(&doc_id) {
                 for link_id in links {
                     if let Some(back_links) = self.back_links.get_mut(&link_id) {
-                        back_links.remove(&doc_id);
+                        remove_sorted(back_links, doc_id);
                     }
                 }
             }
@@ -114,7 +131,7 @@ impl NoteGraph {
             if let Some(incoming_links) = self.back_links.remove(&doc_id) {
                 for source_id in incoming_links {
                     if let Some(forward_links) = self.forward_links.get_mut(&source_id) {
-                        forward_links.remove(&doc_id);
+                        remove_sorted(forward_links, doc_id);
                     }
                 }
             }
@@ -167,26 +184,38 @@ impl NoteGraph {
             if let Some(targets) = self.forward_links.remove(&t) {
                 for child in targets {
                     if let Some(bl) = self.back_links.get_mut(&child) {
-                        bl.remove(&t);
+                        remove_sorted(bl, t);
                     }
                 }
             }
             if let Some(sources) = self.back_links.remove(&t) {
                 for src in sources {
                     if let Some(fl) = self.forward_links.get_mut(&src) {
-                        fl.remove(&t);
+                        remove_sorted(fl, t);
                     }
                 }
             }
         }
     }
 
-    pub fn get_forward_links(&self, id: NodeId) -> Option<&HashSet<NodeId>> {
+    pub fn get_forward_links(&self, id: NodeId) -> Option<&SmallVec<[NodeId; 8]>> {
         self.forward_links.get(&id)
     }
 
-    pub fn get_back_links(&self, id: NodeId) -> Option<&HashSet<NodeId>> {
+    pub fn get_back_links(&self, id: NodeId) -> Option<&SmallVec<[NodeId; 8]>> {
         self.back_links.get(&id)
+    }
+
+    pub fn has_forward_link(&self, src: NodeId, dst: NodeId) -> bool {
+        self.forward_links
+            .get(&src)
+            .is_some_and(|links| links.binary_search(&dst).is_ok())
+    }
+
+    pub fn has_back_link(&self, dst: NodeId, src: NodeId) -> bool {
+        self.back_links
+            .get(&dst)
+            .is_some_and(|links| links.binary_search(&src).is_ok())
     }
 
     pub fn get_metadata(&self, id: NodeId) -> Option<&FileMetadata> {

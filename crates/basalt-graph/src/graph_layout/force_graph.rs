@@ -154,14 +154,12 @@ impl ForceGraph {
         // Gravity toward center + divide net force by mass to get acceleration.
         let (gx, gy) = (self.params.center[0], self.params.center[1]);
         let gravity = self.params.gravity;
-        for i in 0..self.n {
-            let ix = i * 2;
-            let iy = i * 2 + 1;
-            self.acc[ix] += gravity * (gx - self.pos[ix]);
-            self.acc[iy] += gravity * (gy - self.pos[iy]);
+        let (acc_chunks, _) = self.acc.as_chunks_mut::<2>();
+        let (pos_chunks, _) = self.pos.as_chunks::<2>();
+        for (i, (a, p)) in acc_chunks.iter_mut().zip(pos_chunks).enumerate() {
             let inv_m = 1.0 / self.mass[i];
-            self.acc[ix] *= inv_m;
-            self.acc[iy] *= inv_m;
+            a[0] = (a[0] + gravity * (gx - p[0])) * inv_m;
+            a[1] = (a[1] + gravity * (gy - p[1])) * inv_m;
         }
     }
 
@@ -169,23 +167,25 @@ impl ForceGraph {
         let dt = self.params.dt;
         let damping = self.params.damping;
         let max_v = self.params.max_velocity;
-        let alpha = self.alpha;
-        for i in 0..self.n {
-            let ix = i * 2;
-            let iy = i * 2 + 1;
-            let mut vx = self.vel[ix] * damping + self.acc[ix] * dt * alpha;
-            let mut vy = self.vel[iy] * damping + self.acc[iy] * dt * alpha;
+        let max_v2 = max_v * max_v;
+        let dt_alpha = dt * self.alpha;
+        let (vel_chunks, _) = self.vel.as_chunks_mut::<2>();
+        let (pos_chunks, _) = self.pos.as_chunks_mut::<2>();
+        let (acc_chunks, _) = self.acc.as_chunks::<2>();
+        for (v, (p, a)) in vel_chunks.iter_mut().zip(pos_chunks.iter_mut().zip(acc_chunks)) {
+            let mut vx = v[0] * damping + a[0] * dt_alpha;
+            let mut vy = v[1] * damping + a[1] * dt_alpha;
             // Clamp speed to keep the integrator stable on close contacts.
             let speed2 = vx * vx + vy * vy;
-            if speed2 > max_v * max_v {
+            if speed2 > max_v2 {
                 let s = max_v / speed2.sqrt();
                 vx *= s;
                 vy *= s;
             }
-            self.vel[ix] = vx;
-            self.vel[iy] = vy;
-            self.pos[ix] += vx * dt;
-            self.pos[iy] += vy * dt;
+            v[0] = vx;
+            v[1] = vy;
+            p[0] += vx * dt;
+            p[1] += vy * dt;
         }
     }
 

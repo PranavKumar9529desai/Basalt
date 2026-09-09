@@ -8,6 +8,7 @@ pub struct Span {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct FileMetadata {
+    #[serde(default, with = "frontmatter_serde")]
     pub frontmatter: Option<serde_yaml_ng::Value>,
     pub tags: Vec<String>,
     pub links: Vec<String>,
@@ -29,5 +30,39 @@ pub struct FileMetadata {
 impl FileMetadata {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+mod frontmatter_serde {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(
+        val: &Option<serde_yaml_ng::Value>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match val {
+            Some(v) => {
+                let json = serde_json::to_string(v).map_err(serde::ser::Error::custom)?;
+                serializer.serialize_some(&json)
+            }
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<serde_yaml_ng::Value>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt: Option<String> = Option::deserialize(deserializer)?;
+        match opt {
+            Some(s) => {
+                let v = serde_json::from_str(&s).map_err(serde::de::Error::custom)?;
+                Ok(Some(v))
+            }
+            None => Ok(None),
+        }
     }
 }

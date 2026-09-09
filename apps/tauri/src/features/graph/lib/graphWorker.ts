@@ -44,8 +44,8 @@ export interface GraphNodeMeta {
 export interface GraphSnapshot {
   node_count: number;
   nodes: GraphNodeMeta[];
-  edges: number[];
-  edge_weights: number[];
+  edges: number[] | Uint32Array;
+  edge_weights: number[] | Float32Array;
 }
 
 export interface GraphFrame {
@@ -66,6 +66,8 @@ let ready: Promise<void> | null = null;
 let activeNodeCount = 0;
 let running = false;
 let failed = false;
+
+const recycledBuffers: ArrayBuffer[] = [];
 
 function ensureInit(): Promise<void> {
   if (!ready) {
@@ -90,19 +92,31 @@ function start() {
       return;
     }
     ex.graph_step();
-    // Re-fetch the buffer each frame: wasm may grow memory on a later step,
-    // detaching the previous ArrayBuffer.
-    const buf = ex.memory.buffer;
-    const positions = new Float32Array(
-      buf,
+    // Zero-allocation position transfer using double-buffered pool
+    const floatCount = activeNodeCount * 2;
+    const requiredBytes = floatCount * 4;
+    let transferBuf = recycledBuffers.pop();
+    if (!transferBuf || transferBuf.byteLength < requiredBytes) {
+      transferBuf = new ArrayBuffer(requiredBytes);
+    }
+
+    const wasmPositions = new Float32Array(
+      ex.memory.buffer,
       ex.graph_positions_ptr(),
-      activeNodeCount * 2,
+      floatCount,
     );
-    self.postMessage({
-      positions: positions.slice(),
-      nodeCount: activeNodeCount,
-      alpha: ex.graph_alpha(),
-    });
+    const outPositions = new Float32Array(transferBuf, 0, floatCount);
+    outPositions.set(wasmPositions);
+
+    self.postMessage(
+      {
+        positions: outPositions,
+        nodeCount: activeNodeCount,
+        alpha: ex.graph_alpha(),
+      },
+      [transferBuf],
+    );
+
     if (ex.graph_alpha() > 0.03) {
       setTimeout(tick, 1000 / 60);
     } else {
@@ -118,15 +132,13 @@ self.onmessage = async (
     | { action: "start"; n?: number; degree?: number }
     | { action: "reheat" }
     | { action: "pin"; index: number; x: number; y: number }
+    | { action: "recycle"; buffer: ArrayBuffer }
   >,
 ) => {
   if (failed) return;
   try {
     await ensureInit();
   } catch (err) {
-    // Latch the failure: report once, then ignore all further messages. Without
-    // this, a rejected init promise would hang every await below and freeze the
-    // graph with no explanation.
     failed = true;
     self.postMessage({
       action: "error",
@@ -135,6 +147,12 @@ self.onmessage = async (
     return;
   }
   const data = e.data;
+  if ("action" in data && data.action === "recycle") {
+    if (data.buffer && data.buffer.byteLength > 0) {
+      recycledBuffers.push(data.buffer);
+    }
+    return;
+  }
   if (data.action === "build") {
     activeNodeCount = data.nodeCount;
     const edgeCount = Math.floor(data.edges.length / 2);

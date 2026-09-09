@@ -1,14 +1,14 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::asset_index::{compute_md5, infer_file_type, infer_mime_type, AssetInfo};
+use crate::asset_index::{infer_file_type, infer_mime_type, AssetInfo};
 use crate::utils::mtime_secs;
 use crate::vault::Vault;
+use basalt_parser::extract_metadata;
+use basalt_types::FileMetadata;
 use ignore::WalkBuilder;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::Path;
-
-/// Maximum file size (100 MiB) to compute MD5 content hash for during indexing.
-const MAX_HASH_FILE_SIZE: u64 = 100 * 1024 * 1024;
 
 #[inline]
 fn is_md_path(path: &Path) -> bool {
@@ -20,7 +20,8 @@ fn is_canvas_path(path: &Path) -> bool {
     path.extension().and_then(|ext| ext.to_str()) == Some("canvas")
 }
 
-/// Build an `AssetInfo` from a filesystem entry.
+/// Build an `AssetInfo` from a filesystem entry without synchronous content hashing.
+/// Content hashing is deferred to avoid cold indexing I/O stalls on large media files.
 fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
     let meta = abs_path.metadata().ok()?;
     let rel_path = abs_path
@@ -30,23 +31,6 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
         .to_string();
     let file_name = abs_path.file_name().and_then(|n| n.to_str())?.to_string();
 
-    // Compute MD5 content hash (skip for very large files to avoid stalling).
-    let content_hash = if meta.len() <= MAX_HASH_FILE_SIZE {
-        // ≤100 MiB: read and hash
-        match std::fs::read(abs_path) {
-            Ok(data) => compute_md5(&data),
-            Err(e) => {
-                eprintln!(
-                    "[indexer] failed to read {} for hash: {e}",
-                    abs_path.display()
-                );
-                String::new()
-            }
-        }
-    } else {
-        String::new()
-    };
-
     Some(AssetInfo {
         rel_path,
         abs_path: abs_path.to_string_lossy().to_string(),
@@ -54,7 +38,7 @@ fn build_asset_info(abs_path: &Path, vault_root: &Path) -> Option<AssetInfo> {
         file_type: infer_file_type(&abs_path.to_string_lossy()),
         mime_type: infer_mime_type(&abs_path.to_string_lossy()).to_string(),
         size_bytes: meta.len(),
-        content_hash,
+        content_hash: String::new(),
         width: None,
         height: None,
         embeds_by: Vec::new(),
@@ -85,13 +69,20 @@ pub fn index_directory(path: &Path) -> Vault {
         }
     }
 
-    // Index markdown documents after all non-markdown assets are populated in
-    // asset_index so that embed/link targets resolve deterministically regardless
-    // of filesystem iteration order.
-    for md_path in md_files {
-        if let Ok(text) = std::fs::read_to_string(&md_path) {
-            vault.add_document(&md_path, &text);
-        }
+    // Phase 1: Parallel map (Rayon) across pre-sorted markdown files
+    md_files.sort_unstable();
+    let parsed: Vec<(String, FileMetadata)> = md_files
+        .par_iter()
+        .filter_map(|md_path| {
+            let text = std::fs::read_to_string(md_path).ok()?;
+            let meta = extract_metadata(&text);
+            Some((md_path.clone(), meta))
+        })
+        .collect();
+
+    // Phase 2: Sequential deterministic reduce into Vault arena & graph
+    for (md_path, meta) in parsed {
+        vault.add_document_metadata(&md_path, meta);
     }
 
     vault
@@ -107,7 +98,8 @@ pub fn incremental_reindex(
 ) -> HashMap<String, u64> {
     let mut new_mtimes: HashMap<String, u64> = HashMap::new();
 
-    let mut md_to_reindex: Vec<(String, bool)> = Vec::new();
+    let mut md_to_reindex: Vec<String> = Vec::new();
+    let mut canvas_to_reindex: Vec<String> = Vec::new();
     let walker = WalkBuilder::new(vault_path).build();
     for entry in walker.flatten() {
         if !entry.file_type().is_some_and(|ft| ft.is_file()) {
@@ -123,10 +115,13 @@ pub fn incremental_reindex(
         let cached_mtime = cached_mtimes.get(&path_str).copied().unwrap_or(0);
         new_mtimes.insert(path_str.clone(), current_mtime);
 
-        if is_md_path(path) || is_canvas_path(path) {
-            // Markdown / Canvas: buffer for update after assets are upserted
+        if is_md_path(path) {
             if current_mtime > cached_mtime {
-                md_to_reindex.push((path_str, is_md_path(path)));
+                md_to_reindex.push(path_str);
+            }
+        } else if is_canvas_path(path) {
+            if current_mtime > cached_mtime {
+                canvas_to_reindex.push(path_str);
             }
         } else if current_mtime > cached_mtime {
             // Non-markdown/non-canvas: register/update in asset index if modified
@@ -136,14 +131,23 @@ pub fn incremental_reindex(
         }
     }
 
-    for (path_str, is_md) in md_to_reindex {
-        if is_md {
-            if let Ok(content) = std::fs::read_to_string(&path_str) {
-                vault.add_document(&path_str, &content);
-            }
-        } else {
-            vault.add_document(&path_str, "");
-        }
+    // Phase 1: Parallel map for modified markdown files
+    md_to_reindex.sort_unstable();
+    let parsed: Vec<(String, FileMetadata)> = md_to_reindex
+        .par_iter()
+        .filter_map(|path_str| {
+            let content = std::fs::read_to_string(path_str).ok()?;
+            let meta = extract_metadata(&content);
+            Some((path_str.clone(), meta))
+        })
+        .collect();
+
+    // Phase 2: Sequential deterministic reduce
+    for (path_str, meta) in parsed {
+        vault.add_document_metadata(&path_str, meta);
+    }
+    for path_str in canvas_to_reindex {
+        vault.add_document(&path_str, "");
     }
 
     // Remove documents that have been deleted since the cache was written.
