@@ -22,7 +22,7 @@ fn cache_filename(vault_path: &str) -> String {
         .and_then(|n| n.to_str())
         .unwrap_or("vault");
 
-    format!("{}_{:08x}.json", folder_name, djb2_hash(vault_path))
+    format!("{}_{:08x}.bincode", folder_name, djb2_hash(vault_path))
 }
 
 pub(crate) fn cache_path(app: &tauri::AppHandle, vault_path: &str) -> PathBuf {

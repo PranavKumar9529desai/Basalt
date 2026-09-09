@@ -71,7 +71,7 @@ fn bench_index_walk(c: &mut Criterion) {
         });
     } else {
         let mut dirs = Vec::new();
-        for &size in &[50usize, 500, 5000] {
+        for &size in &[50usize, 500, 5000, 25000] {
             let (dir, _paths) = create_vault_fixture(size);
             let path = dir.path().to_path_buf();
             dirs.push(dir);

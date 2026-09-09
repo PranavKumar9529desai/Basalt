@@ -4460,6 +4460,7 @@ dependencies = [
  "mimalloc",
  "serde",
  "serde_json",
+ "smallvec",
  "tauri 2.10.2",
  "tauri-build",
  "tauri-plugin-dialog",

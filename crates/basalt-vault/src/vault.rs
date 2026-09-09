@@ -22,12 +22,15 @@ impl Vault {
         }
     }
 
-    pub fn add_document(&mut self, path: &str, content: &str) {
-        let meta = extract_metadata(content);
-        // Register embed/link references in the asset index
+    pub fn add_document_metadata(&mut self, path: &str, meta: FileMetadata) {
         self.asset_index.register_embeds(path, &meta.embeds);
         self.asset_index.register_links(path, &meta.links);
         self.graph.add_document(path, meta, &mut self.arena);
+    }
+
+    pub fn add_document(&mut self, path: &str, content: &str) {
+        let meta = extract_metadata(content);
+        self.add_document_metadata(path, meta);
     }
 
     pub fn remove_document(&mut self, path: &str) {
