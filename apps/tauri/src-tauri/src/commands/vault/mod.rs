@@ -11,7 +11,7 @@ use crate::error::{AppError, AppResult};
 mod cc;
 
 mod graph;
-pub(crate) use graph::{build_graph_snapshot, GraphSnapshot};
+pub(crate) use graph::{build_graph_snapshot, encode_graph_snapshot_binary};
 
 #[derive(Serialize)]
 pub struct VaultSummary {
@@ -74,7 +74,7 @@ pub async fn open_vault_dialog(app: tauri::AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
-pub fn get_graph(state: State<AppState>) -> AppResult<GraphSnapshot> {
+pub fn get_graph(state: State<AppState>) -> AppResult<tauri::ipc::Response> {
     let vault_path = state
         .vault_path
         .read()
@@ -85,5 +85,7 @@ pub fn get_graph(state: State<AppState>) -> AppResult<GraphSnapshot> {
         .vault
         .read()
         .map_err(|_| AppError::LockPoisoned("vault"))?;
-    build_graph_snapshot(&vault, Path::new(&vault_path))
+    let snapshot = build_graph_snapshot(&vault, Path::new(&vault_path))?;
+    let bytes = encode_graph_snapshot_binary(&snapshot)?;
+    Ok(tauri::ipc::Response::new(bytes))
 }

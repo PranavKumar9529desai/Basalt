@@ -11,9 +11,8 @@ const TAG_PREFIX: &str = "#";
 
 #[inline]
 fn insert_sorted(vec: &mut SmallVec<[NodeId; 8]>, id: NodeId) {
-    match vec.binary_search(&id) {
-        Ok(_) => {}
-        Err(pos) => vec.insert(pos, id),
+    if let Err(pos) = vec.binary_search(&id) {
+        vec.insert(pos, id);
     }
 }
 
@@ -46,8 +45,8 @@ impl NoteGraph {
         // Remove old forward links for this document (incl. prior tag edges)
         // and clean each target's back_links to us.
         if let Some(old_links) = self.forward_links.get(&doc_id) {
-            for link_id in old_links {
-                if let Some(back_links) = self.back_links.get_mut(link_id) {
+            for &link_id in old_links {
+                if let Some(back_links) = self.back_links.get_mut(&link_id) {
                     remove_sorted(back_links, doc_id);
                 }
             }
@@ -105,6 +104,8 @@ impl NoteGraph {
             }
         }
 
+        new_links.sort_unstable();
+        new_links.dedup();
         self.forward_links.insert(doc_id, new_links);
         self.metadata_cache.insert(doc_id, metadata);
 
@@ -197,6 +198,14 @@ impl NoteGraph {
         }
     }
 
+    pub fn get_forward_links(&self, id: NodeId) -> Option<&[NodeId]> {
+        self.forward_links.get(&id).map(|v| v.as_slice())
+    }
+
+    pub fn get_back_links(&self, id: NodeId) -> Option<&[NodeId]> {
+        self.back_links.get(&id).map(|v| v.as_slice())
+    }
+
     pub fn has_forward_link(&self, src: NodeId, target: NodeId) -> bool {
         self.forward_links
             .get(&src)
@@ -207,14 +216,6 @@ impl NoteGraph {
         self.back_links
             .get(&target)
             .is_some_and(|links| links.binary_search(&src).is_ok())
-    }
-
-    pub fn get_forward_links(&self, id: NodeId) -> Option<&[NodeId]> {
-        self.forward_links.get(&id).map(|v| v.as_slice())
-    }
-
-    pub fn get_back_links(&self, id: NodeId) -> Option<&[NodeId]> {
-        self.back_links.get(&id).map(|v| v.as_slice())
     }
 
     pub fn get_metadata(&self, id: NodeId) -> Option<&FileMetadata> {

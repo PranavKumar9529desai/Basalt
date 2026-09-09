@@ -1,7 +1,9 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
-use basalt_parser::query::{CompareOp, Expr, FieldRef, Literal};
+use basalt_parser::query::{CompareOp, Expr, FieldRef, Literal, QueryPlan};
 use basalt_types::TypedValue;
+use chrono::{DateTime, NaiveDate};
 
 use crate::page_row::PageRow;
 
@@ -32,10 +34,34 @@ pub fn eval_expr(expr: &Expr, ctx: &EvalCtx) -> bool {
             match op {
                 CompareOp::Eq => compare_typed(&lv, &rv) == Ordering::Equal,
                 CompareOp::Ne => compare_typed(&lv, &rv) != Ordering::Equal,
-                CompareOp::Lt => compare_typed(&lv, &rv) == Ordering::Less,
-                CompareOp::Gt => compare_typed(&lv, &rv) == Ordering::Greater,
-                CompareOp::Le => compare_typed(&lv, &rv) != Ordering::Greater,
-                CompareOp::Ge => compare_typed(&lv, &rv) != Ordering::Less,
+                CompareOp::Lt => {
+                    if matches!(lv, TypedValue::Null) || matches!(rv, TypedValue::Null) {
+                        false
+                    } else {
+                        compare_typed(&lv, &rv) == Ordering::Less
+                    }
+                }
+                CompareOp::Gt => {
+                    if matches!(lv, TypedValue::Null) || matches!(rv, TypedValue::Null) {
+                        false
+                    } else {
+                        compare_typed(&lv, &rv) == Ordering::Greater
+                    }
+                }
+                CompareOp::Le => {
+                    if matches!(lv, TypedValue::Null) || matches!(rv, TypedValue::Null) {
+                        false
+                    } else {
+                        compare_typed(&lv, &rv) != Ordering::Greater
+                    }
+                }
+                CompareOp::Ge => {
+                    if matches!(lv, TypedValue::Null) || matches!(rv, TypedValue::Null) {
+                        false
+                    } else {
+                        compare_typed(&lv, &rv) != Ordering::Less
+                    }
+                }
                 CompareOp::Contains => eval_contains_values(&lv, &rv),
             }
         }
@@ -154,29 +180,67 @@ pub fn field_value(field: &FieldRef, ctx: &EvalCtx) -> TypedValue {
 
 /// Resolve a field against a single page (the pre-group row shape).
 fn page_field_value(field: &FieldRef, page: &PageRow) -> TypedValue {
-    let key = field.0.join(".");
-    match key.as_str() {
-        "file.name" | "name" => TypedValue::Text {
-            value: page.name.clone(),
-        },
-        "file.path" | "path" => TypedValue::Text {
-            value: page.path.clone(),
-        },
-        "file.folder" | "folder" => TypedValue::Text {
-            value: page.folder.clone(),
-        },
-        "file.tags" | "tags" => TypedValue::Text {
-            value: page.tags.join(", "),
-        },
-        "file.links" | "links" => TypedValue::Text {
-            value: page.links.join(", "),
-        },
-        _ => page
+    if field.0.is_empty() {
+        return TypedValue::Null;
+    }
+
+    // 1. Strict `file.` namespace: built-in file metadata cannot be shadowed by frontmatter
+    if field.0[0] == "file" {
+        if field.0.len() == 2 {
+            match field.0[1].as_str() {
+                "name" => return TypedValue::Text { value: page.name().to_string() },
+                "path" => return TypedValue::Text { value: page.path.clone() },
+                "folder" => return TypedValue::Text { value: page.folder().to_string() },
+                "tags" => return TypedValue::Text { value: page.tags.join(", ") },
+                "links" | "outlinks" => return TypedValue::Text { value: page.links.join(", ") },
+                _ => return TypedValue::Null,
+            }
+        }
+        return TypedValue::Null;
+    }
+
+    // 2. Explicit `frontmatter.` namespace
+    if field.0[0] == "frontmatter" {
+        if field.0.len() == 2 {
+            let key = &field.0[1];
+            return page
+                .frontmatter
+                .iter()
+                .find(|(k, _)| k == key)
+                .map(|(_, v)| v.clone())
+                .unwrap_or(TypedValue::Null);
+        }
+        let key = field.0[1..].join(".");
+        return page
             .frontmatter
             .iter()
             .find(|(k, _)| k == &key)
             .map(|(_, v)| v.clone())
-            .unwrap_or(TypedValue::Null),
+            .unwrap_or(TypedValue::Null);
+    }
+
+    // 3. User property access: check frontmatter first (so custom properties match)
+    if field.0.len() == 1 {
+        let key = &field.0[0];
+        if let Some((_, v)) = page.frontmatter.iter().find(|(k, _)| k == key) {
+            return v.clone();
+        }
+
+        // 4. Built-in convenience fallbacks for unprefixed file properties
+        match key.as_str() {
+            "name" => TypedValue::Text { value: page.name().to_string() },
+            "path" => TypedValue::Text { value: page.path.clone() },
+            "folder" => TypedValue::Text { value: page.folder().to_string() },
+            "tags" => TypedValue::Text { value: page.tags.join(", ") },
+            "links" => TypedValue::Text { value: page.links.join(", ") },
+            _ => TypedValue::Null,
+        }
+    } else {
+        let key = field.0.join(".");
+        if let Some((_, v)) = page.frontmatter.iter().find(|(k, _)| k == &key) {
+            return v.clone();
+        }
+        TypedValue::Null
     }
 }
 
@@ -206,16 +270,27 @@ fn eval_aggregate(name: &str, args: &[Expr], ctx: &EvalCtx) -> TypedValue {
                 .filter(|v| !matches!(v, TypedValue::Null))
                 .count() as f64,
         },
-        "sum" => TypedValue::Number {
-            value: values.iter().filter_map(numeric).sum(),
-        },
-        "avg" | "average" => {
-            let nums: Vec<f64> = values.iter().filter_map(numeric).collect();
+        "sum" => {
+            let nums: Vec<f64> = values.iter().filter_map(numeric).filter(|n| n.is_finite()).collect();
             if nums.is_empty() {
                 TypedValue::Null
             } else {
                 TypedValue::Number {
-                    value: nums.iter().sum::<f64>() / nums.len() as f64,
+                    value: nums.iter().sum(),
+                }
+            }
+        }
+        "avg" | "average" => {
+            let nums: Vec<f64> = values.iter().filter_map(numeric).filter(|n| n.is_finite()).collect();
+            if nums.is_empty() {
+                TypedValue::Null
+            } else {
+                let sum: f64 = nums.iter().sum();
+                let avg = sum / nums.len() as f64;
+                if avg.is_finite() {
+                    TypedValue::Number { value: avg }
+                } else {
+                    TypedValue::Null
                 }
             }
         }
@@ -230,16 +305,18 @@ fn extremum(values: &[TypedValue], want: Ordering) -> TypedValue {
     let mut best: Option<f64> = None;
     for v in values {
         if let TypedValue::Number { value } = v {
-            best = Some(match best {
-                None => *value,
-                Some(b) => {
-                    if b.partial_cmp(value).unwrap_or(Ordering::Equal) == want {
-                        b
-                    } else {
-                        *value
+            if value.is_finite() {
+                best = Some(match best {
+                    None => *value,
+                    Some(b) => {
+                        if b.total_cmp(value) == want {
+                            b
+                        } else {
+                            *value
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
     match best {
@@ -290,18 +367,180 @@ fn is_truthy(v: &TypedValue) -> bool {
     }
 }
 
-/// Compare two `TypedValue`s for ordering (used by SORT).
-pub fn compare_typed(a: &TypedValue, b: &TypedValue) -> std::cmp::Ordering {
+/// Canonical discriminant tier for cross-type comparison.
+/// ADR-045 canonical ordering: Null (0) < Checkbox (1) < Number (2) < Date (3) < DateTime (4) < Text (5) < Link (6) < List (7).
+fn type_tier(v: &TypedValue) -> u8 {
+    match v {
+        TypedValue::Null => 0,
+        TypedValue::Checkbox { .. } => 1,
+        TypedValue::Number { .. } => 2,
+        TypedValue::Date { .. } => 3,
+        TypedValue::DateTime { .. } => 4,
+        TypedValue::Text { .. } => 5,
+        TypedValue::Link { .. } => 6,
+        TypedValue::List { .. } => 7,
+    }
+}
+
+fn parse_date_ts(s: &str) -> Option<i64> {
+    let nd = NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()?;
+    Some(nd.and_hms_opt(0, 0, 0)?.and_utc().timestamp())
+}
+
+fn parse_datetime_ts(s: &str) -> Option<i64> {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        Some(dt.timestamp())
+    } else if let Ok(nd) = NaiveDate::parse_from_str(s, "%Y-%m-%d") {
+        Some(nd.and_hms_opt(0, 0, 0)?.and_utc().timestamp())
+    } else {
+        None
+    }
+}
+
+/// Compare two `TypedValue`s with canonical total ordering across all types (ADR-045).
+pub fn compare_typed(a: &TypedValue, b: &TypedValue) -> Ordering {
+    let tier_a = type_tier(a);
+    let tier_b = type_tier(b);
+    if tier_a != tier_b {
+        // Cross-type temporal interoperability: Date vs DateTime
+        if (tier_a == 3 && tier_b == 4) || (tier_a == 4 && tier_b == 3) {
+            let ts_a = match a {
+                TypedValue::Date { value } => parse_date_ts(value),
+                TypedValue::DateTime { value } => parse_datetime_ts(value),
+                _ => None,
+            };
+            let ts_b = match b {
+                TypedValue::Date { value } => parse_date_ts(value),
+                TypedValue::DateTime { value } => parse_datetime_ts(value),
+                _ => None,
+            };
+            if let (Some(ts_a), Some(ts_b)) = (ts_a, ts_b) {
+                return ts_a.cmp(&ts_b);
+            }
+        }
+        return tier_a.cmp(&tier_b);
+    }
+
     match (a, b) {
-        (TypedValue::Number { value: a }, TypedValue::Number { value: b }) => {
-            a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+        (TypedValue::Null, TypedValue::Null) => Ordering::Equal,
+        (TypedValue::Checkbox { value: a }, TypedValue::Checkbox { value: b }) => a.cmp(b),
+        (TypedValue::Number { value: a }, TypedValue::Number { value: b }) => a.total_cmp(b),
+        (TypedValue::Date { value: a }, TypedValue::Date { value: b }) => {
+            if let (Some(ts_a), Some(ts_b)) = (parse_date_ts(a), parse_date_ts(b)) {
+                ts_a.cmp(&ts_b)
+            } else {
+                a.cmp(b)
+            }
+        }
+        (TypedValue::DateTime { value: a }, TypedValue::DateTime { value: b }) => {
+            if let (Some(ts_a), Some(ts_b)) = (parse_datetime_ts(a), parse_datetime_ts(b)) {
+                ts_a.cmp(&ts_b)
+            } else {
+                a.cmp(b)
+            }
         }
         (TypedValue::Text { value: a }, TypedValue::Text { value: b }) => a.cmp(b),
-        // ISO-8601 dates compare lexicographically.
-        (TypedValue::Date { value: a }, TypedValue::Date { value: b }) => a.cmp(b),
-        (TypedValue::Checkbox { value: a }, TypedValue::Checkbox { value: b }) => a.cmp(b),
-        (TypedValue::Null, _) => std::cmp::Ordering::Less,
-        (_, TypedValue::Null) => std::cmp::Ordering::Greater,
-        _ => std::cmp::Ordering::Equal,
+        (TypedValue::Link { name: na, path: pa }, TypedValue::Link { name: nb, path: pb }) => {
+            pa.cmp(pb).then_with(|| na.cmp(nb))
+        }
+        (TypedValue::List { items: a }, TypedValue::List { items: b }) => {
+            let min_len = a.len().min(b.len());
+            for i in 0..min_len {
+                let cmp = compare_typed(&a[i], &b[i]);
+                if cmp != Ordering::Equal {
+                    return cmp;
+                }
+            }
+            a.len().cmp(&b.len())
+        }
+        _ => Ordering::Equal,
     }
+}
+
+/// Traverse an expression tree and collect all referenced field paths.
+pub fn collect_expr_fields(expr: &Expr, fields: &mut Vec<FieldRef>) {
+    match expr {
+        Expr::Field(f) => fields.push(f.clone()),
+        Expr::Comparison { left, right, .. } => {
+            collect_expr_fields(left, fields);
+            collect_expr_fields(right, fields);
+        }
+        Expr::Not(inner) => collect_expr_fields(inner, fields),
+        Expr::Func { args, .. } => {
+            for arg in args {
+                collect_expr_fields(arg, fields);
+            }
+        }
+        Expr::Literal(_) => {}
+    }
+}
+
+/// Analyze the full QueryPlan to determine the minimal projection needed from the vault:
+/// 1. Referenced frontmatter keys (returns None if wildcard/unprojected).
+/// 2. Whether note tags are needed (`file.tags` / `tags` in query).
+/// 3. Whether note links are needed (`file.links` / `links` / `file.outlinks` in query).
+pub fn collect_query_projection(
+    plan: &QueryPlan,
+) -> (Option<HashSet<String>>, bool, bool) {
+    let mut fields: Vec<FieldRef> = Vec::new();
+
+    // Query fields / columns
+    for f in &plan.fields {
+        collect_expr_fields(&f.expr, &mut fields);
+    }
+
+    // Commands (WHERE, SORT, GROUP BY, FLATTEN)
+    for cmd in &plan.commands {
+        match cmd {
+            basalt_parser::query::DataCommand::Where(expr) => collect_expr_fields(expr, &mut fields),
+            basalt_parser::query::DataCommand::Sort { field, .. } => fields.push(field.clone()),
+            basalt_parser::query::DataCommand::GroupBy { expr, .. } => collect_expr_fields(expr, &mut fields),
+            basalt_parser::query::DataCommand::Flatten { expr, .. } => collect_expr_fields(expr, &mut fields),
+            basalt_parser::query::DataCommand::Limit(_) => {}
+        }
+    }
+
+    let mut projected_keys = HashSet::new();
+    let mut needs_tags = false;
+    let mut needs_links = false;
+
+    for field in fields {
+        if field.0.is_empty() {
+            continue;
+        }
+        let first = &field.0[0];
+        if first == "file" {
+            if field.0.len() == 2 {
+                match field.0[1].as_str() {
+                    "tags" => needs_tags = true,
+                    "links" | "outlinks" => needs_links = true,
+                    _ => {}
+                }
+            }
+        } else if first == "frontmatter" {
+            if field.0.len() > 1 {
+                projected_keys.insert(field.0[1..].join("."));
+            }
+        } else if first == "rows" {
+            if field.0.len() > 1 {
+                let sub = &field.0[1];
+                if sub == "tags" {
+                    needs_tags = true;
+                } else if sub == "links" || sub == "outlinks" {
+                    needs_links = true;
+                } else {
+                    projected_keys.insert(field.0[1..].join("."));
+                }
+            }
+        } else {
+            match first.as_str() {
+                "tags" => needs_tags = true,
+                "links" => needs_links = true,
+                _ => {}
+            }
+            projected_keys.insert(field.0.join("."));
+        }
+    }
+
+    (Some(projected_keys), needs_tags, needs_links)
 }

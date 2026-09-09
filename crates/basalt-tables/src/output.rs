@@ -39,7 +39,7 @@ pub(crate) fn execute_list_query(rows: &[WorkRow], total: usize) -> Result<Query
         .map(|r| {
             let p =
                 first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
-            Ok::<_, DqlError>(link_row(&p.name, &p.path))
+            Ok::<_, DqlError>(link_row(p.name(), &p.path))
         })
         .collect::<Result<_, _>>()?;
     Ok(QueryResult {
@@ -68,7 +68,7 @@ pub(crate) fn execute_task_query(rows: &[WorkRow], total: usize) -> Result<Query
                 first_page(r).ok_or_else(|| DqlError::Runtime("group must have members".into()))?;
             Ok::<_, DqlError>(vec![
                 TypedValue::Link {
-                    name: p.name.clone(),
+                    name: p.name().to_string(),
                     path: p.path.clone(),
                 },
                 TypedValue::Text {

@@ -12,7 +12,8 @@ basalt-graph = { path = "../../basalt-graph" }
 # Standalone workspace so `cargo build --target wasm32-unknown-unknown` here does
 # not pull the whole repo workspace (which cannot build for wasm).
 [profile.release]
-opt-level = "z"
+opt-level = 3
+codegen-units = 1
 lto = true
 
 [workspace]

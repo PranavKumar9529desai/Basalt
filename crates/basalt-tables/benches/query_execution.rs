@@ -32,6 +32,14 @@ fn bench_table_query(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("list_sort_limit", size), &vault, |b, v| {
             b.iter(|| execute_query(v, "LIST SORT file.name ASC LIMIT 50").unwrap());
         });
+        // ADR-045 Benchmark 1: Scan & Filter over notes
+        group.bench_with_input(BenchmarkId::new("scan_and_filter", size), &vault, |b, v| {
+            b.iter(|| execute_query(v, "TABLE file.name, priority WHERE priority = 2").unwrap());
+        });
+        // ADR-045 Benchmark 2: Sort & Top-K Limit
+        group.bench_with_input(BenchmarkId::new("sort_limit", size), &vault, |b, v| {
+            b.iter(|| execute_query(v, "TABLE file.name, priority SORT priority DESC LIMIT 20").unwrap());
+        });
     }
     group.finish();
 }
