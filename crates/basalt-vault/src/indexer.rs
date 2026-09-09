@@ -1,24 +1,13 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use crate::asset_index::{infer_file_type, infer_mime_type, AssetInfo};
-use crate::utils::mtime_secs;
 use crate::vault::Vault;
 use basalt_parser::extract_metadata;
-use basalt_types::FileMetadata;
+use basalt_types::{is_canvas_path, is_md_path, mtime_secs, FileMetadata};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::Path;
-
-#[inline]
-fn is_md_path(path: &Path) -> bool {
-    path.extension().and_then(|ext| ext.to_str()) == Some("md")
-}
-
-#[inline]
-fn is_canvas_path(path: &Path) -> bool {
-    path.extension().and_then(|ext| ext.to_str()) == Some("canvas")
-}
 
 /// Build an `AssetInfo` from a filesystem entry without synchronous content hashing.
 /// Content hashing is deferred to avoid cold indexing I/O stalls on large media files.

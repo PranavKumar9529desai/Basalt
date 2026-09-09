@@ -203,15 +203,12 @@ impl AssetIndex {
         }
 
         // 3. Stem match — `![[image]]` (no extension) → `image.png`.
-        let target_stem = Path::new(target).file_stem().and_then(|s| s.to_str());
+        let target_stem = basalt_types::stem_of(target);
         if let Some(stem) = target_stem {
             if !stem.is_empty() {
                 let mut best: Option<&AssetInfo> = None;
                 for asset in self.assets.values() {
-                    let file_stem = Path::new(&asset.file_name)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("");
+                    let file_stem = basalt_types::stem_of(&asset.file_name).unwrap_or("");
                     if file_stem.eq_ignore_ascii_case(stem) {
                         let better = match best {
                             None => true,

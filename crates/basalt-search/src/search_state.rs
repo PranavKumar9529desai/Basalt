@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::{Duration, Instant, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use basalt_vault::Vault;
 
 use crate::error::SearchError;
 use crate::nucleo_scorer::NucleoScorer;
 use crate::tantivy::TantivyIndex;
-use basalt_types::{FileResult, SearchContentResult};
+use basalt_types::{
+    is_canvas_path, is_document_path, mtime_secs, stem_of, FileResult, SearchContentResult,
+};
 
 type Result<T> = std::result::Result<T, SearchError>;
 
@@ -78,11 +80,7 @@ impl SearchState {
         paths
             .iter()
             .filter(|path| {
-                let current_mtime = std::fs::metadata(path)
-                    .and_then(|m| m.modified())
-                    .ok()
-                    .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                    .map(|d| d.as_secs());
+                let current_mtime = mtime_secs(Path::new(path));
 
                 match (current_mtime, known_mtimes.get(*path)) {
                     (Some(cur), Some(&known)) => cur > known,
@@ -104,7 +102,7 @@ impl SearchState {
         let paths: Vec<String> = vault
             .arena
             .all_strings()
-            .filter(|p| p.ends_with(".md") || p.ends_with(".canvas"))
+            .filter(|p| is_document_path(Path::new(p)))
             .cloned()
             .collect();
 
@@ -113,13 +111,9 @@ impl SearchState {
         let mut any_indexed = false;
 
         for path in &stale_paths {
-            let title = Path::new(path)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or(path.as_str())
-                .to_string();
+            let title = stem_of(path).unwrap_or(path.as_str()).to_string();
 
-            if path.ends_with(".canvas") {
+            if is_canvas_path(Path::new(path)) {
                 if let Err(e) = state.tantivy.update_document(path, &title, "", "") {
                     eprintln!("[search] failed to index canvas {path}: {e}");
                 }
@@ -198,11 +192,7 @@ impl SearchState {
     /// Extracts inline #tags from content automatically.
     /// Does NOT commit — callers must call `commit()` after batching updates.
     pub fn update_document(&mut self, path: &str, content: &str, tags: &str) -> Result<()> {
-        let title = Path::new(path)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or(path)
-            .to_string();
+        let title = stem_of(path).unwrap_or(path).to_string();
 
         self.tantivy.update_document(path, &title, content, tags)?;
         self.nucleo.add_item(path.to_string(), title);

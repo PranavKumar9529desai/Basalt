@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use basalt_types::is_document_path;
 use ignore::WalkBuilder;
 
 use crate::Vault;
@@ -54,7 +55,7 @@ pub fn build_flat_tree(vault: &Vault, vault_root: &Path) -> Vec<FlatTreeNode> {
         .metadata_cache
         .keys()
         .filter_map(|id| vault.arena.get_string(*id).cloned())
-        .filter(|p| (p.ends_with(".md") || p.ends_with(".canvas")) && Path::new(p).exists())
+        .filter(|p| is_document_path(Path::new(p)) && Path::new(p).exists())
         .collect();
     paths.sort_unstable();
 
@@ -140,7 +141,7 @@ pub fn fast_scan_flat_tree(vault_root: &Path) -> Vec<FlatTreeNode> {
             continue;
         }
         let Some(ft) = entry.file_type() else { continue };
-        if ft.is_file() && is_tree_file(path) {
+        if ft.is_file() && is_document_path(path) {
             let parts: Vec<&str> = rel_str.split('/').collect();
             insert_path(&mut root, &parts);
         }
@@ -155,16 +156,6 @@ pub fn fast_scan_flat_tree(vault_root: &Path) -> Vec<FlatTreeNode> {
     let mut out = Vec::new();
     flatten_children(&root, "", &root_prefix, 0, &mut out);
     out
-}
-
-/// True for the two document kinds the tree shows (and `index_directory`
-/// ingests): Markdown notes and JSON Canvas files.
-#[inline]
-fn is_tree_file(path: &Path) -> bool {
-    matches!(
-        path.extension().and_then(|e| e.to_str()),
-        Some("md" | "canvas")
-    )
 }
 
 /// Recursively insert `parts` (the segments of a relative path) under `node`.

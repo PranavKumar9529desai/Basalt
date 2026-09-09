@@ -2,7 +2,7 @@ use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use std::collections::HashSet;
 
-use basalt_types::FileResult;
+use basalt_types::{stem_of, FileResult};
 
 /// Scores vault file paths against a query using nucleo's Smith-Waterman
 /// fuzzy algorithm — the same engine used by the Helix editor.
@@ -15,16 +15,6 @@ pub struct NucleoScorer {
     path_set: HashSet<String>,
 }
 
-/// Extract the filename stem from an absolute path.
-/// e.g. "/vault/rust-notes/borrow-checker.md" -> "borrow-checker"
-fn stem_from_path(path: &str) -> String {
-    std::path::Path::new(path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(path)
-        .to_string()
-}
-
 impl NucleoScorer {
     /// Create a scorer from a list of absolute paths.
     /// Titles are derived automatically as the filename stem.
@@ -32,7 +22,7 @@ impl NucleoScorer {
         let items = paths
             .iter()
             .map(|p| {
-                let title = stem_from_path(p);
+                let title = stem_of(p).unwrap_or(p).to_string();
                 (p.clone(), title)
             })
             .collect();
@@ -154,7 +144,7 @@ impl NucleoScorer {
             return;
         }
         let resolved = if title.is_empty() {
-            stem_from_path(&path)
+            stem_of(&path).unwrap_or(&path).to_string()
         } else {
             title
         };

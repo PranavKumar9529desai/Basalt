@@ -5,8 +5,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use basalt_parser::extract_metadata;
-use basalt_types::FileMetadata;
-use basalt_vault::{indexer::incremental_reindex, utils::mtime_secs, VaultCache};
+use basalt_types::{
+    is_canvas_path, is_document_path, mtime_secs, stem_of, FileMetadata,
+};
+use basalt_vault::{indexer::incremental_reindex, VaultCache};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -88,13 +90,9 @@ pub fn start_fused_indexing(
                     chunk
                         .par_iter()
                         .filter_map(|path| {
-                            let title = Path::new(path)
-                                .file_stem()
-                                .and_then(|s| s.to_str())
-                                .unwrap_or(path.as_str())
-                                .to_string();
+                            let title = stem_of(path).unwrap_or(path.as_str()).to_string();
 
-                            if path.ends_with(".canvas") {
+                            if is_canvas_path(Path::new(path)) {
                                 Some((path.clone(), None, title, String::new(), String::new()))
                             } else if let Ok(content) = std::fs::read_to_string(path) {
                                 let meta = extract_metadata(&content);
@@ -230,7 +228,7 @@ pub fn start_background_mtime_sync(
                 if entry.file_type().is_some_and(|ft| ft.is_file()) {
                     let path = entry.path();
                     if let Some(path_str) = path.to_str() {
-                        if path_str.ends_with(".md") || path_str.ends_with(".canvas") {
+                        if is_document_path(path) {
                             let current_mtime = mtime_secs(path).unwrap_or(0);
                             let cached_mtime = cached_mtimes.get(path_str).copied().unwrap_or(0);
                             disk_mtimes.insert(path_str.to_string(), current_mtime);
@@ -262,11 +260,7 @@ pub fn start_background_mtime_sync(
                         let vault_read = vault_arc.read().ok();
                         for path in &stale_paths {
                             if let Ok(content) = std::fs::read_to_string(path) {
-                                let title = Path::new(path)
-                                    .file_stem()
-                                    .and_then(|s| s.to_str())
-                                    .unwrap_or(path.as_str())
-                                    .to_string();
+                                let title = stem_of(path).unwrap_or(path.as_str()).to_string();
                                 let tags = vault_read
                                     .as_ref()
                                     .and_then(|v| v.metadata(path))

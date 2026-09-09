@@ -1,3 +1,4 @@
+use basalt_types::is_document_path;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -78,8 +79,7 @@ impl VaultWatcher {
         match event.kind {
             EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_) => {
                 for path in event.paths {
-                    let ext = path.extension().and_then(|e| e.to_str());
-                    if ext == Some("md") || ext == Some("canvas") {
+                    if is_document_path(&path) {
                         pending.insert(path);
                     }
                 }

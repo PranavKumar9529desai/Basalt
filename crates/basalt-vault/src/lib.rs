@@ -4,7 +4,6 @@ pub mod indexer;
 pub mod links;
 pub mod path_utils;
 pub mod tree;
-pub mod utils;
 pub mod vault;
 pub mod watcher;
 

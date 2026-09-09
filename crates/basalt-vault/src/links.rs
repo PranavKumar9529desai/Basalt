@@ -210,10 +210,7 @@ fn next_char_boundary(s: &str, mut i: usize) -> usize {
     i
 }
 fn stem_lower(path: &str) -> Option<String> {
-    Path::new(path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .map(|s| s.to_lowercase())
+    basalt_types::stem_lower(path)
 }
 
 #[cfg(test)]

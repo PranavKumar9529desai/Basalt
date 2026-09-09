@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::Path;
 
-use crate::utils::mtime_secs;
+use basalt_types::{is_document_path, mtime_secs};
 use crate::vault::Vault;
 
 /// Magic 4-byte header identifying a Basalt binary cache.
@@ -45,11 +45,11 @@ impl VaultCache {
     /// Build a fresh cache snapshot from a live vault.
     /// `vault_path` is the root directory that was indexed.
     pub fn build(vault_path: &str, vault: Vault) -> Self {
-        // Collect current mtimes for every .md file in the arena.
+        // Collect current mtimes for every document file in the arena.
         let file_mtimes = vault
             .arena
             .all_strings()
-            .filter(|p| !p.starts_with('#') && (p.ends_with(".md") || p.ends_with(".canvas")))
+            .filter(|p| !p.starts_with('#') && is_document_path(Path::new(p)))
             .filter_map(|p| {
                 let mtime = mtime_secs(Path::new(p))?;
                 Some((p.clone(), mtime))
