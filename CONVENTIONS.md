@@ -671,3 +671,103 @@ diverges:
 - CI runs clippy with `-D warnings`. Enable `clippy::perf` (unnecessary
   allocs/clones) and the `cognitive-complexity` lint deliberately; do **not**
   blanket-enable all of `pedantic`.
+
+### 12.8 Cross-crate shared utilities
+
+Before writing a new utility function, **search all crates** for an existing
+implementation (`grep -r "fn <name>" crates/`). If one exists in the wrong
+crate, **move it** rather than writing a second copy.
+
+Shared utilities that cross crate boundaries go in the **leaf crate** both
+callers depend on — almost always `basalt-types`. This keeps the dependency
+arrow pointing downward (`basalt-types` → heavier crates, never the reverse).
+
+Canonical locations for known shared utilities:
+
+| Utility | Canonical location | Why |
+|---|---|---|
+| `stem_of(path) → Option<&str>` | `basalt-types` | Used by vault, search, tables |
+| `stem_lower(path) → Option<String>` | `basalt-types` | Used by vault, search |
+| `mtime_secs(path) → Option<u64>` | `basalt-types` | Used by vault, search |
+| `is_md_path(path) → bool` | `basalt-types` | Used by vault (5 places), search |
+| `is_canvas_path(path) → bool` | `basalt-types` | Used by vault (3 places), search |
+| `is_document_path(path) → bool` | `basalt-types` | Union of above two |
+| Frontmatter fence bounds | `basalt-parser::frontmatter` | One detector, consumed by all |
+| Wikilink `[[…]]` scanner | `basalt-parser` | One grammar, all consumers import |
+| TypedValue comparison | `basalt-types::value` | Type owns its operations (§12.9) |
+
+**Rule:** if a utility appears in 2+ crates, it belongs in `basalt-types`
+(or `basalt-parser` for parsing-specific utilities). Create it there first.
+
+### 12.9 Type owns its operations
+
+The crate that **defines** a type owns its comparison, ordering, formatting,
+and core operations. A type's operations must not live in a heavier crate
+that the type's consumers would then have to depend on.
+
+```
+// ❌ WRONG — compare_typed in basalt-tables (pulls in vault, parser, graph)
+// Any crate wanting TypedValue comparison must depend on the full tables chain
+
+// ✅ CORRECT — compare_typed in basalt-types (right next to TypedValue)
+// basalt-types/src/value.rs
+pub fn compare_typed(a: &TypedValue, b: &TypedValue) -> Ordering { ... }
+```
+
+If an operation on a type needs a new dependency (e.g. `chrono` for date
+comparison), the dependency goes where the type is — not where the first
+caller happens to be.
+
+### 12.10 Error Display conventions
+
+All `#[error("...")]` messages in `thiserror` enums:
+
+- **Lowercase**, no trailing period: `#[error("vault not opened")]` ✅
+  `#[error("Vault not opened.")]` ❌
+- **No double-prefixing**: if wrapping an error that self-describes, use
+  `{0}` or `{self.0}` — don't add a category prefix. `ParseError` already
+  says "parse error" in its message; `DqlError` must not add another layer.
+  `#[error("DQL: {0}")]` ✅ `#[error("parse error: {0}")]` ❌
+- **One IO wrapper variant** per error type unless the variants carry distinct
+  context that callers need to match on. Three separate `Io(CreateDir)`,
+  `Io(WriteFile)`, `Io(Rename)` variants that all wrap `std::io::Error` with
+  only a different string should be collapsed into one
+  `Io(#[from] std::io::Error)` or `Io(String)` with context.
+- `PartialEq` on error types only when needed for test assertions — don't
+  derive it by rote.
+
+### 12.11 Dependency direction for utilities
+
+Dependency arrows in `crates/` flow **downward only**:
+
+```
+basalt-types (leaf — no internal deps)
+  ↑
+basalt-parser
+  ↑
+basalt-vault, basalt-search, basalt-tables, basalt-graph
+  ↑
+basalt-wasm (C-ABI wrappers)
+```
+
+**Rule:** shared utilities always flow with the dependency arrow. A utility
+in `basalt-tables` cannot be used by `basalt-parser` (that would be a cycle).
+A utility in `basalt-types` can be used by everyone.
+
+If a utility is needed by two crates at the same depth (e.g. vault + search),
+it must live one level down from both (i.e. `basalt-types` or `basalt-parser`).
+Never put shared logic in a peer crate and have the other peer depend on it.
+
+### 12.12 Pre-implementation checklist for new Rust code
+
+Before writing new utility code in any `crates/` crate:
+
+1. **Search first**: `grep -r "fn <utility_name>" crates/` — does it already
+   exist in another crate?
+2. **If yes → import it.** If it's in the wrong crate, move it (§12.8/§12.9
+   pattern) rather than writing a copy.
+3. **If no → put it in the leaf crate** both callers depend on (`basalt-types`
+   for path/collection utilities, `basalt-parser` for parsing utilities).
+4. **After writing:** run `cargo clippy --workspace --all-targets -- -D warnings
+   && cargo test --workspace` before committing.
+5. **Error messages:** lowercase, no double-prefix, no trailing period (§12.10).
