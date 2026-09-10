@@ -178,5 +178,29 @@
     "name": "Open today's daily note",
     "category": "Daily notes",
     "icon": "IconCalendarEvent"
+  },
+  {
+    "id": "tasks:create",
+    "name": "Tasks: Create task",
+    "category": "Tasks",
+    "icon": "IconPlus"
+  },
+  {
+    "id": "tasks:edit",
+    "name": "Tasks: Edit task",
+    "category": "Tasks",
+    "icon": "IconPencil"
+  },
+  {
+    "id": "tasks:toggle",
+    "name": "Tasks: Toggle done",
+    "category": "Tasks",
+    "icon": "IconCheckbox"
+  },
+  {
+    "id": "tasks:cycle-status",
+    "name": "Tasks: Cycle status",
+    "category": "Tasks",
+    "icon": "IconRefresh"
   }
 ]

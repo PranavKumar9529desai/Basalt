@@ -13,11 +13,11 @@ export interface CreateTaskInput {
   priority?: string;
   due?: string;
   scheduled?: string;
+  start?: string;
   recurrence?: string;
   tags?: string[];
 }
 
-/** Wire shape of `update_task` (mirrors Rust UpdateTaskInput). */
 export interface UpdateTaskInput {
   path: string;
   line_number: number;
@@ -26,6 +26,7 @@ export interface UpdateTaskInput {
   priority?: string;
   due?: string;
   scheduled?: string;
+  start?: string;
   recurrence?: string;
   tags?: string[];
 }

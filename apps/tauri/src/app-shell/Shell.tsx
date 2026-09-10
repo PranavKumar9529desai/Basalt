@@ -49,9 +49,8 @@ import {
   ViewHeader,
   startEditorContextSync,
 } from "../shared";
-import "../features/export/lib/commands";
-import "../features/templates/lib/commands";
 import "../features/tasks";
+import { setTaskContext } from "../features/tasks";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
 import "./registrations";
@@ -128,6 +127,12 @@ function WorkspaceShell({
   // authority — single owner, so pane churn can't leave stale flags.
   useEffect(() => startEditorContextSync(), []);
 
+  // Tasks feature resolves the active note path outside React (commands).
+  // Re-inject whenever the active note changes so closures stay fresh.
+  const activePath = ws.activeNote?.path ?? null;
+  useEffect(() => {
+    setTaskContext({ getActivePath: () => activePath });
+  }, [activePath]);
   // Reading-mode deps for the search preview, composed where editor + vault
   // services coexist. See features/search/types.ts (PreviewDeps) — ADR-029
   // full reading-mode parity. `parseFrontmatter` is a stable module fn and the
@@ -278,6 +283,10 @@ function WorkspaceShell({
         onSearchOpen={ws.openNote}
         onCreateNote={ws.createNoteFromQuery}
         previewDeps={previewDeps}
+        taskModal={{
+          getActivePath: () => ws.activeNote?.path ?? null,
+          onTaskCreated: ws.openNote,
+        }}
       />
 
       <TabDragGhost />

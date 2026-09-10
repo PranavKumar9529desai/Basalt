@@ -26,6 +26,14 @@ const ExportDialog = lazy(() =>
 const TemplatePicker = lazy(() =>
   import("../features/templates").then((m) => ({ default: m.TemplatePicker })),
 );
+const CreateTaskModal = lazy(() =>
+  import("../features/tasks").then((m) => ({ default: m.CreateTaskModal })),
+);
+
+interface TaskModalProps {
+  getActivePath: () => string | null;
+  onTaskCreated: (path: string, line?: number) => void;
+}
 
 interface OverlaysProps {
   contextMenu: {
@@ -57,6 +65,7 @@ interface OverlaysProps {
   onSearchOpen: (path: string, line?: number) => void;
   onCreateNote: (name: string) => Promise<boolean>;
   previewDeps: PreviewDeps;
+  taskModal: TaskModalProps;
 }
 
 export function Overlays({
@@ -67,6 +76,7 @@ export function Overlays({
   onSearchOpen,
   onCreateNote,
   previewDeps,
+  taskModal,
 }: OverlaysProps) {
   return (
     <>
@@ -112,9 +122,14 @@ export function Overlays({
         <SettingsModal />
         <ExportDialog previewDeps={previewDeps} />
         <TemplatePicker />
+        <CreateTaskModal
+          getActivePath={taskModal.getActivePath}
+          onTaskCreated={taskModal.onTaskCreated}
+        />
       </Suspense>
 
       <IndexingProgressToast />
     </>
   );
 }
+

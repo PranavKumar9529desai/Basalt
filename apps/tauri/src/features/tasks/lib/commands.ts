@@ -4,6 +4,10 @@
  * Toggling/cycling edit the CM6 document directly (the tab save flow
  * persists); no IPC needed for these — the source document is the
  * source of truth and the Rust scanner re-parses on the next index.
+ *
+ * Create/edit open the modal; edit resolves the target line from the
+ * cursor and the note path from the context injected by the shell
+ * (features never import each other, AGENTS.md §3).
  */
 import { syntaxTree } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
@@ -13,6 +17,16 @@ import {
   statusToCheckboxChar,
 } from "@workspace/editor";
 
+import { useTaskModalStore } from "../store";
+
+/** Shell-injected context: resolves the active note path outside React. */
+let taskContext: { getActivePath: () => string | null } = {
+  getActivePath: () => null,
+};
+
+export function setTaskContext(ctx: typeof taskContext): void {
+  taskContext = ctx;
+}
 /**
  * Active markdown view: the focused editor if any, else the first visible
  * one. Same DOM-level access as `features/templates/lib/commands.ts`.
@@ -109,5 +123,20 @@ export function registerTaskCommands() {
     if (!marker) return;
     const status = statusFromMarker(marker.text);
     replaceMarkerAtCursor(view, marker, cycleStatus(status));
+  });
+
+  commandService.registerCommand("tasks:create", () => {
+    useTaskModalStore.getState().openCreate();
+  });
+
+  commandService.registerCommand("tasks:edit", () => {
+    const view = findActiveMarkdownView();
+    if (!view) return;
+    const marker = taskMarkerAtCursor(view);
+    if (!marker) return;
+    const path = taskContext.getActivePath();
+    if (!path) return;
+    const line = view.state.doc.lineAt(marker.from).number;
+    useTaskModalStore.getState().openEdit({ path, line });
   });
 }

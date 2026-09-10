@@ -6,6 +6,164 @@
 > with authority only over "what are we doing right now".
 
 ---
+## ADR-048 Native Task Management — Phases 1–5 DONE, Phase 6 next (2026-09-10)
+
+**Branch:** `feat/adr-048-task-management` (Phases 1–4 committed; Phase 5
+uncommitted until the Phase 5 commit lands — gate is green).
+
+**Goal:** Native task management (kanban explicitly EXCLUDED by user). Scope:
+Rust query engine + Tauri IPC, ```tasks block widget, editor signifier
+enhancements, create/edit modal, settings + commands + keybindings.
+
+**Note:** The prior CURRENT_WORK note ("cargo test --workspace fails in
+basalt-tables — user WIP urgency.rs/output.rs") is now RESOLVED — that WIP was
+this work; deps added, `output.rs` rewritten, all crates pass.
+
+### Phase 1 — Rust scanner + data model ✅
+- `crates/basalt-types/src/task.rs` — `TaskData`, `TaskStatus`, `TaskPriority`
+  (30+ tests)
+- `crates/basalt-types/src/metadata.rs` — `FileMetadata.tasks: Vec<TaskData>`
+  with `#[serde(default)]`
+- `crates/basalt-parser/src/task_scan.rs` (719 lines) — checkbox scanner +
+  signifier parsing (priority `⏫🔺🔼🔽⏬`, status `✅/🟢/🟡/🟠/🔴/⛔`,
+  dates `📅 🛫 ⏳ ✅ created` via `YYYY-MM-DD`, tags `#tag`, recurring `🔁`),
+  integrated into `scan_body_tokens_ascii/unicode` in `metadata.rs`
+
+### Phase 2 — Query engine + Tauri IPC ✅
+- `crates/basalt-tables/src/urgency.rs` — urgency score (11 tests)
+- `crates/basalt-tables/src/output.rs` — `execute_task_query(vault,
+  Option<&TaskQuery>)`, `task_to_row`, `matches_filter`, `sort_tasks`,
+  `collect_all_tasks`, `task_columns` (full + short modes); 10 output columns:
+  File/Path/Line/Description/Status/Priority/Due/Scheduled/Tags/Urgency
+- `crates/basalt-tables/src/engine.rs` (line 307) — `QueryType::Task =>
+  execute_task_query(vault, None)`
+- `apps/tauri/src-tauri/src/commands/tasks/` — 5 commands: `get_tasks`,
+  `toggle_task`, `create_task`, `update_task`, `get_task_line`. **Module split
+  (Phase 5):** `commands/tasks/{mod,line,signifiers,serializer}.rs` — the
+  700-line monolith is GONE; signifier parsing, line parsing, and line
+  serialization are separate files.
+- `apps/tauri/src-tauri/src/{commands/mod.rs, lib.rs}` — wired into handler list
+- `crates/basalt-tables/tests/task_query.rs` — 12 integration tests
+- **Gate passed:** `cargo test --workspace` + `cargo clippy --workspace
+  --all-targets -- -D warnings` both clean BEFORE the TS phase
+
+### Phase 3 — ```tasks block widget (packages/editor) ✅
+- `src/block-widgets/task-query-types.ts` — TS mirror of TaskQuery/TaskFilter/
+  TaskSort + `RunTasksQueryFn` + `TaskDisplayOptions` + `ParsedTaskQuery`
+- `src/block-widgets/task-query-parser.ts` (401 lines) — line-based instruction
+  parser: done/not-done, status, priority (above/below/is/in), dates with
+  relative tokens (today/tomorrow/yesterday/this|next|last week), no-due-date/
+  exists, description/tags/path/folder/filename, recurring/blocked, sort/group/
+  limit, display options (short mode, hide X, show urgency). Unsupported lines
+  collected into `unsupported[]` for a footer warning.
+- `src/block-widgets/task-query-html.ts` — renders the 10-column result as a
+  task list: checkbox icons, priority badges, date chips, tag pills, urgency,
+  backlink links. Client-side grouping on `query.groups[0]`.
+- `src/block-widgets/task-query-theme.ts` — `TASK_WIDGET_THEME` via
+  `EditorView.baseTheme` with `--sat-*` tokens
+- `src/block-widgets/task-query-widget.ts` — `TaskQueryWidget` + 
+  `taskQueryBlockSpec`; detects `tasks`/`task` fenced langs, parses, caches by
+  `${todayKey()}::${body}` (relative-date expiry at midnight), `getTasksQueryFacet`
+  injection, code-toggle button in live mode, null span when caret in block
+- `src/block-widgets/dql-types.ts` — added `list` TypedValue variant AND
+  `"list"` to `QueryColumn.type` (Tags columns arrive as list cells)
+- `src/block-widgets/dql-html.ts` — `renderCellHtml` `list` case added
+  (`.map(renderCellHtml).join(", ")`)
+- `src/editor.ts` — `commonBlockWidgetExtensions(config?)` gained
+  `runTasksQuery` param; registers task spec/theme/facet when provided;
+  forwarded through `createEditorExtensionGroups`, `readingExtensions`,
+  `readingModeExtras`
+- `src/index.ts` — exports: `taskQueryBlockSpec`, `TASK_WIDGET_THEME`,
+  `clearTaskQueryCache`, `getTasksQueryFacet` + 6 types
+- `src/preview/code-blocks.ts` — **critical live-preview fix**: 
+  `handleCodeBlockNode` only passed `dql`/`dataview`/`mermaid` through to the
+  block-widget walk; added `tasks`/`task` to the allowlist or ```tasks blocks
+  render as raw code chrome in live mode (found via e2e test; READ THIS if
+  results don't render in a new surface)
+- Feature wiring: `features/editor/hooks/useNoteIO.ts` (`runTasksQuery`
+  → `invoke("get_tasks", { query })`), `controller/EditorController.ts` +
+  `.test.ts` (NoteIO interface + fixture)
+- Tests: `task-query-parser.test.ts` (22), `task-widget.test.ts` (9, incl.
+  e2e through `createEditorExtensions` in reading+live modes),
+  `public-api.test.ts` snapshot updated; editor suite 314/314 at the time
+
+### Phase 4 — Editor signifier decorations + status cycling ✅
+- `features/tasks/` canonical layout: `index.ts`, `types.ts`, `lib/commands.ts`
+  (toggle + cycle-status via CM6 transaction, no IPC in hot path),
+  `lib/task-icons.ts`, `hooks/useTaskActions.ts`, `components/TaskBadge.tsx`,
+  `components/TaskDateChip.tsx`
+- `packages/editor/src/input/task-signifiers.ts` — pure-TS signifier parser
+  (mirror of Rust scanner), zero allocations per visible range
+
+### Phase 5 — Create/Edit modal ✅
+- **Rust fixes (committed in the module-split commit `da94ab6`):**
+  - `priority_to_signifier` emits ADR-048 §2.3 canonical emoji
+    (`⏫/🔼/🔽/⏬`); legacy `🔴/🟡/🔵/⬇️` + p0–p4 read for compat
+  - start/scheduled swap: `🛫`→start, `⏳`→scheduled (matches Phase 1
+    scanner + TS parser); `CreateTaskInput`/`UpdateTaskInput` both carry
+    `start`
+  - `?` checkbox char ↔ `on_hold` status round-trip
+  - multi-token recurrence: `🔁every 2 weeks on Friday` absorbed as one
+    rule via byte-offset slicing
+  - **description-stripping fix:** `parse_task_line_parts` returns only
+    plain-text description (signifiers are leaf suffixes) — fixes
+    `get_task_line` prefill double-serialization AND `update_task` fallback
+  - `build_task_line_from_parts` takes a `TaskLineParts` struct
+    (clippy too_many_arguments)
+- `features/tasks/store.ts` — `useTaskModalStore` (isOpen/mode/editTarget)
+- `features/tasks/components/CreateTaskModal.tsx` — shadcn Dialog; fields:
+  Description, Status (edit-only), Priority, Due/Scheduled/Start (native
+  date inputs), Recurrence (presets + custom), Tags (chips). Validation:
+  description required; recurrence needs ≥1 date. Props
+  `getActivePath`/`onTaskCreated` injected from Shell (no cross-feature
+  imports)
+- `features/tasks/lib/commands.ts` — `tasks:create` + `tasks:edit`
+  registered (edit resolves path+line via shell-injected `setTaskContext`)
+- Shell/Overlays wiring: `setTaskContext` effect in `Shell.tsx`; lazy
+  `CreateTaskModal` in `Overlays.tsx`
+- `packages/commands` — 4 tasks entries in `commands.json`
+  (create/edit/toggle/cycle-status) + `IconCheckbox`/`IconRefresh`
+- Tests: 11 Rust module tests (including round-trip), 8 modal tests
+  (create/edit round-trip, validation, tags, escape)
+
+### Phase 6 — Settings + Commands + Keybindings (NEXT)
+- 9 task settings in `settings-data.ts` + `specs/tasks.ts` +
+  `CorePluginsSection.tsx`
+- remaining `commands.json` entries (set-priority, set-due/scheduled,
+  board-view is EXCLUDED, postpone) + `icons.ts`
+- `Mod+Enter` keybinding in `packages/keybindings`
+
+### Key decisions (respect these)
+- `execute_task_query` bypasses the DQL WorkRow pipeline — iterates vault
+  metadata directly
+- `matches_filter(path, task, filter)` — path/folder/filename predicates need
+  the source path; signature takes it first
+- Date-range semantics: `due this week` → two inclusive filters
+  (`on_or_after` start + `on_or_before` end); `before/after this week` → single
+  bound
+- Bare relative dates (`due tomorrow`) = equality ("on")
+- Display options are frontend-only — parsed alongside query, never sent to Rust
+- Cache key `${todayKey()}::${body}`; `clearTaskQueryCache()` exported for tests
+- Module split: `commands/tasks/` is a directory module; NEVER rebuild a
+  700-line monolith (repeated surgical edits corrupted it)
+- Simpler description semantics: description = text before the FIRST
+  signifier token (signifiers are leaf suffixes in the canonical layout)
+- App vitest: `bun run test` (NOT `bun test` — that runs Bun's runner without
+  jsdom/vi.mocked and shows bogus failures)
+- `local/adr048-plan.md` is scratch; `local/` is gitignored scratch space
+
+### Commands
+```bash
+cd packages/editor && bunx vitest run          # editor test suite (337/337)
+cd packages/editor && bunx tsc --noEmit        # editor types
+cd apps/tauri && bun run test                  # app vitest (362/362)
+cd apps/tauri && bunx tsc --noEmit             # app types
+cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings
+bun run lint                                   # oxlint at repo root
+```
+
+
+---
 
 ## Obsidian Excalidraw plugin compat — COMPLETE ✅ (2026-09-10)
 
