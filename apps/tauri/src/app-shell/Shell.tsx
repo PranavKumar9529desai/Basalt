@@ -153,9 +153,7 @@ function WorkspaceShell({
 
   const renderLeaf = useCallback(
     (ctx: LeafRenderContext) => {
-      const tab = ctx.activeTabId
-        ? useTabsStore.getState().tabs[ctx.activeTabId]
-        : null;
+      const tab = ctx.activeTab;
       if (!tab) return null;
 
       const leaf =

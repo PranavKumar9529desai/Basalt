@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import type { LeafTabInfo } from "@workspace/views";
 import type { LayoutNode, LeafNode, PaneId } from "../types";
 import { useTabsStore } from "../store";
 import { useTabDnD } from "../hooks/useTabDnD";
@@ -8,6 +9,7 @@ import { EdgeDropZones } from "./EdgeDropZones";
 export interface LeafRenderContext {
   paneId: PaneId;
   activeTabId: string | null;
+  activeTab: LeafTabInfo | null;
   markTabDirty: (tabId: string, dirty: boolean) => void;
 }
 
@@ -58,13 +60,19 @@ function LeafPane({
 }) {
   const markTabDirty = useTabsStore((state) => state.markTabDirty);
   const activatePane = useTabsStore((state) => state.activatePane);
+  const activeTabId = node.tabGroup.activeTabId;
+  const activeTab = useTabsStore((state) =>
+    activeTabId ? (state.tabs[activeTabId] ?? null) : null,
+  );
 
   // The node prop carries this leaf's own tab group (root is the source of
   // truth in ADR-032), so each pane renders ITS active tab — never another
-  // pane's. Rerenders arrive through the tree subscription in the shell.
+  // pane's. Rerenders arrive through the tree subscription in the shell and
+  // the reactive activeTab subscription for tab state changes (e.g. viewMode).
   const ctx: LeafRenderContext = {
     paneId: node.id,
-    activeTabId: node.tabGroup.activeTabId,
+    activeTabId,
+    activeTab,
     markTabDirty,
   };
 
