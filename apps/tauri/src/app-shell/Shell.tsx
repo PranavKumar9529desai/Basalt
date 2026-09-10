@@ -49,8 +49,8 @@ import {
   ViewHeader,
   startEditorContextSync,
 } from "../shared";
-import "../features/export/commands";
-import "../features/templates/commands";
+import "../features/export/lib/commands";
+import "../features/templates/lib/commands";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
 import "./registrations";
