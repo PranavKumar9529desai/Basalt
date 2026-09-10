@@ -8,6 +8,7 @@ import {
   contextMenuExtension,
   createEditorExtensionGroups,
   readingModeExtras,
+  requestPreviewRebuild,
 } from "@workspace/editor";
 import { useKeybindingService } from "@workspace/keybindings";
 import type { LeafServices, LeafTabInfo } from "@workspace/views";
@@ -191,36 +192,42 @@ export class EditorController {
 
   /** Switch between edit and reading mode by reconfiguring the mode compartment.
    * Scroll position and undo history survive the switch (CM6 reuses the state). */
-  setMode(mode: "edit" | "reading") {
-    if (mode === this.currentMode) return;
+  setMode(mode: "edit" | "reading", force = false) {
+    if (!force && mode === this.currentMode) return;
     this.currentMode = mode;
     const view = this.view;
     if (!view) return;
 
     if (mode === "reading") {
       view.dispatch({
-        effects: this.modeCompartment.reconfigure(
-          readingModeExtras({
-            runQuery: this.io.runQuery,
-            onOpenLink: this.handleOpenLink,
-            onOpenTag: this.handleOpenTag,
-            openExternalLink: this.openExternalLink,
-            resolveAsset: this.services.resolveAsset,
-            parseFrontmatter: this.io.parseFrontmatter,
-          }),
-        ),
+        effects: [
+          this.modeCompartment.reconfigure(
+            readingModeExtras({
+              runQuery: this.io.runQuery,
+              onOpenLink: this.handleOpenLink,
+              onOpenTag: this.handleOpenTag,
+              openExternalLink: this.openExternalLink,
+              resolveAsset: this.services.resolveAsset,
+              parseFrontmatter: this.io.parseFrontmatter,
+            }),
+          ),
+        ],
       });
+      requestPreviewRebuild(view);
     } else {
       // Revert to edit mode — rebuild edit extensions from the groups.
       const groups = this.editGroups();
       view.dispatch({
-        effects: this.modeCompartment.reconfigure([
-          ...groups.input,
-          ...groups.suggestions,
-          ...groups.links,
-          ...groups.blockWidgets,
-        ]),
+        effects: [
+          this.modeCompartment.reconfigure([
+            ...groups.input,
+            ...groups.suggestions,
+            ...groups.links,
+            ...groups.blockWidgets,
+          ]),
+        ],
       });
+      requestPreviewRebuild(view);
     }
   }
 
@@ -272,6 +279,7 @@ export class EditorController {
       this.statesRef.delete(t.id);
       this.statesRef.set(t.id, cached);
       view.setState(cached);
+      this.setMode(t.viewMode ?? "edit", true);
       this.onDocumentReady?.();
       view.scrollDOM.scrollTop = this.scrollRef.get(t.id) ?? 0;
       this.io.setSaveStatus(this.isDirty(t.id) ? "unsaved" : "saved");
@@ -298,6 +306,7 @@ export class EditorController {
       });
       this.statesRef.set(t.id, state);
       view.setState(state);
+      this.setMode(t.viewMode ?? "edit", true);
       this.onDocumentReady?.();
       view.scrollDOM.scrollTop = 0;
       if (t.line) this.revealLine(t.line);

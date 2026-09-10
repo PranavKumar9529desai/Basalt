@@ -38,8 +38,8 @@ function makeFakeView(doc = ""): {
       lastState.current = newState;
       fake.state = newState;
     },
-    dispatch(spec: { selection: { anchor: number } }) {
-      void spec.selection.anchor;
+    dispatch(spec?: { selection?: { anchor: number } }) {
+      void spec?.selection?.anchor;
     },
   };
   return { view: fake as unknown as EditorView, lastState, scrollTop };
