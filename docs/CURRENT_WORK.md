@@ -6,11 +6,13 @@
 > with authority only over "what are we doing right now".
 
 ---
-## ADR-048 Native Task Management — Phases 1–6 DONE (2026-09-10)
+## ADR-048 Native Task Management — MERGED to main ✅ (2026-09-10)
 
-**Branch:** `feat/adr-048-task-management` (Phases 1–5 committed — `f186845`,
-`6448b11`, `9b9fecd`, `02618e2`, `da94ab6`, `5043730`; Phase 6 uncommitted
-until the Phase 6 commit lands — gate is green).
+**Merged:** fast-forward `ccc7e63..16e3c78` onto `main` (2026-09-10); branch
+history: `f186845` Phase 1 scanner/data model · `6448b11` Phase 2 query
+engine+IPC · `9b9fecd` Phase 3 ```tasks block widget · `02618e2` Phase 4
+signifier decorations · `da94ab6` Phase 5 module split · `5043730` Phase 5
+create/edit modal · `16e3c78` Phase 6 settings/commands/keybindings.
 
 **Goal:** Native task management (kanban explicitly EXCLUDED by user). Scope:
 Rust query engine + Tauri IPC, ```tasks block widget, editor signifier
@@ -904,4 +906,6 @@ WASM before tagging.
 
 See git log for completed features: ADR-023 (inline title + rename), editor
 performance campaign (ADR-019/020, p95 = 4ms @ 100KB), graph view (ADR-021),
-DQL query engine (ADR-027/028). All merged to main.
+DQL query engine (ADR-027/028), native task management (ADR-048, kanban
+excluded; see the merged ADR-048 section above for phase notes). All merged to
+main.
