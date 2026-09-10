@@ -91,10 +91,14 @@ export const MatchRow = memo(function MatchRow({
       }}
       onClick={() => onOpen(file.path, match.lineNumber)}
     >
-      <span className={`text-[9px] tabular-nums ${selected ? "opacity-70" : "text-[var(--sat-text-muted)]"}`}>
+      <span
+        className={`text-[9px] tabular-nums ${selected ? "opacity-70" : "text-[var(--sat-text-muted)]"}`}
+      >
         Ln {match.lineNumber}
       </span>
-      <span className={`w-full truncate text-[11px] leading-snug ${selected ? "" : "text-[var(--sat-text-primary)]"}`}>
+      <span
+        className={`w-full truncate text-[11px] leading-snug ${selected ? "" : "text-[var(--sat-text-primary)]"}`}
+      >
         <HighlightedText text={match.text} query={query} />
       </span>
     </Button>

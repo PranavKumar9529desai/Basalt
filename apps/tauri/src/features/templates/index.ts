@@ -1,4 +1,4 @@
-import "./commands";
+import "./lib/commands";
 
 export { formatDate } from "./lib/date-format";
 export { expandTemplate } from "./lib/expand-template";

@@ -18,7 +18,10 @@ export const GENERAL_SPECS: SettingItemSpec[] = [
     name: `Version ${APP_VERSION}`,
     description: `Installer version: ${APP_VERSION}. Read the changelog.`,
     type: "button",
-    button: { text: "Check for updates", onClick: deferred("Check for updates") },
+    button: {
+      text: "Check for updates",
+      onClick: deferred("Check for updates"),
+    },
   },
   {
     key: "autoUpdates",

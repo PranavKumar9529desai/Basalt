@@ -7,7 +7,10 @@ function nowMs() {
   return Date.now();
 }
 
-function resolveActiveTabId(state: TabsState, explicitTabId?: TabId): TabId | null {
+function resolveActiveTabId(
+  state: TabsState,
+  explicitTabId?: TabId,
+): TabId | null {
   if (explicitTabId) return explicitTabId;
   const leaf = findLeaf(state.root, state.activePaneId);
   return leaf?.tabGroup.activeTabId ?? null;

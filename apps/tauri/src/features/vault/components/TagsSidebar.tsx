@@ -67,13 +67,7 @@ export const TagsSidebar: FC<TagsSidebarProps> = ({ onOpenTag }) => {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle
-            cx="15"
-            cy="8"
-            r="1.5"
-            fill="currentColor"
-            stroke="none"
-          />
+          <circle cx="15" cy="8" r="1.5" fill="currentColor" stroke="none" />
         </svg>
         <span className="text-xs font-semibold text-[var(--sat-text-primary)] uppercase tracking-wide">
           Tags

@@ -39,7 +39,7 @@ A web app cannot do this. Expected: −150ms+ off launch.
 Window created `"visible": false`; the frontend calls `show()` immediately on
 mount — deliberately **not** gated on a paint rAF, because WebKit suspends
 `requestAnimationFrame` for hidden windows (observed deadlock until the
-failsafe). rAF is used only *after* `show()` to timestamp paint. Rust runs a
+failsafe). rAF is used only _after_ `show()` to timestamp paint. Rust runs a
 10s failsafe timer that shows the window regardless (JS failure must never
 yield an invisible app). Kills the white-flash and improves perceived launch
 even when real time is unchanged.

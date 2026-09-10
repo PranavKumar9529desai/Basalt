@@ -8,7 +8,7 @@ interface GuidelineLinesProps {
   horizontalLines?: number[];
 }
 
-function GuidelineLines({
+function GuidelineLinesInner({
   verticalLine,
   horizontalLine,
   verticalLines = [],
@@ -70,4 +70,4 @@ function GuidelineLines({
   );
 }
 
-export default memo(GuidelineLines);
+export const GuidelineLines = memo(GuidelineLinesInner);

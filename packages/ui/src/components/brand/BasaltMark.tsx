@@ -45,7 +45,11 @@ export const BasaltMark: FC<BasaltMarkProps> = ({
       viewBox="0 0 200 200"
       fill="none"
       aria-label="Basalt Emblem"
-      className={cn("inline-block select-none shrink-0", SIZE_CLASSES[size], className)}
+      className={cn(
+        "inline-block select-none shrink-0",
+        SIZE_CLASSES[size],
+        className,
+      )}
       style={style}
       {...props}
     >

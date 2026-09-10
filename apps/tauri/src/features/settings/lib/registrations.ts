@@ -7,11 +7,12 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react";
-import CommunityPluginsSection from "../components/sections/CommunityPluginsSection";
-import CorePluginsSection, {
+import { CommunityPluginsSection } from "../components/sections/CommunityPluginsSection";
+import {
   CORE_PLUGINS,
+  CorePluginsSection,
 } from "../components/sections/CorePluginsSection";
-import HotkeysSection from "../components/sections/HotkeysSection";
+import { HotkeysSection } from "../components/sections/HotkeysSection";
 import { settingsRegistry } from "./registry";
 import { getSetting } from "./settings-data";
 import {
@@ -34,7 +35,8 @@ import {
  */
 
 /** Plugin-gated visibility: absent from `enabledPlugins` = enabled. */
-const pluginEnabled = (id: string) => () => getSetting("enabledPlugins")[id] !== false;
+const pluginEnabled = (id: string) => () =>
+  getSetting("enabledPlugins")[id] !== false;
 
 // ─── Options — built-in preference pages ─────────────────────────────────
 settingsRegistry.register({
@@ -73,7 +75,8 @@ settingsRegistry.register({
   group: "options",
   icon: IconFolder,
   order: 3,
-  description: "Where new notes and attachments live, and how links are written.",
+  description:
+    "Where new notes and attachments live, and how links are written.",
   specs: FILES_LINKS_SPECS,
 });
 

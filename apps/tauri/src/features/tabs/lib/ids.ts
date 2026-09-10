@@ -1,3 +1,4 @@
+import { stemOf } from "@workspace/ui";
 import type { TabId } from "../types";
 
 let uniqueId = 0;
@@ -15,11 +16,5 @@ export function newTabId(path: string): TabId {
 
 /** Human label for a note path: basename minus a known extension. */
 export function label(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  const file = normalized.split("/").pop() ?? path;
-  return file.endsWith(".canvas")
-    ? file.slice(0, -7)
-    : file.endsWith(".md")
-      ? file.slice(0, -3)
-      : file;
+  return stemOf(path) || path;
 }

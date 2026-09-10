@@ -8,5 +8,7 @@ import { TagsSidebar } from "../../features/vault/components/TagsSidebar";
  */
 export function Tags() {
   const openSearchWithQuery = useSearchStore((s) => s.openSearchWithQuery);
-  return <TagsSidebar onOpenTag={(tag) => void openSearchWithQuery(`tag:${tag}`)} />;
+  return (
+    <TagsSidebar onOpenTag={(tag) => void openSearchWithQuery(`tag:${tag}`)} />
+  );
 }

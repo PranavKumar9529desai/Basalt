@@ -137,7 +137,9 @@ export const swallowClickAfterDrag = (e: MouseEvent) => {
 // Read the shared drag state first, then fall back to dataTransfer. This is
 // necessary because on macOS WebKit (Tauri), `dragend` can fire before `drop`,
 // which would null the shared state before the drop handler runs.
-export function readDraggedTab(event: DragEvent<Element>): DraggedTabState | null {
+export function readDraggedTab(
+  event: DragEvent<Element>,
+): DraggedTabState | null {
   if (draggedTab) return draggedTab;
   try {
     const raw = event.dataTransfer.getData("application/x-basalt-tab");

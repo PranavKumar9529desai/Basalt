@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./src/index.ts",
     "./components/sidebar": "./src/components/sidebar/index.ts",
     "./components/file-tree": "./src/components/file-tree/index.ts",
     "./components/ribbon": "./src/components/ribbon/index.ts",
@@ -20,6 +21,7 @@
     "./hooks/*": "./src/hooks/*.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

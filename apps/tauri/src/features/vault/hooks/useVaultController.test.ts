@@ -76,9 +76,7 @@ describe("useVaultController", () => {
     });
   });
 
-
   describe("context menu", () => {
-
     it("onTreeContextMenu selects the node and opens its menu", () => {
       const { result } = setup({ visibleNodes: [B] });
       act(() => result.current.onTreeContextMenu(B, mouse()));

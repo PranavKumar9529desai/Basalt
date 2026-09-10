@@ -5,5 +5,13 @@
  */
 
 export { cn } from "./lib/utils";
+export {
+  basename,
+  isCanvasPath,
+  isDocumentPath,
+  isMarkdownPath,
+  normalizePath,
+  stemOf,
+} from "./lib/paths";
 
 export { useClickOutside, useMediaQuery, useResizeObserver } from "./hooks";

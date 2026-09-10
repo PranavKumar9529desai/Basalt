@@ -23,6 +23,7 @@ import type { TabModel } from "../features/tabs";
 import { useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
 import { useVaultController, useVaultMutations } from "../features/vault";
+import { isMarkdownPath } from "@workspace/ui";
 import { useSetting } from "../features/settings";
 
 interface NoteSelection {
@@ -182,8 +183,7 @@ export function useWorkspace({
       newName: string,
     ): Promise<RenameResult> => {
       try {
-        const isNote =
-          !target.isFolder && target.name.toUpperCase().endsWith(".MD");
+        const isNote = !target.isFolder && isMarkdownPath(target.name);
         const result: RenameNodeResult = isNote
           ? await invoke<RenameNodeResult>("rename_note", {
               path: target.path,

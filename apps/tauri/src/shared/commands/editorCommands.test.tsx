@@ -60,8 +60,9 @@ describe("editor:find / editor:replace", () => {
 
     const panel = view.dom.querySelector<HTMLDivElement>(".cm-search");
     expect(panel).not.toBeNull();
-    const replace =
-      panel?.querySelector<HTMLInputElement>('input[name="replace"]');
+    const replace = panel?.querySelector<HTMLInputElement>(
+      'input[name="replace"]',
+    );
     expect(replace).not.toBeNull();
     expect(document.activeElement).toBe(replace);
   });

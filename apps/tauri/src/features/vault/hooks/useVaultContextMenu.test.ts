@@ -8,7 +8,9 @@ const B = node("b.md", "file", 1);
 describe("useVaultContextMenuState", () => {
   it("openForNode records the anchor, target, and multi-select flag", () => {
     const { result } = renderHook(() => useVaultContextMenuState());
-    act(() => result.current.openForNode(B, mouse({ clientX: 9, clientY: 11 }), false));
+    act(() =>
+      result.current.openForNode(B, mouse({ clientX: 9, clientY: 11 }), false),
+    );
     const ms = result.current.menuState;
     expect(ms.anchor).toEqual({ x: 9, y: 11 });
     expect(ms.target?.kind).toBe("file");

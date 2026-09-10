@@ -40,7 +40,6 @@ class PreviewScheduler {
     this.schedule(_view);
   }
 
-
   update(update: {
     docChanged: boolean;
     selectionSet: boolean;

@@ -13,7 +13,7 @@ const SIDES = [
   { id: "left", pos: Position.Left },
 ] as const;
 
-function CardHandles({ borderColor, selected }: CardHandlesProps) {
+function CardHandlesInner({ borderColor, selected }: CardHandlesProps) {
   const highlightColor =
     borderColor && borderColor !== "var(--sat-layout-border)"
       ? borderColor
@@ -42,4 +42,4 @@ function CardHandles({ borderColor, selected }: CardHandlesProps) {
   );
 }
 
-export default memo(CardHandles);
+export const CardHandles = memo(CardHandlesInner);

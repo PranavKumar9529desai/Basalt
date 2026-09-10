@@ -13,10 +13,7 @@ import {
 import { parseMarkdownTable, type TableBlockModel } from "./table-parse";
 import type { ResolveAssetFn } from "./table-html";
 import { TABLE_BLOCK_THEME } from "./table-theme";
-import {
-  buildTableElement,
-  type TableRenderCallbacks,
-} from "./table-render";
+import { buildTableElement, type TableRenderCallbacks } from "./table-render";
 import { buildInteractiveChrome } from "./table-chrome";
 
 // ---------------------------------------------------------------------------

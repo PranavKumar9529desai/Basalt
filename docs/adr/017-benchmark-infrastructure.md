@@ -68,19 +68,19 @@ Output: color-coded terminal table showing each benchmark's change with ± confi
 
 ### Benchmark targets
 
-| Benchmark          | Crate           | Measures                                                                 |
-| ------------------ | --------------- | ------------------------------------------------------------------------ |
-| `parse_metadata`   | `basalt-parser` | Zero-AST scanner throughput — groups `seq_1k`/`parse_frontmatter_1k`/`seq_25k`/`parse_frontmatter_25k` |
-| `index_walk`       | `basalt-vault`  | `index_directory` full sweep + reindex — wall-clock time and allocations |
-| `cache_roundtrip`  | `basalt-vault`  | `VaultCache::save()` + `load()` on 1k / 5k entries                       |
-| `index_docs`       | `basalt-search` | Tantivy `IndexWriter::add_document` throughput                            |
-| `search_query`     | `basalt-search` | `index.search(q, 10)` on a fixed query set (no percentile breakdown)     |
-| `search_reindex`   | `basalt-search` | Full delete-all + rebuild index cycle                                     |
-| `graph_insert`     | `basalt-graph`  | `NoteGraph::add_document` — link rebuild cost per insert                  |
-| `graph_query`      | `basalt-graph`  | Backlink lookup latency                                                    |
-| `graph_step`       | `basalt-graph`  | One force-layout tick (25k)                                                |
-| `arena_growth`     | `basalt-graph`  | `StringArena` memory growth and allocation count vs entry count           |
-| `query_execution`  | `basalt-tables` | DQL query execution over a generated 25k-note corpus                      |
+| Benchmark         | Crate           | Measures                                                                                               |
+| ----------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `parse_metadata`  | `basalt-parser` | Zero-AST scanner throughput — groups `seq_1k`/`parse_frontmatter_1k`/`seq_25k`/`parse_frontmatter_25k` |
+| `index_walk`      | `basalt-vault`  | `index_directory` full sweep + reindex — wall-clock time and allocations                               |
+| `cache_roundtrip` | `basalt-vault`  | `VaultCache::save()` + `load()` on 1k / 5k entries                                                     |
+| `index_docs`      | `basalt-search` | Tantivy `IndexWriter::add_document` throughput                                                         |
+| `search_query`    | `basalt-search` | `index.search(q, 10)` on a fixed query set (no percentile breakdown)                                   |
+| `search_reindex`  | `basalt-search` | Full delete-all + rebuild index cycle                                                                  |
+| `graph_insert`    | `basalt-graph`  | `NoteGraph::add_document` — link rebuild cost per insert                                               |
+| `graph_query`     | `basalt-graph`  | Backlink lookup latency                                                                                |
+| `graph_step`      | `basalt-graph`  | One force-layout tick (25k)                                                                            |
+| `arena_growth`    | `basalt-graph`  | `StringArena` memory growth and allocation count vs entry count                                        |
+| `query_execution` | `basalt-tables` | DQL query execution over a generated 25k-note corpus                                                   |
 
 ## Rationale
 

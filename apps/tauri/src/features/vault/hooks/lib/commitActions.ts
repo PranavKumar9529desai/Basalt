@@ -109,11 +109,7 @@ export function createCommitActions(deps: CommitActionsDeps): CommitActions {
     mutations.clearRename();
     const isFolder = node.isFolder ?? target.kind === "folder";
     if (trimmed === target.name) return;
-    const newNameResolved = resolveRenameName(
-      trimmed,
-      target.name,
-      isFolder,
-    );
+    const newNameResolved = resolveRenameName(trimmed, target.name, isFolder);
     if (newNameResolved === target.name.replace(/\.md$/i, "")) return;
     void onRenameNode?.(
       { path: target.path, name: target.name, isFolder },

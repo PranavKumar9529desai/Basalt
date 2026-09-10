@@ -141,12 +141,12 @@ and unnecessary for XSS in this application:
 The single render-boundary is enough because every HTML sink feeds through
 it:
 
-| Render surface                              | Reads from        | Sanitizer |
-| ------------------------------------------- | ----------------- | --------- |
-| CM6 live-preview block widget (`html-block`) | raw text buffer   | DOMPurify |
-| CM6 reading mode (same widget path)          | raw text buffer   | DOMPurify |
-| CM6 inline `HTMLTag`                         | raw text buffer   | *no widget — stays raw + mark class* |
-| Search `PreviewPane` (CM6)                   | raw text          | DOMPurify |
+| Render surface                               | Reads from      | Sanitizer                            |
+| -------------------------------------------- | --------------- | ------------------------------------ |
+| CM6 live-preview block widget (`html-block`) | raw text buffer | DOMPurify                            |
+| CM6 reading mode (same widget path)          | raw text buffer | DOMPurify                            |
+| CM6 inline `HTMLTag`                         | raw text buffer | _no widget — stays raw + mark class_ |
+| Search `PreviewPane` (CM6)                   | raw text        | DOMPurify                            |
 
 DOMPurify runs once per block when it first enters the widget (not per
 keystroke), and the `WidgetType.eq()` guard skips re-render when content is
@@ -232,15 +232,61 @@ source of truth in `packages/editor/src/preview/html-sanitize.ts`:
 ```typescript
 export const HTML_SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
-    "div", "span", "p", "br", "hr", "pre", "code",
-    "details", "summary", "table", "thead", "tbody", "tr", "th", "td", "caption",
-    "figure", "figcaption", "strong", "em", "del", "ins", "mark", "sub", "sup",
-    "abbr", "ul", "ol", "li", "a", "img", "video", "audio", "source", "track",
+    "div",
+    "span",
+    "p",
+    "br",
+    "hr",
+    "pre",
+    "code",
+    "details",
+    "summary",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "caption",
+    "figure",
+    "figcaption",
+    "strong",
+    "em",
+    "del",
+    "ins",
+    "mark",
+    "sub",
+    "sup",
+    "abbr",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "img",
+    "video",
+    "audio",
+    "source",
+    "track",
   ],
   ALLOWED_ATTR: [
-    "class", "style", "id", "href", "src", "alt", "title", "width", "height",
-    "colspan", "rowspan", "scope", "controls", "autoplay", "loop", "muted",
-    "poster", "preload",
+    "class",
+    "style",
+    "id",
+    "href",
+    "src",
+    "alt",
+    "title",
+    "width",
+    "height",
+    "colspan",
+    "rowspan",
+    "scope",
+    "controls",
+    "autoplay",
+    "loop",
+    "muted",
+    "poster",
+    "preload",
   ],
   ALLOW_DATA_ATTR: false,
 };
@@ -257,14 +303,14 @@ export function sanitizeHtml(raw: string): string {
 
 Follows the `frontmatter.ts` block-widget pattern:
 
-| Field                  | Value                                                                                                                                                                             |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                   | `"html-block"`                                                                                                                                                                    |
-| `matches(node)`        | `node.type.name === "HTMLBlock"`                                                                                                                                                  |
-| `parse(state, node)`   | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()`, return `{ html: string }`                                                            |
+| Field                  | Value                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `"html-block"`                                                                                                                   |
+| `matches(node)`        | `node.type.name === "HTMLBlock"`                                                                                                 |
+| `parse(state, node)`   | Extract text via `state.doc.sliceString(node.from, node.to)`, sanitize with `sanitizeHtml()`, return `{ html: string }`          |
 | `render(model, state)` | `HtmlBlockWidget` — cursor-aware (`model.active`): raw source when the caret is inside the block, rendered `innerHTML` otherwise |
-| `span(model, state)`   | `{ from: node.from, to: node.to }`                                                                                                                                                |
-| `theme`                | CSS for `.cm-live-html-block` / `.sat-html`                                                                                                                                        |
+| `span(model, state)`   | `{ from: node.from, to: node.to }`                                                                                               |
+| `theme`                | CSS for `.cm-live-html-block` / `.sat-html`                                                                                      |
 
 Larger/off-screen blocks need no explicit gate: CM6 constructs widgets lazily
 near the viewport, and the >48KB doc-size parse budget defers the block parse
@@ -378,7 +424,7 @@ variants), `bun run lint && bunx tsc --noEmit`, and the editor test suite
 - `dompurify` is added to the frontend bundle (~7KB gzipped). This is
   acceptable for the security guarantees it provides.
 - Inline HTML stays raw-with-mark (deferred); the reading-mode `<span
-  style="color:red">text</span>` validation item below is not yet met.
+style="color:red">text</span>` validation item below is not yet met.
 
 ## Validation
 

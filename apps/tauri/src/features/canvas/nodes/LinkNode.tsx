@@ -8,8 +8,8 @@ import {
 } from "@tabler/icons-react";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
-import CardHandles from "./CardHandles";
-import { useCanvas } from "../components/CanvasContext";
+import { CardHandles } from "./CardHandles";
+import { useCanvas } from "../lib/CanvasContext";
 
 function normalizeUrl(input: string): string {
   const trimmed = input.trim();
@@ -18,7 +18,7 @@ function normalizeUrl(input: string): string {
   return `https://${trimmed}`;
 }
 
-function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
+function LinkNodeInner({ id, data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
   const url = (data.url as string) || "";
   const color = data.color as string | undefined;
@@ -203,4 +203,4 @@ function LinkNode({ id, data, selected }: NodeProps<CanvasXYNode>) {
   );
 }
 
-export default memo(LinkNode);
+export const LinkNode = memo(LinkNodeInner);

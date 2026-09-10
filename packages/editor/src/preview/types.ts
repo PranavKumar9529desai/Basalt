@@ -105,4 +105,3 @@ export function sortCodeBlockRanges(
 ): void {
   ranges.sort((a, b) => a.from - b.from);
 }
-

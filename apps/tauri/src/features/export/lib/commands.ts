@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import { commandService } from "@workspace/commands";
-import { useExportStore } from "./store";
+import { useExportStore } from "../store";
 
 function findActiveMarkdownView(): EditorView | null {
   const els = document.querySelectorAll<HTMLElement>(".cm-editor");

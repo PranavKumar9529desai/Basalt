@@ -22,12 +22,12 @@ feature, verified at extraction). `docs/file-splitting-plan.md` is the working b
 Full-tree scan of every `.ts`/`.tsx`/`.rs` file (excluding node_modules/target/generated
 schema). Findings, by size:
 
-| Tier | Count | Definition | Verdict |
-|---|---|---|---|
-| 1 — urgent | 4 files | >900 ln, mixed concerns in one file | Split first |
-| 2 — high | 12 files | 450–744 ln, clear seams exist | Split |
-| 3 — moderate | ~20 files | 300–450 ln | Split where seams exist; **Keep** when one concern |
-| 4 — tests | 6+ files | >350 ln test mods/files | Extract by scenario/concern |
+| Tier         | Count     | Definition                          | Verdict                                            |
+| ------------ | --------- | ----------------------------------- | -------------------------------------------------- |
+| 1 — urgent   | 4 files   | >900 ln, mixed concerns in one file | Split first                                        |
+| 2 — high     | 12 files  | 450–744 ln, clear seams exist       | Split                                              |
+| 3 — moderate | ~20 files | 300–450 ln                          | Split where seams exist; **Keep** when one concern |
+| 4 — tests    | 6+ files  | >350 ln test mods/files             | Extract by scenario/concern                        |
 
 Largest offenders: `graph/components/Graph.tsx` (1359), `block-widgets/table-widget.ts`
 (1053), `canvas/CanvasView.tsx` (907), `tabs/store/core.ts` (900), `vault/hooks/
@@ -40,7 +40,7 @@ useVaultController.ts` (744), `preview/live-preview.ts` (615), the two WebGL ren
 1. **Accretion on working surfaces.** The graph leaf, canvas leaf, and tab store each
    grew one interaction domain at a time inside the component/slice that first shipped;
    no one stopped to extract once the second or third concern landed.
-2. **Data-in-code inflation.** Shader sources and CM6 theme CSS are *data*, not logic,
+2. **Data-in-code inflation.** Shader sources and CM6 theme CSS are _data_, not logic,
    yet live inside the renderer/widget files (e.g. `packages/graph/src/renderer.ts` packs
    ~200 lines of GLSL plus three programs plus the class; `table-widget.ts` packs ~215
    lines of theme CSS).
@@ -60,20 +60,20 @@ interaction surface.
 ### 2.1 File budgets
 
 - **Production file ≤ ~400 ln soft** (TS) / **>500 ln is a smell**; Rust keeps ADR-030's
-  ~450 ln soft. These are tripwires for *mixed-concern* files, not single algorithms.
+  ~450 ln soft. These are tripwires for _mixed-concern_ files, not single algorithms.
 - **Component ≤ ~300 ln** of JSX/logic; interaction domains beyond that move to `lib/`
   hooks or child components.
 - **One store slice file per concern** (zustand): never a single `StateCreator` body with
   more than ~3 action domains.
 - **Test mods >~150 ln extracted** from production files (see §2.4).
 - **Data-in-code rule:** shader strings, theme CSS, and other static blobs are data —
-  split into their own file *even below the threshold* when they exceed ~20% of the file.
+  split into their own file _even below the threshold_ when they exceed ~20% of the file.
 
 ### 2.2 Module-first
 
 `foo.ts` → `foo/` directory as soon as a second concern exists inside it. Splits follow
 responsibility, never line-count alone: `parse` / `html` / `theme` / `widget` /
-`state` / `persistence` / `interactions` are the recognized seams. When a file *is* one
+`state` / `persistence` / `interactions` are the recognized seams. When a file _is_ one
 algorithm, keep it whole (see §4).
 
 ### 2.3 Import surfaces are frozen
@@ -87,7 +87,7 @@ should see a split. This is what makes the campaign mechanically safe.
 
 In-crate `#[cfg(test)] mod tests` blobs move to sibling `*_tests.rs` files included via
 `#[path = "..."]` + `#[cfg(test)] mod`, preserving access to crate internals. Tests of
-*pure public* surface become integration tests in `tests/`. `cargo test` output is
+_pure public_ surface become integration tests in `tests/`. `cargo test` output is
 unchanged — the split is organizational.
 
 ### 2.5 What is NOT in scope
@@ -101,29 +101,29 @@ test suite plus lint/type-check.
 
 ### Tier 1 — urgent (>900 ln)
 
-| File | ln | Split into | Disposition |
-|---|---|---|---|
-| `graph/components/Graph.tsx` | 1359 | `lib/graphWorker.ts`, `lib/geometry.ts`, `lib/themeColors.ts`, `lib/excerpt.ts`, `lib/persistedState.ts`, `lib/filters.ts`, `lib/localGraph.ts`, `lib/interactions.ts`; component keeps JSX + store wiring | ✅ `d40231b` (engine hook `useGraphEngine.ts` added — worker-entry isolation) |
-| `editor/block-widgets/table-widget.ts` | 1053 | `table-parse.ts`, `table-html.ts`, `table-theme.ts`; widget + spec stay | ✅ `3e8036b` |
-| `canvas/CanvasView.tsx` | 907 | `lib/useCanvasState.ts`, `lib/useCanvasPersistence.ts`, `lib/useCanvasKeyboard.ts`, `lib/useCanvasSelection.ts`, `lib/useCanvasGuidelines.ts`, `lib/useCanvasModals.ts` | ✅ `d40231b` |
-| `tabs/store/core.ts` | 900 | `core/openClose.ts`, `core/panes.ts`, `core/pin.ts`, `core/persistenceSync.ts`, `lib/ids.ts`; `createCoreSlice` composes them | ✅ `d40231b` |
+| File                                   | ln   | Split into                                                                                                                                                                                                 | Disposition                                                                   |
+| -------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `graph/components/Graph.tsx`           | 1359 | `lib/graphWorker.ts`, `lib/geometry.ts`, `lib/themeColors.ts`, `lib/excerpt.ts`, `lib/persistedState.ts`, `lib/filters.ts`, `lib/localGraph.ts`, `lib/interactions.ts`; component keeps JSX + store wiring | ✅ `d40231b` (engine hook `useGraphEngine.ts` added — worker-entry isolation) |
+| `editor/block-widgets/table-widget.ts` | 1053 | `table-parse.ts`, `table-html.ts`, `table-theme.ts`; widget + spec stay                                                                                                                                    | ✅ `3e8036b`                                                                  |
+| `canvas/CanvasView.tsx`                | 907  | `lib/useCanvasState.ts`, `lib/useCanvasPersistence.ts`, `lib/useCanvasKeyboard.ts`, `lib/useCanvasSelection.ts`, `lib/useCanvasGuidelines.ts`, `lib/useCanvasModals.ts`                                    | ✅ `d40231b`                                                                  |
+| `tabs/store/core.ts`                   | 900  | `core/openClose.ts`, `core/panes.ts`, `core/pin.ts`, `core/persistenceSync.ts`, `lib/ids.ts`; `createCoreSlice` composes them                                                                              | ✅ `d40231b`                                                                  |
 
 ### Tier 2 — high (450–744 ln)
 
-| File | ln | Split into | Disposition |
-|---|---|---|---|
-| `vault/hooks/useVaultController.ts` | 744 | `useVaultClipboard.ts`, `useVaultContextMenu.ts`, `useVaultSelection.ts`, `lib/vaultDnD.ts` | ✅ `3e8036b` (no DnD code exists → `lib/vaultDnD.ts` skipped) |
-| `editor/preview/live-preview.ts` | 615 | `collector.ts`, `scheduler.ts`, `tag-marks.ts` (engine core stays) | ✅ `3e8036b` |
-| `packages/graph/src/renderer.ts` | 596 | `shaders.ts`, `programs.ts`, `renderer.ts` | ✅ `3e8036b` |
-| `packages/canvas/src/renderer.ts` | 569 | same shape (shaders/programs/renderer) | ✅ `3e8036b` |
-| `tabs/hooks/useTabDnD.ts` | 512 | `lib/dragState.ts`, `lib/hitTest.ts`, `lib/dropExec.ts` | ✅ `3e8036b` |
-| `editor/controller/EditorController.ts` | 473 | `lib/linkFetch.ts`, `lib/viewEvents.ts` (lite) | ✅ `d40231b` |
-| `shared/editorCommands.tsx` | 470 | `commands/editorCommands.ts`, `commands/tableCommands.ts`, `commands/devBenchmarks.ts` | ✅ `d40231b` |
-| `editor/block-widgets/dql-widget.ts` | 464 | `dql-types.ts`, `dql-html.ts`, `dql-theme.ts` | ✅ `3e8036b` |
-| `commands/assets/reorganize.rs` | 612 | `rewrite.rs` (embed rewriting), `reorganize_tests.rs` | ✅ `3e8036b` |
-| `commands/notes/rename.rs` | 586 | `rename_attachments.rs`, `rename_tests.rs` | ✅ `3e8036b` |
-| `commands/folders/move_rename.rs` | 573 | `move.rs`, `rename.rs`, `common.rs`, `move_rename_tests.rs` | ✅ `3e8036b` |
-| `commands/media.rs` | 497 | `media/server.rs`, `media/http.rs` | ✅ `3147787` |
+| File                                    | ln  | Split into                                                                                  | Disposition                                                   |
+| --------------------------------------- | --- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `vault/hooks/useVaultController.ts`     | 744 | `useVaultClipboard.ts`, `useVaultContextMenu.ts`, `useVaultSelection.ts`, `lib/vaultDnD.ts` | ✅ `3e8036b` (no DnD code exists → `lib/vaultDnD.ts` skipped) |
+| `editor/preview/live-preview.ts`        | 615 | `collector.ts`, `scheduler.ts`, `tag-marks.ts` (engine core stays)                          | ✅ `3e8036b`                                                  |
+| `packages/graph/src/renderer.ts`        | 596 | `shaders.ts`, `programs.ts`, `renderer.ts`                                                  | ✅ `3e8036b`                                                  |
+| `packages/canvas/src/renderer.ts`       | 569 | same shape (shaders/programs/renderer)                                                      | ✅ `3e8036b`                                                  |
+| `tabs/hooks/useTabDnD.ts`               | 512 | `lib/dragState.ts`, `lib/hitTest.ts`, `lib/dropExec.ts`                                     | ✅ `3e8036b`                                                  |
+| `editor/controller/EditorController.ts` | 473 | `lib/linkFetch.ts`, `lib/viewEvents.ts` (lite)                                              | ✅ `d40231b`                                                  |
+| `shared/editorCommands.tsx`             | 470 | `commands/editorCommands.ts`, `commands/tableCommands.ts`, `commands/devBenchmarks.ts`      | ✅ `d40231b`                                                  |
+| `editor/block-widgets/dql-widget.ts`    | 464 | `dql-types.ts`, `dql-html.ts`, `dql-theme.ts`                                               | ✅ `3e8036b`                                                  |
+| `commands/assets/reorganize.rs`         | 612 | `rewrite.rs` (embed rewriting), `reorganize_tests.rs`                                       | ✅ `3e8036b`                                                  |
+| `commands/notes/rename.rs`              | 586 | `rename_attachments.rs`, `rename_tests.rs`                                                  | ✅ `3e8036b`                                                  |
+| `commands/folders/move_rename.rs`       | 573 | `move.rs`, `rename.rs`, `common.rs`, `move_rename_tests.rs`                                 | ✅ `3e8036b`                                                  |
+| `commands/media.rs`                     | 497 | `media/server.rs`, `media/http.rs`                                                          | ✅ `3147787`                                                  |
 
 ### Tier 3 — moderate (300–450 ln)
 
@@ -160,7 +160,7 @@ Disposition: all ✅ `1c6d21c` (tables 56 tests, parser 38, canvas lib tests →
 
 ## 4. What stays whole — the cohesion rule
 
-These files are large *because* they are one algorithm or one deliberate surface; splitting
+These files are large _because_ they are one algorithm or one deliberate surface; splitting
 them would add indirection without adding manageability. They get test-blob extraction only:
 
 - `basalt-parser`: `link_rewrite.rs`, `metadata.rs`, `parser.rs`, `inline.rs`

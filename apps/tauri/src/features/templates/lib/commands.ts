@@ -2,9 +2,9 @@ import { EditorView } from "@codemirror/view";
 import { invoke } from "@tauri-apps/api/core";
 import { commandService } from "@workspace/commands";
 
-import { expandTemplate } from "./lib/expand-template";
-import { splitTemplateFrontmatter } from "./lib/split-frontmatter";
-import { useTemplatePickerStore } from "./picker-store";
+import { expandTemplate } from "./expand-template";
+import { splitTemplateFrontmatter } from "./split-frontmatter";
+import { useTemplatePickerStore } from "../picker-store";
 
 /**
  * Active markdown view: the focused editor if any, else the first visible
@@ -46,7 +46,10 @@ export async function insertTemplate(name: string): Promise<void> {
   if (!view) return; // nothing to insert into — command stays silent
 
   const raw = await invoke<string>("read_template", { name });
-  const expanded = expandTemplate(raw, { title: getActiveNoteTitle(), now: new Date() });
+  const expanded = expandTemplate(raw, {
+    title: getActiveNoteTitle(),
+    now: new Date(),
+  });
   const { frontmatter, body } = splitTemplateFrontmatter(expanded);
 
   const doc = view.state.doc;

@@ -2,7 +2,7 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { CanvasXYNode } from "../lib/mapper";
 
-function GhostCardNode({ data }: NodeProps<CanvasXYNode>) {
+function GhostCardNodeInner({ data }: NodeProps<CanvasXYNode>) {
   const onCommit = data?.onCommit as (() => void) | undefined;
 
   return (
@@ -52,4 +52,4 @@ function GhostCardNode({ data }: NodeProps<CanvasXYNode>) {
   );
 }
 
-export default memo(GhostCardNode);
+export const GhostCardNode = memo(GhostCardNodeInner);

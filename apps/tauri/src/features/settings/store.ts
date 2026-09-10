@@ -18,18 +18,20 @@ interface SettingsModalStore {
   setSearchQuery: (query: string) => void;
 }
 
-export const useSettingsModalStore = create<SettingsModalStore>()((set, get) => ({
-  isOpen: false,
-  activeSection: "general",
-  searchQuery: "",
+export const useSettingsModalStore = create<SettingsModalStore>()(
+  (set, get) => ({
+    isOpen: false,
+    activeSection: "general",
+    searchQuery: "",
 
-  open: (section) =>
-    set({
-      isOpen: true,
-      activeSection: section ?? get().activeSection,
-      searchQuery: "",
-    }),
-  close: () => set({ isOpen: false }),
-  setActiveSection: (id) => set({ activeSection: id }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-}));
+    open: (section) =>
+      set({
+        isOpen: true,
+        activeSection: section ?? get().activeSection,
+        searchQuery: "",
+      }),
+    close: () => set({ isOpen: false }),
+    setActiveSection: (id) => set({ activeSection: id }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+  }),
+);

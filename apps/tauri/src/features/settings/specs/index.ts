@@ -50,9 +50,7 @@ export function buildSearchIndex(): SettingSearchEntry[] {
       sectionLabel: sectionId,
       itemName: spec.name,
       itemDescription:
-        typeof spec.description === "string"
-          ? spec.description
-          : undefined,
+        typeof spec.description === "string" ? spec.description : undefined,
       keywords: spec.keywords ?? [],
     })),
   );

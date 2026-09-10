@@ -71,7 +71,10 @@ describe("mathBlockSpec", () => {
         extensions: [renderModeFacet.of("live")],
       });
 
-      const model = mathBlockSpec.parse!(state, mockNode("BlockMath", 0, doc.length));
+      const model = mathBlockSpec.parse!(
+        state,
+        mockNode("BlockMath", 0, doc.length),
+      );
       expect(model).toBeNull();
     });
 
@@ -83,7 +86,10 @@ describe("mathBlockSpec", () => {
         extensions: [renderModeFacet.of("live")],
       });
 
-      const model = mathBlockSpec.parse!(state, mockNode("BlockMath", 0, doc.length));
+      const model = mathBlockSpec.parse!(
+        state,
+        mockNode("BlockMath", 0, doc.length),
+      );
       expect(model?.inCursor).toBe(true);
     });
   });
@@ -146,22 +152,36 @@ describe("handleInlineMathNode", () => {
   });
 
   it("adds a replace decoration when cursor is on a different line", () => {
-    const { ctx } = makeContext("Line 1: $E=mc^2$\nLine 2: other", { headPos: 20 }); // cursor on line 2
+    const { ctx } = makeContext("Line 1: $E=mc^2$\nLine 2: other", {
+      headPos: 20,
+    }); // cursor on line 2
     const collector = makeCollector();
 
-    const handled = handleInlineMathNode(mockNode("InlineMath", 8, 16), ctx, collector);
+    const handled = handleInlineMathNode(
+      mockNode("InlineMath", 8, 16),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(true);
     expect(collector.replaces).toHaveLength(1);
     expect(collector.replaces[0].from).toBe(8);
     expect(collector.replaces[0].to).toBe(16);
-    expect((collector.replaces[0].widget as any).constructor.name).toBe("MathInlineWidget");
+    expect((collector.replaces[0].widget as any).constructor.name).toBe(
+      "MathInlineWidget",
+    );
   });
 
   it("does not replace when cursor is on the same line (live mode reveal)", () => {
-    const { ctx } = makeContext("Line 1: $E=mc^2$\nLine 2: other", { headPos: 2 }); // cursor on line 1
+    const { ctx } = makeContext("Line 1: $E=mc^2$\nLine 2: other", {
+      headPos: 2,
+    }); // cursor on line 1
     const collector = makeCollector();
 
-    const handled = handleInlineMathNode(mockNode("InlineMath", 8, 16), ctx, collector);
+    const handled = handleInlineMathNode(
+      mockNode("InlineMath", 8, 16),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(false);
     expect(collector.replaces).toHaveLength(0);
   });
@@ -170,7 +190,11 @@ describe("handleInlineMathNode", () => {
     const { ctx } = makeUnfocusedContext("Line 1: $E=mc^2$");
     const collector = makeCollector();
 
-    const handled = handleInlineMathNode(mockNode("InlineMath", 8, 16), ctx, collector);
+    const handled = handleInlineMathNode(
+      mockNode("InlineMath", 8, 16),
+      ctx,
+      collector,
+    );
     expect(handled).toBe(true);
     expect(collector.replaces).toHaveLength(1);
   });

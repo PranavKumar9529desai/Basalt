@@ -171,7 +171,7 @@ graph, search, and backlinks natively — never as a render-only layer.**
    `parse_frontmatter(input) -> FrontmatterModel` returns **typed** values and
    **UTF-16 per-key/per-value spans**: shaped as
    `{ entries: Vec<FrontmatterEntry { key, value, key_span, value_span }>,
-   diagnostics, block_span }` in `basalt-types`. The vault indexer and the live
+diagnostics, block_span }` in `basalt-types`. The vault indexer and the live
    editor call the _same_ function → no live/indexed drift.
 2. **Parser injection keeps `packages/editor` pure.** The editor receives the
    parser through `EditorConfig.parseFrontmatter`, exactly like the existing
@@ -227,8 +227,8 @@ safe, and extensible to future property types:
    `crates/basalt-wasm/graph-wasm`), wrapped and injected as `EditorConfig.parseFrontmatter`
    (rule 2). A frontmatter-region transaction reparses and re-renders the
    widget in the same frame — no async gap, no "widget lags the keystroke."
-The Tauri `parse_frontmatter` **command** remains for the vault
-    indexer/batch only. The sync WASM path is the code.
+   The Tauri `parse_frontmatter` **command** remains for the vault
+   indexer/batch only. The sync WASM path is the code.
 10. **Per-view state, never module globals.** The live-preview field's
     `widgetModels` (kernel) is the single per-editor holder of the model;
     `surgicalEdit` is bound to its own `EditorView`; the widget binds its view

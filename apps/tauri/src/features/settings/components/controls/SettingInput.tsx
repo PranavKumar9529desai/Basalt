@@ -68,7 +68,10 @@ export function SettingInput({
       onChange={(e) => {
         setDraft(e.target.value);
         if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => commit(e.target.value), DEBOUNCE_MS);
+        timerRef.current = setTimeout(
+          () => commit(e.target.value),
+          DEBOUNCE_MS,
+        );
       }}
       onBlur={() => {
         if (timerRef.current) clearTimeout(timerRef.current);

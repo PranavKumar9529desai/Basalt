@@ -30,7 +30,8 @@ export const FILES_LINKS_SPECS: SettingItemSpec[] = [
   {
     key: "autoUpdateLinks",
     name: "Automatically update internal links",
-    description: "Update links inside all notes when a note is renamed or moved.",
+    description:
+      "Update links inside all notes when a note is renamed or moved.",
     type: "toggle",
     keywords: ["rename", "move", "links"],
   },

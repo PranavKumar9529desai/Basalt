@@ -93,7 +93,12 @@ export function Ribbon({
   const bottomItems = [
     {
       id: "brand",
-      icon: <BasaltMark size="xs" className="w-5 h-5 opacity-80 hover:opacity-100 transition-opacity" />,
+      icon: (
+        <BasaltMark
+          size="xs"
+          className="w-5 h-5 opacity-80 hover:opacity-100 transition-opacity"
+        />
+      ),
       label: "Basalt",
       onClick: openSettings,
     },

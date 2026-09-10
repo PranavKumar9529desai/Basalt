@@ -272,5 +272,3 @@ export function CanvasCardEditor({
     />
   );
 }
-
-export default CanvasCardEditor;

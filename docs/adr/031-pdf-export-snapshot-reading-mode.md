@@ -38,7 +38,7 @@ it, because Basalt owns both the renderer (CM6/Lezer) and the data layer
 
 **A PDF export is a styled snapshot of the reading-mode renderer.** We do not
 re-parse Markdown source into a second HTML/AST engine. The export builds a
-fresh read-only CM6 view from the *same* `readingExtensions()` stack (ADR-029)
+fresh read-only CM6 view from the _same_ `readingExtensions()` stack (ADR-029)
 in a hidden print container, lets the block widgets resolve (DQL, embeds,
 frontmatter, tables, HTML), then lays that DOM out for paper via the browser's
 print pipeline.
@@ -73,12 +73,12 @@ The print stylesheet is a **thin print overlay on the reading-mode DOM**, never
 a re-typesetter (contrast with Pandoc, which re-typesets content in LaTeX/Typst
 and so diverges from the editor).
 
-| Chrome controls (implemented)                 | Must NOT touch (content)     |
-| --------------------------------------------- | ---------------------------- |
-| Page size + margins (`@page`), orientation    | Paragraph text / ordering    |
-| Font size scaler (`--sat-font-prose`, px)     | Markdown semantics           |
-| Theme (a "no theme" print reset)              | DQL table content / rows     |
-| Include toggles (properties/images/tables/code) | Callout / code structure   |
+| Chrome controls (implemented)                   | Must NOT touch (content)  |
+| ----------------------------------------------- | ------------------------- |
+| Page size + margins (`@page`), orientation      | Paragraph text / ordering |
+| Font size scaler (`--sat-font-prose`, px)       | Markdown semantics        |
+| Theme (a "no theme" print reset)                | DQL table content / rows  |
+| Include toggles (properties/images/tables/code) | Callout / code structure  |
 
 A forum-request is to be able to export **without** the app's color theme
 ("Export To PDF with no color theme"). The implementation offers both: the

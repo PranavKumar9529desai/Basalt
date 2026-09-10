@@ -25,18 +25,19 @@ immediately notice these gaps.
 
 ### Competitive landscape
 
-| App | Mermaid | Math | Key pain points observed |
-|---|---|---|---|
-| **Obsidian** | ✅ Built-in | ✅ Built-in (KaTeX) | Bundle bloat at startup; SVG sizing bugs; Mermaid locked to release cycle; no `securityLevel` enforcement in some plugin paths |
-| **Typora** | ✅ Built-in | ✅ Built-in (KaTeX) | Closed-source; proprietary; no Lezer/CM6 integration model |
-| **Logseq** | ⚠️ Community plugin | ✅ Built-in (KaTeX) | Mermaid via plugins only; rendering lags on complex graphs; theme mismatches |
-| **Joplin** | ✅ | ✅ | Dual-pane architecture; layout thrash; high memory on math-heavy notes |
-| **Zettlr** | ✅ | ✅ | Pandoc dependency for math makes offline rendering brittle |
-| **Foam / Dendron** | ❌ | ❌ | No live preview; VS Code dependent |
+| App                | Mermaid             | Math                | Key pain points observed                                                                                                       |
+| ------------------ | ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Obsidian**       | ✅ Built-in         | ✅ Built-in (KaTeX) | Bundle bloat at startup; SVG sizing bugs; Mermaid locked to release cycle; no `securityLevel` enforcement in some plugin paths |
+| **Typora**         | ✅ Built-in         | ✅ Built-in (KaTeX) | Closed-source; proprietary; no Lezer/CM6 integration model                                                                     |
+| **Logseq**         | ⚠️ Community plugin | ✅ Built-in (KaTeX) | Mermaid via plugins only; rendering lags on complex graphs; theme mismatches                                                   |
+| **Joplin**         | ✅                  | ✅                  | Dual-pane architecture; layout thrash; high memory on math-heavy notes                                                         |
+| **Zettlr**         | ✅                  | ✅                  | Pandoc dependency for math makes offline rendering brittle                                                                     |
+| **Foam / Dendron** | ❌                  | ❌                  | No live preview; VS Code dependent                                                                                             |
 
 ### What Obsidian gets right — and what it gets wrong
 
 **Right:**
+
 - Both features render in the same single CM6 view used for editing (no
   split-pane latency — the ADR-029 single-renderer architecture Basalt already shares)
 - Cursor-reveal pattern: caret inside a block shows raw source; cursor outside
@@ -45,14 +46,14 @@ immediately notice these gaps.
 
 **Wrong — Basalt's opportunity:**
 
-| Obsidian Failure | Specifics | Basalt Fix |
-|---|---|---|
-| **Mermaid bundled eagerly** | ~2–3 MB JS is in the initial bundle, paid on every boot regardless of whether a note has a diagram | `await import('mermaid')` on first diagram → separate Vite chunk |
-| **KaTeX bundled eagerly** | ~240 KB KaTeX bundle always loaded | `await import('katex')` on first math node → separate Vite chunk |
-| **SVG sizing bugs** | Mermaid SVGs overflow their containers; users inject CSS hacks like `.mermaid svg { max-width: 100%; height: auto }` | Widget forces `max-width: 100%; height: auto; overflow: hidden` |
-| **`securityLevel` overridable** | Diagram `%%{init: {"securityLevel":"loose"}}%%` directives can override the global setting in some plugin paths | `mermaid.initialize({ securityLevel: 'strict' })` called once at module load; not re-applied per diagram |
-| **No content caching** | Re-renders SVG on every editor rebuild even when diagram source is unchanged | `WidgetType.eq()` compares diagram body string; `toDOM` only called when content changes; module-level `Map<string, string>` SVG cache |
-| **Mermaid update locked** | New Mermaid features (Timeline, XY chart, Quadrant) require a full Obsidian release | Basalt pins Mermaid as a normal npm dep; updatable independently |
+| Obsidian Failure                | Specifics                                                                                                            | Basalt Fix                                                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mermaid bundled eagerly**     | ~2–3 MB JS is in the initial bundle, paid on every boot regardless of whether a note has a diagram                   | `await import('mermaid')` on first diagram → separate Vite chunk                                                                       |
+| **KaTeX bundled eagerly**       | ~240 KB KaTeX bundle always loaded                                                                                   | `await import('katex')` on first math node → separate Vite chunk                                                                       |
+| **SVG sizing bugs**             | Mermaid SVGs overflow their containers; users inject CSS hacks like `.mermaid svg { max-width: 100%; height: auto }` | Widget forces `max-width: 100%; height: auto; overflow: hidden`                                                                        |
+| **`securityLevel` overridable** | Diagram `%%{init: {"securityLevel":"loose"}}%%` directives can override the global setting in some plugin paths      | `mermaid.initialize({ securityLevel: 'strict' })` called once at module load; not re-applied per diagram                               |
+| **No content caching**          | Re-renders SVG on every editor rebuild even when diagram source is unchanged                                         | `WidgetType.eq()` compares diagram body string; `toDOM` only called when content changes; module-level `Map<string, string>` SVG cache |
+| **Mermaid update locked**       | New Mermaid features (Timeline, XY chart, Quadrant) require a full Obsidian release                                  | Basalt pins Mermaid as a normal npm dep; updatable independently                                                                       |
 
 ### Why Rust/WASM is NOT the right choice here
 
@@ -70,6 +71,7 @@ years. Rust/WASM alternatives:
 - **Conclusion: use `mermaid` npm package with lazy loading.**
 
 **For KaTeX:**
+
 - `latex2mathml` (Rust WASM) — outputs MathML, not HTML/CSS. MathML rendering
   is browser-dependent: Chromium added MathML Core support only in 2023, and
   WebKitGTK's MathML rendering is inconsistent and visually inferior to KaTeX's
@@ -143,6 +145,7 @@ walks the Lezer syntax tree once per rebuild. The walk calls specialized
 handlers for each node type. `handleBlockWidgetsNode` reads all registered
 `BlockWidgetSpec`s (via the `blockWidgetSpecsFacet`) and for each matching node
 calls:
+
 - `spec.matches(node)` — cheap gate
 - `spec.parse(state, node)` — synchronous extraction of a typed model
 - `spec.render(model, state)` — returns `WidgetType | null`
@@ -203,10 +206,12 @@ exactly as `dql` does.
 ### Phase 2 — Mermaid block widget
 
 Files created:
+
 - `packages/editor/src/block-widgets/mermaid-widget.ts`
 - `packages/editor/src/block-widgets/mermaid-theme.ts`
 
 Key implementation details:
+
 - `MermaidWidget extends WidgetType`; `eq()` compares `diagramText` string
 - Module-level `svgCache: Map<string, string>` keyed by diagram source
 - `mermaidInitialized` guard ensures `mermaid.initialize({ securityLevel: 'strict', theme: 'dark' })` runs once
@@ -221,10 +226,12 @@ Key implementation details:
 ### Phase 3 — Math block + inline widgets
 
 Files created:
+
 - `packages/editor/src/block-widgets/math-widget.ts`
 - `packages/editor/src/block-widgets/math-theme.ts`
 
 Key implementation details:
+
 - `mathBlockSpec` matches `BlockMath` Lezer node (from `markdownMath()`)
 - `parse()` strips `$$` delimiters from the node's text slice
 - `MathBlockWidget.toDOM()`: async `import('katex')`, then `katex.renderToString(latex, { displayMode: true, throwOnError: false, output: 'html' })`
@@ -243,11 +250,13 @@ Key implementation details:
 ### Phase 4 — Wire into collector + editor + exports
 
 Files modified:
+
 - `packages/editor/src/preview/collector.ts` — add `handleInlineMathNode` call
 - `packages/editor/src/editor.ts` — register specs in `commonBlockWidgetExtensions()`
 - `packages/editor/src/index.ts` — export new symbols
 
 Changes:
+
 - `collector.ts`: add `import { handleInlineMathNode } from '../block-widgets/math-widget'`; call `handleInlineMathNode(node, ctx, collector)` after `handleMarkHidingNode(node, ctx, collector)`
 - `editor.ts`: in `commonBlockWidgetExtensions()`, add `blockWidgetSpecsFacet.of(mermaidBlockSpec)`, `MERMAID_WIDGET_THEME`, `blockWidgetSpecsFacet.of(mathBlockSpec)`, `MATH_WIDGET_THEME`
 - `index.ts`: export `mermaidBlockSpec`, `MERMAID_WIDGET_THEME`, `clearMermaidCache`, `mathBlockSpec`, `MathInlineWidget`, `MATH_WIDGET_THEME`, `clearMathCache`
@@ -260,6 +269,7 @@ all surfaces.
 ### Phase 5 — Tests
 
 Files created:
+
 - `packages/editor/tests/block-widgets/mermaid-widget.test.ts`
 - `packages/editor/tests/block-widgets/math-widget.test.ts`
 
@@ -293,6 +303,7 @@ Mermaid has had multiple CVEs (e.g. CVE-2025-54881, v10.9.0–v11.9.0) from the
 `%%{init}%%` directive and HTML label injection.
 
 Mitigations:
+
 1. `mermaid.initialize({ securityLevel: 'strict' })` called once, guarded by
    `mermaidInitialized`. Per-diagram `%%{init}%%` cannot override it.
 2. `securityLevel: 'strict'` disables click handlers, `javascript:` URIs,
@@ -312,19 +323,19 @@ exceptions from crashing the widget.
 
 ## File-level change summary
 
-| File | Status | Description |
-|---|---|---|
-| `packages/editor/src/block-widgets/mermaid-widget.ts` | **NEW** | `MermaidWidget`, `mermaidBlockSpec`, SVG cache, `clearMermaidCache` |
-| `packages/editor/src/block-widgets/mermaid-theme.ts` | **NEW** | `MERMAID_WIDGET_THEME` using `--sat-*` tokens |
-| `packages/editor/src/block-widgets/math-widget.ts` | **NEW** | `MathBlockWidget`, `mathBlockSpec`, `MathInlineWidget`, `handleInlineMathNode`, caches, KaTeX CSS injection |
-| `packages/editor/src/block-widgets/math-theme.ts` | **NEW** | `MATH_WIDGET_THEME` using `--sat-*` tokens |
-| `packages/editor/src/syntax/registry.ts` | **MODIFY** | Add `math` `SyntaxManifest` with `markdownMath()` grammar |
-| `packages/editor/src/preview/collector.ts` | **MODIFY** | Call `handleInlineMathNode` in tree walk |
-| `packages/editor/src/editor.ts` | **MODIFY** | Register both specs in `commonBlockWidgetExtensions()` |
-| `packages/editor/src/index.ts` | **MODIFY** | Export new symbols |
-| `packages/editor/package.json` | **MODIFY** | Add `katex`, `mermaid`, `@types/katex` |
-| `docs/adr/039-mermaid-math-rendering.md` | **NEW** | This document |
-| `AGENTS.md` | **MODIFY** | Status table row for Mermaid + Math |
+| File                                                  | Status     | Description                                                                                                 |
+| ----------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages/editor/src/block-widgets/mermaid-widget.ts` | **NEW**    | `MermaidWidget`, `mermaidBlockSpec`, SVG cache, `clearMermaidCache`                                         |
+| `packages/editor/src/block-widgets/mermaid-theme.ts`  | **NEW**    | `MERMAID_WIDGET_THEME` using `--sat-*` tokens                                                               |
+| `packages/editor/src/block-widgets/math-widget.ts`    | **NEW**    | `MathBlockWidget`, `mathBlockSpec`, `MathInlineWidget`, `handleInlineMathNode`, caches, KaTeX CSS injection |
+| `packages/editor/src/block-widgets/math-theme.ts`     | **NEW**    | `MATH_WIDGET_THEME` using `--sat-*` tokens                                                                  |
+| `packages/editor/src/syntax/registry.ts`              | **MODIFY** | Add `math` `SyntaxManifest` with `markdownMath()` grammar                                                   |
+| `packages/editor/src/preview/collector.ts`            | **MODIFY** | Call `handleInlineMathNode` in tree walk                                                                    |
+| `packages/editor/src/editor.ts`                       | **MODIFY** | Register both specs in `commonBlockWidgetExtensions()`                                                      |
+| `packages/editor/src/index.ts`                        | **MODIFY** | Export new symbols                                                                                          |
+| `packages/editor/package.json`                        | **MODIFY** | Add `katex`, `mermaid`, `@types/katex`                                                                      |
+| `docs/adr/039-mermaid-math-rendering.md`              | **NEW**    | This document                                                                                               |
+| `AGENTS.md`                                           | **MODIFY** | Status table row for Mermaid + Math                                                                         |
 
 **No Rust files. No IPC commands. No `apps/tauri` feature/shared changes.**
 
@@ -332,14 +343,14 @@ exceptions from crashing the widget.
 
 ## Validation
 
-- [ ] ` ```mermaid\ngraph TD\n  A-->B\n``` ` renders SVG flowchart in live preview; cursor entering reveals raw source
-- [ ] ` ```mermaid\nsequenceDiagram\n  A->>B: Hello\n``` ` renders sequence diagram
-- [ ] `$$E = mc^2$$` renders display-mode equation
-- [ ] `$\alpha + \beta$` renders inline; cursor on that line reveals raw `$...$`
-- [ ] `$\unknown$` renders with error marker, widget does not crash
-- [ ] `%%{init: {"securityLevel":"loose"}}%%` in a mermaid block has no effect
-- [ ] Both features work in reading mode and search preview panes
-- [ ] `bun run build` — `mermaid` and `katex` appear as separate chunks; absent from `index.js`
-- [ ] `bun run lint && bunx tsc --noEmit` — clean
-- [ ] `cd packages/editor && bun run test` — all new tests pass
-- [ ] Typing latency: p95 ≤ 4ms @ 100KB (blank note, no diagrams/math)
+- [x] ` ```mermaid\ngraph TD\n  A-->B\n``` ` renders SVG flowchart in live preview; cursor entering reveals raw source
+- [x] ` ```mermaid\nsequenceDiagram\n  A->>B: Hello\n``` ` renders sequence diagram
+- [x] `$$E = mc^2$$` renders display-mode equation
+- [x] `$\alpha + \beta$` renders inline; cursor on that line reveals raw `$...$`
+- [x] `$\unknown$` renders with error marker, widget does not crash
+- [x] `%%{init: {"securityLevel":"loose"}}%%` in a mermaid block has no effect
+- [x] Both features work in reading mode and search preview panes
+- [x] `bun run build` — `mermaid` and `katex` appear as separate chunks; absent from `index.js`
+- [x] `bun run lint && bunx tsc --noEmit` — clean
+- [x] `cd packages/editor && bun run test` — all new tests pass
+- [x] Typing latency: p95 ≤ 4ms @ 100KB (blank note, no diagrams/math)

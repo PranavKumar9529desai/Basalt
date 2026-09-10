@@ -1,10 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { basename, stemOf } from "@workspace/ui";
 
-import type {
-  FileMatch,
-  FileResult,
-  SearchContentResult,
-} from "../types";
+import type { FileMatch, FileResult, SearchContentResult } from "../types";
 
 // Guards against out-of-order responses (a slower earlier query returning after a
 // newer one) overwriting fresher results — the classic search-as-you-type flicker.
@@ -30,22 +27,16 @@ export const isPreviewSeqCurrent = (seq: number): boolean =>
 export const countMatches = (results: FileMatch[]): number =>
   results.reduce((n, f) => n + f.matches.length, 0);
 
-const SWITCHER_EXT_RE = /\.(?:md|markdown|canvas)$/i;
-const switcherBasename = (path: string): string =>
-  path.split("/").pop() ?? path;
-const switcherDisplayName = (path: string): string =>
-  switcherBasename(path).replace(SWITCHER_EXT_RE, "");
-
 /** Offer the "Create new note" row whenever the query names no existing file. */
-export const canCreateSwitcher = (query: string, results: FileResult[]): boolean => {
+export const canCreateSwitcher = (
+  query: string,
+  results: FileResult[],
+): boolean => {
   const q = query.trim().toLowerCase();
   if (!q) return false;
   return !results.some((r) => {
-    const raw = switcherBasename(r.path);
-    return (
-      switcherDisplayName(r.path).toLowerCase() === q ||
-      raw.toLowerCase() === q
-    );
+    const raw = basename(r.path);
+    return stemOf(r.path).toLowerCase() === q || raw.toLowerCase() === q;
   });
 };
 
@@ -60,7 +51,8 @@ export const searchContent = (
 export const searchFiles = (
   query: string,
   limit: number,
-): Promise<FileResult[]> => invoke<FileResult[]>("search_files", { query, limit });
+): Promise<FileResult[]> =>
+  invoke<FileResult[]>("search_files", { query, limit });
 
 /** Read a file's text for the search preview pane. */
 export const openFileForPreview = (path: string): Promise<string> =>

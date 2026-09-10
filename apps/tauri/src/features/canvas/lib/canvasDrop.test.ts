@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  canvasFileDropAt,
-  registerCanvasFileDrop,
-} from "./canvasDrop";
+import { canvasFileDropAt, registerCanvasFileDrop } from "./canvasDrop";
 
 function makeEl(rect: {
   left: number;
@@ -13,7 +10,8 @@ function makeEl(rect: {
   const right = rect.right ?? rect.left + 400;
   const bottom = rect.bottom ?? rect.top + 300;
   return {
-    getBoundingClientRect: () => ({ left: rect.left, top: rect.top, right, bottom }) as DOMRect,
+    getBoundingClientRect: () =>
+      ({ left: rect.left, top: rect.top, right, bottom }) as DOMRect,
   } as HTMLElement;
 }
 

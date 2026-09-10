@@ -87,7 +87,10 @@ export interface ColorContext {
 }
 
 /** Drawn RGB triple for a full-graph node under the current color mode. */
-export function colorFor(full: number, ctx: ColorContext): [number, number, number] {
+export function colorFor(
+  full: number,
+  ctx: ColorContext,
+): [number, number, number] {
   const tc = ctx.colors;
   const mode = ctx.mode;
   if (ctx.isTag[full]) {

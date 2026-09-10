@@ -18,14 +18,14 @@ import { CanvasContextMenu, type ContextTarget } from "./CanvasContextMenu";
 import { NotePickerModal } from "../components/NotePickerModal";
 import { AssetPickerModal } from "../components/AssetPickerModal";
 
-import TextCardNode from "../nodes/TextCardNode";
-import FileNode from "../nodes/FileNode";
-import GroupNode from "../nodes/GroupNode";
-import LinkNode from "../nodes/LinkNode";
-import GhostCardNode from "../nodes/GhostCardNode";
-import CanvasEdge from "../edges/CanvasEdge";
-import GuidelineLines from "../components/GuidelineLines";
-import { CanvasContext } from "./CanvasContext";
+import { TextCardNode } from "../nodes/TextCardNode";
+import { FileNode } from "../nodes/FileNode";
+import { GroupNode } from "../nodes/GroupNode";
+import { LinkNode } from "../nodes/LinkNode";
+import { GhostCardNode } from "../nodes/GhostCardNode";
+import { CanvasEdge } from "../edges/CanvasEdge";
+import { GuidelineLines } from "../components/GuidelineLines";
+import { CanvasContext } from "../lib/CanvasContext";
 import { registerCanvasFileDrop } from "../lib/canvasDrop";
 import type { CanvasXYNode } from "../lib/mapper";
 
@@ -53,8 +53,11 @@ function CanvasFlow({ tab, paneId }: LeafProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { saveCanvasNow, triggerSave, loadCanvas, nodesRef, edgesRef } =
     useCanvasPersistence({ tab, reactFlowInstance });
-  const { guidelines: guidelineState, setGuidelines, clearGuidelines } =
-    useCanvasGuidelines();
+  const {
+    guidelines: guidelineState,
+    setGuidelines,
+    clearGuidelines,
+  } = useCanvasGuidelines();
   const {
     nodes,
     edges,

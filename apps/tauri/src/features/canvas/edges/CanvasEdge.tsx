@@ -7,7 +7,7 @@ import {
 } from "@xyflow/react";
 import { resolveCanvasColor } from "../lib/colors";
 
-function CanvasEdge({
+function CanvasEdgeInner({
   sourceX,
   sourceY,
   targetX,
@@ -59,4 +59,4 @@ function CanvasEdge({
   );
 }
 
-export default memo(CanvasEdge);
+export const CanvasEdge = memo(CanvasEdgeInner);

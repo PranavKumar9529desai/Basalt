@@ -36,7 +36,7 @@ function byteOffsetsToUnitOffsets(
 ): number[] {
   const unitByByte: number[] = [];
   let bytes = 0;
-  for (let unit = 0; unit < text.length; ) {
+  for (let unit = 0; unit < text.length;) {
     const cp = text.codePointAt(unit) ?? 0;
     unitByByte[bytes] = unit;
     bytes += cp > 0xffff ? 4 : cp > 0x7f ? 2 : 1;
@@ -66,7 +66,11 @@ function matchIndices(text: string, query: string): number[] | null {
   return indices;
 }
 
-export function HighlightedText({ text, query, indices }: HighlightedTextProps) {
+export function HighlightedText({
+  text,
+  query,
+  indices,
+}: HighlightedTextProps) {
   const hits = useMemo(() => {
     if (indices && indices.length > 0) {
       return byteOffsetsToUnitOffsets(text, indices);

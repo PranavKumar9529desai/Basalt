@@ -77,7 +77,9 @@ describe("find & replace in the production extension stack", () => {
       ),
     });
     expect(replaceAll(view)).toBe(true);
-    expect(view.state.doc.toString()).toBe("omega beta omega\nfrontmatter omega");
+    expect(view.state.doc.toString()).toBe(
+      "omega beta omega\nfrontmatter omega",
+    );
   });
 
   it("closes the panel on closeSearchPanel", () => {

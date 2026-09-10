@@ -13,7 +13,11 @@ describe("decodeBinaryGraphSnapshot", () => {
     const edgeCount = Math.floor(edges.length / 2);
     const padBytes = (4 - (jsonBytes.length % 4)) % 4;
     const totalSize =
-      24 + jsonBytes.length + padBytes + edges.length * 4 + edgeWeights.length * 4;
+      24 +
+      jsonBytes.length +
+      padBytes +
+      edges.length * 4 +
+      edgeWeights.length * 4;
 
     const buffer = new ArrayBuffer(totalSize);
     const u8 = new Uint8Array(buffer);

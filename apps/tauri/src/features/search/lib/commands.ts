@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { commandService } from "@workspace/commands";
-import { formatSearchBenchmarkReport, runSearchBenchmark } from "./lib/benchmark";
-import { useSearchStore } from "./store";
+import { formatSearchBenchmarkReport, runSearchBenchmark } from "./benchmark";
+import { useSearchStore } from "../store";
 
 commandService.registerCommand(
   "search:open",

@@ -125,7 +125,6 @@ export const livePreviewField = StateField.define<PreviewState>({
       // (typing) have no explicit selection and take the lazy path.
       !tr.selection;
 
-
     const path = lazy ? (tr.docChanged ? "lazy-map" : "no-op") : "full-rebuild";
     if (path !== "no-op" && import.meta.env.DEV && editorBenchmarkState.debug) {
       console.log(

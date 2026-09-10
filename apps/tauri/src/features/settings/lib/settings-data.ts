@@ -179,4 +179,3 @@ export function initSettings(backend: Record<string, unknown> | undefined) {
   useSettingsStore.getState().set("__init__", undefined);
   useSettingsStore.setState({ values: merged });
 }
-

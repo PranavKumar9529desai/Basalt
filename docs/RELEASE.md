@@ -10,10 +10,10 @@
 
 ## 1. Workflow map (the only two workflows)
 
-| File | Triggers | Jobs | Purpose |
-|---|---|---|---|
-| `.github/workflows/ci.yml` | push to `main`, every PR | `frontend` (oxlint → `tsc --noEmit` → vite build → vitest), `rust` (clippy `-D warnings` → `cargo test --workspace`), `build` (`ubuntu-22.04` + `windows-latest` Tauri bundles) | Quality gate + per-push package check **without macOS** |
-| `.github/workflows/release.yml` | **tags `v*`** + `workflow_dispatch` (manual) | `build-and-release` matrix: `ubuntu-22.04`, `windows-latest`, **`macos-latest` (aarch64)** | Create draft GitHub Release with all 3 OS bundles |
+| File                            | Triggers                                     | Jobs                                                                                                                                                                            | Purpose                                                 |
+| ------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `.github/workflows/ci.yml`      | push to `main`, every PR                     | `frontend` (oxlint → `tsc --noEmit` → vite build → vitest), `rust` (clippy `-D warnings` → `cargo test --workspace`), `build` (`ubuntu-22.04` + `windows-latest` Tauri bundles) | Quality gate + per-push package check **without macOS** |
+| `.github/workflows/release.yml` | **tags `v*`** + `workflow_dispatch` (manual) | `build-and-release` matrix: `ubuntu-22.04`, `windows-latest`, **`macos-latest` (aarch64)**                                                                                      | Create draft GitHub Release with all 3 OS bundles       |
 
 **Hard rule: macOS builds only ever happen on tags or manual dispatch.** Never
 add `macos` to `ci.yml`'s matrix or any per-push trigger. See Cost model.
@@ -42,13 +42,14 @@ GitHub Free (private repo) — current official limits:
 
 Effective monthly budgets (≈5–15 min per full Tauri build, less with caching):
 
-| OS | Effective budget | ≈ builds/month |
-|---|---|---|
-| Linux | 2,000 min | 130–300+ |
-| Windows | 1,000 min (÷2) | 65–150 |
-| macOS | 200 min (÷10) | **~15–30 — scarce, treat as precious** |
+| OS      | Effective budget | ≈ builds/month                         |
+| ------- | ---------------- | -------------------------------------- |
+| Linux   | 2,000 min        | 130–300+                               |
+| Windows | 1,000 min (÷2)   | 65–150                                 |
+| macOS   | 200 min (÷10)    | **~15–30 — scarce, treat as precious** |
 
 Consequences:
+
 - macOS job runs ~1 build per 1–2 days max if used daily; budget for
   ~2–4 tag releases/month comfortably.
 - Under no circumstances add macOS to PR/push workflows.
@@ -103,7 +104,7 @@ Consequences:
 ## 5. Gotchas learned the hard way (keep these patterns intact)
 
 - **Worker/asset URL bugs are the #1 build breaker.** Any `new Worker(new
-  URL(...))` or wasm import path must resolve from the file that contains it
+URL(...))` or wasm import path must resolve from the file that contains it
   (relative to `import.meta.url`), not from where the file "should" be. Example:
   `features/graph/hooks/useGraphEngine.ts` must reference
   `../lib/graphWorker.ts` (file lives in `lib/`, moved there by ADR-038).

@@ -15,11 +15,12 @@ import { useLeafServices } from "@workspace/views";
 
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
-import CardHandles from "./CardHandles";
-import { useCanvas } from "../components/CanvasContext";
+import { CardHandles } from "./CardHandles";
+import { useCanvas } from "../lib/CanvasContext";
 import { CanvasCardEditor } from "../components/CanvasCardEditor";
+import { stemOf } from "@workspace/ui";
 
-function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
+function FileNodeInner({ data, selected }: NodeProps<CanvasXYNode>) {
   const canvas = useCanvas();
   const filePath = (data.file as string) || "";
   const subpath = data.subpath as string | undefined;
@@ -86,7 +87,7 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
     services.openNote(abs);
   };
 
-  const fileName = filePath.split("/").pop()?.replace(/\.md$/, "") || filePath;
+  const fileName = stemOf(filePath) || filePath;
 
   return (
     <div className="group relative w-full h-full">
@@ -237,4 +238,4 @@ function FileNode({ data, selected }: NodeProps<CanvasXYNode>) {
   );
 }
 
-export default memo(FileNode);
+export const FileNode = memo(FileNodeInner);

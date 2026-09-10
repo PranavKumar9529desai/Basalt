@@ -64,7 +64,11 @@ const mathParser = {
 // ---------------------------------------------------------------------------
 
 class BlockMathLeafParser {
-  nextLine(_cx: BlockContext, _line: { text: string }, _leaf: LeafBlock): boolean {
+  nextLine(
+    _cx: BlockContext,
+    _line: { text: string },
+    _leaf: LeafBlock,
+  ): boolean {
     return false;
   }
 

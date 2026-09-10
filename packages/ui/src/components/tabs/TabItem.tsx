@@ -106,7 +106,9 @@ export const TabItem = memo(function TabItem({
               }
             }}
           >
-            {showDropIndicator ? <DropIndicator edge={showDropIndicator} /> : null}
+            {showDropIndicator ? (
+              <DropIndicator edge={showDropIndicator} />
+            ) : null}
 
             <div
               data-disabled={tab.disabled ? "true" : undefined}

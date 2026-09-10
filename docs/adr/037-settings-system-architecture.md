@@ -24,6 +24,7 @@ Settings in an Obsidian-class desktop workspace are not an auxiliary dialog; the
 A direct visual and architectural audit of Basalt’s initial settings implementation against Obsidian (v1.13.7) reveals four foundational gaps:
 
 #### A. Left Navigation Hierarchy and Polish
+
 - **Obsidian Reference:**
   - Categorized into three distinct groups:
     1. **Options:** Core application preferences (`General`, `Appearance`, `Interface`, `Editor`, `Files and links`, `Hotkeys`, `Keychain`, `Core plugins`, `Community plugins`). Every item has a distinctive icon.
@@ -33,17 +34,18 @@ A direct visual and architectural audit of Basalt’s initial settings implement
 - **Basalt Today:**
   - Text-only sidebar without icons.
   - Hardcoded navigation array in `store.ts`.
-  - Static empty state placeholders (*"No core plugin settings yet"*, *"No community plugins installed"*) that did not reflect dynamically registered core plugins (like Templates and Daily Notes).
+  - Static empty state placeholders (_"No core plugin settings yet"_, _"No community plugins installed"_) that did not reflect dynamically registered core plugins (like Templates and Daily Notes).
   - Search input was purely visual with no deep filtering across settings items.
 
 #### B. Setting Item Layout and Visual Rhythm
+
 - **Obsidian Reference:**
   - Uses an exact two-column horizontal layout per setting item (`.setting-item`):
     - **Left column (`setting-item-info`):** Setting name (medium font, high contrast) and setting description (muted color, relaxed line height, supporting inline markdown links for help docs).
     - **Right column (`setting-item-control`):** Action widget aligned to the right. Widgets include:
-      - **Toggle switch:** For booleans (e.g., *Automatic updates*).
-      - **Select / Dropdown:** For enumerated choices (e.g., *Language: English*).
-      - **Button / Button Group:** For actions (e.g., *Check for updates*, *Log in / Sign up*, *Activate / Purchase*).
+      - **Toggle switch:** For booleans (e.g., _Automatic updates_).
+      - **Select / Dropdown:** For enumerated choices (e.g., _Language: English_).
+      - **Button / Button Group:** For actions (e.g., _Check for updates_, _Log in / Sign up_, _Activate / Purchase_).
       - **Text / Number Input:** For strings/numbers (e.g., folder paths, date formats).
       - **Slider:** For ranges (e.g., font size, zoom).
       - **Color Picker:** For theme accent color.
@@ -55,10 +57,12 @@ A direct visual and architectural audit of Basalt’s initial settings implement
   - Only supported string text inputs; zero support for switches, dropdowns, buttons, sliders, or sub-headings.
 
 #### C. Extensibility & Core Plugin Integration
-- In Obsidian, when a user enables a core plugin (e.g., Templates, Canvas, Backlinks) in the *Core plugins* manager, that plugin's settings tab instantly appears under the "Core plugins" sidebar group. Disabling the plugin instantly removes the tab.
+
+- In Obsidian, when a user enables a core plugin (e.g., Templates, Canvas, Backlinks) in the _Core plugins_ manager, that plugin's settings tab instantly appears under the "Core plugins" sidebar group. Disabling the plugin instantly removes the tab.
 - In Basalt, plugins had no uniform registration hook to add settings tabs dynamically without editing core settings files.
 
 #### D. Multi-Tier Persistence
+
 - Settings lacked an explicit boundary between:
   - **Global / Machine settings:** UI theme, accent color, hardware acceleration, check for updates.
   - **Vault / Workspace settings:** Attachment paths, template folder, daily note format, enabled plugins.
@@ -103,7 +107,7 @@ We adopt a **Registry-Driven, Declarative + Component Hybrid Settings Architectu
 
 To eliminate hardcoded section arrays and satisfy [ADR-018](018-registry-driven-workbench.md) and [ADR-036](036-core-plugin-architecture.md), settings tabs register dynamically.
 
-#### Type Contract (`features/settings/registry.ts`)
+#### Type Contract (`features/settings/lib/registry.ts`)
 
 ```typescript
 export type SettingsGroup = "options" | "core-plugins" | "community-plugins";
@@ -127,7 +131,8 @@ export interface SettingSectionDef {
    * Custom React component for complex settings tabs (e.g. Hotkeys, Appearance, CorePlugins).
    * Lazy-loaded via React.lazy().
    */
-  component?: React.LazyExoticComponent<React.ComponentType> | React.ComponentType;
+  component?:
+    React.LazyExoticComponent<React.ComponentType> | React.ComponentType;
   /**
    * Declarative item specifications. If component is omitted, SettingsPanel renders
    * these items automatically using standard SettingItem rows.
@@ -137,8 +142,9 @@ export interface SettingSectionDef {
 ```
 
 #### Lifecycle Behavior:
+
 - **Core Plugins:** When a plugin is loaded/enabled in the workbench, it calls `settingsRegistry.register(...)`.
-- **Plugin Toggle:** When a plugin is disabled via the *Core plugins* or *Community plugins* manager, it unregisters its section via `settingsRegistry.unregister(id)`. If the user currently had that section open, `activeSection` automatically falls back to `"general"`.
+- **Plugin Toggle:** When a plugin is disabled via the _Core plugins_ or _Community plugins_ manager, it unregisters its section via `settingsRegistry.unregister(id)`. If the user currently had that section open, `activeSection` automatically falls back to `"general"`.
 
 ---
 
@@ -148,14 +154,14 @@ export interface SettingSectionDef {
 
 ```typescript
 export type SettingControlType =
-  | "toggle"       // Boolean switch
-  | "text"         // Text input
-  | "number"       // Number input
-  | "dropdown"     // Select dropdown
-  | "slider"       // Range slider
-  | "button"       // Single button
+  | "toggle" // Boolean switch
+  | "text" // Text input
+  | "number" // Number input
+  | "dropdown" // Select dropdown
+  | "slider" // Range slider
+  | "button" // Single button
   | "button-group" // Multiple buttons (e.g. Log in + Sign up)
-  | "color";       // Accent color picker
+  | "color"; // Accent color picker
 
 export interface SettingOption {
   label: string;
@@ -210,6 +216,7 @@ export interface SettingItemSpec {
 To satisfy [ADR-003](003-shadcn-radix-over-raw-html.md) and [ADR-002](002-sat-css-theme-tokens.md), all UI elements are built from modular, stateless primitives styled via `--sat-*` tokens.
 
 #### 3.1 Two-Column Setting Item (`SettingItem.tsx`)
+
 The structural building block of every settings page:
 
 ```tsx
@@ -223,7 +230,7 @@ export function SettingItem({
     <div
       className={cn(
         "flex items-center justify-between py-3.5 border-b border-[var(--sat-layout-border)] last:border-b-0 gap-6",
-        className
+        className,
       )}
     >
       {/* Left: Info */}
@@ -248,6 +255,7 @@ export function SettingItem({
 ```
 
 #### 3.2 Sub-Section Heading (`SettingHeading.tsx`)
+
 Used to partition settings into distinct functional groups:
 
 ```tsx
@@ -268,6 +276,7 @@ export function SettingHeading({ title, description }: SettingHeadingProps) {
 ```
 
 #### 3.3 Control Widgets
+
 - **Switch / Toggle:** Accessible boolean toggle with `--sat-accent-primary` track background when checked and smooth thumb sliding.
 - **Select / Dropdown:** Styled custom dropdown or system select using `--sat-surface-2` and `--sat-layout-border`.
 - **Button / Button Group:** Standard `@workspace/ui/components/ui/button` components using `sm` sizing.
@@ -286,7 +295,7 @@ export function SettingHeading({ title, description }: SettingHeadingProps) {
    - **Options:** General, Appearance, Interface, Editor, Files and links, Hotkeys, Core plugins, Community plugins.
    - **Core plugins:** Only visible when core plugins are active and provide settings tabs.
    - **Community plugins:** Only visible when community plugins are active.
-   - Empty state fallback text: *"No core plugin settings yet"* / *"No community plugins installed"*.
+   - Empty state fallback text: _"No core plugin settings yet"_ / _"No community plugins installed"_.
 3. **Item Row Styling:**
    - Distinct icon + title per row.
    - Active state: pill highlight (`bg-[var(--sat-accent-primary)]/10 text-[var(--sat-accent-primary)] font-medium`).
@@ -299,6 +308,7 @@ export function SettingHeading({ title, description }: SettingHeadingProps) {
 Users must be able to find any setting instantly without knowing which tab contains it.
 
 #### Indexing & Filtering Pipeline
+
 1. **Search Index:** A memoized flat index maps every setting item (from both declarative `specs` and registered sections) into searchable records:
    ```typescript
    interface SearchIndexEntry {
@@ -322,13 +332,14 @@ Users must be able to find any setting instantly without knowing which tab conta
 
 Settings are partitioned into three clean tiers of persistence:
 
-| Tier | Scope | Storage Backend | IPC Methods | Canonical Examples |
-|---|---|---|---|---|
-| **Tier 1: Global** | App-wide (Machine) | `config.json` in OS app-data | `get_settings`, `set_setting` | UI theme, accent color, font size, update check, hardware acceleration |
-| **Tier 2: Vault** | Per-vault workspace | `.basalt/settings.json` in vault | `get_vault_settings`, `set_vault_setting` | Template folder, daily notes format, attachment folder, enabled core plugins |
-| **Tier 3: Plugin** | Plugin private state | `.basalt/plugins/<id>/data.json` | Plugin storage APIs | Plugin-specific cache, custom query presets |
+| Tier               | Scope                | Storage Backend                  | IPC Methods                               | Canonical Examples                                                           |
+| ------------------ | -------------------- | -------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
+| **Tier 1: Global** | App-wide (Machine)   | `config.json` in OS app-data     | `get_settings`, `set_setting`             | UI theme, accent color, font size, update check, hardware acceleration       |
+| **Tier 2: Vault**  | Per-vault workspace  | `.basalt/settings.json` in vault | `get_vault_settings`, `set_vault_setting` | Template folder, daily notes format, attachment folder, enabled core plugins |
+| **Tier 3: Plugin** | Plugin private state | `.basalt/plugins/<id>/data.json` | Plugin storage APIs                       | Plugin-specific cache, custom query presets                                  |
 
 #### Reactivity Contract
+
 - Changes update the frontend Zustand store **optimistically** (0ms latency).
 - Updates are written to the Rust backend asynchronously in the background.
 - UI components subscribe to specific setting keys via `useSetting(key)`.
@@ -338,16 +349,18 @@ Settings are partitioned into three clean tiers of persistence:
 ### 7. Specifications for Core Sections
 
 #### A. General (`GeneralSection.tsx`)
+
 - App version display with `"Check for updates"` button.
-- Toggle: *Automatic updates*.
-- Toggle: *Receive early access versions*.
-- Dropdown: *Language* (e.g. English).
-- Action: *Help* ("Open" button to documentation/community).
-- Section `Account`: Account status display with *Log in* and *Sign up* buttons.
-- Section `Commercial license`: License status with *Activate* and *Purchase* buttons.
+- Toggle: _Automatic updates_.
+- Toggle: _Receive early access versions_.
+- Dropdown: _Language_ (e.g. English).
+- Action: _Help_ ("Open" button to documentation/community).
+- Section `Account`: Account status display with _Log in_ and _Sign up_ buttons.
+- Section `Commercial license`: License status with _Activate_ and _Purchase_ buttons.
 
 #### B. Appearance (`AppearanceSection.tsx`)
-- Base color scheme: *Dark* / *Light* / *Adapt to system* (radio/dropdown cards).
+
+- Base color scheme: _Dark_ / _Light_ / _Adapt to system_ (radio/dropdown cards).
 - Accent color: Swatches for presets (Purple, Blue, Emerald, Amber, Rose) + custom hex input.
 - Typography:
   - Font family override input.
@@ -355,34 +368,38 @@ Settings are partitioned into three clean tiers of persistence:
 - UI Zoom level slider (80% to 150%).
 
 #### C. Editor (`EditorSection.tsx`)
-- Default view mode: *Live preview* vs *Reading view*.
+
+- Default view mode: _Live preview_ vs _Reading view_.
 - Toggles:
-  - *Readable line length* (centers prose within comfortable line width).
-  - *Strict line breaks* (CommonMark line break rules).
-  - *Line numbers* (show line numbers in gutter).
-  - *Fold heading and indentation*.
-  - *Auto-pair brackets and quotes*.
-  - *Vim keybindings mode*.
-- Dropdown: *Tab size* (2 spaces, 4 spaces, Tab).
+  - _Readable line length_ (centers prose within comfortable line width).
+  - _Strict line breaks_ (CommonMark line break rules).
+  - _Line numbers_ (show line numbers in gutter).
+  - _Fold heading and indentation_.
+  - _Auto-pair brackets and quotes_.
+  - _Vim keybindings mode_.
+- Dropdown: _Tab size_ (2 spaces, 4 spaces, Tab).
 
 #### D. Files & Links (`FilesLinksSection.tsx`)
-- Default location for new notes: *Vault root*, *Same folder as current note*, *In specified folder*.
-- Text Input: *Default folder path*.
-- Dropdown: *New link format* (*Wikilink [[note]]* vs *Markdown [note](note.md)*).
-- Toggle: *Auto-update internal links on rename*.
-- Text Input: *Attachment folder path* (default `_attachments`).
-- Dropdown: *Attachment organization* (Flat, By note, By type, By date).
+
+- Default location for new notes: _Vault root_, _Same folder as current note_, _In specified folder_.
+- Text Input: _Default folder path_.
+- Dropdown: _New link format_ (_Wikilink [[note]]_ vs _Markdown [note](note.md)_).
+- Toggle: _Auto-update internal links on rename_.
+- Text Input: _Attachment folder path_ (default `_attachments`).
+- Dropdown: _Attachment organization_ (Flat, By note, By type, By date).
 
 #### E. Hotkeys (`HotkeysSection.tsx`)
+
 - Search filter input to filter commands by name or keybinding.
 - Table virtualized with `@tanstack/react-virtual`.
 - Interactive hotkey recorder:
-  - Click hotkey button → prompt *"Press desired shortcut"*.
+  - Click hotkey button → prompt _"Press desired shortcut"_.
   - Listens for key events, normalizes modifiers (`Ctrl`/`Cmd`, `Alt`, `Shift`).
   - Conflict detection alerting if keybinding collides with existing command.
-  - *Reset to default* and *Unbind* actions.
+  - _Reset to default_ and _Unbind_ actions.
 
 #### F. Core Plugins Manager (`CorePluginsSection.tsx`)
+
 - Manager tab listed under "Options".
 - Renders cards/rows for each core plugin:
   - Templates, Daily notes, Backlinks, Canvas, Graph view, Quick switcher, Command palette.
@@ -399,8 +416,11 @@ apps/tauri/src/features/settings/
 ├── index.ts                      # Public barrel: SettingsModal, useSetting, setSetting, types
 ├── types.ts                      # Domain types: SettingSectionDef, SettingItemSpec, SettingGroup
 ├── store.ts                      # Modal state: isOpen, activeSection, searchQuery, activeTab
-├── settings-data.ts              # KV store: DEFAULTS, useSetting, setSetting, initSettings
-├── registry.ts                   # Dynamic registry: settingsRegistry (register/unregister/getAll)
+├── lib/
+│   ├── settings-data.ts          # KV store: DEFAULTS, useSetting, setSetting, initSettings
+│   ├── registry.ts               # Dynamic registry: settingsRegistry (register/unregister/getAll)
+│   ├── registrations.ts          # Boot-time section registrations (side-effect import)
+│   └── appearance-effects.ts     # Applies accent/font/zoom to --sat-* tokens
 ├── commands.ts                   # Palette command wiring: app:open-settings
 │
 ├── specs/                        # Declarative specifications per domain
@@ -427,28 +447,19 @@ apps/tauri/src/features/settings/
     │   ├── index.ts              # Barrel export for controls
     │   ├── SettingToggle.tsx     # Boolean switch
     │   ├── SettingDropdown.tsx   # Select dropdown
+    │   ├── SettingColor.tsx      # Accent color picker
     │   ├── SettingInput.tsx      # Text/number input
     │   ├── SettingButton.tsx     # Action button(s)
     │   └── SettingSlider.tsx     # Range slider with value display
     │
-    └── sections/                 # Sections organized by category
-        ├── options/              # Core app option pages
-        │   ├── GeneralSection.tsx
-        │   ├── AppearanceSection.tsx
-        │   ├── EditorSection.tsx
-        │   ├── FilesLinksSection.tsx
-        │   ├── HotkeysSection.tsx
-        │   ├── CorePluginsSection.tsx
-        │   └── CommunityPluginsSection.tsx
-        │
-        └── plugins/              # Core plugin settings pages
-            ├── TemplatesSection.tsx
-            ├── DailyNotesSection.tsx
-            ├── CanvasSection.tsx
-            └── BacklinksSection.tsx
+    └── sections/                 # Custom component sections (declarative specs render the rest)
+        ├── HotkeysSection.tsx    # Virtualized command list with key recorder
+        ├── CorePluginsSection.tsx # Plugin manager with enable toggles
+        └── CommunityPluginsSection.tsx # Empty state (host not built)
 ```
 
 #### File Budget & Responsibility Invariants:
+
 1. **Zero Monolithic Files:** No settings file exceeds 200 lines. Heavy forms use modular `specs/` files.
 2. **Strict Presentational Separation:** Components in `components/layout/` and `components/controls/` are stateless, receiving props and emitting callbacks.
 3. **No Direct Deep Cross-Imports:** Plugins and shell import only from `features/settings` (or `types.ts` for typings).

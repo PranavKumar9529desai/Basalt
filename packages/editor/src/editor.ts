@@ -54,7 +54,11 @@ import {
   type BlockWidgetSpec,
 } from "./block-widgets/registry";
 import type { EditorConfig } from "./types";
-import { openExternalLinkFacet, openTagFacet, resolveAssetFacet } from "./types";
+import {
+  openExternalLinkFacet,
+  openTagFacet,
+  resolveAssetFacet,
+} from "./types";
 import { search } from "@codemirror/search";
 import { renderModeReading } from "./preview/render-mode";
 import { readingLinkHandler } from "./preview/links";
@@ -184,7 +188,10 @@ export function createEditorExtensionGroups(
       SUGGESTIONS_THEME,
       createSuggestionsPlugin(onFetchLinks, onFetchTags),
     ],
-    links: [clickableLinksPlugin(onOpenLink), clickableTagsPlugin(config.onOpenTag)],
+    links: [
+      clickableLinksPlugin(onOpenLink),
+      clickableTagsPlugin(config.onOpenTag),
+    ],
     blockWidgets: [
       ...frontmatterBlockWidgetGroup({
         parseFrontmatter: config.parseFrontmatter,
@@ -329,4 +336,3 @@ export function readingModeExtras(config: {
     EditorView.editable.of(false),
   ];
 }
-

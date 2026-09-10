@@ -191,17 +191,16 @@ export function useCanvasState({
     [saveCanvasNow, clearGuidelines],
   );
 
-  const { handleAddTextCard, handleAddGroup, handleAddLink, onDrop } =
-    useMemo(
-      () =>
-        createNodeCreators({
-          reactFlowInstance,
-          setNodes,
-          nodesRef,
-          saveCanvasNow,
-        }),
-      [reactFlowInstance, setNodes, nodesRef, saveCanvasNow],
-    );
+  const { handleAddTextCard, handleAddGroup, handleAddLink, onDrop } = useMemo(
+    () =>
+      createNodeCreators({
+        reactFlowInstance,
+        setNodes,
+        nodesRef,
+        saveCanvasNow,
+      }),
+    [reactFlowInstance, setNodes, nodesRef, saveCanvasNow],
+  );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();

@@ -42,7 +42,11 @@ export function registerCanvasFileDrop(
 
 /** Route a drop at screen (x, y) to the canvas pane under it. Returns true if
  *  a pane accepted the drop. */
-export function canvasFileDropAt(x: number, y: number, filePath: string): boolean {
+export function canvasFileDropAt(
+  x: number,
+  y: number,
+  filePath: string,
+): boolean {
   for (const { dom, handler } of registrations.values()) {
     const r = dom.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {

@@ -1,4 +1,4 @@
-import "./commands";
+import "./lib/commands";
 
 export { QuickSwitcher } from "./components/QuickSwitcher";
 export { SearchModal } from "./components/SearchModal";

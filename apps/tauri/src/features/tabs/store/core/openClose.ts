@@ -10,10 +10,7 @@ export type { OpenSlice } from "./open";
 
 /** Open/close/activate tab mutations, split by concern (ADR-038): the open
  * path (preview/pinned/view), activation + tab metadata, and closing. */
-export interface OpenCloseSlice
-  extends OpenSlice,
-    ActivateSlice,
-    CloseSlice {}
+export interface OpenCloseSlice extends OpenSlice, ActivateSlice, CloseSlice {}
 
 export const createOpenCloseSlice: StateCreator<
   TabsState,

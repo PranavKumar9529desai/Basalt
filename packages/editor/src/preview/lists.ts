@@ -81,7 +81,10 @@ const BULLET_WIDGETS = [
   new ListBulletWidget(3),
 ];
 
-const NUMBER_WIDGETS = Array.from({ length: 64 }, (_, i) => new ListNumberWidget(i));
+const NUMBER_WIDGETS = Array.from(
+  { length: 64 },
+  (_, i) => new ListNumberWidget(i),
+);
 
 const DEPTH_CLASSES = [
   "cm-live-list-depth-0",
@@ -148,7 +151,10 @@ export function handleListNode(
           ctx.state.doc.sliceString(node.to, node.to + 1) === " "
             ? node.to + 1
             : node.to;
-        const widget = number < NUMBER_WIDGETS.length ? NUMBER_WIDGETS[number] : new ListNumberWidget(number);
+        const widget =
+          number < NUMBER_WIDGETS.length
+            ? NUMBER_WIDGETS[number]
+            : new ListNumberWidget(number);
         collector.addReplace(node.from, markEnd, widget);
       } else {
         const depth = listDepth(node);

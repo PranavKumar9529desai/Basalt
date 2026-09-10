@@ -32,12 +32,20 @@ describe("useVaultSelectionState", () => {
     const { result } = renderHook(() => useVaultSelectionState());
     act(() => result.current.handleSelect(asFileNode(A), mouse(), [A, B, C]));
     act(() =>
-      result.current.handleSelect(asFileNode(B), mouse({ metaKey: true }), [A, B, C]),
+      result.current.handleSelect(asFileNode(B), mouse({ metaKey: true }), [
+        A,
+        B,
+        C,
+      ]),
     );
     expect(result.current.selectedIds.has("a.md")).toBe(true);
     expect(result.current.selectedIds.has("b.md")).toBe(true);
     act(() =>
-      result.current.handleSelect(asFileNode(A), mouse({ ctrlKey: true }), [A, B, C]),
+      result.current.handleSelect(asFileNode(A), mouse({ ctrlKey: true }), [
+        A,
+        B,
+        C,
+      ]),
     );
     expect(result.current.selectedIds.has("a.md")).toBe(false);
     expect(result.current.selectedIds.has("b.md")).toBe(true);
@@ -47,7 +55,11 @@ describe("useVaultSelectionState", () => {
     const { result } = renderHook(() => useVaultSelectionState());
     act(() => result.current.handleSelect(asFileNode(A), mouse(), [A, B, C]));
     act(() =>
-      result.current.handleSelect(asFileNode(C), mouse({ shiftKey: true }), [A, B, C]),
+      result.current.handleSelect(asFileNode(C), mouse({ shiftKey: true }), [
+        A,
+        B,
+        C,
+      ]),
     );
     expect(result.current.selectedIds.has("a.md")).toBe(true);
     expect(result.current.selectedIds.has("b.md")).toBe(true);

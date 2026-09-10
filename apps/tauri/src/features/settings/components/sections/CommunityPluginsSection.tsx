@@ -7,7 +7,7 @@ import { SettingItem } from "../layout/SettingItem";
  * state. Community plugins that expose settings will register sections
  * through `settingsRegistry` and appear here automatically.
  */
-export default function CommunityPluginsSection() {
+export function CommunityPluginsSection() {
   return (
     <SettingItem
       name="Community plugins"

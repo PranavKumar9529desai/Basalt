@@ -102,7 +102,6 @@ export function useFileDrag() {
         if (draggedFile) e.preventDefault();
       };
 
-
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
       window.addEventListener("pointercancel", onPointerCancel);

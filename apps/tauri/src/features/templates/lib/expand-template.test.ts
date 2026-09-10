@@ -44,9 +44,9 @@ describe("expandTemplate", () => {
   });
 
   it("passes through text without variables unchanged", () => {
-    expect(expandTemplate("# Meeting\n\nAgenda:\n- one", { title: "x", now: NOW })).toBe(
-      "# Meeting\n\nAgenda:\n- one",
-    );
+    expect(
+      expandTemplate("# Meeting\n\nAgenda:\n- one", { title: "x", now: NOW }),
+    ).toBe("# Meeting\n\nAgenda:\n- one");
   });
 
   it("handles whitespace inside the braces", () => {

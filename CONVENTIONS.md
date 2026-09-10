@@ -100,6 +100,25 @@ Package modules follow a `{concern}-{role}` pattern (`table-source.ts`,
 `*-theme.ts` (`frontmatter-theme.ts`, `math-theme.ts`, `mermaid-theme.ts`).
 Cross the §2.4 module budget and split by role — never by growing the folder.
 
+### 1.8 Standard Feature Layout
+
+Every feature directory in `apps/tauri/src/features/<name>/` follows the canonical structure:
+
+```
+features/<name>/
+├── index.ts          ← Barrel: the ONLY public import surface for other layers
+├── types.ts          ← Domain types and interfaces
+├── lib/              ← Pure functions, math/algorithms, and lib/commands.ts
+├── store/            ← Zustand store slice(s) (or store.ts if single file)
+├── hooks/            ← Feature-specific React hooks
+└── components/       ← React components (PascalCase.tsx, named exports only)
+```
+
+Rules:
+
+- **Feature commands** live in `features/<name>/lib/commands.ts`. Do not place command files at the feature root.
+- **Context definitions** that are not UI components live in `lib/` (e.g. `lib/CanvasContext.ts`), not inside `components/`.
+- **Pure logic** (parsers, geometry, filters) lives in `lib/`, never inside `components/` or `hooks/`.
 
 ---
 
@@ -168,14 +187,35 @@ Exception: a feature may import **types only** from another feature's `types.ts`
 
 ### 2.4 File Count Budget per Feature
 
-| Aspect                   | Max | Why                                   |
-| ------------------------ | --- | ------------------------------------- |
-| Hooks per feature        | 4   | More means too many tiny abstractions |
-| Store slices per feature | 2   | Core + persistence. Not 5 files       |
-| Barrel exports per index | 15  | Beyond that, the feature is too broad |
-| Lines per component      | 200 | Beyond that, extract sub-components   |
-| Lines per hook           | 150 | Beyond that, split concerns           |
-| Lines per package module     | 300 | Beyond that, split by role (`table-widget` → `-render`/`-chrome`) |
+| Aspect                   | Max | Why                                                               |
+| ------------------------ | --- | ----------------------------------------------------------------- |
+| Hooks per feature        | 4   | More means too many tiny abstractions                             |
+| Store slices per feature | 2   | Core + persistence. Not 5 files                                   |
+| Barrel exports per index | 15  | Beyond that, the feature is too broad                             |
+| Lines per component      | 200 | Beyond that, extract sub-components                               |
+| Lines per hook           | 150 | Beyond that, split concerns                                       |
+| Lines per package module | 300 | Beyond that, split by role (`table-widget` → `-render`/`-chrome`) |
+
+### 2.5 Downward-Only Layer Direction
+
+Layer dependencies flow strictly downward without exception:
+
+```
+packages/          (Primitives, UI widgets, registries, pure utilities)
+    ↑
+features/          (Domain logic, feature stores, hooks, UI)
+    ↑
+shared/            (Cross-feature orchestration, multi-store commands)
+    ↑
+app-shell/         (Layout composition, view/leaf registrations, providers)
+    ↑
+routes/            (TanStack Router routes)
+```
+
+- 🚫 `features/` MUST NEVER import from `shared/`, `app-shell/`, or `routes/`.
+- 🚫 `shared/` MUST NEVER import from `app-shell/` or `routes/`.
+- 🚫 `packages/` MUST NEVER import from `apps/` (no Tauri API, no Zustand stores, no app-level logic).
+- Pure utilities that cut across features or packages belong in `@workspace/ui` (`packages/ui/src/lib/`), NEVER in `shared/`.
 
 ---
 
@@ -237,6 +277,23 @@ useEffect(() => {
 - Compose features, pass callbacks between them.
 - Keep under 200 lines. If longer, extract sub-components.
 - Does NOT contain orchestration logic — that belongs in `shared/`.
+
+### 4.4 Component Named Exports
+
+All React components across `packages/` and `apps/tauri/` MUST use named exports. Default exports (`export default`) are forbidden for components and modules.
+
+```tsx
+// ❌ WRONG — default export
+const FileNode = memo(function FileNode(props: FileNodeProps) { ... });
+export default FileNode;
+
+// ✅ CORRECT — named export
+export const FileNode = memo(function FileNode(props: FileNodeProps) { ... });
+// or
+export function FileNode(props: FileNodeProps) { ... }
+```
+
+Why: Named exports guarantee consistent symbol names during project-wide refactoring, eliminate import alias drift across files, and enhance automated search and IDE indexing.
 
 ---
 
@@ -684,17 +741,17 @@ arrow pointing downward (`basalt-types` → heavier crates, never the reverse).
 
 Canonical locations for known shared utilities:
 
-| Utility | Canonical location | Why |
-|---|---|---|
-| `stem_of(path) → Option<&str>` | `basalt-types` | Used by vault, search, tables |
-| `stem_lower(path) → Option<String>` | `basalt-types` | Used by vault, search |
-| `mtime_secs(path) → Option<u64>` | `basalt-types` | Used by vault, search |
-| `is_md_path(path) → bool` | `basalt-types` | Used by vault (5 places), search |
-| `is_canvas_path(path) → bool` | `basalt-types` | Used by vault (3 places), search |
-| `is_document_path(path) → bool` | `basalt-types` | Union of above two |
-| Frontmatter fence bounds | `basalt-parser::frontmatter` | One detector, consumed by all |
-| Wikilink `[[…]]` scanner | `basalt-parser` | One grammar, all consumers import |
-| TypedValue comparison | `basalt-types::value` | Type owns its operations (§12.9) |
+| Utility                             | Canonical location           | Why                               |
+| ----------------------------------- | ---------------------------- | --------------------------------- |
+| `stem_of(path) → Option<&str>`      | `basalt-types`               | Used by vault, search, tables     |
+| `stem_lower(path) → Option<String>` | `basalt-types`               | Used by vault, search             |
+| `mtime_secs(path) → Option<u64>`    | `basalt-types`               | Used by vault, search             |
+| `is_md_path(path) → bool`           | `basalt-types`               | Used by vault (5 places), search  |
+| `is_canvas_path(path) → bool`       | `basalt-types`               | Used by vault (3 places), search  |
+| `is_document_path(path) → bool`     | `basalt-types`               | Union of above two                |
+| Frontmatter fence bounds            | `basalt-parser::frontmatter` | One detector, consumed by all     |
+| Wikilink `[[…]]` scanner            | `basalt-parser`              | One grammar, all consumers import |
+| TypedValue comparison               | `basalt-types::value`        | Type owns its operations (§12.9)  |
 
 **Rule:** if a utility appears in 2+ crates, it belongs in `basalt-types`
 (or `basalt-parser` for parsing-specific utilities). Create it there first.
@@ -769,5 +826,53 @@ Before writing new utility code in any `crates/` crate:
 3. **If no → put it in the leaf crate** both callers depend on (`basalt-types`
    for path/collection utilities, `basalt-parser` for parsing utilities).
 4. **After writing:** run `cargo clippy --workspace --all-targets -- -D warnings
-   && cargo test --workspace` before committing.
+&& cargo test --workspace` before committing.
 5. **Error messages:** lowercase, no double-prefix, no trailing period (§12.10).
+
+---
+
+## 13. Shared Frontend Utilities (`@workspace/ui`)
+
+Pure, framework-agnostic helper functions that are required across multiple features or packages belong in `@workspace/ui` (`packages/ui/src/lib/`).
+
+### 13.1 Canonical Path Utilities (`packages/ui/src/lib/paths.ts`)
+
+Never re-implement string manipulation for note paths, extensions, or filenames across features. Always import the canonical helpers:
+
+```ts
+import {
+  basename, // "folder/note.md" → "note.md"
+  stemOf, // "folder/note.canvas" → "note"
+  isMarkdownPath, // true for .md / .markdown
+  isCanvasPath, // true for .canvas
+  isDocumentPath, // true for markdown or canvas
+  normalizePath, // normalizes backslashes to forward slashes and trims leading/trailing slashes
+} from "@workspace/ui";
+```
+
+### 13.2 Path Operation Anti-Patterns
+
+```ts
+// ❌ WRONG — ad-hoc basename extraction
+const name = path.split("/").pop() ?? path;
+const name = path.slice(path.lastIndexOf("/") + 1);
+
+// ✅ CORRECT
+const name = basename(path);
+
+// ❌ WRONG — ad-hoc extension removal / stem extraction
+const title = path.replace(/\.md$/, "");
+const title = basename(path).replace(/\.(md|canvas)$/, "");
+
+// ✅ CORRECT
+const title = stemOf(path);
+
+// ❌ WRONG — ad-hoc extension checks
+if (path.endsWith(".md") || path.endsWith(".markdown")) { ... }
+if (path.endsWith(".canvas")) { ... }
+
+// ✅ CORRECT
+if (isMarkdownPath(path)) { ... }
+if (isCanvasPath(path)) { ... }
+if (isDocumentPath(path)) { ... }
+```

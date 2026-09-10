@@ -47,7 +47,13 @@ export function SettingsFields({ specs, query = "" }: SettingsFieldsProps) {
         />,
       );
     }
-    rows.push(<SettingRow key={`${spec.heading ?? ""}-${spec.name}`} spec={spec} query={q} />);
+    rows.push(
+      <SettingRow
+        key={`${spec.heading ?? ""}-${spec.name}`}
+        spec={spec}
+        query={q}
+      />,
+    );
   }
 
   return <div>{rows}</div>;
@@ -172,7 +178,10 @@ function SettingRow({ spec, query }: { spec: SettingItemSpec; query: string }) {
 /** Does an item match the query? Name, description, or declared keywords. */
 function itemMatches(spec: SettingItemSpec, q: string): boolean {
   if (spec.name.toLowerCase().includes(q)) return true;
-  if (typeof spec.description === "string" && spec.description.toLowerCase().includes(q))
+  if (
+    typeof spec.description === "string" &&
+    spec.description.toLowerCase().includes(q)
+  )
     return true;
   return (spec.keywords ?? []).some((k) => k.toLowerCase().includes(q));
 }

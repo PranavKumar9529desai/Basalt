@@ -44,7 +44,9 @@ export function SettingColor({
             onClick={() => onValueChange(option.value)}
             className={cn(
               "h-6 w-6 rounded-full transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)]",
-              active ? "scale-110 ring-2 ring-[var(--sat-accent-primary)] ring-offset-2 ring-offset-[var(--sat-surface-1)]" : "hover:scale-105",
+              active
+                ? "scale-110 ring-2 ring-[var(--sat-accent-primary)] ring-offset-2 ring-offset-[var(--sat-surface-1)]"
+                : "hover:scale-105",
             )}
             style={{ backgroundColor: option.value }}
           />

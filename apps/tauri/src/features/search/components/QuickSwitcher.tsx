@@ -10,6 +10,7 @@ import { IconFilePlus } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { isCanvasPath, stemOf } from "@workspace/ui";
 import { useSearchStore } from "../store";
 import type { FileResult } from "../types";
 
@@ -27,12 +28,10 @@ function ResultRow({
   query: string;
 }) {
   const parts = result.path.split("/");
-  const rawName = parts.pop() ?? result.path;
+  parts.pop();
   const dir = parts.join("/");
-  const isCanvas = result.path.endsWith(".canvas");
-  const displayName = isCanvas
-    ? rawName.replace(/\.canvas$/i, "")
-    : rawName.replace(/\.md$/i, "");
+  const isCanvas = isCanvasPath(result.path);
+  const displayName = stemOf(result.path);
 
   return (
     <Button

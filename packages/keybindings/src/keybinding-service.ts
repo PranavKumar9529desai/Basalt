@@ -27,7 +27,6 @@ interface PreparedBinding {
 }
 const OVERRIDES_STORAGE_KEY = "basalt.hotkey-overrides";
 
-
 export class KeybindingService {
   private bindings: Keybinding[];
   private context: WhenContext = {};
@@ -38,7 +37,6 @@ export class KeybindingService {
   private customBindings = new Map<string, string>();
   /** Commands whose keybinding is explicitly removed. */
   private unbound = new Set<string>();
-
 
   constructor() {
     this.bindings = KEYBINDINGS.map((b) => ({ ...b }));
@@ -65,7 +63,6 @@ export class KeybindingService {
       };
     });
   }
-
 
   register(binding: Keybinding): void {
     this.bindings.push(binding);

@@ -8,6 +8,7 @@ import {
   mapToXYFlow,
   type CanvasXYNode,
 } from "../lib/mapper";
+import { isCanvasPath } from "@workspace/ui";
 
 export interface UseCanvasPersistenceOptions {
   tab: LeafProps["tab"];
@@ -69,7 +70,7 @@ export function useCanvasPersistence({
   }, [saveCanvasNow, tab.id]);
 
   const loadCanvas = useCallback(async () => {
-    if (!tab.path.endsWith(".canvas")) return;
+    if (!isCanvasPath(tab.path)) return;
     try {
       const json: string = await invoke("open_canvas", { path: tab.path });
       const doc = JSON.parse(json);

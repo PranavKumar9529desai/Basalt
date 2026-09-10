@@ -3,7 +3,11 @@
   { "key": "CmdOrCtrl+W", "command": "tabs:close-active" },
   { "key": "CmdOrCtrl+F", "command": "editor:find", "when": "editorFocused" },
   { "key": "CmdOrCtrl+Shift+F", "command": "search:open" },
-  { "key": "CmdOrCtrl+H", "command": "editor:replace", "when": "editorFocused" },
+  {
+    "key": "CmdOrCtrl+H",
+    "command": "editor:replace",
+    "when": "editorFocused"
+  },
   { "key": "CmdOrCtrl+O", "command": "switcher:open" },
   { "key": "CmdOrCtrl+,", "command": "app:open-settings" },
   { "key": "CmdOrCtrl+G", "command": "graph:open" },
