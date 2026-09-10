@@ -133,6 +133,31 @@ describe("DqlResultWidget layout notification", () => {
     expect(dom.innerHTML).toContain("cm-dql-loading");
     expect(requestMeasure).not.toHaveBeenCalled();
   });
+
+  it("renders code toggle button in live mode but omits it in reading mode", () => {
+    const { view } = mockView();
+    const liveWidget = new DqlResultWidget(
+      'TABLE FROM "docs"',
+      undefined,
+      undefined,
+      0,
+      20,
+      true,
+    );
+    const liveDom = liveWidget.toDOM(view);
+    expect(liveDom.querySelector(".cm-code-btn-toggle")).not.toBeNull();
+
+    const readingWidget = new DqlResultWidget(
+      'TABLE FROM "docs"',
+      undefined,
+      undefined,
+      0,
+      20,
+      false,
+    );
+    const readingDom = readingWidget.toDOM(view);
+    expect(readingDom.querySelector(".cm-code-btn-toggle")).toBeNull();
+  });
 });
 
 describe("EmbedMediaWidget layout notification", () => {
@@ -147,6 +172,29 @@ describe("EmbedMediaWidget layout notification", () => {
 
     img!.dispatchEvent(new Event("load"));
     expect(requestMeasure).toHaveBeenCalled();
+  });
+
+  it("renders code toggle button in live mode but omits it in reading mode", () => {
+    const { view } = mockView();
+    const liveWidget = new EmbedMediaWidget(
+      "asset.png",
+      "asset.png",
+      0,
+      10,
+      true,
+    );
+    const liveDom = liveWidget.toDOM(view);
+    expect(liveDom.querySelector(".cm-code-btn-toggle")).not.toBeNull();
+
+    const readingWidget = new EmbedMediaWidget(
+      "asset.png",
+      "asset.png",
+      0,
+      10,
+      false,
+    );
+    const readingDom = readingWidget.toDOM(view);
+    expect(readingDom.querySelector(".cm-code-btn-toggle")).toBeNull();
   });
 });
 

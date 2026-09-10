@@ -117,4 +117,12 @@ describe("live preview keeps cursor-reveal (renderMode 'live')", () => {
     const { state } = stateFor(dql);
     expect(widgetNames(state)).not.toContain("DqlResultWidget");
   });
+
+  it("keeps closing backticks visible and unhidden when DQL block is in raw mode under caret", () => {
+    const dql = '```dql\nTABLE FROM "docs"\n```';
+    // Caret at index 0 (line 1). Closing fence is at index 26..29.
+    const { state } = stateFor(dql);
+    const closingMarks = marksIn(state, 26, 29);
+    expect(closingMarks).not.toContain("cm-live-hide");
+  });
 });

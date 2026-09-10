@@ -7,13 +7,14 @@ import type { TabItemData } from "./types";
  * Measures each tab's width, then fills left/right from the active tab so it
  * is never hidden by overflow.
  */
+const MIN_TAB_WIDTH = 90;
+
 export function useTabOverflow(
   tabs: TabItemData[],
   reserveWidthRef?: React.RefObject<HTMLElement | null>,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const tabWidthsRef = useRef<Map<string, number>>(new Map());
   const [visibleTabCount, setVisibleTabCount] = useState(tabs.length);
   const [visibleTabStart, setVisibleTabStart] = useState(0);
 
@@ -21,17 +22,9 @@ export function useTabOverflow(
     const container = containerRef.current;
     if (!container) return;
 
-    const reserved = reserveWidthRef?.current?.offsetWidth ?? 0;
-    const availableWidth = container.clientWidth - reserved - 8; // 8px buffer
-
-    const widths = tabs.map((tab) => {
-      const el = tabRefs.current.get(tab.id);
-      const measuredWidth = el?.offsetWidth ?? 0;
-      if (measuredWidth > 0) {
-        tabWidthsRef.current.set(tab.id, measuredWidth);
-      }
-      return tabWidthsRef.current.get(tab.id) || 170;
-    });
+    // The container is a flex-1 sibling of the end controls, so container.clientWidth
+    // is already the exact width of the tab strip.
+    const availableWidth = container.clientWidth;
 
     if (tabs.length === 0) {
       setVisibleTabStart(0);
@@ -39,28 +32,33 @@ export function useTabOverflow(
       return;
     }
 
-    // Keep the active tab in the strip. Fill to the right first, then use
-    // remaining space on the left so overflow never hides the current tab.
+    // Maximum number of tabs that can physically fit at minimum tab width (90px)
+    const maxFittingTabs = Math.max(
+      1,
+      Math.floor(availableWidth / MIN_TAB_WIDTH),
+    );
+    const count = Math.min(tabs.length, maxFittingTabs);
+
+    if (count >= tabs.length) {
+      setVisibleTabStart(0);
+      setVisibleTabCount(tabs.length);
+      return;
+    }
+
+    // Keep the active tab centered/visible within the sliding window
     const activeIndex = tabs.findIndex((tab) => tab.isActive);
     const anchor = activeIndex >= 0 ? activeIndex : 0;
-    let start = anchor;
-    let end = anchor + 1;
-    let usedWidth = widths[anchor] ?? 170;
-    while (end < tabs.length && usedWidth + widths[end] <= availableWidth) {
-      usedWidth += widths[end] ?? 170;
-      end += 1;
-    }
-    while (start > 0 && usedWidth + widths[start - 1] <= availableWidth) {
-      start -= 1;
-      usedWidth += widths[start] ?? 170;
+
+    let start = Math.max(0, anchor - Math.floor(count / 2));
+    if (start + count > tabs.length) {
+      start = Math.max(0, tabs.length - count);
     }
 
     setVisibleTabStart(start);
-    setVisibleTabCount(Math.max(1, end - start));
-  }, [tabs, containerRef, tabRefs, reserveWidthRef]);
+    setVisibleTabCount(count);
+  }, [tabs, containerRef]);
 
-  // ResizeObserver on the container — also fires when the reserved dropdown
-  // width changes since it resizes the row.
+  // ResizeObserver on the container
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -74,7 +72,7 @@ export function useTabOverflow(
   // Also recalc when tabs change
   useEffect(() => {
     recalcOverflow();
-  }, [recalcOverflow, tabs.length]);
+  }, [recalcOverflow, tabs]);
 
   return { containerRef, tabRefs, visibleTabCount, visibleTabStart };
 }

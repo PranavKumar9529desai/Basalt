@@ -290,7 +290,9 @@ export function buildPreviewState(
         if (handled.found) {
           return false;
         }
-        return;
+        // Block widget in raw edit mode: record range and skip descending into child tokens
+        ctx.codeBlockRanges.push({ from: node.from, to: node.to });
+        return false;
       }
 
       // 3. Monotonic code block containment check (O(log N) -> amortized O(1), ADR-040)

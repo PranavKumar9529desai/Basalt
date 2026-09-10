@@ -70,7 +70,7 @@ export const TabItem = memo(function TabItem({
               // Flat top + open bottom: the active tab's bottom edge sits flush
               // against the editor pane. The concave corner cutouts ("nubs")
               // are drawn by TabsBar's chrome layer, not by SVG.
-              "group/item relative z-10 flex h-9 items-center gap-1 rounded-t-lg border border-b-0 px-2 transition-colors select-none",
+              "group/item relative z-10 flex h-9 min-w-[90px] max-w-[240px] flex-1 shrink items-center gap-1 rounded-t-lg border border-b-0 px-2 transition-colors select-none",
               tab.isActive
                 ? "z-20 border-[var(--sat-layout-border)] bg-[var(--sat-editor-background)]"
                 : "border-transparent bg-transparent hover:bg-[var(--sat-surface-3)]/70",
@@ -113,7 +113,7 @@ export const TabItem = memo(function TabItem({
             <div
               data-disabled={tab.disabled ? "true" : undefined}
               className={cn(
-                "flex h-8 min-w-[150px] max-w-[280px] flex-1 items-center justify-start gap-1 px-1 transition-colors",
+                "flex h-8 min-w-0 flex-1 items-center justify-start gap-1 px-1 transition-colors",
                 tab.isActive
                   ? "text-[var(--sat-text-primary)]"
                   : "text-[var(--sat-text-muted)] opacity-85 hover:opacity-100",
@@ -122,13 +122,13 @@ export const TabItem = memo(function TabItem({
               )}
             >
               {tab.icon}
-              <span className="truncate text-xs max-w-[180px]">
+              <span className="truncate text-xs min-w-0 flex-1">
                 {tab.title}
               </span>
               {tab.isDirty ? (
                 <span
                   aria-hidden="true"
-                  className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[var(--sat-accent-primary)]"
+                  className="ml-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sat-accent-primary)]"
                 />
               ) : null}
             </div>

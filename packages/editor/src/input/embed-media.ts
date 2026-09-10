@@ -75,6 +75,7 @@ export class EmbedMediaWidget extends WidgetType {
     private readonly target: string,
     private readonly from?: number,
     private readonly to?: number,
+    private readonly isLive: boolean = true,
   ) {
     super();
   }
@@ -84,7 +85,8 @@ export class EmbedMediaWidget extends WidgetType {
       this.url === other.url &&
       this.target === other.target &&
       this.from === other.from &&
-      this.to === other.to
+      this.to === other.to &&
+      this.isLive === other.isLive
     );
   }
 
@@ -92,7 +94,7 @@ export class EmbedMediaWidget extends WidgetType {
     const wrapper = document.createElement("div");
     wrapper.className = EMBED_MEDIA_CLASS;
 
-    if (this.from !== undefined && this.to !== undefined) {
+    if (this.isLive && this.from !== undefined && this.to !== undefined) {
       const codeBtn = createCodeToggleButton(view, (v) => {
         const from = this.from!;
         const to = this.to!;
@@ -156,8 +158,9 @@ export function buildEmbedWidget(
   target: string,
   from?: number,
   to?: number,
+  isLive: boolean = true,
 ): WidgetType {
-  return new EmbedMediaWidget(url, target, from, to);
+  return new EmbedMediaWidget(url, target, from, to, isLive);
 }
 
 class EmbedMediaPlugin implements PluginValue {
@@ -207,7 +210,7 @@ class EmbedMediaPlugin implements PluginValue {
 
       deco.push(
         Decoration.replace({
-          widget: new EmbedMediaWidget(url, target, from, to),
+          widget: new EmbedMediaWidget(url, target, from, to, false),
           inclusive: true,
         }).range(from, to),
       );

@@ -64,6 +64,7 @@ export class DqlResultWidget extends WidgetType {
     private readonly onOpenLink: OpenLinkFn | undefined,
     private readonly from?: number,
     private readonly to?: number,
+    private readonly isLive: boolean = true,
   ) {
     super();
   }
@@ -72,7 +73,8 @@ export class DqlResultWidget extends WidgetType {
     return (
       this.queryText === other.queryText &&
       this.from === other.from &&
-      this.to === other.to
+      this.to === other.to &&
+      this.isLive === other.isLive
     );
   }
   /** Attach a delegated click handler so result links open notes via onOpenLink. */
@@ -93,7 +95,7 @@ export class DqlResultWidget extends WidgetType {
     const div = document.createElement("div");
     div.className = "cm-dql-result";
 
-    if (this.from !== undefined) {
+    if (this.isLive && this.from !== undefined) {
       const codeBtn = createCodeToggleButton(view, (v) => {
         v.dispatch({
           selection: { anchor: this.from! },
@@ -221,6 +223,7 @@ const renderWidget = (
     state.facet(openLinkFacet),
     model.from,
     model.to,
+    state.facet(renderModeFacet) === "live",
   );
 };
 

@@ -231,7 +231,7 @@ export function TabsBar({
           {tabs.length > 0 && visibleTabCount > 0 && (
             <div
               aria-hidden="true"
-              className="h-full w-20 shrink-0"
+              className="h-full flex-1 min-w-0"
               onDragOver={(e) => {
                 e.preventDefault();
                 const last = tabs[visibleTabStart + visibleTabCount - 1];
