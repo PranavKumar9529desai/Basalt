@@ -12,6 +12,12 @@
     "icon": "IconLayoutBoardSplit"
   },
   {
+    "id": "app:new-drawing",
+    "name": "Create New Drawing",
+    "category": "File",
+    "icon": "IconPencil"
+  },
+  {
     "id": "app:delete-file",
     "name": "Delete Current Note",
     "category": "File",

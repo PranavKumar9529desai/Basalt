@@ -205,3 +205,18 @@ fn rename_with_note_moves_attachments_and_rewrites_embeds() {
         "old embed removed: {c_after}"
     );
 }
+
+#[test]
+fn rename_drawing_file_preserves_extension() {
+    let (root, state) = temp_vault();
+    let draw_path = root.join("architecture.drawing.md");
+    std::fs::write(&draw_path, "```json:excalidraw\n{}\n```\n# Drawing Text & Elements\n## Text Elements\n- Microservice arch\n").unwrap();
+    state.vault.write().unwrap().add_document(&draw_path.to_string_lossy(), "```json:excalidraw\n{}\n```\n# Drawing Text & Elements\n## Text Elements\n- Microservice arch\n");
+
+    let res = rename_note_impl(&draw_path.to_string_lossy(), "system_design", &state, None).unwrap();
+
+    assert_eq!(res.name, "system_design");
+    assert!(res.path.ends_with("system_design.drawing.md"));
+    assert!(root.join("system_design.drawing.md").exists(), "file renamed with .drawing.md preserved");
+    assert!(!root.join("architecture.drawing.md").exists(), "old drawing file removed");
+}

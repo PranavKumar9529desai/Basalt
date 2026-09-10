@@ -1,5 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils";
 import { type FC, memo, useCallback, useEffect, useRef } from "react";
+import { isDrawingPath, stemOf } from "../../lib/paths";
 import type { FileNode } from "./types";
 
 /** Pixels of indentation per depth level. */
@@ -140,6 +141,27 @@ function CanvasIcon() {
   );
 }
 
+function DrawingIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path
+        d="M11.5 2.5a1.414 1.414 0 0 1 2 2L4.5 13.5l-3 1 1-3L11.5 2.5z"
+        stroke="var(--sat-accent-primary, #6366f1)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 interface InlineEditInputProps {
   node: FileNode;
   onCommitEdit?: (node: FileNode, newName: string) => void;
@@ -242,13 +264,17 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
     const isEditing = node.isEditing ?? false;
     const paddingLeft = node.depth * INDENT_PX + 6;
 
+    const isDrawing = !node.isFolder && isDrawingPath(node.name);
     const isCanvas = !node.isFolder && node.name.endsWith(".canvas");
-    const displayName =
-      !node.isFolder && node.name.endsWith(".md")
-        ? node.name.slice(0, -3)
+    const displayName = isFolder
+      ? node.name
+      : isDrawing
+        ? stemOf(node.name)
         : isCanvas
           ? node.name.slice(0, -7)
-          : node.name;
+          : node.name.endsWith(".md")
+            ? node.name.slice(0, -3)
+            : node.name;
 
     const handleClick = (e: React.UIEvent) => {
       if (isEditing) return; // Don't navigate while editing
@@ -344,6 +370,8 @@ export const FileTreeNode: FC<FileTreeNodeProps> = memo(
           <span className="mr-1.5 flex items-center shrink-0">
             {isFolder ? (
               <FolderIcon />
+            ) : isDrawing ? (
+              <DrawingIcon />
             ) : isCanvas ? (
               <CanvasIcon />
             ) : (

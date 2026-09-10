@@ -28,6 +28,15 @@ export function basename(path: string): string {
  */
 export function stemOf(path: string): string {
   const base = basename(path);
+  if (/\.drawing\.md$/i.test(base)) {
+    return base.slice(0, -".drawing.md".length);
+  }
+  if (/\.excalidraw\.md$/i.test(base)) {
+    return base.slice(0, -".excalidraw.md".length);
+  }
+  if (/\.excalidraw$/i.test(base)) {
+    return base.slice(0, -".excalidraw".length);
+  }
   const dotIndex = base.lastIndexOf(".");
   if (dotIndex <= 0) return base;
   return base.slice(0, dotIndex);

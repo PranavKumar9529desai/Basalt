@@ -11,11 +11,15 @@ use std::path::Path;
 ///
 /// `"/vault/notes/borrow-checker.md"` → `Some("borrow-checker")`
 /// `"/vault/canvases/board.canvas"` → `Some("board")`
+/// `"/vault/diagrams/arch.drawing.md"` → `Some("arch")`
 #[inline]
 pub fn stem_of(path: &str) -> Option<&str> {
-    Path::new(path)
-        .file_stem()
-        .and_then(|s| s.to_str())
+    let stem = Path::new(path).file_stem()?.to_str()?;
+    if let Some(stripped) = stem.strip_suffix(".drawing").or_else(|| stem.strip_suffix(".excalidraw")) {
+        Some(stripped)
+    } else {
+        Some(stem)
+    }
 }
 
 /// Extract the filename stem, lowercased.
@@ -77,6 +81,8 @@ mod tests {
     fn stem_of_extracts_filename_stem() {
         assert_eq!(stem_of("/vault/notes/borrow-checker.md"), Some("borrow-checker"));
         assert_eq!(stem_of("file.canvas"), Some("file"));
+        assert_eq!(stem_of("diagram.drawing.md"), Some("diagram"));
+        assert_eq!(stem_of("sketch.excalidraw.md"), Some("sketch"));
         assert_eq!(stem_of("/a/b/c.txt"), Some("c"));
         assert_eq!(stem_of(""), None);
     }

@@ -41,6 +41,13 @@ describe("paths utility", () => {
       expect(stemOf("notes/untitled")).toBe("untitled");
     });
 
+    it("strips .drawing.md, .excalidraw.md, and .excalidraw extensions", () => {
+      expect(stemOf("diagrams/architecture.drawing.md")).toBe("architecture");
+      expect(stemOf("diagrams/architecture.DRAWING.MD")).toBe("architecture");
+      expect(stemOf("sketch.excalidraw.md")).toBe("sketch");
+      expect(stemOf("whiteboard.excalidraw")).toBe("whiteboard");
+    });
+
     it("handles multiple dots correctly", () => {
       expect(stemOf("archive.tar.gz")).toBe("archive.tar");
     });

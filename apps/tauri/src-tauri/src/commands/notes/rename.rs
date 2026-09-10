@@ -20,7 +20,13 @@ use basalt_parser::{rewrite_wikilinks, NoteRename};
 /// separators and empty/`.`/`..` names.
 fn sanitize_name(raw: &str) -> AppResult<String> {
     let mut name = raw.trim().to_string();
-    for ext in [".md", ".markdown"] {
+    for ext in [
+        ".drawing.md",
+        ".excalidraw.md",
+        ".excalidraw",
+        ".md",
+        ".markdown",
+    ] {
         if name.len() > ext.len() && name.to_ascii_lowercase().ends_with(ext) {
             let cut = name.len() - ext.len();
             name.truncate(cut);
@@ -75,10 +81,27 @@ fn rename_note_impl(
     }
 
     let new_stem = sanitize_name(new_name)?;
-    let old_stem = old_abs
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
+    let (suffix, old_stem_owned) = {
+        let file_name = old_abs
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
+        let lower = file_name.to_ascii_lowercase();
+        if lower.ends_with(".drawing.md") {
+            (".drawing.md", file_name[..file_name.len() - 11].to_string())
+        } else if lower.ends_with(".excalidraw.md") {
+            (".excalidraw.md", file_name[..file_name.len() - 14].to_string())
+        } else if lower.ends_with(".excalidraw") {
+            (".excalidraw", file_name[..file_name.len() - 11].to_string())
+        } else {
+            let stem = old_abs
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
+            (".md", stem.to_string())
+        }
+    };
+    let old_stem = &old_stem_owned;
     if new_stem.eq_ignore_ascii_case(old_stem) {
         return Err(AppError::Validation(
             "the note already has that name".to_string(),
@@ -88,7 +111,7 @@ fn rename_note_impl(
     let parent = old_abs
         .parent()
         .ok_or_else(|| AppError::Validation("invalid parent directory".to_string()))?;
-    let new_abs = parent.join(format!("{new_stem}.md"));
+    let new_abs = parent.join(format!("{new_stem}{suffix}"));
     if new_abs.exists() {
         return Err(AppError::Validation(format!(
             "a note named '{new_stem}' already exists"
@@ -109,7 +132,7 @@ fn rename_note_impl(
             .read()
             .map_err(|_| AppError::LockPoisoned("vault"))?;
         for path_str in vault.note_paths() {
-            if !path_str.ends_with(".md") {
+            if !path_str.ends_with(".md") && !path_str.ends_with(".excalidraw") {
                 continue;
             }
             let links_match = vault

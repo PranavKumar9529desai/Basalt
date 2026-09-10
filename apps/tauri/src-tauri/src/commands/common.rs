@@ -44,10 +44,11 @@ pub(super) fn index_remove(state: &AppState, path_str: &str) {
 
 pub(super) fn canonical_md_path(path: &str) -> std::io::Result<std::path::PathBuf> {
     let p = Path::new(path);
-    if p.extension().and_then(|e| e.to_str()) != Some("md") {
+    let ext = p.extension().and_then(|e| e.to_str());
+    if ext != Some("md") && ext != Some("excalidraw") {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            "only .md files are supported",
+            "only .md and .excalidraw files are supported",
         ));
     }
     p.canonicalize()

@@ -1,5 +1,6 @@
 [
   { "key": "CmdOrCtrl+N", "command": "app:new-file" },
+  { "key": "CmdOrCtrl+Shift+D", "command": "app:new-drawing" },
   { "key": "CmdOrCtrl+W", "command": "tabs:close-active" },
   { "key": "CmdOrCtrl+F", "command": "editor:find", "when": "editorFocused" },
   { "key": "CmdOrCtrl+Shift+F", "command": "search:open" },
