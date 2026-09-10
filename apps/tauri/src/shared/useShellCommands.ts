@@ -57,6 +57,10 @@ export function useShellCommands(ws: AppContextValue) {
       ws.controller.createCanvasInstant,
     );
     commandService.registerCommand(
+      "app:new-drawing",
+      ws.controller.createDrawingInstant,
+    );
+    commandService.registerCommand(
       "app:delete-file",
       ws.controller.handleDeleteFromCommands,
     );
@@ -68,6 +72,7 @@ export function useShellCommands(ws: AppContextValue) {
       commandService.unregister("dailies:open-today");
       commandService.unregister("app:new-file");
       commandService.unregister("app:new-canvas");
+      commandService.unregister("app:new-drawing");
       commandService.unregister("app:delete-file");
       commandService.unregister("vault:pick-and-set");
     };
@@ -75,6 +80,7 @@ export function useShellCommands(ws: AppContextValue) {
     openNote,
     ws.controller.createNoteInstant,
     ws.controller.createCanvasInstant,
+    ws.controller.createDrawingInstant,
     ws.controller.handleDeleteFromCommands,
     ws.mutations.pickAndSetVault,
   ]);

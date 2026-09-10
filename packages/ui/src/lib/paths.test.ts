@@ -3,6 +3,7 @@ import {
   basename,
   isCanvasPath,
   isDocumentPath,
+  isDrawingPath,
   isMarkdownPath,
   normalizePath,
   stemOf,
@@ -61,9 +62,22 @@ describe("paths utility", () => {
       expect(isCanvasPath("")).toBe(false);
     });
 
+    it("identifies drawing files case-insensitively", () => {
+      expect(isDrawingPath("diagram.drawing.md")).toBe(true);
+      expect(isDrawingPath("diagram.DRAWING.MD")).toBe(true);
+      expect(isDrawingPath("sketch.excalidraw.md")).toBe(true);
+      expect(isDrawingPath("scene.excalidraw")).toBe(true);
+      expect(isDrawingPath("scene.EXCALIDRAW")).toBe(true);
+      expect(isDrawingPath("note.md")).toBe(false);
+      expect(isDrawingPath("board.canvas")).toBe(false);
+      expect(isDrawingPath("")).toBe(false);
+    });
+
     it("identifies document paths", () => {
       expect(isDocumentPath("note.md")).toBe(true);
       expect(isDocumentPath("board.canvas")).toBe(true);
+      expect(isDocumentPath("diagram.drawing.md")).toBe(true);
+      expect(isDocumentPath("scene.excalidraw")).toBe(true);
       expect(isDocumentPath("image.png")).toBe(false);
     });
   });

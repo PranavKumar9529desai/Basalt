@@ -12,10 +12,11 @@ export interface CreateActionsDeps {
 export interface CreateActions {
   createNoteInstant: () => Promise<void>;
   createCanvasInstant: () => Promise<void>;
+  createDrawingInstant: () => Promise<void>;
   startFolderInline: () => void;
 }
 
-/** Instant-create actions for the tree (note/canvas/folder) — every one
+/** Instant-create actions for the tree (note/canvas/drawing/folder) — every one
  * derives its destination from the focused/selected node, opens that folder,
  * and for notes loads the fresh file with the one-time title-rename flag. */
 export function createCreateActions(deps: CreateActionsDeps): CreateActions {
@@ -52,11 +53,26 @@ export function createCreateActions(deps: CreateActionsDeps): CreateActions {
     await refreshTree();
   };
 
+  const createDrawingInstant = async () => {
+    const ctx = deriveParentContext();
+    if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
+    const result = await mutations.createUntitledDrawing(
+      ctx.parentRelPath || undefined,
+    );
+    if (!result) return;
+    void editor.loadNote({
+      name: result.name,
+      path: result.path,
+      renameOnOpen: true,
+    });
+    await refreshTree();
+  };
+
   const startFolderInline = () => {
     const ctx = deriveParentContext();
     if (ctx.parentRelPath) openFolder(ctx.parentRelPath);
     mutations.createFolderInline(ctx);
   };
 
-  return { createNoteInstant, createCanvasInstant, startFolderInline };
+  return { createNoteInstant, createCanvasInstant, createDrawingInstant, startFolderInline };
 }

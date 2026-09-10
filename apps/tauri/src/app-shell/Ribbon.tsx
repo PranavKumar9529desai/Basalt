@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconSitemap,
   IconTemplate,
+  IconPencil,
 } from "@tabler/icons-react";
 import { commandService } from "@workspace/commands";
 import { BasaltMark } from "@workspace/ui/components/brand";
@@ -87,6 +88,12 @@ export function Ribbon({
       icon: <IconCalendarEvent size={20} stroke={1.5} />,
       label: "Open today's daily note",
       onClick: () => commandService.execute("dailies:open-today"),
+    },
+    {
+      id: "drawing",
+      icon: <IconPencil size={20} stroke={1.5} />,
+      label: "New drawing",
+      onClick: () => commandService.execute("app:new-drawing"),
     },
   ];
 

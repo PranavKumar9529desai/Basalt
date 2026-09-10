@@ -50,10 +50,18 @@ export function isCanvasPath(path: string): boolean {
 }
 
 /**
- * Checks if a path is a primary Basalt document type (Markdown or Canvas).
+ * Checks if a path or filename is a Drawing document (`.drawing.md`, `.excalidraw.md`, or `.excalidraw`). Case-insensitive.
+ */
+export function isDrawingPath(path: string): boolean {
+  if (!path) return false;
+  return /\.(drawing|excalidraw)\.md$/i.test(path) || /\.excalidraw$/i.test(path);
+}
+
+/**
+ * Checks if a path is a primary Basalt document type (Markdown, Canvas, or Drawing).
  */
 export function isDocumentPath(path: string): boolean {
-  return isMarkdownPath(path) || isCanvasPath(path);
+  return isMarkdownPath(path) || isCanvasPath(path) || isDrawingPath(path);
 }
 
 /**

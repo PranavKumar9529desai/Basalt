@@ -146,15 +146,20 @@ export class LeafRegistry {
     return this.leaves.get(type);
   }
 
-  /** Resolve a file path to a registered leaf type via extension. */
+  /** Resolve a file path to a registered leaf type via extension (longest extension match wins). */
   leafTypeForPath(path: string): string | null {
     const lower = path.toLowerCase();
+    let bestMatch: { type: string; len: number } | null = null;
     for (const leaf of this.leaves.values()) {
-      if (leaf.extensions.some((ext) => lower.endsWith(ext))) {
-        return leaf.type;
+      for (const ext of leaf.extensions) {
+        if (lower.endsWith(ext.toLowerCase())) {
+          if (!bestMatch || ext.length > bestMatch.len) {
+            bestMatch = { type: leaf.type, len: ext.length };
+          }
+        }
       }
     }
-    return null;
+    return bestMatch ? bestMatch.type : null;
   }
 
   getAll(): LeafDescriptor[] {

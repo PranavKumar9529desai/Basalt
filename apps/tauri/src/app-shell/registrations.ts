@@ -6,6 +6,7 @@ import {
   IconLink,
   IconTag,
   IconPaperclip,
+  IconPencil,
 } from "@tabler/icons-react";
 import { TableControls } from "./views/TableControls";
 import { leafRegistry, viewRegistry } from "@workspace/views";
@@ -24,6 +25,10 @@ const Graph = lazy(() =>
 // Canvas pulls in WebGL2 viewport renderer — lazy-load like graph.
 const Canvas = lazy(() =>
   import("../features/canvas").then((m) => ({ default: m.CanvasView })),
+);
+// Drawing pulls in Excalidraw engine — lazy-load like graph and canvas.
+const Drawing = lazy(() =>
+  import("../features/drawing").then((m) => ({ default: m.DrawingView })),
 );
 
 /**
@@ -96,4 +101,11 @@ leafRegistry.register({
   name: "Canvas",
   extensions: [".canvas"],
   component: Canvas,
+});
+leafRegistry.register({
+  type: "drawing",
+  name: "Drawing",
+  icon: IconPencil,
+  extensions: [".drawing.md", ".excalidraw.md", ".excalidraw"],
+  component: Drawing,
 });

@@ -9,6 +9,7 @@ export {
   basename,
   isCanvasPath,
   isDocumentPath,
+  isDrawingPath,
   isMarkdownPath,
   normalizePath,
   stemOf,

@@ -48,6 +48,7 @@ export interface UseVaultControllerOptions {
 export interface UseVaultControllerReturn {
   createNoteInstant: () => Promise<void>;
   createCanvasInstant: () => Promise<void>;
+  createDrawingInstant: () => Promise<void>;
   startFolderInline: () => void;
   cutIds: Set<string>;
   canPasteToMenuTarget: boolean;
@@ -154,7 +155,12 @@ export function useVaultController(
     contextMenu.menuState.target,
   ]);
 
-  const { createNoteInstant, createCanvasInstant, startFolderInline } = useMemo(
+  const {
+    createNoteInstant,
+    createCanvasInstant,
+    createDrawingInstant,
+    startFolderInline,
+  } = useMemo(
     () =>
       createCreateActions({
         deriveParentContext,
@@ -263,6 +269,7 @@ export function useVaultController(
   return {
     createNoteInstant,
     createCanvasInstant,
+    createDrawingInstant,
     startFolderInline,
     cutIds,
     canPasteToMenuTarget,
