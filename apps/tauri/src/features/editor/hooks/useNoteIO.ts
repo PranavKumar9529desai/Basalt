@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
-import type { QueryResult } from "@workspace/editor";
+import type { QueryResult, TaskQuery } from "@workspace/editor";
 import { useActiveNoteStore } from "../store";
 import type { BacklinkEntry, LinkSuggestion, SaveStatus } from "../types";
 
@@ -63,6 +63,13 @@ export function useNoteIO() {
     return invoke<QueryResult>("run_query", { dql, path: "" });
   }, []);
 
+  const runTasksQuery = useCallback(
+    async (query: TaskQuery): Promise<QueryResult> => {
+      return invoke<QueryResult>("get_tasks", { query });
+    },
+    [],
+  );
+
   const onPasteImage = useCallback(
     async (data: Uint8Array, filename: string): Promise<string | null> => {
       try {
@@ -84,7 +91,6 @@ export function useNoteIO() {
     },
     [],
   );
-
   return {
     status,
     setStatus,
@@ -96,6 +102,7 @@ export function useNoteIO() {
     onFetchLinks,
     onFetchTags,
     runQuery,
+    runTasksQuery,
     onPasteImage,
     parseFrontmatter,
   };

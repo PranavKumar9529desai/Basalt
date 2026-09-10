@@ -242,13 +242,19 @@ export function handleCodeBlockNode(
   );
   const endRenderLine = Math.min(endLine.number, doc.lineAt(rangeTo).number);
 
-  // DQL/dataview blocks: add the code-block background line classes, but leave
-  // widget dispatch and child-skipping to the dql block widget (live-preview).
-  // Return false so handleBlockWidgetsNode dispatches them.
+  // DQL/dataview/tasks blocks: add the code-block background line classes, but
+  // leave widget dispatch and child-skipping to the query block widgets
+  // (live-preview). Return false so handleBlockWidgetsNode dispatches them.
   if (name === "FencedCode") {
     const langMatch = startLine.text.match(/^```([^\s]*)/);
     const lang = langMatch ? langMatch[1].toLowerCase() : "";
-    if (lang === "dql" || lang === "dataview" || lang === "mermaid") {
+    if (
+      lang === "dql" ||
+      lang === "dataview" ||
+      lang === "tasks" ||
+      lang === "task" ||
+      lang === "mermaid"
+    ) {
       addCodeLineClasses(startRenderLine, endRenderLine, doc, collector);
       return false;
     }

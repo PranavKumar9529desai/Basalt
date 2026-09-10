@@ -5,6 +5,7 @@ import {
   type EditorExtensionGroups,
   type FrontmatterModel,
   type QueryResult,
+  type TaskQuery,
   contextMenuExtension,
   createEditorExtensionGroups,
   readingModeExtras,
@@ -35,6 +36,7 @@ export interface NoteIO {
   onFetchLinks: (query: string) => Promise<LinkSuggestion[]>;
   onFetchTags: (query: string) => Promise<string[]>;
   runQuery: (dql: string) => Promise<QueryResult>;
+  runTasksQuery: (query: TaskQuery) => Promise<QueryResult>;
   parseFrontmatter: (text: string) => FrontmatterModel | null;
   onPasteImage?: (data: Uint8Array, filename: string) => Promise<string | null>;
 }
@@ -156,6 +158,7 @@ export class EditorController {
       parseFrontmatter: this.io.parseFrontmatter,
       editFrontmatter,
       runQuery: this.io.runQuery,
+      runTasksQuery: this.io.runTasksQuery,
       resolveAsset: this.services.resolveAsset,
       onTableCursorChange,
     });
@@ -204,6 +207,7 @@ export class EditorController {
           this.modeCompartment.reconfigure(
             readingModeExtras({
               runQuery: this.io.runQuery,
+              runTasksQuery: this.io.runTasksQuery,
               onOpenLink: this.handleOpenLink,
               onOpenTag: this.handleOpenTag,
               openExternalLink: this.openExternalLink,

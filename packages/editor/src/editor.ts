@@ -36,6 +36,11 @@ import {
   runQueryFacet,
 } from "./block-widgets/dql-widget";
 import {
+  taskQueryBlockSpec,
+  TASK_WIDGET_THEME,
+  getTasksQueryFacet,
+} from "./block-widgets/task-query-widget";
+import {
   tableBlockSpec,
   TABLE_BLOCK_THEME,
 } from "./block-widgets/table-widget";
@@ -91,14 +96,16 @@ export interface EditorExtensionGroups {
 }
 
 /**
- * Shared registration for the HTML/table/DQL block widgets plus their themes.
- * Each block widget registers a spec (via `blockWidgetSpecsFacet.of`) and a
- * base theme. When a `runQuery`/`onOpenLink` config is supplied, the DQL widget
- * and the dependency facets are included (skip for read-only preview panes).
+ * Shared registration for the HTML/table/DQL/tasks block widgets plus their
+ * themes. Each block widget registers a spec (via `blockWidgetSpecsFacet.of`)
+ * and a base theme. When a `runQuery`/`onOpenLink`/`runTasksQuery` config is
+ * supplied, the live-query widgets and dependency facets are included (skip
+ * for read-only preview panes).
  */
 function commonBlockWidgetExtensions(config?: {
   runQuery?: EditorConfig["runQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
+  runTasksQuery?: EditorConfig["runTasksQuery"];
 }): Extension[] {
   const exts: Extension[] = [
     // Sanitized HTML block widget + its theme.
@@ -126,6 +133,14 @@ function commonBlockWidgetExtensions(config?: {
     );
     exts.push(runQueryFacet.of(config.runQuery));
     exts.push(openLinkFacet.of(config.onOpenLink));
+  }
+  if (config?.runTasksQuery) {
+    // Task query block widget — renders ```tasks code blocks as live task lists.
+    exts.push(
+      blockWidgetSpecsFacet.of(taskQueryBlockSpec as BlockWidgetSpec),
+      TASK_WIDGET_THEME,
+    );
+    exts.push(getTasksQueryFacet.of(config.runTasksQuery));
   }
   return exts;
 }
@@ -201,6 +216,7 @@ export function createEditorExtensionGroups(
       }),
       ...commonBlockWidgetExtensions({
         runQuery: config.runQuery,
+        runTasksQuery: config.runTasksQuery,
         onOpenLink: config.onOpenLink,
       }),
     ],
@@ -267,6 +283,7 @@ export function previewExtensions(): Extension[] {
  */
 export function readingExtensions(config: {
   runQuery?: EditorConfig["runQuery"];
+  runTasksQuery?: EditorConfig["runTasksQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
   onOpenTag?: EditorConfig["onOpenTag"];
   openExternalLink?: EditorConfig["openExternalLink"];
@@ -289,6 +306,7 @@ export function readingExtensions(config: {
     }),
     ...commonBlockWidgetExtensions({
       runQuery: config.runQuery,
+      runTasksQuery: config.runTasksQuery,
       onOpenLink: config.onOpenLink,
     }),
     // Embed asset resolution facet.
@@ -311,6 +329,7 @@ export function readingExtensions(config: {
  * grammar + live-preview live outside the compartment. */
 export function readingModeExtras(config: {
   runQuery?: EditorConfig["runQuery"];
+  runTasksQuery?: EditorConfig["runTasksQuery"];
   onOpenLink?: EditorConfig["onOpenLink"];
   onOpenTag?: EditorConfig["onOpenTag"];
   openExternalLink?: EditorConfig["openExternalLink"];
@@ -323,6 +342,7 @@ export function readingModeExtras(config: {
     }),
     ...commonBlockWidgetExtensions({
       runQuery: config.runQuery,
+      runTasksQuery: config.runTasksQuery,
       onOpenLink: config.onOpenLink,
     }),
     resolveAssetFacet.of(config.resolveAsset),

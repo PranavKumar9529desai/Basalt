@@ -2,6 +2,8 @@ import { Facet, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { RunQueryFn } from "./block-widgets/dql-widget";
 export type { RunQueryFn } from "./block-widgets/dql-widget";
+import type { RunTasksQueryFn } from "./block-widgets/task-query-widget";
+export type { RunTasksQueryFn } from "./block-widgets/task-query-widget";
 export type FetchLinksFn = (
   query: string,
 ) => Promise<Array<{ name: string; path: string }>>;
@@ -119,6 +121,12 @@ export interface EditorConfig {
    * `run_query` Tauri IPC command (basalt-tables engine).
    */
   runQuery?: RunQueryFn;
+  /**
+   * Execute a TASK query against the vault (`get_tasks` Tauri IPC). Injected
+   * so `packages/editor` stays pure — the feature layer owns the IPC call.
+   * Unlike `runQuery` (DQL text), this takes a structured TaskQuery.
+   */
+  runTasksQuery?: RunTasksQueryFn;
   /**
    * Resolve an embed target (`![[file]]`) to a loadable asset URL (e.g. via
    * Tauri's `convertFileSrc`). Return `null` when the target is not a

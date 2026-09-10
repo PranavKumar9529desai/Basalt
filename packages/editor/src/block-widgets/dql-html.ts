@@ -1,7 +1,3 @@
-// ---------------------------------------------------------------------------
-// HTML rendering helpers
-// ---------------------------------------------------------------------------
-
 import { escapeHtml } from "./utils";
 import type { TypedValue, QueryResult } from "./dql-types";
 
@@ -19,6 +15,8 @@ function renderCellHtml(value: TypedValue): string {
         : '<span class="cm-dql-check cm-dql-check--off">✗</span>';
     case "link":
       return `<a class="internal-link cm-dql-link" data-href="${escapeHtml(value.path)}" data-name="${escapeHtml(value.name)}">${escapeHtml(value.name)}</a>`;
+    case "list":
+      return value.items.map(renderCellHtml).join(", ");
     case "null":
       return '<span class="cm-dql-null">—</span>';
   }
@@ -82,10 +80,6 @@ function renderTaskHtml(result: QueryResult): string {
       : "";
   return `<ul class="cm-dql-task-list">${itemsHtml}</ul>${footer}`;
 }
-
-// ---------------------------------------------------------------------------
-// Result rendering — infers query type from column structure
-// ---------------------------------------------------------------------------
 
 export function renderDqlResult(result: QueryResult): string {
   // LIST: 1 column "File" with type "link"

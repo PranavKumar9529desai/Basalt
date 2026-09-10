@@ -78,6 +78,20 @@ export {
   runQueryFacet,
   openLinkFacet,
 } from "./block-widgets/dql-widget";
+export {
+  taskQueryBlockSpec,
+  TASK_WIDGET_THEME,
+  clearTaskQueryCache,
+  getTasksQueryFacet,
+} from "./block-widgets/task-query-widget";
+export type {
+  TaskQuery,
+  TaskFilter,
+  TaskSort,
+  TaskDisplayOptions,
+  ParsedTaskQuery,
+  RunTasksQueryFn,
+} from "./block-widgets/task-query-widget";
 export type {
   QueryResult,
   QueryColumn,
