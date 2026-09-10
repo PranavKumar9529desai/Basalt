@@ -1,10 +1,12 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
   IconCode,
   IconDownload,
   IconMaximize,
   IconPalette,
   IconPhoto,
+  IconSettings,
+  IconX,
 } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
 import type { DrawingViewMode } from "../types";
@@ -17,6 +19,9 @@ export interface DrawingHeaderActionsProps {
   onZoomToFit?: () => void;
 }
 
+const ICON_BTN =
+  "h-8 w-8 p-0 flex items-center justify-center rounded-md text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]";
+
 export const DrawingHeaderActions = memo(function DrawingHeaderActions({
   viewMode,
   onToggleViewMode,
@@ -24,71 +29,96 @@ export const DrawingHeaderActions = memo(function DrawingHeaderActions({
   onExportPng,
   onZoomToFit,
 }: DrawingHeaderActionsProps) {
+  const [panelOpen, setPanelOpen] = useState(false);
+
   return (
-    <div className="absolute top-3 right-4 z-20 flex items-center gap-1.5 rounded-lg border border-[var(--sat-layout-border,#27272a)] bg-[var(--sat-surface-2,#18181b)]/90 backdrop-blur-md px-2 py-1 shadow-sm">
-      {viewMode === "canvas" && onZoomToFit && (
+    <>
+      {/* Vertical icon strip — pinned to the top-right edge, above Excalidraw's own toolbar */}
+      <div
+        className="absolute top-3 right-3 z-30 flex flex-col items-center gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/90 backdrop-blur-md p-1 shadow-sm"
+        aria-label="Drawing actions"
+      >
         <Button
           variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-[var(--sat-text-muted,#a1a1aa)] hover:text-[var(--sat-text-default,#fafafa)]"
-          onClick={onZoomToFit}
-          title="Zoom to fit"
+          size="icon"
+          className={ICON_BTN}
+          onClick={() => setPanelOpen((v) => !v)}
+          title="Drawing settings"
+          aria-expanded={panelOpen}
         >
-          <IconMaximize size={14} className="mr-1" />
-          Fit
+          {panelOpen ? <IconX size={15} /> : <IconSettings size={15} />}
         </Button>
-      )}
+      </div>
 
-      {viewMode === "canvas" && (
-        <>
+      {/* Expanded panel — shown when the settings button is toggled */}
+      {panelOpen && (
+        <div
+          className="absolute top-3 right-14 z-30 flex flex-col gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/95 backdrop-blur-md p-2 shadow-md min-w-[160px]"
+          aria-label="Drawing action panel"
+        >
+          <p className="text-[10px] uppercase tracking-wide text-[var(--sat-text-muted)] px-1 pb-0.5 font-medium">
+            Drawing
+          </p>
+
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-[var(--sat-text-muted,#a1a1aa)] hover:text-[var(--sat-text-default,#fafafa)]"
-            onClick={onExportSvg}
-            title="Export scene as SVG"
+            className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
+            onClick={() => { onToggleViewMode(); setPanelOpen(false); }}
+            title={
+              viewMode === "canvas"
+                ? "Switch to Raw Markdown mode"
+                : "Switch to Visual Canvas mode"
+            }
           >
-            <IconDownload size={14} className="mr-1" />
-            SVG
+            {viewMode === "canvas" ? (
+              <><IconCode size={13} /><span>Raw Markdown</span></>
+            ) : (
+              <><IconPalette size={13} /><span>Canvas</span></>
+            )}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-[var(--sat-text-muted,#a1a1aa)] hover:text-[var(--sat-text-default,#fafafa)]"
-            onClick={onExportPng}
-            title="Export scene as PNG"
-          >
-            <IconPhoto size={14} className="mr-1" />
-            PNG
-          </Button>
-        </>
+
+          {viewMode === "canvas" && onZoomToFit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
+              onClick={() => { onZoomToFit(); setPanelOpen(false); }}
+              title="Zoom to fit"
+            >
+              <IconMaximize size={13} /><span>Zoom to fit</span>
+            </Button>
+          )}
+
+          {viewMode === "canvas" && (
+            <>
+              <div className="h-px bg-[var(--sat-layout-border)] my-0.5" />
+              <p className="text-[10px] uppercase tracking-wide text-[var(--sat-text-muted)] px-1 pb-0.5 font-medium">
+                Export
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
+                onClick={() => { onExportSvg(); setPanelOpen(false); }}
+                title="Export as SVG"
+              >
+                <IconDownload size={13} /><span>SVG</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
+                onClick={() => { onExportPng(); setPanelOpen(false); }}
+                title="Export as PNG"
+              >
+                <IconPhoto size={13} /><span>PNG</span>
+              </Button>
+            </>
+          )}
+        </div>
       )}
-
-      <div className="h-4 w-[1px] bg-[var(--sat-layout-border,#27272a)] mx-0.5" />
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 px-2 text-xs text-[var(--sat-text-muted,#a1a1aa)] hover:text-[var(--sat-text-default,#fafafa)]"
-        onClick={onToggleViewMode}
-        title={
-          viewMode === "canvas"
-            ? "Switch to Raw Markdown mode"
-            : "Switch to Visual Canvas mode"
-        }
-      >
-        {viewMode === "canvas" ? (
-          <>
-            <IconCode size={14} className="mr-1" />
-            Raw Markdown
-          </>
-        ) : (
-          <>
-            <IconPalette size={14} className="mr-1" />
-            Canvas
-          </>
-        )}
-      </Button>
-    </div>
+    </>
   );
 });
+
