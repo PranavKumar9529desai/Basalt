@@ -11,7 +11,8 @@ import type {
 import {
   parseDrawingContent,
   serializeDrawingMarkdown,
-  EMPTY_DRAWING_JSON,
+  getEditorBg,
+  makeEmptyDrawingJson,
 } from "../lib/parser";
 
 export interface UseDrawingStateOptions {
@@ -64,12 +65,23 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
         try {
           parsedScene = JSON.parse(payload.data_json);
         } catch {
-          parsedScene = JSON.parse(EMPTY_DRAWING_JSON);
+          parsedScene = JSON.parse(makeEmptyDrawingJson());
         }
+
+        // Default to the current editor background so the canvas feels like a
+        // native continuation of the editor surface. Also migrate old drawings
+        // that still have the Excalidraw default white (#ffffff).
+        const storedBg = parsedScene.appState?.viewBackgroundColor;
+        const editorBg = getEditorBg();
+        const resolvedBg =
+          storedBg && storedBg !== "#ffffff" ? storedBg : editorBg;
 
         sceneDataRef.current = {
           elements: (parsedScene.elements || []).filter((e) => !e.isDeleted),
-          appState: parsedScene.appState || {},
+          appState: {
+            ...parsedScene.appState,
+            viewBackgroundColor: resolvedBg,
+          },
           files: parsedScene.files || {},
         };
 
@@ -84,14 +96,14 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
       } catch (err) {
         console.error("Failed to load drawing:", err);
         if (isCancelled) return;
-        const empty = JSON.parse(EMPTY_DRAWING_JSON);
+        const empty = JSON.parse(makeEmptyDrawingJson());
         sceneDataRef.current = {
           elements: [],
           appState: empty.appState,
           files: {},
         };
         setInitialData(empty);
-        setRawMarkdownState(serializeDrawingMarkdown(EMPTY_DRAWING_JSON));
+        setRawMarkdownState(serializeDrawingMarkdown(makeEmptyDrawingJson()));
         isLoadedRef.current = true;
         setIsLoaded(true);
       }
@@ -133,8 +145,11 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
           source: "basalt",
           elements: cleanElements,
           appState: {
+            // Migrate old drawings that still have Excalidraw's default white.
             viewBackgroundColor:
-              sceneDataRef.current.appState.viewBackgroundColor || "#121110",
+              sceneDataRef.current.appState.viewBackgroundColor !== "#ffffff"
+                ? sceneDataRef.current.appState.viewBackgroundColor || getEditorBg()
+                : getEditorBg(),
             gridSize: sceneDataRef.current.appState.gridSize ?? 20,
           },
           files: sceneDataRef.current.files,
@@ -212,7 +227,9 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
         elements: cleanElements,
         appState: {
           viewBackgroundColor:
-            sceneDataRef.current.appState.viewBackgroundColor || "#121110",
+            sceneDataRef.current.appState.viewBackgroundColor !== "#ffffff"
+              ? sceneDataRef.current.appState.viewBackgroundColor || getEditorBg()
+              : getEditorBg(),
           gridSize: sceneDataRef.current.appState.gridSize ?? 20,
         },
         files: sceneDataRef.current.files,

@@ -136,7 +136,16 @@ function buildThemeInfo(): DrawingThemeInfo {
   --scrollbar-thumb: ${surface3};
   --scrollbar-thumb-hover: ${mixHex(surface3, isLight ? black : white, 0.1)};
 }
-`.trim();
+
+/* Hide Excalidraw's built-in top-right UI buttons (Library, Help) that overlap
+   our DrawingHeaderActions vertical strip. We replace them with our own panel. */
+.excalidraw-basalt-host .excalidraw .library-button,
+.excalidraw-basalt-host .excalidraw [aria-label="Open menu"],
+.excalidraw-basalt-host .excalidraw .help-icon,
+.excalidraw-basalt-host .excalidraw .sidebar-trigger,
+.excalidraw-basalt-host .excalidraw .App-toolbar__divider + button:last-child {
+  display: none !important;
+}`.trim();
 
   return { theme, cssOverride };
 }

@@ -1,4 +1,5 @@
 import type { ExcalidrawElementStub, ExcalidrawAppStateStub } from "../types";
+import { getEditorBg } from "./parser";
 
 /**
  * Triggers a browser download for a given Blob.
@@ -29,7 +30,9 @@ export async function exportSceneToSvg(
     appState: {
       ...appState,
       exportBackground: true,
-      viewBackgroundColor: appState?.viewBackgroundColor || "#121110",
+      viewBackgroundColor: appState?.viewBackgroundColor !== "#ffffff"
+        ? (appState?.viewBackgroundColor || getEditorBg())
+        : getEditorBg(),
     } as any,
     files: (files || {}) as any,
   });
@@ -49,7 +52,9 @@ export async function exportSceneToBlob(
     appState: {
       ...appState,
       exportBackground: true,
-      viewBackgroundColor: appState?.viewBackgroundColor || "#121110",
+      viewBackgroundColor: appState?.viewBackgroundColor !== "#ffffff"
+        ? (appState?.viewBackgroundColor || getEditorBg())
+        : getEditorBg(),
     } as any,
     files: (files || {}) as any,
     mimeType: "image/png",

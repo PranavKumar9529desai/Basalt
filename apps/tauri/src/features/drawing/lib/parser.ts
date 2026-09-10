@@ -1,16 +1,54 @@
 import type { DrawingPayload, ExcalidrawSceneData } from "../types";
 
+/** Fallback canvas background for SSR / tests where document is unavailable. */
+const FALLBACK_CANVAS_BG = "#0d0e12";
+
+/**
+ * Read the current editor background from the Basalt theme token.
+ * Falls back to the volcanic default when document is not available.
+ */
+export function getEditorBg(): string {
+  if (typeof document === "undefined") return FALLBACK_CANVAS_BG;
+  return (
+    window.getComputedStyle(document.documentElement)
+      .getPropertyValue("--sat-surface-1")
+      .trim() || FALLBACK_CANVAS_BG
+  );
+}
+
+/**
+ * A static JSON template for unit tests and SSR.
+ * Live code should call `makeEmptyDrawingJson()` to pick up the current theme.
+ */
 export const EMPTY_DRAWING_JSON = JSON.stringify({
   type: "excalidraw",
   version: 2,
   source: "basalt",
   elements: [],
   appState: {
-    viewBackgroundColor: "#121110",
+    viewBackgroundColor: FALLBACK_CANVAS_BG,
     gridSize: 20,
   },
   files: {},
 });
+
+/**
+ * Create a fresh empty drawing scene whose canvas background matches the
+ * currently-active Basalt theme (`--sat-surface-1`).
+ */
+export function makeEmptyDrawingJson(): string {
+  return JSON.stringify({
+    type: "excalidraw",
+    version: 2,
+    source: "basalt",
+    elements: [],
+    appState: {
+      viewBackgroundColor: getEditorBg(),
+      gridSize: 20,
+    },
+    files: {},
+  });
+}
 
 /**
  * Extracts non-empty text lines from active (non-deleted) text elements in an Excalidraw JSON payload.
