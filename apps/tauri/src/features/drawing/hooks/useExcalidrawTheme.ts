@@ -137,6 +137,24 @@ function buildThemeInfo(): DrawingThemeInfo {
   --scrollbar-thumb-hover: ${mixHex(surface3, isLight ? black : white, 0.1)};
 }
 
+/* ---- Canvas background override ----
+   Excalidraw sets the canvas background via inline JS style (viewBackgroundColor).
+   Our --default-bg-color override has equal specificity to Excalidraw's own
+   .excalidraw.theme--dark rule.  Because Excalidraw's stylesheet loads after our
+   injected <style> tag, theirs wins in same-specificity cascade.
+
+   We fix this with !important on --default-bg-color (escalates above competing
+   rules) and by painting the canvas wrapper directly so even if
+   viewBackgroundColor is stale the visual result is correct.
+*/
+.excalidraw-basalt-host .excalidraw {
+  --default-bg-color: ${surface1} !important;
+}
+.excalidraw-basalt-host .excalidraw .excalidraw__canvas-wrapper,
+.excalidraw-basalt-host .excalidraw canvas.excalidraw__canvas {
+  background-color: ${surface1} !important;
+}
+
 /* Hide Excalidraw's built-in top-right UI buttons (Library, Help) that overlap
    our DrawingHeaderActions vertical strip. We replace them with our own panel. */
 .excalidraw-basalt-host .excalidraw .library-button,

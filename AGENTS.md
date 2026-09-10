@@ -313,6 +313,10 @@ When we finalize an architectural decision, document it in `docs/adr/NNN-name.md
 | [045-dql-query-engine-execution-and-optimization](docs/adr/045-dql-query-engine-execution-and-optimization.md)   | ADR-045: DQL Query Engine Execution & Optimization                          |
 | [046-instant-two-tier-boot-and-decoupled-indexing](docs/adr/046-instant-two-tier-boot-and-decoupled-indexing.md) | ADR-046: Instant Two-Tier Boot & Decoupled Indexing Architecture            |
 
+| [047-native-drawing-infinite-canvas](docs/adr/047-native-drawing-infinite-canvas.md) | ADR-047: Native Drawing and Infinite Whiteboard Integration |
+| [048-native-task-management-system](docs/adr/048-native-task-management-system.md) | ADR-048: Native Task Management System |
+
+
 <!-- ADR_INDEX_END -->
 
 ---
