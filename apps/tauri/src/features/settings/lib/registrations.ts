@@ -21,6 +21,7 @@ import {
   EDITOR_SPECS,
   FILES_LINKS_SPECS,
   GENERAL_SPECS,
+  TASKS_SPECS,
   TEMPLATES_SPECS,
 } from "../specs";
 
@@ -120,8 +121,9 @@ for (const plugin of CORE_PLUGINS) {
       ? TEMPLATES_SPECS
       : plugin.id === "dailies"
         ? DAILIES_SPECS
-        : undefined;
-  if (!specs) continue;
+        : plugin.id === "tasks"
+          ? TASKS_SPECS
+          : undefined;
   settingsRegistry.register({
     id: plugin.id,
     label: plugin.name,

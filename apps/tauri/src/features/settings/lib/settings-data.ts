@@ -80,8 +80,29 @@ const DEFAULTS = {
   newLinkFormat: "wikilink" as "wikilink" | "markdown",
   /** Update internal links when a note is renamed or moved (Files & links). */
   autoUpdateLinks: true as boolean,
-  /** Per-core-plugin enabled state (Core plugins manager). Absent = enabled. */
-  enabledPlugins: {} as Record<string, boolean>,
+  /** Global filter applied to all task queries (Tasks). */
+  tasksGlobalFilter: "" as string,
+  /** Priority applied to new tasks; "none" omits a signifier (Tasks). */
+  tasksDefaultPriority: "none" as
+    | "none"
+    | "highest"
+    | "high"
+    | "medium"
+    | "low"
+    | "lowest",
+  /** Auto-stamp ⭐ (done date) when a task is completed (Tasks). */
+  tasksDoneDateAutoAdd: true as boolean,
+  /** Auto-stamp ️✖️ (cancelled date) when a task is cancelled (Tasks). */
+  tasksCancelledDateAutoAdd: true as boolean,
+  /** Checkbox sequence for status cycling; comma-separated status names
+   *  ("in_progress" = [/], "done" = [x]) consumed by task UI. */
+  tasksStatusSequence: "in_progress,done" as string,
+  /** Where a new task line is inserted relative to the cursor (Tasks). */
+  tasksNewTaskPosition: "above" as "above" | "below",
+  /** Remove the scheduled signifier when a recurring task is completed. */
+  tasksRemoveScheduledOnRecurrence: false as boolean,
+   /** Per-core-plugin enabled state (Core plugins manager). Absent = enabled. */
+   enabledPlugins: {} as Record<string, boolean>,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;

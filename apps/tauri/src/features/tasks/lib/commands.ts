@@ -13,6 +13,7 @@ import { syntaxTree } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { commandService } from "@workspace/commands";
 import {
+  parseTaskSignifiers,
   cycleStatus,
   statusToCheckboxChar,
 } from "@workspace/editor";
@@ -42,6 +43,15 @@ function findActiveMarkdownView(): EditorView | null {
     if (view) return view;
   }
   return null;
+}
+
+/** Local-time ISO date (YYYY-MM-DD) for tomorrow. */
+function isoTomorrow(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 /** A TaskMarker syntax node spanning the checkbox `[x]` text. */
@@ -125,11 +135,8 @@ export function registerTaskCommands() {
     replaceMarkerAtCursor(view, marker, cycleStatus(status));
   });
 
-  commandService.registerCommand("tasks:create", () => {
-    useTaskModalStore.getState().openCreate();
-  });
-
-  commandService.registerCommand("tasks:edit", () => {
+  /** Open the modal in edit mode targeting the task line at the cursor. */
+  const openEditAtCursor = () => {
     const view = findActiveMarkdownView();
     if (!view) return;
     const marker = taskMarkerAtCursor(view);
@@ -138,5 +145,42 @@ export function registerTaskCommands() {
     if (!path) return;
     const line = view.state.doc.lineAt(marker.from).number;
     useTaskModalStore.getState().openEdit({ path, line });
+  };
+
+  commandService.registerCommand("tasks:create", () => {
+    useTaskModalStore.getState().openCreate();
+  });
+  commandService.registerCommand("tasks:edit", () => {
+    openEditAtCursor();
+  });
+
+  commandService.registerCommand("tasks:set-priority", () => {
+    openEditAtCursor();
+  });
+
+  commandService.registerCommand("tasks:set-due-date", () => {
+    openEditAtCursor();
+  });
+
+  commandService.registerCommand("tasks:set-scheduled", () => {
+    openEditAtCursor();
+  });
+
+  commandService.registerCommand("tasks:postpone", () => {
+    const view = findActiveMarkdownView();
+    if (!view) return;
+    const marker = taskMarkerAtCursor(view);
+    if (!marker) return;
+    const line = view.state.doc.lineAt(marker.from);
+    const tomorrow = isoTomorrow();
+    const due = parseTaskSignifiers(line.text)?.due;
+    const insert =
+      due !== undefined
+        ? line.text.replace(/\u{1F4C5}\d{4}-\d{2}-\d{2}/u, `\u{1F4C5}${tomorrow}`)
+        : `${line.text} \u{1F4C5}${tomorrow}`;
+    view.dispatch({
+      changes: { from: line.from, to: line.to, insert },
+    });
+    view.focus();
   });
 }

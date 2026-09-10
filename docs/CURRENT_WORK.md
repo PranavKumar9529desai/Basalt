@@ -6,15 +6,15 @@
 > with authority only over "what are we doing right now".
 
 ---
-## ADR-048 Native Task Management — Phases 1–5 DONE, Phase 6 next (2026-09-10)
+## ADR-048 Native Task Management — Phases 1–6 DONE (2026-09-10)
 
-**Branch:** `feat/adr-048-task-management` (Phases 1–4 committed; Phase 5
-uncommitted until the Phase 5 commit lands — gate is green).
+**Branch:** `feat/adr-048-task-management` (Phases 1–5 committed — `f186845`,
+`6448b11`, `9b9fecd`, `02618e2`, `da94ab6`, `5043730`; Phase 6 uncommitted
+until the Phase 6 commit lands — gate is green).
 
 **Goal:** Native task management (kanban explicitly EXCLUDED by user). Scope:
 Rust query engine + Tauri IPC, ```tasks block widget, editor signifier
 enhancements, create/edit modal, settings + commands + keybindings.
-
 **Note:** The prior CURRENT_WORK note ("cargo test --workspace fails in
 basalt-tables — user WIP urgency.rs/output.rs") is now RESOLVED — that WIP was
 this work; deps added, `output.rs` rewritten, all crates pass.
@@ -125,13 +125,22 @@ this work; deps added, `output.rs` rewritten, all crates pass.
   (create/edit/toggle/cycle-status) + `IconCheckbox`/`IconRefresh`
 - Tests: 11 Rust module tests (including round-trip), 8 modal tests
   (create/edit round-trip, validation, tags, escape)
-
-### Phase 6 — Settings + Commands + Keybindings (NEXT)
-- 9 task settings in `settings-data.ts` + `specs/tasks.ts` +
-  `CorePluginsSection.tsx`
-- remaining `commands.json` entries (set-priority, set-due/scheduled,
-  board-view is EXCLUDED, postpone) + `icons.ts`
-- `Mod+Enter` keybinding in `packages/keybindings`
+### Phase 6 — Settings + Commands + Keybindings ✅
+- 8 task settings in `settings-data.ts` (`tasksGlobalFilter`,
+  `tasksDefaultPriority`, `tasksDoneDateAutoAdd`, `tasksCancelledDateAutoAdd`,
+  `tasksCreatedDateAutoAdd`, `tasksStatusSequence` (comma-separated string),
+  `tasksNewTaskPosition`, `tasksRemoveScheduledOnRecurrence`) + `specs/tasks.ts`
+  (8 items) wired into `specs/index.ts` CORE_SPECS, the registrations.ts
+  plugin loop, and `CorePluginsSection.tsx` roster (IconCheckbox)
+- 4 new commands: `tasks:set-priority` (IconFlag), `tasks:set-due-date` +
+  `tasks:set-scheduled` (IconCalendarEvent) → open the modal in edit mode at
+  cursor via extracted `openEditAtCursor` helper; `tasks:postpone`
+  (IconCalendarOff) → CM6 dispatch replacing `📅YYYY-MM-DD` with tomorrow
+  (local-time ISO) or appending it
+- Keybinding: `CmdOrCtrl+Enter` → `tasks:toggle` (`when: editorFocused`;
+  hotkey parser lowercases key, matches Enter)
+- Gate green: app vitest 362/362, editor vitest 337/337, cargo test --workspace
+  clean, clippy clean, `bun run lint` + both tsc clean
 
 ### Key decisions (respect these)
 - `execute_task_query` bypasses the DQL WorkRow pipeline — iterates vault

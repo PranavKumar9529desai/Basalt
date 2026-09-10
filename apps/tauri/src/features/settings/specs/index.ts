@@ -4,6 +4,7 @@ import { DAILIES_SPECS } from "./dailies";
 import { EDITOR_SPECS } from "./editor";
 import { FILES_LINKS_SPECS } from "./filesLinks";
 import { GENERAL_SPECS } from "./general";
+import { TASKS_SPECS } from "./tasks";
 import { TEMPLATES_SPECS } from "./templates";
 
 /**
@@ -18,16 +19,17 @@ export const CORE_SPECS: Record<string, SettingItemSpec[]> = {
   "files-links": FILES_LINKS_SPECS,
   templates: TEMPLATES_SPECS,
   dailies: DAILIES_SPECS,
+  tasks: TASKS_SPECS,
 };
 
 export { APP_VERSION, GENERAL_SPECS } from "./general";
 export { ACCENT_PRESETS } from "./appearance";
 export { APPEARANCE_SPECS } from "./appearance";
-export { EDITOR_SPECS } from "./editor";
-export { FILES_LINKS_SPECS } from "./filesLinks";
 export { TEMPLATES_SPECS } from "./templates";
 export { DAILIES_SPECS } from "./dailies";
-
+export { TASKS_SPECS } from "./tasks";
+export { EDITOR_SPECS } from "./editor";
+export { FILES_LINKS_SPECS } from "./filesLinks";
 /** Does a spec item match the query? Name, description, or declared keywords. */
 export function specMatches(spec: SettingItemSpec, q: string): boolean {
   if (spec.name.toLowerCase().includes(q)) return true;

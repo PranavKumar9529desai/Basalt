@@ -1,6 +1,7 @@
 import {
   IconArrowsExchange,
   IconCalendar,
+  IconCheckbox,
   IconClipboardList,
   IconGraph,
   IconHistory,
@@ -73,6 +74,12 @@ export const CORE_PLUGINS: CorePluginMeta[] = [
     name: "Templates",
     description: "Insertable note boilerplate.",
     icon: IconClipboardList,
+  },
+  {
+    id: "tasks",
+    name: "Tasks",
+    description: "Native task management.",
+    icon: IconCheckbox,
   },
 ];
 

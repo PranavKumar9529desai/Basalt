@@ -202,5 +202,29 @@
     "name": "Tasks: Cycle status",
     "category": "Tasks",
     "icon": "IconRefresh"
+  },
+  {
+    "id": "tasks:set-priority",
+    "name": "Tasks: Set priority",
+    "category": "Tasks",
+    "icon": "IconFlag"
+  },
+  {
+    "id": "tasks:set-due-date",
+    "name": "Tasks: Set due date",
+    "category": "Tasks",
+    "icon": "IconCalendarEvent"
+  },
+  {
+    "id": "tasks:set-scheduled",
+    "name": "Tasks: Set scheduled date",
+    "category": "Tasks",
+    "icon": "IconCalendarEvent"
+  },
+  {
+    "id": "tasks:postpone",
+    "name": "Tasks: Postpone to tomorrow",
+    "category": "Tasks",
+    "icon": "IconCalendarOff"
   }
 ]
