@@ -51,6 +51,7 @@ import {
 } from "../shared";
 import "../features/export/lib/commands";
 import "../features/templates/lib/commands";
+import "../features/tasks";
 import { Ribbon } from "./Ribbon";
 import { SideDock } from "./SideDock";
 import "./registrations";

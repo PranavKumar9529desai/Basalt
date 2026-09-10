@@ -102,6 +102,13 @@ export {
   getBlockWidgetModel,
   requestPreviewRebuild,
 } from "./preview/live-preview";
+export {
+  parseTaskSignifiers,
+  cycleStatus,
+  statusToCheckboxChar,
+  TASK_STATUS_CYCLE,
+  type TaskSignifiers,
+} from "./input/task-signifiers";
 export { notifyViewOfSizeChange } from "./block-widgets/utils";
 export type { BlockWidgetSpec } from "./block-widgets/registry";
 export {
