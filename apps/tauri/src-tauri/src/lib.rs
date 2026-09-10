@@ -33,13 +33,13 @@ pub fn process_uptime_ms() -> Option<u64> {
 
 use commands::{
     autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
-    create_untitled_canvas, create_untitled_note, delete_file, delete_paths, get_asset_audit,
+    create_untitled_canvas, create_untitled_drawing, create_untitled_note, delete_file, delete_paths, get_asset_audit,
     get_assets, get_backlinks, get_graph, get_settings, get_tag_counts, get_vault_tree,
     get_workspace,
     list_templates, media_server_url, move_paths, open_canvas, open_daily_note, open_file,
-    open_files, open_vault_dialog, parse_canvas, parse_frontmatter, read_template, reindex_vault,
+    open_files, open_vault_dialog, parse_canvas, parse_frontmatter, read_drawing, read_template, reindex_vault,
     rename_note, rename_path, reorganize_assets,
-    run_query, save_attachment, save_canvas, save_file, save_files, search_content, search_files,
+    run_query, save_attachment, save_canvas, save_drawing, save_file, save_files, search_content, search_files,
     set_setting, set_vault, set_workspace_key, write_dev_report,
 };
 
@@ -122,6 +122,9 @@ pub fn run() {
             save_canvas,
             create_untitled_canvas,
             parse_canvas,
+            read_drawing,
+            save_drawing,
+            create_untitled_drawing,
             media_server_url,
         ])
         .run(tauri::generate_context!())

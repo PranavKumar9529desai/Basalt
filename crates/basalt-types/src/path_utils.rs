@@ -50,13 +50,22 @@ pub fn is_canvas_path(path: &Path) -> bool {
     path.extension().and_then(|ext| ext.to_str()) == Some("canvas")
 }
 
-/// True for the two document kinds the vault indexes and the tree shows:
-/// Markdown notes (`.md`) and JSON Canvas files (`.canvas`).
+/// True when the path is a drawing document (`.drawing.md`, `.excalidraw.md`, or `.excalidraw`).
+#[inline]
+pub fn is_drawing_path(path: &Path) -> bool {
+    let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    name.ends_with(".drawing.md")
+        || name.ends_with(".excalidraw.md")
+        || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
+}
+
+/// True for document kinds the vault indexes and the tree shows:
+/// Markdown notes (`.md`), JSON Canvas files (`.canvas`), and standalone drawing files (`.excalidraw`).
 #[inline]
 pub fn is_document_path(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|e| e.to_str()),
-        Some("md" | "canvas")
+        Some("md" | "canvas" | "excalidraw")
     )
 }
 
@@ -86,6 +95,14 @@ mod tests {
         assert!(!is_canvas_path(Path::new("board.md")));
         assert!(is_document_path(Path::new("note.md")));
         assert!(is_document_path(Path::new("board.canvas")));
+        assert!(is_document_path(Path::new("sketch.excalidraw")));
+        assert!(is_document_path(Path::new("diagram.drawing.md")));
         assert!(!is_document_path(Path::new("image.png")));
+
+        assert!(is_drawing_path(Path::new("diagram.drawing.md")));
+        assert!(is_drawing_path(Path::new("sketch.excalidraw.md")));
+        assert!(is_drawing_path(Path::new("canvas.excalidraw")));
+        assert!(!is_drawing_path(Path::new("note.md")));
+        assert!(!is_drawing_path(Path::new("board.canvas")));
     }
 }
