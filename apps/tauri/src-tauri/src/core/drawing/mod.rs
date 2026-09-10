@@ -1,13 +1,18 @@
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
+
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
+pub(crate) mod basalt;
+pub(crate) mod obsidian;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DrawingPayload {
-    /// Raw JSON scene string parsed from %%#drawing-data ... %% or direct .excalidraw JSON.
+    /// Raw JSON scene string — either the hybrid file's embedded scene or the
+    /// direct `.excalidraw` JSON (decompressed when the source was compressed).
     pub data_json: String,
     /// Extracted plain-text lines from the drawing elements for markdown search/graph indexing.
     pub text_elements: Vec<String>,
@@ -57,7 +62,42 @@ pub fn extract_text_elements_from_json(data_json: &str) -> Vec<String> {
     result
 }
 
-/// Parse a drawing file content (either hybrid `.drawing.md` or raw `.excalidraw` JSON).
+/// Parse YAML frontmatter for `created:`/`updated:` timestamps.
+/// Returns `(created, updated, body_start)` where `body_start` is the byte offset
+/// just past the closing frontmatter fence (0 when no frontmatter is present).
+fn parse_frontmatter(content: &str) -> (Option<String>, Option<String>, usize) {
+    let trimmed_start = content.trim_start();
+    if !trimmed_start.starts_with("---") {
+        return (None, None, 0);
+    }
+
+    let after_first_fence = &content[3..];
+    let Some(second_fence_idx) = after_first_fence.find("\n---") else {
+        return (None, None, 0);
+    };
+
+    let mut created = None;
+    let mut updated = None;
+
+    for line in after_first_fence[..second_fence_idx].lines() {
+        let line_trim = line.trim();
+        if let Some(rest) = line_trim.strip_prefix("created:") {
+            created = Some(rest.trim().trim_matches('"').trim_matches('\'').to_string());
+        } else if let Some(rest) = line_trim.strip_prefix("updated:") {
+            updated = Some(rest.trim().trim_matches('"').trim_matches('\'').to_string());
+        }
+    }
+
+    let mut body_start = 3 + second_fence_idx + 4;
+    if body_start < content.len() && content.as_bytes()[body_start] == b'\n' {
+        body_start += 1;
+    }
+
+    (created, updated, body_start)
+}
+
+/// Parse a drawing file's string content (either hybrid `.drawing.md`, an
+/// Obsidian Excalidraw plugin `.excalidraw.md`, or raw `.excalidraw` JSON).
 pub fn parse_drawing_content(content: &str) -> DrawingPayload {
     let trimmed_start = content.trim_start();
     if trimmed_start.starts_with('{') {
@@ -72,91 +112,54 @@ pub fn parse_drawing_content(content: &str) -> DrawingPayload {
         };
     }
 
-    let mut created = None;
-    let mut updated = None;
-    let mut body_start = 0;
-
-    // Parse YAML frontmatter if present
-    if trimmed_start.starts_with("---") {
-        let after_first_fence = &content[3..];
-        if let Some(second_fence_idx) = after_first_fence.find("\n---") {
-            let fm_str = &after_first_fence[..second_fence_idx];
-            body_start = 3 + second_fence_idx + 4;
-            if body_start < content.len() && content.as_bytes()[body_start] == b'\n' {
-                body_start += 1;
-            }
-
-            for line in fm_str.lines() {
-                let line_trim = line.trim();
-                if let Some(rest) = line_trim.strip_prefix("created:") {
-                    created = Some(rest.trim().trim_matches('"').trim_matches('\'').to_string());
-                } else if let Some(rest) = line_trim.strip_prefix("updated:") {
-                    updated = Some(rest.trim().trim_matches('"').trim_matches('\'').to_string());
-                }
-            }
-        }
-    }
-
+    let (created, updated, body_start) = parse_frontmatter(content);
     let body = if body_start < content.len() {
         &content[body_start..]
     } else {
         ""
     };
 
-    // Extract JSON payload from %%#drawing-data ... %%
-    let data_json = if let Some(start_tag) = content.find("%%#drawing-data") {
-        let json_start = start_tag + "%%#drawing-data".len();
-        let rest = &content[json_start..];
-        if let Some(end_tag) = rest.find("%%") {
-            let extracted = rest[..end_tag].trim().to_string();
-            if extracted.is_empty() {
-                EMPTY_DRAWING_JSON.to_string()
-            } else {
-                extracted
-            }
+    // Basalt's native hybrid (`.drawing.md`): `%%#drawing-data` + `# Drawing Text & Elements`.
+    if basalt::is_basalt_hybrid(content) {
+        let parsed = basalt::parse_basalt_hybrid(content, body);
+        let text_elements = if parsed.text_elements.is_empty() {
+            extract_text_elements_from_json(&parsed.data_json)
         } else {
-            EMPTY_DRAWING_JSON.to_string()
-        }
-    } else {
-        EMPTY_DRAWING_JSON.to_string()
-    };
-
-    // Extract text elements from markdown body
-    let mut text_elements = Vec::new();
-    let mut in_text_section = false;
-
-    for line in body.lines() {
-        let line_trim = line.trim();
-        if line_trim.starts_with("%%") {
-            break;
-        }
-
-        if line_trim == "# Drawing Text & Elements" {
-            in_text_section = true;
-            continue;
-        }
-
-        if in_text_section {
-            if line_trim.starts_with('#') {
-                break;
-            }
-            if let Some(item) = line_trim.strip_prefix('-') {
-                let val = item.trim();
-                if !val.is_empty() {
-                    text_elements.push(val.to_string());
-                }
-            }
-        }
+            parsed.text_elements
+        };
+        return DrawingPayload {
+            data_json: parsed.data_json,
+            text_elements,
+            raw_markdown: content.to_string(),
+            created,
+            updated,
+        };
     }
 
-    // Fallback if no text elements in markdown section: extract from json elements
-    if text_elements.is_empty() {
-        text_elements = extract_text_elements_from_json(&data_json);
+    // Obsidian Excalidraw plugin hybrid (`.excalidraw.md`): `# Excalidraw Data` +
+    // fenced `## Drawing` scene block (plain or LZString-compressed).
+    if obsidian::is_obsidian_excalidraw_format(content) {
+        let parsed = obsidian::parse_obsidian_excalidraw(content);
+        let data_json = parsed
+            .data_json
+            .unwrap_or_else(|| EMPTY_DRAWING_JSON.to_string());
+        let text_elements = if parsed.text_elements.is_empty() {
+            extract_text_elements_from_json(&data_json)
+        } else {
+            parsed.text_elements
+        };
+        return DrawingPayload {
+            data_json,
+            text_elements,
+            raw_markdown: content.to_string(),
+            created,
+            updated,
+        };
     }
 
     DrawingPayload {
-        data_json,
-        text_elements,
+        data_json: EMPTY_DRAWING_JSON.to_string(),
+        text_elements: Vec::new(),
         raw_markdown: content.to_string(),
         created,
         updated,
@@ -168,34 +171,30 @@ pub fn serialize_drawing_markdown(
     data_json: &str,
     existing_markdown: Option<&str>,
 ) -> Result<String, String> {
-    // Validate JSON or sanitize
     let text_elements = extract_text_elements_from_json(data_json);
     let now_iso = Utc::now().to_rfc3339();
 
     let mut created = now_iso.clone();
-    let mut custom_frontmatter_lines = Vec::new();
+    let mut custom_frontmatter_lines: Vec<&str> = Vec::new();
 
     if let Some(existing) = existing_markdown {
         let trimmed = existing.trim_start();
         if trimmed.starts_with("---") {
-            let after_first = &existing[3..];
-            if let Some(second_fence) = after_first.find("\n---") {
-                let fm = &after_first[..second_fence];
-                for line in fm.lines() {
-                    let trimmed_line = line.trim();
-                    if trimmed_line.starts_with("created:") {
-                        if let Some(rest) = trimmed_line.strip_prefix("created:") {
-                            let c = rest.trim().trim_matches('"').trim_matches('\'');
-                            if !c.is_empty() {
-                                created = c.to_string();
-                            }
+            let after_first_fence = &existing[3..];
+            if let Some(second_fence_idx) = after_first_fence.find("\n---") {
+                for line in after_first_fence[..second_fence_idx].lines() {
+                    let line_trim = line.trim();
+                    if let Some(rest) = line_trim.strip_prefix("created:") {
+                        let val = rest.trim().trim_matches('"').trim_matches('\'').to_string();
+                        if !val.is_empty() {
+                            created = val;
                         }
-                    } else if !trimmed_line.starts_with("updated:")
-                        && !trimmed_line.starts_with("type:")
-                        && !trimmed_line.starts_with("version:")
-                        && !trimmed_line.is_empty()
+                    } else if !line_trim.starts_with("updated:")
+                        && !line_trim.starts_with("type:")
+                        && !line_trim.starts_with("version:")
+                        && !line_trim.is_empty()
                     {
-                        custom_frontmatter_lines.push(line.to_string());
+                        custom_frontmatter_lines.push(line);
                     }
                 }
             }
@@ -206,20 +205,20 @@ pub fn serialize_drawing_markdown(
     out.push_str("---\n");
     out.push_str("type: excalidraw\n");
     out.push_str("version: 2\n");
-    out.push_str(&format!("created: {}\n", created));
-    out.push_str(&format!("updated: {}\n", now_iso));
-    for custom in custom_frontmatter_lines {
-        out.push_str(&custom);
+    out.push_str(&format!("created: {created}\n"));
+    out.push_str(&format!("updated: {now_iso}\n"));
+    for custom in &custom_frontmatter_lines {
+        out.push_str(custom);
         out.push('\n');
     }
     out.push_str("---\n\n");
-
     out.push_str("# Drawing Text & Elements\n\n");
+
     if text_elements.is_empty() {
         out.push('\n');
     } else {
-        for text in text_elements {
-            out.push_str(&format!("- {}\n", text));
+        for text in &text_elements {
+            out.push_str(&format!("- {text}\n"));
         }
         out.push('\n');
     }
@@ -311,4 +310,3 @@ mod tests {
         assert_eq!(read_back, content);
     }
 }
-

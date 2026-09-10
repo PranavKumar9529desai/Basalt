@@ -68,4 +68,87 @@ describe("Drawing Parser & Serializer", () => {
     const parsed = parseDrawingContent(markdown);
     expect(parsed.data_json).toBe(EMPTY_DRAWING_JSON);
   });
+  it("parses Obsidian Excalidraw format with # Drawing and ```json fence", () => {
+    const content = [
+      "---",
+      "excalidraw-plugin: parsed",
+      "tags: [excalidraw]",
+      "---",
+      "# Text Elements",
+      "- [[System Architecture]] ^abc123",
+      "- Load Balancer",
+      "",
+      "# Drawing",
+      "```json",
+      '{"type":"excalidraw","version":2,"source":"obsidian-excalidraw-plugin","elements":[{"type":"text","text":"Hello","isDeleted":false}],"appState":{},"files":{}}',
+      "```",
+      "%%",
+    ].join("\n");
+
+    const parsed = parseDrawingContent(content);
+    expect(parsed.data_json).toContain("obsidian-excalidraw-plugin");
+    expect(parsed.text_elements).toEqual(["[[System Architecture]]", "Load Balancer"]);
+  });
+
+  it("parses Obsidian Excalidraw format with ## Drawing double-hash heading", () => {
+    const content = [
+      "---",
+      "excalidraw-plugin: parsed",
+      "---",
+      "# Text Elements",
+      "- Item one",
+      "",
+      "## Drawing",
+      "```json",
+      '{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}',
+      "```",
+      "%%",
+    ].join("\n");
+
+    const parsed = parseDrawingContent(content);
+    expect(parsed.data_json).toContain('"elements":[]');
+    expect(parsed.text_elements).toEqual(["Item one"]);
+  });
+
+  it("falls back to EMPTY_DRAWING_JSON for corrupt compressed-json blocks", () => {
+    const content = [
+      "---",
+      "excalidraw-plugin: parsed",
+      "---",
+      "# Drawing",
+      "```compressed-json",
+      "LZStringCompressedData",
+      "```",
+      "%%",
+    ].join("\n");
+
+    const parsed = parseDrawingContent(content);
+    expect(parsed.data_json).toBe(EMPTY_DRAWING_JSON);
+  });
+  it("decompresses a real Obsidian compressed-json drawing block", () => {
+    // Scene compressed with LZString.compressToBase64 (same as the plugin).
+    const compressed =
+      "N4IgLgngDgpiBcIYA8DGBDANgSwCYCd0B3EAGhADcZ8BnbAewDsEAmcm+gV31TkXoBGdXNnSMAtCgw4CxcVEycA5tmbkYmGAFsYjMDQQBtUJFgJwKMGRB5zYAIzWwl8wAkNmegAIAZvnpaXgDyQniiajY0ACIaMM64CD5YNDAAvgC65OhQUADKYOjOCMCp5D7YmgbwJalAA=";
+    const content = [
+      "---",
+      "excalidraw-plugin: parsed",
+      "tags: [excalidraw]",
+      "---",
+      "# Excalidraw Data",
+      "## Text Elements",
+      "- Hello from Obsidian ^x1",
+      "## Drawing",
+      "```compressed-json",
+      compressed,
+      "```",
+      "%%",
+    ].join("\n");
+
+    const parsed = parseDrawingContent(content);
+    expect(parsed.data_json).toContain('"type":"excalidraw"');
+    expect(parsed.data_json).toContain("Hello from Obsidian");
+    expect(parsed.text_elements).toEqual(["Hello from Obsidian"]);
+  });
 });
+
+

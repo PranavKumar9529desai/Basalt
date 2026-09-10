@@ -1,4 +1,6 @@
 import type { DrawingPayload, ExcalidrawSceneData } from "../types";
+import { isObsidianExcalidrawFormat, parseObsidianExcalidraw } from "./obsidianFormat";
+
 
 /** Fallback canvas background for SSR / tests where document is unavailable. */
 const FALLBACK_CANVAS_BG = "#0d0e12";
@@ -83,53 +85,53 @@ export function extractTextElementsFromJson(dataJson: string): string[] {
 }
 
 /**
- * Parses a drawing file's string content (either hybrid `.drawing.md` or raw `.excalidraw` JSON).
+ * Parse YAML frontmatter for `created:`/`updated:` timestamps plus the body
+ * offset just past the closing frontmatter fence.
  */
-export function parseDrawingContent(content: string): DrawingPayload {
+function parseFrontmatter(
+  content: string,
+): { created: string | null; updated: string | null; bodyStart: number } {
   const trimmedStart = content.trimStart();
-  if (trimmedStart.startsWith("{")) {
-    return {
-      data_json: content,
-      text_elements: extractTextElementsFromJson(content),
-      raw_markdown: content,
-      created: null,
-      updated: null,
-    };
+  if (!trimmedStart.startsWith("---")) {
+    return { created: null, updated: null, bodyStart: 0 };
   }
+
+  const afterFirst = content.slice(3);
+  const secondFenceIdx = afterFirst.indexOf("\n---");
+  if (secondFenceIdx === -1) {
+    return { created: null, updated: null, bodyStart: 0 };
+  }
+  const fmStr = afterFirst.slice(0, secondFenceIdx);
 
   let created: string | null = null;
   let updated: string | null = null;
-  let bodyStart = 0;
-
-  if (trimmedStart.startsWith("---")) {
-    const afterFirst = content.slice(3);
-    const secondFenceIdx = afterFirst.indexOf("\n---");
-    if (secondFenceIdx !== -1) {
-      const fmStr = afterFirst.slice(0, secondFenceIdx);
-      bodyStart = 3 + secondFenceIdx + 4;
-      if (bodyStart < content.length && content[bodyStart] === "\n") {
-        bodyStart += 1;
-      }
-
-      for (const line of fmStr.split("\n")) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("created:")) {
-          created = trimmed.replace("created:", "").trim().replace(/^['"]|['"]$/g, "");
-        } else if (trimmed.startsWith("updated:")) {
-          updated = trimmed.replace("updated:", "").trim().replace(/^['"]|['"]$/g, "");
-        }
-      }
+  for (const line of fmStr.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("created:")) {
+      created = trimmed.replace("created:", "").trim().replace(/^['"]|['"]$/g, "");
+    } else if (trimmed.startsWith("updated:")) {
+      updated = trimmed.replace("updated:", "").trim().replace(/^['"]|['"]$/g, "");
     }
   }
 
-  const body = bodyStart < content.length ? content.slice(bodyStart) : "";
+  let bodyStart = 3 + secondFenceIdx + 4;
+  if (bodyStart < content.length && content[bodyStart] === "\n") {
+    bodyStart += 1;
+  }
+  return { created, updated, bodyStart };
+}
 
-  // Extract %%#drawing-data ... %%
+/**
+ * Parse Basalt's native hybrid (`%%#drawing-data` + `# Drawing Text & Elements`).
+ */
+function parseBasaltHybrid(
+  content: string,
+  body: string,
+): { dataJson: string; textElements: string[] } {
+  const basaltTag = content.indexOf("%%#drawing-data");
   let dataJson = EMPTY_DRAWING_JSON;
-  const startTag = content.indexOf("%%#drawing-data");
-  if (startTag !== -1) {
-    const jsonStart = startTag + "%%#drawing-data".length;
-    const rest = content.slice(jsonStart);
+  if (basaltTag !== -1) {
+    const rest = content.slice(basaltTag + "%%#drawing-data".length);
     const endTag = rest.indexOf("%%");
     if (endTag !== -1) {
       const extracted = rest.slice(0, endTag).trim();
@@ -139,21 +141,17 @@ export function parseDrawingContent(content: string): DrawingPayload {
     }
   }
 
-  // Extract text elements from markdown body
-  let textElements: string[] = [];
+  const textElements: string[] = [];
   let inTextSection = false;
-
   for (const line of body.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.startsWith("%%")) {
       break;
     }
-
     if (trimmed === "# Drawing Text & Elements") {
       inTextSection = true;
       continue;
     }
-
     if (inTextSection) {
       if (trimmed.startsWith("#")) {
         break;
@@ -167,13 +165,65 @@ export function parseDrawingContent(content: string): DrawingPayload {
     }
   }
 
-  if (textElements.length === 0) {
-    textElements = extractTextElementsFromJson(dataJson);
+  return { dataJson, textElements };
+}
+
+/**
+ * Parses a drawing file's string content (either hybrid `.drawing.md`, an
+ * Obsidian Excalidraw plugin `.excalidraw.md`, or raw `.excalidraw` JSON).
+ */
+export function parseDrawingContent(content: string): DrawingPayload {
+  const trimmedStart = content.trimStart();
+  if (trimmedStart.startsWith("{")) {
+    // Pure Excalidraw JSON file (.excalidraw)
+    return {
+      data_json: content,
+      text_elements: extractTextElementsFromJson(content),
+      raw_markdown: content,
+      created: null,
+      updated: null,
+    };
+  }
+
+  const { created, updated, bodyStart } = parseFrontmatter(content);
+  const body = bodyStart < content.length ? content.slice(bodyStart) : "";
+
+  // Basalt's native hybrid (.drawing.md): %%#drawing-data + # Drawing Text & Elements.
+  if (content.includes("%%#drawing-data") || content.includes("# Drawing Text & Elements")) {
+    const parsed = parseBasaltHybrid(content, body);
+    const textElements =
+      parsed.textElements.length > 0
+        ? parsed.textElements
+        : extractTextElementsFromJson(parsed.dataJson);
+    return {
+      data_json: parsed.dataJson,
+      text_elements: textElements,
+      raw_markdown: content,
+      created,
+      updated,
+    };
+  }
+
+  // Obsidian Excalidraw plugin hybrid (.excalidraw.md).
+  if (isObsidianExcalidrawFormat(content)) {
+    const parsed = parseObsidianExcalidraw(content);
+    const dataJson = parsed.dataJson ?? EMPTY_DRAWING_JSON;
+    const textElements =
+      parsed.textElements.length > 0
+        ? parsed.textElements
+        : extractTextElementsFromJson(dataJson);
+    return {
+      data_json: dataJson,
+      text_elements: textElements,
+      raw_markdown: content,
+      created,
+      updated,
+    };
   }
 
   return {
-    data_json: dataJson,
-    text_elements: textElements,
+    data_json: EMPTY_DRAWING_JSON,
+    text_elements: [],
     raw_markdown: content,
     created,
     updated,

@@ -7,6 +7,48 @@
 
 ---
 
+## Obsidian Excalidraw plugin compat — COMPLETE ✅ (2026-09-10)
+
+**Bug:** `.excalidraw.md` files created by Obsidian's Excalidraw plugin opened
+blank in Basalt. Root cause: ALL real plugin files store the scene as an
+LZString `compressed-json` base64 block inside `## Drawing` — the parser only
+handled raw `json` fences and returned `EMPTY_DRAWING_JSON`.
+
+**Fix — per-format parse dispatch, mirror in Rust + TS:**
+
+- `src-tauri/src/core/drawing.rs` → `core/drawing/` directory module:
+  - `mod.rs` — `DrawingPayload`, `EMPTY_DRAWING_JSON`, `extract_text_elements_from_json`,
+    frontmatter helper, dispatcher (`parse_drawing_content`: pure JSON →
+    Basalt hybrid → Obsidian hybrid → empty fallback), `serialize_drawing_markdown`,
+    `atomic_write_file`
+  - `basalt.rs` — native `.drawing.md` (`%%#drawing-data` + `# Drawing Text & Elements`)
+  - `obsidian.rs` — `is_obsidian_excalidraw_format`, `parse_obsidian_excalidraw`,
+    `serialize_obsidian_markdown` (Drawing-block-only replacement), and a faithful
+    LZString `decompress_from_base64` port (~100 lines, 5-bit BitReader, surrogate-aware
+    code-unit→String conversion, JSON validation on decompressed payload)
+- `apps/tauri/src/features/drawing/lib/`:
+  - `obsidianFormat.ts` — TS mirror importing `lz-string` (added as direct dep to
+    `apps/tauri/package.json`)
+  - `parser.ts` — old inline `extractDrawingJson` soup deleted; clean 3-way dispatcher
+- **Save preservation:** `save_drawing` detects Obsidian format and rewrites ONLY the
+  `## Drawing` fenced block (as an uncompressed `json` fence — the plugin reads both),
+  keeping `# Excalidraw Data`, `## Text Elements`, warning banner, and all user markdown
+  byte-for-byte. Auto-save on a Basalt-format file is unchanged.
+- **Text-element bullets:** stacked `^blockref` suffixes stripped for search/indexing.
+
+**Verified:** real user vault file decompresses to a valid Excalidraw v2 scene
+(3 elements, all `isDeleted: true` — genuinely empty drawing). Rust: 69 tauri
+tests pass, clippy `-D warnings` clean. TS: 9 drawing tests pass (includes real
+compressed fixture round-trip), oxlint 0, `tsc --noEmit` clean.
+
+**Note:** `cargo test --workspace` currently fails in `basalt-tables` — pre-existing
+user WIP (`urgency.rs`, `output.rs` reference `chrono`/`serde` without deps). Unrelated
+to this work; left untouched.
+
+**Follow-up:** `## Text Elements` bullets are preserved but not re-synced from the
+scene on save (plugin re-syncs on its own save; see `serialize_obsidian_markdown`
+comment). Element Links / Embedded Files sections also untouched by design.
+
 ## Rust Crate Hygiene & Deslop Refactoring (2026-09-09) — COMPLETE ✅
 
 All 8 phases completed with dedicated commits, verified against full workspace test suite and clippy zero-warning gate:

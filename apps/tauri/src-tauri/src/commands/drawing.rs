@@ -5,6 +5,7 @@ use tauri::State;
 
 use super::common::{ensure_inside_vault, index_upsert, register_self_writes};
 use crate::app_state::AppState;
+use crate::core::drawing::obsidian::{is_obsidian_excalidraw_format, serialize_obsidian_markdown};
 use crate::core::drawing::{
     atomic_write_file, parse_drawing_content, serialize_drawing_markdown, DrawingPayload,
     EMPTY_DRAWING_JSON,
@@ -84,8 +85,15 @@ pub fn save_drawing(
         raw
     } else {
         let existing = std::fs::read_to_string(&abs).ok();
-        serialize_drawing_markdown(&data_json, existing.as_deref())
-            .map_err(AppError::Validation)?
+        match existing.as_deref() {
+            // Preserve Obsidian Excalidraw plugin files: update only the
+            // Drawing block so the file stays round-trippable in Obsidian.
+            Some(existing) if is_obsidian_excalidraw_format(existing) => {
+                serialize_obsidian_markdown(&data_json, existing)
+            }
+            _ => serialize_drawing_markdown(&data_json, existing.as_deref())
+                .map_err(AppError::Validation)?,
+        }
     };
 
     register_self_writes(&state, std::slice::from_ref(&abs));
