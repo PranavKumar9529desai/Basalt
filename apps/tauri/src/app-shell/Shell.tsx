@@ -157,7 +157,8 @@ function WorkspaceShell({
       if (!tab) return null;
 
       const leaf =
-        leafRegistry.get(tab.leafType) ?? leafRegistry.get("markdown");
+        leafRegistry.get(tab.leafType || "markdown") ??
+        leafRegistry.get("markdown");
       if (!leaf) return null;
       const LeafComponent = leaf.component;
 

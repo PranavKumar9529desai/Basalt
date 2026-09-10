@@ -10,6 +10,7 @@ export interface LeafTabInfo {
   id: string;
   path: string;
   title: string;
+  leafType?: string;
   /** Presentation mode for Markdown leaves. */
   viewMode?: "edit" | "reading";
   /** Transient: line to reveal once on open (search jump-to-line). Not persisted. */
