@@ -308,7 +308,9 @@ dependencies = [
  "basalt-parser",
  "basalt-types",
  "basalt-vault",
+ "chrono",
  "criterion",
+ "serde",
  "serde_yaml_ng",
  "thiserror 2.0.18",
 ]

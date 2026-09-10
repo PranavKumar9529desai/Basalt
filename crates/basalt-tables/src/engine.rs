@@ -14,6 +14,7 @@ use crate::output::{
 };
 use crate::page_row::{build_page_rows_projected, PageRow};
 
+
 /// Runtime errors during DQL query execution.
 #[derive(Debug, thiserror::Error)]
 pub enum DqlError {
@@ -304,6 +305,6 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
     match plan.query_type {
         QueryType::Table => execute_table_query(&plan, &rows, total),
         QueryType::List => execute_list_query(&rows, total),
-        QueryType::Task => execute_task_query(&rows, total),
+        QueryType::Task => execute_task_query(vault, None),
     }
 }

@@ -13,6 +13,7 @@ pub mod notes;
 pub mod query;
 pub mod search;
 pub mod settings;
+pub mod tasks;
 pub mod templates;
 pub mod vault;
 
@@ -39,4 +40,5 @@ pub use frontmatter::parse_frontmatter;
 pub use templates::{list_templates, read_template};
 pub use search::{search_content, search_files};
 pub use settings::{get_settings, get_workspace, set_setting, set_workspace_key};
+pub use tasks::{create_task, get_task_line, get_tasks, toggle_task, update_task};
 pub use vault::{get_graph, get_vault_tree, open_vault_dialog, reindex_vault};

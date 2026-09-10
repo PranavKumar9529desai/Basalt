@@ -8,7 +8,9 @@ basalt-types = { path = "../basalt-types" }
 basalt-parser = { path = "../basalt-parser" }
 basalt-vault = { path = "../basalt-vault" }
 basalt-graph = { path = "../basalt-graph" }
+chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
+serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.9"
 
 [dev-dependencies]
