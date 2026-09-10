@@ -115,6 +115,7 @@ features/<name>/
 ```
 
 Rules:
+
 - **Feature commands** live in `features/<name>/lib/commands.ts`. Do not place command files at the feature root.
 - **Context definitions** that are not UI components live in `lib/` (e.g. `lib/CanvasContext.ts`), not inside `components/`.
 - **Pure logic** (parsers, geometry, filters) lives in `lib/`, never inside `components/` or `hooks/`.
@@ -840,12 +841,12 @@ Never re-implement string manipulation for note paths, extensions, or filenames 
 
 ```ts
 import {
-  basename,        // "folder/note.md" → "note.md"
-  stemOf,          // "folder/note.canvas" → "note"
-  isMarkdownPath,  // true for .md / .markdown
-  isCanvasPath,    // true for .canvas
-  isDocumentPath,  // true for markdown or canvas
-  normalizePath,   // normalizes backslashes to forward slashes and trims leading/trailing slashes
+  basename, // "folder/note.md" → "note.md"
+  stemOf, // "folder/note.canvas" → "note"
+  isMarkdownPath, // true for .md / .markdown
+  isCanvasPath, // true for .canvas
+  isDocumentPath, // true for markdown or canvas
+  normalizePath, // normalizes backslashes to forward slashes and trims leading/trailing slashes
 } from "@workspace/ui";
 ```
 
@@ -875,4 +876,3 @@ if (isMarkdownPath(path)) { ... }
 if (isCanvasPath(path)) { ... }
 if (isDocumentPath(path)) { ... }
 ```
-
