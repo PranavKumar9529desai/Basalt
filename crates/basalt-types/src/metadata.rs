@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::task::TaskData;
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Span {
     pub start: usize,
@@ -25,6 +27,12 @@ pub struct FileMetadata {
     pub embed_locations: Vec<(String, Span)>,
     pub headings: Vec<(u8, String, Span)>,
     pub block_ids: Vec<(String, Span)>,
+
+    /// Tasks extracted from markdown checkbox lines during the same scan pass.
+    /// `#[serde(default)]` keeps old bincode caches (written before this
+    /// field existed) deserializing to an empty Vec — no cache invalidation.
+    #[serde(default)]
+    pub tasks: Vec<TaskData>,
 }
 
 impl FileMetadata {

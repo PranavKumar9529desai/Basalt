@@ -3,6 +3,7 @@ pub mod inline;
 pub mod link_rewrite;
 pub mod metadata;
 pub mod query;
+pub mod task_scan;
 
 pub mod parser;
 pub mod utf16;

@@ -1,3 +1,4 @@
+use crate::task_scan::{is_task_checkbox, scan_task_line, scan_task_line_unicode};
 use crate::utf16::SpanCursor;
 use basalt_types::{FileMetadata, Span};
 
@@ -227,6 +228,16 @@ fn scan_body_tokens_ascii(input: &str, start: usize, meta: &mut FileMetadata) {
 
         match bytes[i] {
             b'[' => {
+                // Checkbox list item (`- [ ]`, `* [ ]`, `1. [ ]`; indented or
+                // behind `>` prefixes). Checked before wikilinks so a task
+                // line is consumed whole: the checkbox bracket is not a link,
+                // and inner [[wikilinks]] stay part of the task description.
+                if is_task_checkbox(bytes, i) {
+                    if let Some(next_i) = scan_task_line(input, bytes, i, meta) {
+                        i = next_i;
+                        continue;
+                    }
+                }
                 if let Some(next_i) = scan_wikilink_or_embed_ascii(input, bytes, i, meta) {
                     i = next_i;
                     continue;
@@ -453,7 +464,19 @@ fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) 
 
         match bytes[i] {
             b'[' => {
-                if let Some(next_i) = scan_wikilink_or_embed_unicode(input, bytes, i, &mut cursor, meta) {
+                // Checkbox list item (`- [ ]`, `* [ ]`, `1. [ ]`; indented or
+                // behind `>` prefixes). Checked before wikilinks so a task
+                // line is consumed whole; see scan_body_tokens_ascii.
+                if is_task_checkbox(bytes, i) {
+                    if let Some(next_i) = scan_task_line_unicode(input, bytes, i, &mut cursor, meta)
+                    {
+                        i = next_i;
+                        continue;
+                    }
+                }
+                if let Some(next_i) =
+                    scan_wikilink_or_embed_unicode(input, bytes, i, &mut cursor, meta)
+                {
                     i = next_i;
                     continue;
                 }
@@ -465,7 +488,9 @@ fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) 
                 }
             }
             b'#' => {
-                if let Some(next_i) = scan_heading_or_tag_unicode(input, bytes, i, &mut cursor, meta) {
+                if let Some(next_i) =
+                    scan_heading_or_tag_unicode(input, bytes, i, &mut cursor, meta)
+                {
                     i = next_i;
                     continue;
                 }

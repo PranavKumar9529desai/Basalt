@@ -273,6 +273,7 @@ name = "basalt-parser"
 version = "0.1.0"
 dependencies = [
  "basalt-types",
+ "chrono",
  "criterion",
  "memchr",
  "nom",

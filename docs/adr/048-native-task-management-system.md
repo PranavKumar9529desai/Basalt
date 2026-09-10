@@ -888,9 +888,14 @@ Pre-built status configurations from popular themes (Minimal, ITS, etc.). One-cl
 
 ### 10.1 Commands
 
-**File:** `packages/commands/src/commands.json` — ADD entries:
+**Icons are never hardcoded per command or component.** `commands.json` stores
+only icon-name strings (existing registry convention); every task icon name
+resolves through the single `ICONS` map in `packages/commands/src/icons.ts`
+(extended with the task set). Task UI components (board, cards, badges) import
+icons from one feature-local module, `features/tasks/lib/task-icons.ts`, never
+scattered `@tabler/icons-react` imports.
 
-```json
+**File:** `packages/commands/src/commands.json` — ADD entries:
 { "id": "tasks:create", "name": "Tasks: Create or edit task", "category": "Tasks", "icon": "IconCheckbox" },
 { "id": "tasks:toggle", "name": "Tasks: Toggle done", "category": "Tasks", "icon": "IconCheckbox" },
 { "id": "tasks:cycle-status", "name": "Tasks: Cycle task status", "category": "Tasks", "icon": "IconRefresh" },
