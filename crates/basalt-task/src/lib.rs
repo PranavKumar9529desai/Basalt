@@ -17,7 +17,7 @@ pub mod signifiers;
 pub mod urgency;
 
 pub use line::{parse_task_line, TaskLineRef};
-pub use query::{execute_task_query, TaskFilter, TaskQuery, TaskSort};
+pub use query::{collect_tasks, execute_collected_tasks, execute_task_query, TaskFilter, TaskQuery, TaskSort};
 pub use serializer::{build_task_line, TaskLineParts};
 pub use signifiers::{
     is_signifier_token, next_in_cycle, parse_signifiers, priority_emoji, priority_from_emoji,

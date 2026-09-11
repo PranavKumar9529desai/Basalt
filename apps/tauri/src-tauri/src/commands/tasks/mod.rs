@@ -13,10 +13,10 @@
 use std::path::Path;
 
 use basalt_task::{
-    build_task_line, next_in_cycle, parse_task_line, priority_from_name, status_from_name,
-    status_symbol, TaskLineParts, DEFAULT_STATUS_CYCLE,
+    build_task_line, collect_tasks, execute_collected_tasks, next_in_cycle, parse_task_line,
+    priority_from_name, status_from_name, status_symbol, TaskLineParts, DEFAULT_STATUS_CYCLE,
 };
-use basalt_tables::{QueryResult, TaskQuery, execute_task_query};
+use basalt_tables::{QueryResult, TaskQuery};
 use serde::Deserialize;
 use tauri::State;
 
@@ -126,14 +126,26 @@ pub struct UpdateTaskInput {
 
 /// Query tasks across the vault. When `query` is None, returns all tasks
 /// sorted by urgency descending.
+///
+/// Runs off the main thread (ADR-046: sync `#[tauri::command]` fns block the
+/// WebView renderer). The vault read lock is scoped to [`collect_tasks`] —
+/// the clone is dropped before filtering/sorting, so background indexing
+/// (which needs the write lock) is never stalled for the query duration.
 #[tauri::command]
-pub fn get_tasks(query: Option<TaskQuery>, state: State<'_, AppState>) -> AppResult<QueryResult> {
-    let vault = state
-        .vault
-        .read()
-        .map_err(|_| AppError::LockPoisoned("vault"))?;
-    execute_task_query(&vault, query.as_ref())
-        .map_err(|e| AppError::Query(e.to_string()))
+pub async fn get_tasks(
+    query: Option<TaskQuery>,
+    state: State<'_, AppState>,
+) -> AppResult<QueryResult> {
+    let vault = state.vault.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let guard = vault.read().map_err(|_| AppError::LockPoisoned("vault"))?;
+        let tasks = collect_tasks(&guard);
+        drop(guard);
+        execute_collected_tasks(tasks, query.as_ref())
+            .map_err(|e| AppError::Query(e.to_string()))
+    })
+    .await
+    .map_err(|e| AppError::Io(format!("task query task failed: {e}")))?
 }
 
 // ---------------------------------------------------------------------------

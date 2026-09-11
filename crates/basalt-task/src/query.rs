@@ -419,7 +419,12 @@ fn sort_tasks(tasks: &mut [(String, TaskData)], sorts: &[TaskSort]) {
 }
 
 /// Collect all tasks from the vault, with their source file paths.
-fn collect_all_tasks(vault: &Vault) -> Vec<(String, TaskData)> {
+///
+/// The **only** phase of query execution that reads the vault — callers in
+/// the IPC layer scope the vault lock to exactly this call, then drop the
+/// lock before running [`execute_collected_tasks`] (ADR-046: queries must
+/// not hold `AppState` locks or block the WebView main thread).
+pub fn collect_tasks(vault: &Vault) -> Vec<(String, TaskData)> {
     let mut tasks = Vec::new();
     for (node_id, meta) in &vault.graph.metadata_cache {
         let path = vault
@@ -446,8 +451,19 @@ pub fn execute_task_query(
     vault: &Vault,
     query: Option<&TaskQuery>,
 ) -> Result<QueryResult, TaskQueryError> {
+    execute_collected_tasks(collect_tasks(vault), query)
+}
+
+/// Run the full filter → sort → limit → row pipeline against
+/// already-collected tasks. Does **not** touch the vault — safe to execute
+/// outside any lock (the IPC layer collects under a brief read lock, drops
+/// it, then calls this off-thread).
+pub fn execute_collected_tasks(
+    tasks: Vec<(String, TaskData)>,
+    query: Option<&TaskQuery>,
+) -> Result<QueryResult, TaskQueryError> {
     let columns = task_columns();
-    let mut tasks = collect_all_tasks(vault);
+    let mut tasks = tasks;
 
     // Apply filters.
     if let Some(q) = query {
