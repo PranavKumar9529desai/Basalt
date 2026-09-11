@@ -8,9 +8,9 @@ use crate::app_state::AppState;
 use crate::commands::common::{register_self_writes, strip_asset_ext};
 use crate::error::{AppError, AppResult};
 
+use super::rewrite::rewrite_asset_embeds;
 use super::save::file_mtime_date;
 use super::ReorganizeResult;
-use super::rewrite::rewrite_asset_embeds;
 
 /// Bulk-reorganize all existing attachments according to the current
 /// `attachmentOrganization` and `attachmentNaming` settings.

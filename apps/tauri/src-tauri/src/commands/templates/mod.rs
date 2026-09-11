@@ -41,8 +41,8 @@ pub fn list_templates_impl(
     let entries = std::fs::read_dir(&dir)
         .map_err(|e| AppError::Io(format!("failed to read template folder: {e}")))?;
     for entry in entries {
-        let entry = entry
-            .map_err(|e| AppError::Io(format!("failed to read template folder: {e}")))?;
+        let entry =
+            entry.map_err(|e| AppError::Io(format!("failed to read template folder: {e}")))?;
         let path = entry.path();
         if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
             if let Some(s) = path.file_name().and_then(|s| s.to_str()) {
@@ -88,10 +88,7 @@ pub fn read_template_impl(
 }
 
 #[tauri::command]
-pub fn list_templates(
-    state: State<AppState>,
-    app: tauri::AppHandle,
-) -> AppResult<Vec<String>> {
+pub fn list_templates(state: State<AppState>, app: tauri::AppHandle) -> AppResult<Vec<String>> {
     let config = load_config(&app);
     let vault_root = canonical_vault_path(&state)?;
     list_templates_impl(&config.settings, &vault_root)

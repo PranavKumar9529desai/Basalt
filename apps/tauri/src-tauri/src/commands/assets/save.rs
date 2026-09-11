@@ -9,8 +9,8 @@ use crate::app_state::AppState;
 use crate::commands::common::register_self_writes;
 use crate::error::{AppError, AppResult};
 
-use super::SaveAttachmentResult;
 use super::infer::{infer_ext_from_data, infer_ext_from_name, strip_ext_from_name};
+use super::SaveAttachmentResult;
 
 /// Save a binary attachment (pasted/dropped image, PDF, etc.) to the vault.
 ///

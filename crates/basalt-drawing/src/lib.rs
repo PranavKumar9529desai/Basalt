@@ -281,7 +281,9 @@ mod tests {
         let note = "## Drawing\n```json\n{\"x\":1}\n```\n";
         assert!(!is_drawing_content(note));
         // Raw Excalidraw JSON classifies via shape.
-        assert!(is_drawing_content("{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}"));
+        assert!(is_drawing_content(
+            "{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}"
+        ));
         // An ordinary JSON blob is not an Excalidraw scene.
         assert!(!is_drawing_content("{\"a\":1}"));
     }

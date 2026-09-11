@@ -91,7 +91,8 @@ mod tests {
 
     #[test]
     fn task_line_description_strips_signifiers() {
-        let line = "- [ ] Ship release ⏫ 📅2024-02-01 ⏳2024-01-25 🛫2024-01-20 🔁every 2 weeks #release";
+        let line =
+            "- [ ] Ship release ⏫ 📅2024-02-01 ⏳2024-01-25 🛫2024-01-20 🔁every 2 weeks #release";
         let (indent, status_char, desc, sigs) = parse_task_line_parts(line).unwrap();
         assert_eq!(indent, "");
         assert_eq!(status_char, ' ');
@@ -106,8 +107,7 @@ mod tests {
 
     #[test]
     fn task_line_without_signifiers_keeps_full_description() {
-        let (_, _, desc, sigs) =
-            parse_task_line_parts("- [ ] Just a plain task").unwrap();
+        let (_, _, desc, sigs) = parse_task_line_parts("- [ ] Just a plain task").unwrap();
         assert_eq!(desc, "Just a plain task");
         assert!(sigs.tags.is_empty());
         assert_eq!(sigs.priority, None);

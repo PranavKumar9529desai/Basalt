@@ -12,8 +12,8 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use basalt_parser::{normalize_target, scan_wikilinks};
 use basalt_graph::NodeId;
+use basalt_parser::{normalize_target, scan_wikilinks};
 use serde::Serialize;
 
 use crate::vault::Vault;
@@ -252,10 +252,7 @@ mod tests {
     }
     #[test]
     fn casing_and_extension_variants_resolve() {
-        let (_dir, vault) = fixture(&[
-            ("a.md", "[[B]] and [[b.md]] and [[B.md]]"),
-            ("b.md", "hi"),
-        ]);
+        let (_dir, vault) = fixture(&[("a.md", "[[B]] and [[b.md]] and [[B.md]]"), ("b.md", "hi")]);
         let path = _dir.join("b.md").to_str().unwrap().to_string();
         let sources = vault.backlink_sources(&path);
         // a.md counted once despite three link spellings.
@@ -264,13 +261,13 @@ mod tests {
 
     #[test]
     fn path_form_link_resolves() {
-        let (_dir, vault) = fixture(&[
-            ("notes/a.md", "[[notes/b]]"),
-            ("deep/notes/b.md", "hi"),
-        ]);
+        let (_dir, vault) = fixture(&[("notes/a.md", "[[notes/b]]"), ("deep/notes/b.md", "hi")]);
         let path = _dir.join("deep/notes/b.md").to_str().unwrap().to_string();
         let sources = vault.backlink_sources(&path);
-        assert_eq!(sources, vec![_dir.join("notes/a.md").to_str().unwrap().to_string()]);
+        assert_eq!(
+            sources,
+            vec![_dir.join("notes/a.md").to_str().unwrap().to_string()]
+        );
     }
 
     #[test]
@@ -281,7 +278,10 @@ mod tests {
         ]);
         let path = _dir.join("b.md").to_str().unwrap().to_string();
         let sources = vault.backlink_sources(&path);
-        assert_eq!(sources, vec![_dir.join("a.md").to_str().unwrap().to_string()]);
+        assert_eq!(
+            sources,
+            vec![_dir.join("a.md").to_str().unwrap().to_string()]
+        );
     }
 
     #[test]
@@ -305,7 +305,10 @@ mod tests {
     #[test]
     fn contexts_report_line_numbers_and_excerpts() {
         let (_dir, vault) = fixture(&[
-            ("a.md", "# Notes\n\nSee [[b]] and [[b]] again on one line.\nNext line no link."),
+            (
+                "a.md",
+                "# Notes\n\nSee [[b]] and [[b]] again on one line.\nNext line no link.",
+            ),
             ("b.md", "hi"),
         ]);
         let target = _dir.join("b.md").to_str().unwrap().to_string();
@@ -321,7 +324,10 @@ mod tests {
     #[test]
     fn long_line_excerpt_is_ellipsized() {
         let (_dir, vault) = fixture(&[
-            ("a.md", &format!("{}[[b]]{}", "x".repeat(80), "y".repeat(200))),
+            (
+                "a.md",
+                &format!("{}[[b]]{}", "x".repeat(80), "y".repeat(200)),
+            ),
             ("b.md", "hi"),
         ]);
         let target = _dir.join("b.md").to_str().unwrap().to_string();

@@ -44,12 +44,25 @@ fn test_edge_case_1_heterogeneous_sort_tiering() {
         TypedValue::Checkbox { value: true },
         TypedValue::Number { value: 1.0 },
         TypedValue::Number { value: 2.0 },
-        TypedValue::Date { value: "2024-01-01".into() },
-        TypedValue::DateTime { value: "2024-01-01T12:00:00".into() },
-        TypedValue::Text { value: "apple".into() },
-        TypedValue::Text { value: "zebra".into() },
-        TypedValue::Link { name: "A".into(), path: "A".into() },
-        TypedValue::List { items: vec![TypedValue::Number { value: 1.0 }] },
+        TypedValue::Date {
+            value: "2024-01-01".into(),
+        },
+        TypedValue::DateTime {
+            value: "2024-01-01T12:00:00".into(),
+        },
+        TypedValue::Text {
+            value: "apple".into(),
+        },
+        TypedValue::Text {
+            value: "zebra".into(),
+        },
+        TypedValue::Link {
+            name: "A".into(),
+            path: "A".into(),
+        },
+        TypedValue::List {
+            items: vec![TypedValue::Number { value: 1.0 }],
+        },
     ];
 
     for a in &variants {
@@ -60,10 +73,18 @@ fn test_edge_case_1_heterogeneous_sort_tiering() {
                 let ac = compare_typed(a, c);
 
                 if ab == Ordering::Less && bc == Ordering::Less {
-                    assert_eq!(ac, Ordering::Less, "Transitivity violation: a < b and b < c but not a < c");
+                    assert_eq!(
+                        ac,
+                        Ordering::Less,
+                        "Transitivity violation: a < b and b < c but not a < c"
+                    );
                 }
                 if ab == Ordering::Equal && bc == Ordering::Equal {
-                    assert_eq!(ac, Ordering::Equal, "Transitivity violation: a == b and b == c but not a == c");
+                    assert_eq!(
+                        ac,
+                        Ordering::Equal,
+                        "Transitivity violation: a == b and b == c but not a == c"
+                    );
                 }
             }
         }
@@ -75,33 +96,70 @@ fn test_edge_case_2_three_valued_logic_nulls() {
     let mut vault = Vault::new();
     vault.add_document("notes/has_rating_5.md", "---\nrating: 5\n---\n# Has 5\n");
     vault.add_document("notes/has_rating_2.md", "---\nrating: 2\n---\n# Has 2\n");
-    vault.add_document("notes/no_rating.md", "---\nstatus: active\n---\n# Missing\n");
+    vault.add_document(
+        "notes/no_rating.md",
+        "---\nstatus: active\n---\n# Missing\n",
+    );
 
     // WHERE rating > 3: must NOT include note without rating
     let r1 = execute_query(&vault, "TABLE file.name WHERE rating > 3").unwrap();
     assert_eq!(r1.rows.len(), 1);
-    assert_eq!(r1.rows[0][0], TypedValue::Text { value: "has_rating_5".into() });
+    assert_eq!(
+        r1.rows[0][0],
+        TypedValue::Text {
+            value: "has_rating_5".into()
+        }
+    );
 
     // WHERE rating < 3: must NOT include note without rating
     let r2 = execute_query(&vault, "TABLE file.name WHERE rating < 3").unwrap();
     assert_eq!(r2.rows.len(), 1);
-    assert_eq!(r2.rows[0][0], TypedValue::Text { value: "has_rating_2".into() });
+    assert_eq!(
+        r2.rows[0][0],
+        TypedValue::Text {
+            value: "has_rating_2".into()
+        }
+    );
 
     // WHERE rating <= 3: must NOT include note without rating
     let r3 = execute_query(&vault, "TABLE file.name WHERE rating <= 3").unwrap();
     assert_eq!(r3.rows.len(), 1);
-    assert_eq!(r3.rows[0][0], TypedValue::Text { value: "has_rating_2".into() });
+    assert_eq!(
+        r3.rows[0][0],
+        TypedValue::Text {
+            value: "has_rating_2".into()
+        }
+    );
 
     // WHERE rating = null: must ONLY include note without rating
     let r4 = execute_query(&vault, "TABLE file.name WHERE rating = null").unwrap();
     assert_eq!(r4.rows.len(), 1);
-    assert_eq!(r4.rows[0][0], TypedValue::Text { value: "no_rating".into() });
+    assert_eq!(
+        r4.rows[0][0],
+        TypedValue::Text {
+            value: "no_rating".into()
+        }
+    );
 
     // WHERE rating != null: must include notes that have a rating
-    let r5 = execute_query(&vault, "TABLE file.name WHERE rating != null SORT file.name ASC").unwrap();
+    let r5 = execute_query(
+        &vault,
+        "TABLE file.name WHERE rating != null SORT file.name ASC",
+    )
+    .unwrap();
     assert_eq!(r5.rows.len(), 2);
-    assert_eq!(r5.rows[0][0], TypedValue::Text { value: "has_rating_2".into() });
-    assert_eq!(r5.rows[1][0], TypedValue::Text { value: "has_rating_5".into() });
+    assert_eq!(
+        r5.rows[0][0],
+        TypedValue::Text {
+            value: "has_rating_2".into()
+        }
+    );
+    assert_eq!(
+        r5.rows[1][0],
+        TypedValue::Text {
+            value: "has_rating_5".into()
+        }
+    );
 }
 
 #[test]
@@ -110,7 +168,11 @@ fn test_edge_case_3_aggregate_division_by_zero_and_empty() {
     vault.add_document("notes/a.md", "---\ncategory: cat1\n---\n# A\n");
 
     // Empty numeric list average over group
-    let r = execute_query(&vault, "TABLE category, avg(rows.score) AS \"Avg\" GROUP BY category").unwrap();
+    let r = execute_query(
+        &vault,
+        "TABLE category, avg(rows.score) AS \"Avg\" GROUP BY category",
+    )
+    .unwrap();
     assert_eq!(r.rows.len(), 1);
     // score is missing on note A, so rows.score is empty of numbers, avg returns TypedValue::Null (not NaN)
     assert_eq!(r.rows[0][1], TypedValue::Null);
@@ -120,7 +182,10 @@ fn test_edge_case_3_aggregate_division_by_zero_and_empty() {
 fn test_edge_case_4_flatten_row_limit() {
     let mut vault = Vault::new();
     // Build 51 notes each with 1,000 elements in list1 to exceed the 50,000 row safety ceiling
-    let l1: String = (0..1_000).map(|i| i.to_string()).collect::<Vec<_>>().join(", ");
+    let l1: String = (0..1_000)
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
     let content = format!("---\nlist1: [{}]\n---\n# Chunk\n", l1);
     for i in 0..51 {
         vault.add_document(&format!("notes/n{}.md", i), &content);
@@ -129,9 +194,16 @@ fn test_edge_case_4_flatten_row_limit() {
     let res = execute_query(&vault, "TABLE l1 FLATTEN list1 AS \"l1\"");
     match res {
         Err(DqlError::EvaluationLimitExceeded(msg)) => {
-            assert!(msg.contains("50000") || msg.contains("50,000"), "Expected 50,000 row ceiling message, got: {}", msg);
+            assert!(
+                msg.contains("50000") || msg.contains("50,000"),
+                "Expected 50,000 row ceiling message, got: {}",
+                msg
+            );
         }
-        other => panic!("Expected DqlError::EvaluationLimitExceeded, got: {:?}", other),
+        other => panic!(
+            "Expected DqlError::EvaluationLimitExceeded, got: {:?}",
+            other
+        ),
     }
 }
 
@@ -145,10 +217,14 @@ fn test_edge_case_5_exact_subtag_matching() {
     vault.add_document("notes/w5.md", "# W5\n\nTags: #working\n");
 
     let r = execute_query(&vault, "TABLE file.name FROM #work SORT file.name ASC").unwrap();
-    let names: Vec<String> = r.rows.iter().map(|row| match &row[0] {
-        TypedValue::Text { value } => value.clone(),
-        _ => String::new(),
-    }).collect();
+    let names: Vec<String> = r
+        .rows
+        .iter()
+        .map(|row| match &row[0] {
+            TypedValue::Text { value } => value.clone(),
+            _ => String::new(),
+        })
+        .collect();
 
     assert_eq!(names, vec!["w1", "w2"]);
 }
@@ -166,11 +242,26 @@ fn test_edge_case_6_built_in_attribute_shadowing() {
     assert_eq!(r.rows.len(), 1);
 
     // file.name returns the real file name
-    assert_eq!(r.rows[0][0], TypedValue::Text { value: "my-real-file".into() });
+    assert_eq!(
+        r.rows[0][0],
+        TypedValue::Text {
+            value: "my-real-file".into()
+        }
+    );
     // unprefixed `name` finds user property in frontmatter
-    assert_eq!(r.rows[0][1], TypedValue::Text { value: "Custom Display Title".into() });
+    assert_eq!(
+        r.rows[0][1],
+        TypedValue::Text {
+            value: "Custom Display Title".into()
+        }
+    );
     // explicit `frontmatter.file` accesses frontmatter property
-    assert_eq!(r.rows[0][2], TypedValue::Text { value: "malicious_override".into() });
+    assert_eq!(
+        r.rows[0][2],
+        TypedValue::Text {
+            value: "malicious_override".into()
+        }
+    );
 }
 
 #[test]
@@ -181,10 +272,14 @@ fn test_edge_case_7_date_and_datetime_ordering() {
     vault.add_document("notes/d3.md", "---\ndate: 2026-01-15\n---\n# D3\n");
 
     let r = execute_query(&vault, "TABLE file.name, date SORT date ASC").unwrap();
-    let names: Vec<String> = r.rows.iter().map(|row| match &row[0] {
-        TypedValue::Text { value } => value.clone(),
-        _ => String::new(),
-    }).collect();
+    let names: Vec<String> = r
+        .rows
+        .iter()
+        .map(|row| match &row[0] {
+            TypedValue::Text { value } => value.clone(),
+            _ => String::new(),
+        })
+        .collect();
 
     assert_eq!(names, vec!["d3", "d2", "d1"]);
 }
@@ -198,7 +293,11 @@ fn test_top_k_heap_selection() {
     }
 
     // Top-5 highest priority via DESC LIMIT 5
-    let r_desc = execute_query(&vault, "TABLE file.name, priority SORT priority DESC LIMIT 5").unwrap();
+    let r_desc = execute_query(
+        &vault,
+        "TABLE file.name, priority SORT priority DESC LIMIT 5",
+    )
+    .unwrap();
     assert_eq!(r_desc.total, 100);
     assert_eq!(r_desc.rows.len(), 5);
     assert_eq!(r_desc.rows[0][1], TypedValue::Number { value: 99.0 });
@@ -208,7 +307,11 @@ fn test_top_k_heap_selection() {
     assert_eq!(r_desc.rows[4][1], TypedValue::Number { value: 95.0 });
 
     // Top-5 lowest priority via ASC LIMIT 5
-    let r_asc = execute_query(&vault, "TABLE file.name, priority SORT priority ASC LIMIT 5").unwrap();
+    let r_asc = execute_query(
+        &vault,
+        "TABLE file.name, priority SORT priority ASC LIMIT 5",
+    )
+    .unwrap();
     assert_eq!(r_asc.total, 100);
     assert_eq!(r_asc.rows.len(), 5);
     assert_eq!(r_asc.rows[0][1], TypedValue::Number { value: 0.0 });

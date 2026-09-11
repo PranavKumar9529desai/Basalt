@@ -301,7 +301,11 @@ mod tests {
         let m = TermMatcher::new(&["car", "carpet"]).unwrap();
         let matches = extract_file_matches(body, &m, 5, 0);
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].highlights.len(), 1, "overlapping 'car' and 'carpet' must merge into one");
+        assert_eq!(
+            matches[0].highlights.len(),
+            1,
+            "overlapping 'car' and 'carpet' must merge into one"
+        );
         let h = &matches[0].highlights[0];
         assert_eq!(char_sub(&matches[0].text, h.start, h.end), "carpet");
     }

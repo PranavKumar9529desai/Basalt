@@ -140,7 +140,9 @@ pub fn fast_scan_flat_tree(vault_root: &Path) -> Vec<FlatTreeNode> {
         if rel_str.is_empty() {
             continue;
         }
-        let Some(ft) = entry.file_type() else { continue };
+        let Some(ft) = entry.file_type() else {
+            continue;
+        };
         if ft.is_file() && is_document_path(path) {
             let parts: Vec<&str> = rel_str.split('/').collect();
             insert_path(&mut root, &parts);
@@ -373,7 +375,10 @@ mod tests {
         let via_vault = build_flat_tree(&vault, dir.path());
         let via_disk = fast_scan_flat_tree(dir.path());
 
-        assert_eq!(via_vault, via_disk, "fast scan must emit the same tree as the vault index");
+        assert_eq!(
+            via_vault, via_disk,
+            "fast scan must emit the same tree as the vault index"
+        );
     }
 
     #[test]

@@ -65,7 +65,6 @@ impl Vault {
         self.graph.metadata_cache.len()
     }
 
-
     /// All distinct frontmatter/in-body tags across the vault, sorted.
     pub fn all_tags(&self) -> Vec<String> {
         let mut tags: Vec<String> = self
@@ -81,8 +80,7 @@ impl Vault {
     /// Every tag with the number of notes carrying it, sorted by count
     /// descending then name — feeds the Tags pane.
     pub fn tag_counts(&self) -> Vec<(String, u64)> {
-        let mut counts: std::collections::HashMap<&str, u64> =
-            std::collections::HashMap::new();
+        let mut counts: std::collections::HashMap<&str, u64> = std::collections::HashMap::new();
         for meta in self.graph.metadata_cache.values() {
             for tag in &meta.tags {
                 *counts.entry(tag.as_str()).or_insert(0) += 1;
@@ -126,9 +124,12 @@ impl Vault {
             })
             .collect();
         out.sort_by(|a, b| {
-            b.2.cmp(&a.2).then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+            b.2.cmp(&a.2)
+                .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
         });
-        out.into_iter().map(|(name, path, _)| (name, path)).collect()
+        out.into_iter()
+            .map(|(name, path, _)| (name, path))
+            .collect()
     }
 }
 
@@ -194,7 +195,14 @@ mod tests {
         let names: Vec<&str> = suggestions.iter().map(|(n, _)| n.as_str()).collect();
         assert_eq!(
             names,
-            vec!["target.md", "other.md", "alpha.md", "beta.md", "gamma.md", "unused.md"],
+            vec![
+                "target.md",
+                "other.md",
+                "alpha.md",
+                "beta.md",
+                "gamma.md",
+                "unused.md"
+            ],
             "usage (backlink count) desc, then name asc"
         );
     }

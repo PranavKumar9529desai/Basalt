@@ -15,8 +15,8 @@ mod types;
 
 pub use ser::{parse, serialize, validate, CanvasError};
 pub use types::{
-    BackgroundStyle, CanvasColor, CanvasEdge, CanvasDocument, CanvasNode, EndShape,
-    FileNode, GroupNode, LinkNode, NodeBase, Side, TextNode,
+    BackgroundStyle, CanvasColor, CanvasDocument, CanvasEdge, CanvasNode, EndShape, FileNode,
+    GroupNode, LinkNode, NodeBase, Side, TextNode,
 };
 
 #[cfg(test)]

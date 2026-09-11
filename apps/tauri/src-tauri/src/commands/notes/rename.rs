@@ -7,8 +7,8 @@ use tauri::State;
 use crate::app_state::AppState;
 use crate::error::{AppError, AppResult};
 
-use super::RenameNoteResult;
 use super::rename_attachments::rename_attachments_for_note;
+use super::RenameNoteResult;
 use crate::commands::common::{
     canonical_md_path, canonical_vault_path, ensure_inside_vault, index_remove, index_upsert,
     register_self_writes, validate_name,
@@ -82,7 +82,10 @@ fn rename_note_impl(
             .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
         let lower = file_name.to_ascii_lowercase();
         if lower.ends_with(".excalidraw.md") {
-            (".excalidraw.md", file_name[..file_name.len() - 14].to_string())
+            (
+                ".excalidraw.md",
+                file_name[..file_name.len() - 14].to_string(),
+            )
         } else if lower.ends_with(".excalidraw") {
             (".excalidraw", file_name[..file_name.len() - 11].to_string())
         } else {

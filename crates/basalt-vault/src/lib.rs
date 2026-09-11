@@ -13,4 +13,3 @@ pub use indexer::incremental_reindex;
 pub use links::{BacklinkContext, BacklinkMention};
 pub use tree::{build_flat_tree, fast_scan_flat_tree, FlatTreeNode, NodeKind};
 pub use vault::Vault;
-

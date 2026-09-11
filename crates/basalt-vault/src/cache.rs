@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::Path;
 
-use basalt_types::{is_document_path, mtime_secs};
 use crate::vault::Vault;
+use basalt_types::{is_document_path, mtime_secs};
 
 /// Magic 4-byte header identifying a Basalt binary cache.
 pub const CACHE_MAGIC: &[u8; 4] = b"BSLT";
@@ -74,7 +74,9 @@ impl VaultCache {
         {
             let file = std::fs::File::create(tmp_path).map_err(CacheError::WriteFile)?;
             let mut writer = std::io::BufWriter::new(file);
-            writer.write_all(CACHE_MAGIC).map_err(CacheError::WriteFile)?;
+            writer
+                .write_all(CACHE_MAGIC)
+                .map_err(CacheError::WriteFile)?;
             writer
                 .write_all(&CACHE_VERSION.to_le_bytes())
                 .map_err(CacheError::WriteFile)?;
@@ -130,7 +132,10 @@ mod tests {
     #[test]
     fn test_cache_roundtrip() {
         let mut vault = Vault::new();
-        vault.add_document("a.md", "---\ntitle: Doc A\ntags: [rust, perf]\n---\nLink [[b.md]]");
+        vault.add_document(
+            "a.md",
+            "---\ntitle: Doc A\ntags: [rust, perf]\n---\nLink [[b.md]]",
+        );
         vault.add_document("b.md", "Back [[a.md]]");
 
         let cache = VaultCache {

@@ -321,7 +321,8 @@ pub fn set_vault(
 
     if warm {
         // ── Mode 1: warm cache → instant load + background mtime sync ──
-        let (note_count, known_mtimes) = crate::cache::load_cached_vault(&vault_path, &state, &app)?;
+        let (note_count, known_mtimes) =
+            crate::cache::load_cached_vault(&vault_path, &state, &app)?;
 
         // Initialise the search index.
         {

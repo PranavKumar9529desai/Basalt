@@ -166,7 +166,12 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
         let due = NaiveDate::from_ymd_opt(2024, 1, 14).unwrap();
         let scheduled = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let task = make_task(TaskPriority::High, Some(due), Some(scheduled), Some("every day"));
+        let task = make_task(
+            TaskPriority::High,
+            Some(due),
+            Some(scheduled),
+            Some("every day"),
+        );
         // priority: (5-1)*5 = 20, overdue 1 day: 20+1 = 21, scheduled today: +5, recurring: +2
         // total: 20 + 21 + 5 + 2 = 48
         assert_eq!(calculate_urgency(&task, today), 48);

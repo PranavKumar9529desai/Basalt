@@ -122,9 +122,8 @@ pub fn start_background_indexing(state: &AppState, app: &AppHandle, stale_paths:
                 if let Ok(mut search_guard) = search_arc.write() {
                     if let Some(ref mut search) = *search_guard {
                         for (path, title, content, tags) in prepared_docs {
-                            let _ = search.update_document_tantivy_only(
-                                &path, &title, &content, &tags,
-                            );
+                            let _ =
+                                search.update_document_tantivy_only(&path, &title, &content, &tags);
                         }
                         docs_since_commit += chunk.len();
                         if docs_since_commit >= COMMIT_INTERVAL_DOCS {

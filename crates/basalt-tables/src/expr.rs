@@ -188,11 +188,31 @@ fn page_field_value(field: &FieldRef, page: &PageRow) -> TypedValue {
     if field.0[0] == "file" {
         if field.0.len() == 2 {
             match field.0[1].as_str() {
-                "name" => return TypedValue::Text { value: page.name().to_string() },
-                "path" => return TypedValue::Text { value: page.path.clone() },
-                "folder" => return TypedValue::Text { value: page.folder().to_string() },
-                "tags" => return TypedValue::Text { value: page.tags.join(", ") },
-                "links" | "outlinks" => return TypedValue::Text { value: page.links.join(", ") },
+                "name" => {
+                    return TypedValue::Text {
+                        value: page.name().to_string(),
+                    }
+                }
+                "path" => {
+                    return TypedValue::Text {
+                        value: page.path.clone(),
+                    }
+                }
+                "folder" => {
+                    return TypedValue::Text {
+                        value: page.folder().to_string(),
+                    }
+                }
+                "tags" => {
+                    return TypedValue::Text {
+                        value: page.tags.join(", "),
+                    }
+                }
+                "links" | "outlinks" => {
+                    return TypedValue::Text {
+                        value: page.links.join(", "),
+                    }
+                }
                 _ => return TypedValue::Null,
             }
         }
@@ -228,11 +248,21 @@ fn page_field_value(field: &FieldRef, page: &PageRow) -> TypedValue {
 
         // 4. Built-in convenience fallbacks for unprefixed file properties
         match key.as_str() {
-            "name" => TypedValue::Text { value: page.name().to_string() },
-            "path" => TypedValue::Text { value: page.path.clone() },
-            "folder" => TypedValue::Text { value: page.folder().to_string() },
-            "tags" => TypedValue::Text { value: page.tags.join(", ") },
-            "links" => TypedValue::Text { value: page.links.join(", ") },
+            "name" => TypedValue::Text {
+                value: page.name().to_string(),
+            },
+            "path" => TypedValue::Text {
+                value: page.path.clone(),
+            },
+            "folder" => TypedValue::Text {
+                value: page.folder().to_string(),
+            },
+            "tags" => TypedValue::Text {
+                value: page.tags.join(", "),
+            },
+            "links" => TypedValue::Text {
+                value: page.links.join(", "),
+            },
             _ => TypedValue::Null,
         }
     } else {
@@ -271,7 +301,11 @@ fn eval_aggregate(name: &str, args: &[Expr], ctx: &EvalCtx) -> TypedValue {
                 .count() as f64,
         },
         "sum" => {
-            let nums: Vec<f64> = values.iter().filter_map(numeric).filter(|n| n.is_finite()).collect();
+            let nums: Vec<f64> = values
+                .iter()
+                .filter_map(numeric)
+                .filter(|n| n.is_finite())
+                .collect();
             if nums.is_empty() {
                 TypedValue::Null
             } else {
@@ -281,7 +315,11 @@ fn eval_aggregate(name: &str, args: &[Expr], ctx: &EvalCtx) -> TypedValue {
             }
         }
         "avg" | "average" => {
-            let nums: Vec<f64> = values.iter().filter_map(numeric).filter(|n| n.is_finite()).collect();
+            let nums: Vec<f64> = values
+                .iter()
+                .filter_map(numeric)
+                .filter(|n| n.is_finite())
+                .collect();
             if nums.is_empty() {
                 TypedValue::Null
             } else {
@@ -389,9 +427,7 @@ pub fn collect_expr_fields(expr: &Expr, fields: &mut Vec<FieldRef>) {
 /// 1. Referenced frontmatter keys (returns None if wildcard/unprojected).
 /// 2. Whether note tags are needed (`file.tags` / `tags` in query).
 /// 3. Whether note links are needed (`file.links` / `links` / `file.outlinks` in query).
-pub fn collect_query_projection(
-    plan: &QueryPlan,
-) -> (Option<HashSet<String>>, bool, bool) {
+pub fn collect_query_projection(plan: &QueryPlan) -> (Option<HashSet<String>>, bool, bool) {
     let mut fields: Vec<FieldRef> = Vec::new();
 
     // Query fields / columns
@@ -402,10 +438,16 @@ pub fn collect_query_projection(
     // Commands (WHERE, SORT, GROUP BY, FLATTEN)
     for cmd in &plan.commands {
         match cmd {
-            basalt_parser::query::DataCommand::Where(expr) => collect_expr_fields(expr, &mut fields),
+            basalt_parser::query::DataCommand::Where(expr) => {
+                collect_expr_fields(expr, &mut fields)
+            }
             basalt_parser::query::DataCommand::Sort { field, .. } => fields.push(field.clone()),
-            basalt_parser::query::DataCommand::GroupBy { expr, .. } => collect_expr_fields(expr, &mut fields),
-            basalt_parser::query::DataCommand::Flatten { expr, .. } => collect_expr_fields(expr, &mut fields),
+            basalt_parser::query::DataCommand::GroupBy { expr, .. } => {
+                collect_expr_fields(expr, &mut fields)
+            }
+            basalt_parser::query::DataCommand::Flatten { expr, .. } => {
+                collect_expr_fields(expr, &mut fields)
+            }
             basalt_parser::query::DataCommand::Limit(_) => {}
         }
     }

@@ -22,7 +22,8 @@ pub struct CreateDrawingResult {
 /// still a drawing — so this gate alone is never enough.
 fn is_valid_drawing_extension(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    name.ends_with(".excalidraw.md") || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
+    name.ends_with(".excalidraw.md")
+        || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
 }
 
 fn resolve_drawing_path(path: &str, state: &AppState) -> AppResult<PathBuf> {

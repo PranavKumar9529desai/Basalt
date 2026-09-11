@@ -1,5 +1,5 @@
-use crate::commands::common::tests::temp_vault;
 use super::*;
+use crate::commands::common::tests::temp_vault;
 
 fn temp_vault_with_self_refs() -> (std::path::PathBuf, crate::app_state::AppState) {
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -212,12 +212,23 @@ fn rename_drawing_file_preserves_extension() {
     let draw_path = root.join("architecture.excalidraw.md");
     let scene = "---\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n---\n# Excalidraw Data\n## Text Elements\n- Microservice arch\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}\n```\n";
     std::fs::write(&draw_path, scene).unwrap();
-    state.vault.write().unwrap().add_document(&draw_path.to_string_lossy(), scene);
+    state
+        .vault
+        .write()
+        .unwrap()
+        .add_document(&draw_path.to_string_lossy(), scene);
 
-    let res = rename_note_impl(&draw_path.to_string_lossy(), "system_design", &state, None).unwrap();
+    let res =
+        rename_note_impl(&draw_path.to_string_lossy(), "system_design", &state, None).unwrap();
 
     assert_eq!(res.name, "system_design");
     assert!(res.path.ends_with("system_design.excalidraw.md"));
-    assert!(root.join("system_design.excalidraw.md").exists(), "file renamed with .excalidraw.md preserved");
-    assert!(!root.join("architecture.excalidraw.md").exists(), "old drawing file removed");
+    assert!(
+        root.join("system_design.excalidraw.md").exists(),
+        "file renamed with .excalidraw.md preserved"
+    );
+    assert!(
+        !root.join("architecture.excalidraw.md").exists(),
+        "old drawing file removed"
+    );
 }

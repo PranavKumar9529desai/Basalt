@@ -1,5 +1,5 @@
-use crate::commands::common::tests::temp_vault;
 use super::*;
+use crate::commands::common::tests::temp_vault;
 
 #[test]
 fn reorganize_flat_to_by_note_moves_assets_and_rewrites_embeds() {

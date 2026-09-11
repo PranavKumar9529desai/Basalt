@@ -524,13 +524,8 @@ mod tests {
             "a",
         )
         .unwrap();
-        idx.update_document(
-            "/vault/note2.md",
-            "note2",
-            "Another person entirely.",
-            "b",
-        )
-        .unwrap();
+        idx.update_document("/vault/note2.md", "note2", "Another person entirely.", "b")
+            .unwrap();
         idx.commit().unwrap();
 
         // Single-character word query "a" should match exact "a", not prefix-expand to "another", "apple", "and".

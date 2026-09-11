@@ -121,13 +121,9 @@ impl ForceGraph {
         for i in 0..self.n {
             let ix = i * 2;
             let iy = i * 2 + 1;
-            let (fx, fy) = self.tree.repulsion_at(
-                i as u32,
-                self.pos[ix],
-                self.pos[iy],
-                theta2,
-                repulsion,
-            );
+            let (fx, fy) =
+                self.tree
+                    .repulsion_at(i as u32, self.pos[ix], self.pos[iy], theta2, repulsion);
             self.acc[ix] = fx;
             self.acc[iy] = fy;
         }
@@ -172,7 +168,10 @@ impl ForceGraph {
         let (vel_chunks, _) = self.vel.as_chunks_mut::<2>();
         let (pos_chunks, _) = self.pos.as_chunks_mut::<2>();
         let (acc_chunks, _) = self.acc.as_chunks::<2>();
-        for (v, (p, a)) in vel_chunks.iter_mut().zip(pos_chunks.iter_mut().zip(acc_chunks)) {
+        for (v, (p, a)) in vel_chunks
+            .iter_mut()
+            .zip(pos_chunks.iter_mut().zip(acc_chunks))
+        {
             let mut vx = v[0] * damping + a[0] * dt_alpha;
             let mut vy = v[1] * damping + a[1] * dt_alpha;
             // Clamp speed to keep the integrator stable on close contacts.

@@ -10,11 +10,7 @@
 /// returns `"folder/Note"`.
 #[inline]
 pub fn wikilink_target(content: &str) -> &str {
-    content
-        .split(['|', '#'])
-        .next()
-        .unwrap_or("")
-        .trim()
+    content.split(['|', '#']).next().unwrap_or("").trim()
 }
 
 /// Extract the first `[[Target]]` target as an owned string, or `None` when

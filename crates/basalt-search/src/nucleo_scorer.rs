@@ -108,10 +108,8 @@ impl NucleoScorer {
                     // Fast path: for ASCII titles, char offset == byte offset.
                     match_indices.clone()
                 } else {
-                    let char_to_byte: Vec<u32> = title
-                        .char_indices()
-                        .map(|(byte, _)| byte as u32)
-                        .collect();
+                    let char_to_byte: Vec<u32> =
+                        title.char_indices().map(|(byte, _)| byte as u32).collect();
                     match_indices
                         .iter()
                         .filter_map(|&i| char_to_byte.get(i as usize).copied())
@@ -249,9 +247,7 @@ mod tests {
 
     #[test]
     fn test_bounded_top_k_selection() {
-        let paths: Vec<String> = (0..100)
-            .map(|i| format!("/vault/item_{i:03}.md"))
-            .collect();
+        let paths: Vec<String> = (0..100).map(|i| format!("/vault/item_{i:03}.md")).collect();
         let mut scorer = NucleoScorer::new(paths);
         let results = scorer.search("item_05", 5);
         assert!(!results.is_empty());

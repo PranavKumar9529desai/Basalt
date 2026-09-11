@@ -27,7 +27,6 @@ pub struct RenameNoteResult {
     pub updated_files: Vec<String>,
 }
 
-
 /// Return the notes that link to `path` with the concrete mention lines
 /// (line number + excerpt) inside each one. Resolution matches Obsidian: bare
 /// name, vault-relative path, `.md` variants, arbitrary casing, and declared

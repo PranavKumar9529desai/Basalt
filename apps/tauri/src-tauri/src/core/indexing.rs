@@ -5,9 +5,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use basalt_parser::extract_metadata;
-use basalt_types::{
-    is_canvas_path, is_document_path, mtime_secs, stem_of, FileMetadata,
-};
+use basalt_types::{is_canvas_path, is_document_path, mtime_secs, stem_of, FileMetadata};
 use basalt_vault::{indexer::incremental_reindex, VaultCache};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
@@ -128,9 +126,7 @@ pub fn start_fused_indexing(
                 if let Ok(mut search_guard) = search_arc.write() {
                     if let Some(ref mut search) = *search_guard {
                         for (path, _meta, title, content, tags) in &prepared_batch {
-                            let _ = search.update_document_tantivy_only(
-                                path, title, content, tags,
-                            );
+                            let _ = search.update_document_tantivy_only(path, title, content, tags);
                         }
                         docs_since_commit += chunk.len();
                         if docs_since_commit >= COMMIT_INTERVAL_DOCS {
@@ -266,7 +262,8 @@ pub fn start_background_mtime_sync(
                                     .and_then(|v| v.metadata(path))
                                     .map(|m| m.tags.join(" "))
                                     .unwrap_or_default();
-                                let _ = search.update_document_tantivy_only(path, &title, &content, &tags);
+                                let _ = search
+                                    .update_document_tantivy_only(path, &title, &content, &tags);
                             }
                         }
                         let _ = search.commit();

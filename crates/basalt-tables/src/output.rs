@@ -171,10 +171,14 @@ fn task_to_row(task: &TaskData, path: &str) -> Vec<TypedValue> {
             value: format!("{:?}", task.priority).to_lowercase(),
         },
         task.due
-            .map(|d| TypedValue::Date { value: d.to_string() })
+            .map(|d| TypedValue::Date {
+                value: d.to_string(),
+            })
             .unwrap_or(TypedValue::Null),
         task.scheduled
-            .map(|d| TypedValue::Date { value: d.to_string() })
+            .map(|d| TypedValue::Date {
+                value: d.to_string(),
+            })
             .unwrap_or(TypedValue::Null),
         TypedValue::List {
             items: task
@@ -245,8 +249,7 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
                 "includes" => task.tags.iter().any(|t| {
                     let t_clean = t.trim_start_matches('#');
                     t_clean == tag
-                        || (t_clean.starts_with(tag)
-                            && t_clean[tag.len()..].starts_with('/'))
+                        || (t_clean.starts_with(tag) && t_clean[tag.len()..].starts_with('/'))
                 }),
                 _ => false,
             }
@@ -259,9 +262,7 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
         "folder" => {
             let folder = path.rfind('/').map(|i| &path[..i]).unwrap_or("");
             match filter.op.as_str() {
-                "includes" => folder
-                    .to_lowercase()
-                    .contains(&filter.value.to_lowercase()),
+                "includes" => folder.to_lowercase().contains(&filter.value.to_lowercase()),
                 "equals" => folder.eq_ignore_ascii_case(&filter.value),
                 _ => false,
             }
@@ -273,9 +274,7 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
                 .unwrap_or(path)
                 .trim_end_matches(".md");
             match filter.op.as_str() {
-                "includes" => name
-                    .to_lowercase()
-                    .contains(&filter.value.to_lowercase()),
+                "includes" => name.to_lowercase().contains(&filter.value.to_lowercase()),
                 "equals" => name.eq_ignore_ascii_case(&filter.value),
                 _ => false,
             }
@@ -395,14 +394,8 @@ fn sort_tasks(tasks: &mut [(String, TaskData)], sorts: &[TaskSort]) {
                     calculate_urgency(&a.1, today).cmp(&calculate_urgency(&b.1, today)),
                     false,
                 ),
-                "due" => (
-                    date_field_cmp(&a.1.due, &b.1.due, sort.reverse),
-                    true,
-                ),
-                "priority" => (
-                    a.1.priority.numeric().cmp(&b.1.priority.numeric()),
-                    false,
-                ),
+                "due" => (date_field_cmp(&a.1.due, &b.1.due, sort.reverse), true),
+                "priority" => (a.1.priority.numeric().cmp(&b.1.priority.numeric()), false),
                 "status" => (
                     format!("{:?}", a.1.status).cmp(&format!("{:?}", b.1.status)),
                     false,
@@ -413,10 +406,7 @@ fn sort_tasks(tasks: &mut [(String, TaskData)], sorts: &[TaskSort]) {
                     date_field_cmp(&a.1.scheduled, &b.1.scheduled, sort.reverse),
                     true,
                 ),
-                "start" => (
-                    date_field_cmp(&a.1.start, &b.1.start, sort.reverse),
-                    true,
-                ),
+                "start" => (date_field_cmp(&a.1.start, &b.1.start, sort.reverse), true),
                 "created" => (
                     date_field_cmp(&a.1.created, &b.1.created, sort.reverse),
                     true,

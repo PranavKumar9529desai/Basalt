@@ -38,7 +38,9 @@ fn bench_table_query(c: &mut Criterion) {
         });
         // ADR-045 Benchmark 2: Sort & Top-K Limit
         group.bench_with_input(BenchmarkId::new("sort_limit", size), &vault, |b, v| {
-            b.iter(|| execute_query(v, "TABLE file.name, priority SORT priority DESC LIMIT 20").unwrap());
+            b.iter(|| {
+                execute_query(v, "TABLE file.name, priority SORT priority DESC LIMIT 20").unwrap()
+            });
         });
     }
     group.finish();

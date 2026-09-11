@@ -31,7 +31,9 @@ fn read_all(vault: &Path) -> Vec<(String, String)> {
 }
 
 fn main() {
-    let vault_path = std::env::args().nth(1).expect("usage: measure_parse <vault-path>");
+    let vault_path = std::env::args()
+        .nth(1)
+        .expect("usage: measure_parse <vault-path>");
     let p = Path::new(&vault_path);
 
     // Disk I/O baseline
@@ -39,26 +41,40 @@ fn main() {
     let docs = read_all(p);
     let read_ms = t.elapsed().as_millis();
     let bytes: usize = docs.iter().map(|(_, c)| c.len()).sum();
-    println!("disk read {} files to string: {read_ms} ms  ({bytes} bytes / {:.1} MB)",
-        docs.len(), bytes as f64 / (1024.0 * 1024.0));
+    println!(
+        "disk read {} files to string: {read_ms} ms  ({bytes} bytes / {:.1} MB)",
+        docs.len(),
+        bytes as f64 / (1024.0 * 1024.0)
+    );
 
     // extract_metadata: title/links/tags/metadata scan
     let t = Instant::now();
     for (_, c) in &docs {
         black_box(extract_metadata(c));
     }
-    println!("extract_metadata over {} docs: {} ms", docs.len(), t.elapsed().as_millis());
+    println!(
+        "extract_metadata over {} docs: {} ms",
+        docs.len(),
+        t.elapsed().as_millis()
+    );
 
     // parse_frontmatter: structured frontmatter parse
     let t = Instant::now();
     for (_, c) in &docs {
         black_box(parse_frontmatter(c));
     }
-    println!("parse_frontmatter over {} docs: {} ms", docs.len(), t.elapsed().as_millis());
+    println!(
+        "parse_frontmatter over {} docs: {} ms",
+        docs.len(),
+        t.elapsed().as_millis()
+    );
 
     // Full vault index for reference
     let t = Instant::now();
     let vault = index_directory(p);
-    println!("index_directory (full vault parse): {} ms  ({} notes)",
-        t.elapsed().as_millis(), vault.graph.metadata_cache.len());
+    println!(
+        "index_directory (full vault parse): {} ms  ({} notes)",
+        t.elapsed().as_millis(),
+        vault.graph.metadata_cache.len()
+    );
 }

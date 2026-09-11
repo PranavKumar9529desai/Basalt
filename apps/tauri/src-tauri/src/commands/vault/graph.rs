@@ -7,8 +7,8 @@ use basalt_graph::NodeId;
 use basalt_vault::Vault;
 use serde::Serialize;
 
-use crate::error::{AppError, AppResult};
 use super::cc::cc_clusters;
+use crate::error::{AppError, AppResult};
 
 #[derive(Serialize)]
 pub struct GraphNodeMeta {
@@ -479,11 +479,19 @@ mod tests {
 
         let edges_offset = 24 + json_len + pad;
         let u0 = u32::from_le_bytes(bytes[edges_offset..edges_offset + 4].try_into().unwrap());
-        let v0 = u32::from_le_bytes(bytes[edges_offset + 4..edges_offset + 8].try_into().unwrap());
+        let v0 = u32::from_le_bytes(
+            bytes[edges_offset + 4..edges_offset + 8]
+                .try_into()
+                .unwrap(),
+        );
         assert_eq!((u0, v0), (0, 1));
 
         let weights_offset = edges_offset + 8;
-        let w0 = f32::from_le_bytes(bytes[weights_offset..weights_offset + 4].try_into().unwrap());
+        let w0 = f32::from_le_bytes(
+            bytes[weights_offset..weights_offset + 4]
+                .try_into()
+                .unwrap(),
+        );
         assert_eq!(w0, 1.5);
     }
 }

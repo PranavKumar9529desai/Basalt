@@ -202,14 +202,19 @@ pub fn update_task(input: UpdateTaskInput, state: State<AppState>) -> AppResult<
     let old_line = lines[input.line_number - 1];
 
     // Parse existing line to extract current values
-    let (indent, status_char, existing_desc, existing_signifiers) =
-        parse_task_line_parts(old_line)
-            .ok_or_else(|| AppError::Validation("line is not a task checkbox".into()))?;
+    let (indent, status_char, existing_desc, existing_signifiers) = parse_task_line_parts(old_line)
+        .ok_or_else(|| AppError::Validation("line is not a task checkbox".into()))?;
 
     // Determine new values (fall back to existing)
-    let new_desc = input.description.unwrap_or_else(|| existing_desc.to_string());
-    let new_status = input.status.unwrap_or_else(|| checkbox_char_to_status(status_char));
-    let new_priority = input.priority.or(existing_signifiers.priority.map(String::from));
+    let new_desc = input
+        .description
+        .unwrap_or_else(|| existing_desc.to_string());
+    let new_status = input
+        .status
+        .unwrap_or_else(|| checkbox_char_to_status(status_char));
+    let new_priority = input
+        .priority
+        .or(existing_signifiers.priority.map(String::from));
     let new_due = if input.due.as_deref() == Some("") {
         None
     } else {
@@ -218,7 +223,9 @@ pub fn update_task(input: UpdateTaskInput, state: State<AppState>) -> AppResult<
     let new_scheduled = if input.scheduled.as_deref() == Some("") {
         None
     } else {
-        input.scheduled.or(existing_signifiers.scheduled.map(String::from))
+        input
+            .scheduled
+            .or(existing_signifiers.scheduled.map(String::from))
     };
     let new_start = if input.start.as_deref() == Some("") {
         None
@@ -228,13 +235,21 @@ pub fn update_task(input: UpdateTaskInput, state: State<AppState>) -> AppResult<
     let new_recurrence = if input.recurrence.as_deref() == Some("") {
         None
     } else {
-        input.recurrence.or(existing_signifiers.recurrence.map(String::from))
+        input
+            .recurrence
+            .or(existing_signifiers.recurrence.map(String::from))
     };
     let new_tags = input.tags.or_else(|| {
         if existing_signifiers.tags.is_empty() {
             None
         } else {
-            Some(existing_signifiers.tags.iter().map(|s| s.to_string()).collect())
+            Some(
+                existing_signifiers
+                    .tags
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            )
         }
     });
 
@@ -304,17 +319,11 @@ pub fn get_task_line(path: String, line_number: usize) -> AppResult<TaskLineResu
 // ---------------------------------------------------------------------------
 
 /// Write content to disk, update vault cache, and re-index.
-fn write_and_reindex(
-    abs: &Path,
-    content: &str,
-    path: &str,
-    state: &AppState,
-) -> AppResult<()> {
+fn write_and_reindex(abs: &Path, content: &str, path: &str, state: &AppState) -> AppResult<()> {
     // Register self-write before touching disk
     register_self_writes(state, &[abs.to_path_buf()]);
 
-    std::fs::write(abs, content)
-        .map_err(|e| AppError::Io(format!("failed to write file: {e}")))?;
+    std::fs::write(abs, content).map_err(|e| AppError::Io(format!("failed to write file: {e}")))?;
 
     // Update vault cache
     let mut vault = state

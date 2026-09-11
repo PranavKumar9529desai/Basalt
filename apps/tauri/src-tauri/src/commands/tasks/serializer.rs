@@ -30,7 +30,11 @@ fn priority_to_signifier(priority: &str) -> String {
 
 /// Build a complete task checkbox line from input.
 pub(super) fn build_task_line(input: &CreateTaskInput) -> String {
-    let priority_signifier = input.priority.as_deref().map(priority_to_signifier).unwrap_or_default();
+    let priority_signifier = input
+        .priority
+        .as_deref()
+        .map(priority_to_signifier)
+        .unwrap_or_default();
     let due_signifier = input
         .due
         .as_ref()
@@ -69,8 +73,13 @@ pub(super) fn build_task_line(input: &CreateTaskInput) -> String {
 
     format!(
         "- [ ] {}{}{}{}{}{}{}",
-        input.description, priority_signifier, due_signifier, scheduled_signifier,
-        start_signifier, recurrence_signifier, tags_str,
+        input.description,
+        priority_signifier,
+        due_signifier,
+        scheduled_signifier,
+        start_signifier,
+        recurrence_signifier,
+        tags_str,
     )
 }
 
@@ -90,13 +99,9 @@ pub(super) fn build_task_line_from_parts(parts: TaskLineParts<'_>) -> String {
     let status_char = status_to_checkbox_char(status);
     let priority_sig = priority.map(priority_to_signifier).unwrap_or_default();
     let due_sig = due.map(|d| format!(" 📅{d}")).unwrap_or_default();
-    let scheduled_sig = scheduled
-        .map(|d| format!(" ⏳{d}"))
-        .unwrap_or_default();
+    let scheduled_sig = scheduled.map(|d| format!(" ⏳{d}")).unwrap_or_default();
     let start_sig = start.map(|d| format!(" 🛫{d}")).unwrap_or_default();
-    let recurrence_sig = recurrence
-        .map(|r| format!(" 🔁{r}"))
-        .unwrap_or_default();
+    let recurrence_sig = recurrence.map(|r| format!(" 🔁{r}")).unwrap_or_default();
     let tags_str = tags
         .map(|t| {
             t.iter()

@@ -36,7 +36,11 @@ fn round_trip_preserves_scene_across_all_fixtures() {
         })
         .collect();
 
-    assert!(!entries.is_empty(), "no drawing fixtures found in {}", dir.display());
+    assert!(
+        !entries.is_empty(),
+        "no drawing fixtures found in {}",
+        dir.display()
+    );
 
     for entry in &entries {
         let path = entry.path();
@@ -57,16 +61,26 @@ fn round_trip_preserves_scene_across_all_fixtures() {
 
         // Writer lint (ADR-047 §9 verification gate): the output must be a
         // full Obsidian shell, never a fence-less or Basalt-divergent hull.
-        assert!(serialized.contains("# Excalidraw Data"),
-            "[{name}] missing '# Excalidraw Data' hull");
-        assert!(serialized.contains("## Text Elements"),
-            "[{name}] missing '## Text Elements' section");
-        assert!(serialized.contains("## Drawing"),
-            "[{name}] missing '## Drawing' section");
-        assert!(serialized.contains("excalidraw-plugin: parsed"),
-            "[{name}] missing excalidraw-plugin frontmatter marker");
-        assert!(serialized.contains("```json"),
-            "[{name}] missing json fence — empty-file no-fence regression");
+        assert!(
+            serialized.contains("# Excalidraw Data"),
+            "[{name}] missing '# Excalidraw Data' hull"
+        );
+        assert!(
+            serialized.contains("## Text Elements"),
+            "[{name}] missing '## Text Elements' section"
+        );
+        assert!(
+            serialized.contains("## Drawing"),
+            "[{name}] missing '## Drawing' section"
+        );
+        assert!(
+            serialized.contains("excalidraw-plugin: parsed"),
+            "[{name}] missing excalidraw-plugin frontmatter marker"
+        );
+        assert!(
+            serialized.contains("```json"),
+            "[{name}] missing json fence — empty-file no-fence regression"
+        );
 
         // ── re-parse ────────────────────────────────────────────────────────
         let reparsed = parse_drawing_content(&serialized);
@@ -74,8 +88,7 @@ fn round_trip_preserves_scene_across_all_fixtures() {
         // Scene JSON must be byte-identical: the writer threads the raw
         // `data_json` string through the fence verbatim.
         assert_eq!(
-            reparsed.data_json,
-            parsed.data_json,
+            reparsed.data_json, parsed.data_json,
             "[{name}] scene JSON changed across round-trip"
         );
 
@@ -83,8 +96,7 @@ fn round_trip_preserves_scene_across_all_fixtures() {
         // regenerated from the scene for fresh-shell writes. Both must
         // resolve to the same set after re-parse.
         assert_eq!(
-            reparsed.text_elements,
-            parsed.text_elements,
+            reparsed.text_elements, parsed.text_elements,
             "[{name}] text-elements mirror changed across round-trip"
         );
 

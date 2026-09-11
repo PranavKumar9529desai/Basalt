@@ -287,7 +287,9 @@ pub fn create_drawing_file(data_json: &str) -> String {
     out.push_str("  format: obsidian-shell\n");
     out.push_str("  encoding: json\n");
     out.push_str("---\n\n");
-    out.push_str("==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==\n\n");
+    out.push_str(
+        "==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==\n\n",
+    );
     out.push_str("# Excalidraw Data\n");
     out.push_str("## Text Elements\n");
     let mirror = text_element_lines(data_json);
@@ -325,7 +327,11 @@ fn text_element_lines(data_json: &str) -> String {
         let Some(text) = elem.get("text").and_then(|t| t.as_str()) else {
             continue;
         };
-        let lines: Vec<&str> = text.lines().map(str::trim_end).filter(|l| !l.is_empty()).collect();
+        let lines: Vec<&str> = text
+            .lines()
+            .map(str::trim_end)
+            .filter(|l| !l.is_empty())
+            .collect();
         if lines.is_empty() {
             continue;
         }
@@ -623,7 +629,10 @@ mod tests {
         let content = "---\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n---\n\n# Excalidraw Data\n## Text Elements\ntarget ^tZMHYgSv\n\n(8,1) ^ipekGSpj\n\ntwo ^ref2 one ^notref\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n";
         let parsed = parse_obsidian_excalidraw(content);
         // ^ stripping applies only to the trailing block ref.
-        assert_eq!(parsed.text_elements, vec!["target", "(8,1)", "two ^ref2 one"]);
+        assert_eq!(
+            parsed.text_elements,
+            vec!["target", "(8,1)", "two ^ref2 one"]
+        );
     }
 
     #[test]

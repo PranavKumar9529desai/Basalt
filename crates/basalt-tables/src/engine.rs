@@ -9,11 +9,8 @@ use crate::expr::{
     collect_query_projection, compare_typed, eval_expr, eval_to_typed, field_value, EvalCtx,
 };
 use crate::grouping::group_rows;
-use crate::output::{
-    execute_list_query, execute_table_query, execute_task_query, expr_text,
-};
+use crate::output::{execute_list_query, execute_table_query, execute_task_query, expr_text};
 use crate::page_row::{build_page_rows_projected, PageRow};
-
 
 /// Runtime errors during DQL query execution.
 #[derive(Debug, thiserror::Error)]
@@ -148,7 +145,8 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
                         // Top-K Selection: O(N log k) streaming heap selection
                         rows = match direction {
                             SortDirection::Asc => {
-                                let mut heap: BinaryHeap<AscHeapNode> = BinaryHeap::with_capacity(k + 1);
+                                let mut heap: BinaryHeap<AscHeapNode> =
+                                    BinaryHeap::with_capacity(k + 1);
                                 for row in rows {
                                     let key = field_value(field, &row.ctx());
                                     if heap.len() < k {
@@ -165,7 +163,8 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
                                 nodes.into_iter().map(|n| n.row).collect()
                             }
                             SortDirection::Desc => {
-                                let mut heap: BinaryHeap<DescHeapNode> = BinaryHeap::with_capacity(k + 1);
+                                let mut heap: BinaryHeap<DescHeapNode> =
+                                    BinaryHeap::with_capacity(k + 1);
                                 for row in rows {
                                     let key = field_value(field, &row.ctx());
                                     if heap.len() < k {
@@ -198,7 +197,8 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
                             }
                         });
 
-                        let mut row_slots: Vec<Option<WorkRow>> = rows.into_iter().map(Some).collect();
+                        let mut row_slots: Vec<Option<WorkRow>> =
+                            rows.into_iter().map(Some).collect();
                         rows = sort_keys
                             .into_iter()
                             .filter_map(|(_, idx)| row_slots[idx].take())
@@ -254,10 +254,12 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
                                         clone.frontmatter.push((flat_name.clone(), item));
                                         new_rows.push(WorkRow::Page(clone));
                                         if new_rows.len() > MAX_EXPANDED_ROWS {
-                                            return Err(DqlError::EvaluationLimitExceeded(format!(
+                                            return Err(DqlError::EvaluationLimitExceeded(
+                                                format!(
                                                 "flatten expanded working set beyond {} rows limit",
                                                 MAX_EXPANDED_ROWS
-                                            )));
+                                            ),
+                                            ));
                                         }
                                     }
                                 }

@@ -82,10 +82,7 @@ pub fn build_page_rows_projected(
     let mut pages = Vec::with_capacity(capacity);
     for (node_id, meta) in &graph.metadata_cache {
         let path_str = arena.get_string(*node_id).map(|s| s.as_str()).unwrap_or("");
-        let folder_str = path_str
-            .rfind('/')
-            .map(|i| &path_str[..i])
-            .unwrap_or("");
+        let folder_str = path_str.rfind('/').map(|i| &path_str[..i]).unwrap_or("");
 
         // Predicate push-down: evaluate FROM filter before constructing row or parsing frontmatter
         if let Some(src) = source {
@@ -102,8 +99,16 @@ pub fn build_page_rows_projected(
 
         pages.push(PageRow {
             path: path_str.to_string(),
-            tags: if needs_tags { meta.tags.clone() } else { Vec::new() },
-            links: if needs_links { meta.links.clone() } else { Vec::new() },
+            tags: if needs_tags {
+                meta.tags.clone()
+            } else {
+                Vec::new()
+            },
+            links: if needs_links {
+                meta.links.clone()
+            } else {
+                Vec::new()
+            },
             frontmatter: frontmatter_vals,
         });
     }
@@ -137,15 +142,15 @@ pub fn matches_source_raw(
         }
         SourceFilter::Link(target) => {
             let clean_target = target.trim_matches(&['[', ']'][..]);
-            links.iter().any(|l| l.trim_matches(&['[', ']'][..]) == clean_target)
+            links
+                .iter()
+                .any(|l| l.trim_matches(&['[', ']'][..]) == clean_target)
         }
         SourceFilter::And(a, b) => {
-            matches_source_raw(folder, tags, links, a)
-                && matches_source_raw(folder, tags, links, b)
+            matches_source_raw(folder, tags, links, a) && matches_source_raw(folder, tags, links, b)
         }
         SourceFilter::Or(a, b) => {
-            matches_source_raw(folder, tags, links, a)
-                || matches_source_raw(folder, tags, links, b)
+            matches_source_raw(folder, tags, links, a) || matches_source_raw(folder, tags, links, b)
         }
         SourceFilter::Not(a) => !matches_source_raw(folder, tags, links, a),
     }
