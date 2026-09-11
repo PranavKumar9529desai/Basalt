@@ -14,6 +14,8 @@ import { EditorView } from "../features/editor";
 import { Backlinks } from "./views/Backlinks";
 import { Tags } from "./views/Tags";
 import { AssetsView } from "./views/AssetsView";
+import { Calendar as CalendarView } from "./views/CalendarView";
+import { IconCalendar } from "@tabler/icons-react";
 
 import { FileExplorerHeaderActions, FileExplorer } from "./views/FileExplorer";
 
@@ -62,6 +64,15 @@ viewRegistry.register({
   icon: IconTag,
   side: "right",
   component: Tags,
+  section: true,
+});
+
+viewRegistry.register({
+  type: "calendar",
+  name: "Calendar",
+  icon: IconCalendar,
+  side: "right",
+  component: CalendarView,
   section: true,
 });
 

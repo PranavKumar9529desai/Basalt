@@ -180,6 +180,24 @@
     "icon": "IconCalendarEvent"
   },
   {
+    "id": "calendar:open-today",
+    "name": "Calendar: Open today's note",
+    "category": "Calendar",
+    "icon": "IconCalendar"
+  },
+  {
+    "id": "calendar:prev-month",
+    "name": "Calendar: Previous month",
+    "category": "Calendar",
+    "icon": "IconChevronLeft"
+  },
+  {
+    "id": "calendar:next-month",
+    "name": "Calendar: Next month",
+    "category": "Calendar",
+    "icon": "IconChevronRight"
+  },
+  {
     "id": "tasks:create",
     "name": "Tasks: Create task",
     "category": "Tasks",

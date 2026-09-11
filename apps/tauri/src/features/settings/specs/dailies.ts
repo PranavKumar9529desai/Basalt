@@ -31,4 +31,26 @@ export const DAILIES_SPECS: SettingItemSpec[] = [
     placeholder: "Empty — start with a blank note",
     keywords: ["template", "daily"],
   },
+  {
+    key: "calendarWeekStart",
+    name: "Calendar week starts on",
+    description:
+      "First day of the week in the calendar sidebar. 'Auto' follows your system locale.",
+    type: "dropdown",
+    options: [
+      { label: "Auto (locale)", value: "auto" },
+      { label: "Sunday", value: "0" },
+      { label: "Monday", value: "1" },
+      { label: "Saturday", value: "6" },
+    ],
+    keywords: ["calendar", "week", "start", "locale"],
+  },
+  {
+    key: "calendarShowWeekNumbers",
+    name: "Show week numbers",
+    description:
+      "Display ISO week numbers in the calendar sidebar.",
+    type: "toggle",
+    keywords: ["calendar", "week", "numbers"],
+  },
 ];

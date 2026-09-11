@@ -7,6 +7,45 @@
 
 ---
 
+## Calendar sidebar (Obsidian Calendar plugin parity) — complete, uncommitted
+
+**Status:** Built + all gates green (tsc, oxlint, 67+11 Rust tests, 361
+frontend tests, prod build). Not yet committed.
+
+### What was built
+
+- **Rust** `calendar_activity` (`src-tauri/src/commands/calendar/mod.rs`) — one
+  batch IPC scan of the daily-notes folder: matches each `.md` filename
+  against the user's date format (deterministic format compiler — no regex
+  dep), returns per-day `{exists, word_count, unfinished_tasks}` keyed by
+  `YYYY-MM-DD`. Unfinished = checkbox not Done/Cancelled (basalt-task status
+  grammar). 11 unit tests incl. format edge cases (slash-folders, MMMM/MMM,
+  YY century, weekday skip, task counting).
+- **Feature** `features/calendar/` — presentational `CalendarDock` (shadcn
+  `Calendar` + custom `DayButton` with activity dots), `types.ts`, barrel.
+  Pure: no settings/templates imports (oxlint rule enforced).
+- **Shared** `shared/useCalendar.ts` — orchestration: reads dailies settings,
+  fetches activity on month change (cancelled-effect), exports `openDailyNoteAt`
+  (date → template-expand → `open_daily_note` → `openNote`), month nav state.
+- **Shell** `app-shell/views/CalendarView.tsx` + registry entry
+  (`type: "calendar"`, right side, `section: true`, IconCalendar) — the
+  sanctioned wrapper pattern.
+- **Settings** `calendarWeekStart` (auto/0/1/6 dropdown) + `calendarShowWeekNumbers`
+  toggle in `DAILIES_SPECS`; week start resolves via `Intl.Locale#weekInfo`
+  (typed cast — TS 5.9 lacks the type).
+- **Commands** `calendar:open-today` registered in `useShellCommands`;
+  `dailies:open-today` refactored to reuse `openDailyNoteAt` (no dup).
+  `calendar:prev-month`/`next-month`/`open-today` metadata in commands.json.
+- **shadcn** `packages/ui` — installed `calendar` via CLI (`react-day-picker`
+  v9 + `date-fns` added), adapted to `--sat-*` tokens.
+
+### Deferred (v2 candidates)
+- Weekly notes support (week-number click → weekly note; needs 3 settings + reuse of command).
+- Activity-dot levels (multi-dot for word-count ranges, like the Obsidian plugin buckets).
+- ADR write-up if we want to record the format-compiler decision.
+
+---
+
 ## ADR-047 Excalidraw format adoption — ACTIVE
 
 **Status:** Phases 1–4 committed. Remaining: Phase 5 (migration + round-trip harness), Phase 6 (docs).

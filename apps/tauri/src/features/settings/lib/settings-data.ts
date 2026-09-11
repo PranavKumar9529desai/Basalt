@@ -41,6 +41,10 @@ const DEFAULTS = {
   dailyNoteDateFormat: "YYYY-MM-DD" as string,
   /** Template file to apply to new daily notes; empty = blank note. */
   dailyNoteTemplate: "" as string,
+  /** First day of week in the calendar sidebar: "auto" uses locale, or 0-6 (Sun-Sat). */
+  calendarWeekStart: "auto" as string,
+  /** Show week numbers in the calendar sidebar. */
+  calendarShowWeekNumbers: true as boolean,
   /** Auto-update to the latest stable release (General). */
   autoUpdates: true as boolean,
   /** Auto-update to early access builds (General). */
