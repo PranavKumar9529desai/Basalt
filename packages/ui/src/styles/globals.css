@@ -284,6 +284,14 @@
   --sat-editor-heading7: #cdd6f4;
 }
 
+[data-theme="dark"] {
+  --sat-excalidraw-primary-light: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 28%,
+    var(--sat-surface-3)
+  );
+}
+
 [data-theme="dracula"] {
   --sat-surface-1: #282a36;
   --sat-surface-2: #1e1f29;

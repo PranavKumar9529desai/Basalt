@@ -3,5 +3,9 @@
   "label": "Dark",
   "mode": "dark",
   "description": "Baseline Basalt Volcanic Obsidian & Magma Orange theme.",
-  "overrides": {}
+  "overrides": {
+    "excalidraw": {
+      "primaryLight": "color-mix(in srgb, var(--sat-accent-primary) 28%, var(--sat-surface-3))"
+    }
+  }
 }
