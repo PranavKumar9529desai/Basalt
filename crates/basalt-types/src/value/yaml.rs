@@ -2,20 +2,7 @@
 //! engine and DQL.
 
 use super::{is_iso_date_string, is_iso_datetime_string, TypedValue};
-
-/// Extract the first `[[Target]]` target from a string (ignoring alias/`#`).
-fn first_wikilink_target(s: &str) -> Option<String> {
-    let open = s.find("[[")?;
-    let rest = &s[open + 2..];
-    let close = rest.find("]]")?;
-    let inner = &rest[..close];
-    let target = inner.split(['|', '#']).next().unwrap_or("").trim();
-    if target.is_empty() {
-        None
-    } else {
-        Some(target.to_string())
-    }
-}
+use crate::wikilink::wikilink_target_owned;
 
 /// Convert a `serde_yaml_ng::Value` to a `TypedValue`.
 ///
@@ -30,7 +17,7 @@ pub fn yaml_to_typed(val: &serde_yaml_ng::Value) -> TypedValue {
             value: n.as_f64().unwrap_or(0.0),
         },
         serde_yaml_ng::Value::String(s) => {
-            if let Some(target) = first_wikilink_target(s) {
+            if let Some(target) = wikilink_target_owned(s) {
                 TypedValue::Link {
                     name: target.clone(),
                     path: target,

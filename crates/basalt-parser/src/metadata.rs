@@ -1,12 +1,17 @@
+//! Zero-AST metadata scanner: frontmatter, links, tags, headings, and block IDs.
+//!
+//! Two tiers share identical logic but differ in span representation:
+//! - ASCII fast path: byte offsets = UTF-16 code units, zero overhead.
+//! - Unicode path: streaming `SpanCursor` tracks the UTF-8 → UTF-16 mapping.
+
 use crate::task_scan::{is_task_checkbox, scan_task_line, scan_task_line_unicode};
 use crate::utf16::SpanCursor;
 use basalt_types::{FileMetadata, Span};
 
-/// Extract and parse YAML frontmatter between `---` fences.
-///
-/// Returns the number of bytes to skip from `input` to reach the body
-/// (past any trailing newline), or 0 if no frontmatter is present.
-fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
+/// Consume YAML frontmatter between `---` fences, extracting its properties
+/// as first-class graph/backlink edges. Returns the body byte offset (past
+/// the closing fence) or 0 when no frontmatter is present.
+fn consume_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
     let (open_end, close_start) = match crate::frontmatter::fm_bounds(input) {
         Some(bounds) => bounds,
         None => return 0,
@@ -19,9 +24,8 @@ fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
     };
     meta.frontmatter = Some(yaml);
 
-    // Make frontmatter properties first-class: extract wikilinks /
-    // tags / aliases declared inside the block so they reach the
-    // graph, backlinks and search index (ADR-022 rule 1).
+    // Make frontmatter properties first-class: extract wikilinks,
+    // tags, and aliases so they reach graph, backlinks and search.
     if let Some(fm) = &meta.frontmatter {
         let mut fm_links: Vec<String> = Vec::new();
         let mut fm_tags: Vec<String> = Vec::new();
@@ -34,11 +38,6 @@ fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
     }
 
     crate::frontmatter::frontmatter_body_offset(input)
-}
-
-#[inline]
-pub fn extract_target(link_content: &str) -> &str {
-    link_content.split(['|', '#']).next().unwrap_or("").trim()
 }
 
 #[inline]
@@ -55,9 +54,7 @@ fn find_closing_brackets(bytes: &[u8], from: usize) -> Option<usize> {
     None
 }
 
-// ---------------------------------------------------------------------------
-// Tier 1: Pure ASCII Fast Path (0 conversions, 0 allocations, O(1) spans)
-// ---------------------------------------------------------------------------
+// --- Tier 1: Pure ASCII fast path (byte offsets = UTF-16, 0 allocs) ---
 
 #[inline]
 fn scan_wikilink_or_embed_ascii(
@@ -78,7 +75,7 @@ fn scan_wikilink_or_embed_ascii(
     let end_byte = close_i + 2;
 
     let link_content = input.get(content_start..close_i).unwrap_or("");
-    let target = extract_target(link_content);
+    let target = crate::wikilink::wikilink_target(link_content);
 
     if !target.is_empty() {
         let span = Span {
@@ -255,9 +252,7 @@ fn scan_body_tokens_ascii(input: &str, start: usize, meta: &mut FileMetadata) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Tier 2: Streaming Dual-Cursor Fallback (0 allocations, CodeMirror UTF-16)
-// ---------------------------------------------------------------------------
+// --- Tier 2: Unicode path (streaming SpanCursor for CodeMirror UTF-16) ---
 
 #[inline]
 fn scan_wikilink_or_embed_unicode(
@@ -278,7 +273,7 @@ fn scan_wikilink_or_embed_unicode(
     let end_byte = close_i + 2;
 
     let link_content = input.get(content_start..close_i).unwrap_or("");
-    let target = extract_target(link_content);
+    let target = crate::wikilink::wikilink_target(link_content);
 
     if !target.is_empty() {
         cursor.advance_to(i, input);
@@ -509,7 +504,7 @@ fn scan_body_tokens(input: &str, start: usize, meta: &mut FileMetadata) {
 /// Used by `basalt_vault` to quickly index thousands of files without memory bloat.
 pub fn extract_metadata(input: &str) -> FileMetadata {
     let mut meta = FileMetadata::new();
-    let body_start = parse_frontmatter(input, &mut meta);
+    let body_start = consume_frontmatter(input, &mut meta);
     scan_body_tokens(input, body_start, &mut meta);
     meta.links.sort_unstable();
     meta.links.dedup();

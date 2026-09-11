@@ -1,27 +1,6 @@
 use serde_yaml_ng::Value;
 
-/// Append every `[[...]]` target found in `s` to `out`.
-pub(crate) fn collect_wikilinks(s: &str, out: &mut Vec<String>) {
-    let bytes = s.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'[' && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
-            let start = i + 2;
-            if let Some(close) = s[start..].find("]]") {
-                let inner = &s[start..start + close];
-                let target = inner.split(['|', '#']).next().unwrap_or("").trim();
-                if !target.is_empty() {
-                    out.push(target.to_string());
-                }
-                i = start + close + 2;
-            } else {
-                break;
-            }
-        } else {
-            i += 1;
-        }
-    }
-}
+use crate::scan_wikilinks;
 
 /// Walk a parsed YAML frontmatter value, collecting wikilinks (into `links`),
 /// `tags:` (into `tags`) and `aliases:` (into `aliases`). Used to make
@@ -53,6 +32,14 @@ pub(crate) fn walk_fm(
             }
         }
         _ => {}
+    }
+}
+
+/// Append every `[[...]]` target found in `s` to `out`, reusing the canonical
+/// `scan_wikilinks` scanner (one wikilink grammar for the whole crate).
+fn collect_wikilinks(s: &str, out: &mut Vec<String>) {
+    for spec in scan_wikilinks(s) {
+        out.push(s[spec.target_from..spec.target_to].to_string());
     }
 }
 

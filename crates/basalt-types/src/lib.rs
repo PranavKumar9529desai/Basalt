@@ -13,6 +13,7 @@ pub use task::{TaskData, TaskPriority, TaskStatus};
 pub mod convert;
 pub mod path_utils;
 pub mod value;
+pub mod wikilink;
 
 pub use convert::{QueryColumn, QueryColumnType, QueryResult};
 pub use path_utils::{
@@ -22,3 +23,4 @@ pub use value::{
     compare_typed, parse_date_ts, parse_datetime_ts, type_tier, yaml_to_typed, yaml_to_typed_pairs,
     TypedValue,
 };
+pub use wikilink::{wikilink_target, wikilink_target_owned};
