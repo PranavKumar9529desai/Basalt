@@ -59,15 +59,26 @@ fn consume_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
 
 /// ASCII-tier dispatch: scan the body for every token kind, writing byte
 /// spans directly (byte offset = UTF-16 code unit on pure-ASCII input).
+///
+/// Also threads a monotonic 1-based `line_no` counter (ADR-041 hot loop):
+/// every `\n` that `i` advances past is counted exactly once, so task span
+/// line numbers cost O(1) amortized instead of the previous per-task prefix
+/// rescan (O(T × L) per file for T task lines).
 fn scan_body_tokens_ascii(input: &str, start: usize, meta: &mut FileMetadata) {
     let bytes = input.as_bytes();
     let mut i = start;
+    // 1-based line of the current byte; seeded from any frontmatter lines
+    // before the body start. Invariant: equals the number of `\n` before
+    // `i` plus one, maintained by counting in every range `i` advances
+    // through (memchr3 skip regions + token-consumed ranges).
+    let mut line_no: u32 = memchr::memchr_iter(b'\n', &bytes[..start]).count() as u32 + 1;
 
     while i < bytes.len() {
         let rel = match memchr::memchr3(b'[', b'^', b'#', &bytes[i..]) {
             Some(r) => r,
             None => break,
         };
+        line_no += memchr::memchr_iter(b'\n', &bytes[i..i + rel]).count() as u32;
         i += rel;
 
         match bytes[i] {
@@ -77,24 +88,28 @@ fn scan_body_tokens_ascii(input: &str, start: usize, meta: &mut FileMetadata) {
                 // line is consumed whole: the checkbox bracket is not a link,
                 // and inner [[wikilinks]] stay part of the task description.
                 if is_task_checkbox(bytes, i) {
-                    if let Some(next_i) = scan_task_line(input, bytes, i, meta) {
+                    if let Some(next_i) = scan_task_line(input, bytes, i, line_no, meta) {
+                        line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                         i = next_i;
                         continue;
                     }
                 }
                 if let Some(next_i) = scan_wikilink_or_embed_ascii(input, bytes, i, meta) {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }
             }
             b'^' => {
                 if let Some(next_i) = scan_block_id_ascii(input, bytes, i, meta) {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }
             }
             b'#' => {
                 if let Some(next_i) = scan_heading_or_tag_ascii(input, bytes, i, meta) {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }
@@ -106,10 +121,12 @@ fn scan_body_tokens_ascii(input: &str, start: usize, meta: &mut FileMetadata) {
 }
 
 /// Unicode-tier dispatch: same scan as [`scan_body_tokens_ascii`], but spans
-/// are translated to UTF-16 code units via a streaming `SpanCursor`.
+/// are translated to UTF-16 code units via a streaming `SpanCursor`. Same
+/// monotonic `line_no` counter contract as the ASCII tier.
 fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) {
     let bytes = input.as_bytes();
     let mut i = start;
+    let mut line_no: u32 = memchr::memchr_iter(b'\n', &bytes[..start]).count() as u32 + 1;
     let mut cursor = SpanCursor::new();
 
     while i < bytes.len() {
@@ -117,14 +134,17 @@ fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) 
             Some(r) => r,
             None => break,
         };
+        line_no += memchr::memchr_iter(b'\n', &bytes[i..i + rel]).count() as u32;
         i += rel;
 
         match bytes[i] {
             b'[' => {
                 // Checkbox list item; see scan_body_tokens_ascii.
                 if is_task_checkbox(bytes, i) {
-                    if let Some(next_i) = scan_task_line_unicode(input, bytes, i, &mut cursor, meta)
+                    if let Some(next_i) =
+                        scan_task_line_unicode(input, bytes, i, line_no, &mut cursor, meta)
                     {
+                        line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                         i = next_i;
                         continue;
                     }
@@ -132,12 +152,14 @@ fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) 
                 if let Some(next_i) =
                     scan_wikilink_or_embed_unicode(input, bytes, i, &mut cursor, meta)
                 {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }
             }
             b'^' => {
                 if let Some(next_i) = scan_block_id_unicode(input, bytes, i, &mut cursor, meta) {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }
@@ -146,6 +168,7 @@ fn scan_body_tokens_unicode(input: &str, start: usize, meta: &mut FileMetadata) 
                 if let Some(next_i) =
                     scan_heading_or_tag_unicode(input, bytes, i, &mut cursor, meta)
                 {
+                    line_no += memchr::memchr_iter(b'\n', &bytes[i..next_i]).count() as u32;
                     i = next_i;
                     continue;
                 }

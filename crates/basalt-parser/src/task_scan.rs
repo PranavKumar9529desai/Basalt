@@ -59,9 +59,10 @@ pub(crate) fn scan_task_line(
     input: &str,
     bytes: &[u8],
     i: usize,
+    line_no: u32,
     meta: &mut FileMetadata,
 ) -> Option<usize> {
-    let (line_no, line_start, line_end) = line_bounds(bytes, i);
+    let (line_start, line_end) = line_bounds(bytes, i);
     let task = parse_task_line(
         input,
         bytes,
@@ -76,15 +77,17 @@ pub(crate) fn scan_task_line(
 }
 
 /// Scan a checkbox task line (Tier 2 Unicode path), translating the byte
-/// span to UTF-16 code units via `cursor` for CodeMirror decoration.
+/// span to UTF-16 code units via `cursor` for CodeMirror decoration. Same
+/// `line_no` contract as [`scan_task_line`].
 pub(crate) fn scan_task_line_unicode(
     input: &str,
     bytes: &[u8],
     i: usize,
+    line_no: u32,
     cursor: &mut SpanCursor,
     meta: &mut FileMetadata,
 ) -> Option<usize> {
-    let (line_no, line_start, line_end) = line_bounds(bytes, i);
+    let (line_start, line_end) = line_bounds(bytes, i);
     cursor.advance_to(line_start, input);
     let u16_start = cursor.utf16_idx;
     cursor.advance_to(line_end, input);
@@ -102,8 +105,11 @@ pub(crate) fn scan_task_line_unicode(
     Some(line_end)
 }
 
-/// 1-indexed line number, byte bounds of the line containing `i`.
-fn line_bounds(bytes: &[u8], i: usize) -> (u32, usize, usize) {
+/// Byte bounds of the line containing byte `i`. The line NUMBER comes from
+/// the caller's monotonic counter — recomputing it here meant a full
+/// `memchr_iter` rescan of everything before the line for every task line
+/// (O(T × L) file cost for T task lines; see ADR-041 hot path).
+fn line_bounds(bytes: &[u8], i: usize) -> (usize, usize) {
     let line_start = bytes[..i]
         .iter()
         .rposition(|&b| b == b'\n')
@@ -112,8 +118,7 @@ fn line_bounds(bytes: &[u8], i: usize) -> (u32, usize, usize) {
         .iter()
         .position(|&b| b == b'\n')
         .map_or(bytes.len(), |p| i + p);
-    let line_no = memchr::memchr_iter(b'\n', &bytes[..line_start]).count() as u32 + 1;
-    (line_no, line_start, line_end)
+    (line_start, line_end)
 }
 
 /// Parse the task at `checkbox` (verified by `is_task_checkbox`) into
