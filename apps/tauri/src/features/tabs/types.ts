@@ -12,6 +12,12 @@ export interface OpenableTabInput {
   /** Transient: focus the note body once when the tab opens. */
   focusOnOpen?: boolean;
   /**
+   * Optional explicit leaf type. Callers that already resolved the
+   * marker-authoritative type (see `shared/leafType.ts`) pass it here;
+   * defaults to registry extension matching.
+   */
+  leafType?: string;
+  /**
    * Transient: enter the leaf's "rename on open" flow once (select-all title
    * editing) on first show. Mirrors `line` — never persisted.
    */

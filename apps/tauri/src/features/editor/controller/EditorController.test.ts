@@ -56,6 +56,7 @@ function makeStubServices(overrides: Partial<LeafServices> = {}): LeafServices {
     onTabStructureChanged: () => () => {},
     activeNote: null,
     openPinned: () => "",
+    resolveLeafType: async () => "markdown",
     renameNote: vi.fn(),
     ...overrides,
   } as LeafServices;

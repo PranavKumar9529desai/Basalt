@@ -139,7 +139,8 @@ export const createOpenSlice: StateCreator<TabsState, [], [], OpenSlice> = (
         };
       });
 
-      const leafType = leafRegistry.leafTypeForPath(note.path) ?? "markdown";
+      const leafType =
+        note.leafType ?? leafRegistry.leafTypeForPath(note.path) ?? "markdown";
       const title = note.title ?? label(note.path);
       const newEntry = {
         path: note.path,
@@ -224,7 +225,8 @@ export const createOpenSlice: StateCreator<TabsState, [], [], OpenSlice> = (
     set((state) => {
       const tabs = { ...state.tabs };
       const timestamp = nowMs();
-      const leafType = leafRegistry.leafTypeForPath(note.path) ?? "markdown";
+      const leafType =
+        note.leafType ?? leafRegistry.leafTypeForPath(note.path) ?? "markdown";
       const title = note.title ?? label(note.path);
       const initialEntry = {
         path: note.path,

@@ -217,41 +217,45 @@ describe("useWorkspace", () => {
   });
 
   describe("onFileOpen", () => {
-    it("vscode behavior respects the mode arg (pinned)", () => {
+    it("vscode behavior respects the mode arg (pinned)", async () => {
       const { editor, controllerOpts } = setup({ setting: "vscode" });
-      controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
+      await controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
       expect(editor.openPinned).toHaveBeenCalledWith({
         path: "x.md",
         title: "x",
+        leafType: "markdown",
       });
       expect(editor.setTabTitle).toHaveBeenCalledWith("pinned:x.md", "x");
     });
 
-    it("vscode behavior respects the mode arg (preview)", () => {
+    it("vscode behavior respects the mode arg (preview)", async () => {
       const { editor, controllerOpts } = setup({ setting: "vscode" });
-      controllerOpts.onFileOpen(node("x.md", "x"), "preview");
+      await controllerOpts.onFileOpen(node("x.md", "x"), "preview");
       expect(editor.openInPreview).toHaveBeenCalledWith({
         path: "x.md",
         title: "x",
+        leafType: "markdown",
       });
     });
 
-    it("preview behavior overrides the mode arg and opens in preview", () => {
+    it("preview behavior overrides the mode arg and opens in preview", async () => {
       const { editor, controllerOpts } = setup({ setting: "preview" });
-      controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
+      await controllerOpts.onFileOpen(node("x.md", "x"), "pinned");
       expect(editor.openInPreview).toHaveBeenCalledWith({
         path: "x.md",
         title: "x",
+        leafType: "markdown",
       });
       expect(editor.openPinned).not.toHaveBeenCalled();
     });
 
-    it("pinned behavior overrides the mode arg and opens pinned", () => {
+    it("pinned behavior overrides the mode arg and opens pinned", async () => {
       const { editor, controllerOpts } = setup({ setting: "pinned" });
-      controllerOpts.onFileOpen(node("x.md", "x"), "preview");
+      await controllerOpts.onFileOpen(node("x.md", "x"), "preview");
       expect(editor.openPinned).toHaveBeenCalledWith({
         path: "x.md",
         title: "x",
+        leafType: "markdown",
       });
       expect(editor.openInPreview).not.toHaveBeenCalled();
     });

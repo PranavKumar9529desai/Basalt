@@ -74,6 +74,21 @@ pub fn serialize_drawing(data_json: String, existing_markdown: Option<String>) -
     serialize_drawing_content(&data_json, existing_markdown.as_deref())
 }
 
+/// Marker-authoritative drawing classification for a vault path. The frontend
+/// routes plain `.md` files here: a drawing renamed to `carfleet.md` still
+/// carries `excalidraw-plugin: parsed` and must open in the drawing leaf.
+/// Reads only the one file — extension fast paths never call this.
+#[tauri::command]
+pub fn is_drawing_file(path: String, state: State<AppState>) -> bool {
+    let Ok(abs) = resolve_drawing_path(&path, &state) else {
+        return false;
+    };
+    let Ok(content) = std::fs::read_to_string(&abs) else {
+        return false;
+    };
+    is_drawing_content(&content)
+}
+
 /// Read a drawing file from disk and return its structured DrawingPayload.
 /// Classification is marker-authoritative: an `.md` renamed drawing
 /// (`carfleet.md`) opens here, while a plain note is rejected even when it

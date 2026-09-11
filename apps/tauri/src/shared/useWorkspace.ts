@@ -18,6 +18,7 @@
  */
 import { useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { resolveLeafType } from "./leafType";
 import type { RenameResult } from "@workspace/views";
 import type { TabModel } from "../features/tabs";
 import { useTabsStore } from "../features/tabs";
@@ -40,8 +41,9 @@ interface EditorInterface {
     path: string;
     title: string;
     renameOnOpen?: boolean;
+    leafType?: string;
   }) => string;
-  openPinned: (opts: { path: string; title: string }) => string;
+  openPinned: (opts: { path: string; title: string; leafType?: string }) => string;
   setTabTitle: (tabId: string, title: string) => void;
   closeTab: (tabId: string, opts: { force: boolean }) => void;
 }
@@ -120,11 +122,14 @@ export function useWorkspace({
     (node: FlatTreeNode, mode: "preview" | "pinned") => {
       const effectiveMode =
         tabClickOpenBehavior === "vscode" ? mode : tabClickOpenBehavior;
-      const tabId =
-        effectiveMode === "pinned"
-          ? openPinned({ path: node.path, title: node.name })
-          : openInPreview({ path: node.path, title: node.name });
-      setTabTitle(tabId, node.name);
+      return resolveLeafType(node.path).then((leafType) => {
+        const input = { path: node.path, title: node.name, leafType };
+        const tabId =
+          effectiveMode === "pinned"
+            ? openPinned(input)
+            : openInPreview(input);
+        setTabTitle(tabId, node.name);
+      });
     },
     [tabClickOpenBehavior, openPinned, openInPreview, setTabTitle],
   );

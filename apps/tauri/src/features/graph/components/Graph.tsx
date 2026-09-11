@@ -146,7 +146,9 @@ export function Graph({ tab }: LeafProps) {
   const openInNewTab = (full: number) => {
     const path = pathsRef.current[full];
     if (!path) return;
-    services.openPinned({ path, title: basename(path) });
+    services.resolveLeafType(path).then((leafType) =>
+      services.openPinned({ path, title: basename(path), leafType }),
+    );
   };
   const handleMenuOpen = (full: number) => {
     const path = pathsRef.current[full];

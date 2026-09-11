@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useCallback, useMemo } from "react";
 import { classifyMediaExtension, extensionOf } from "@workspace/editor";
 
+import { resolveLeafType } from "./leafType";
 import { useTabsStore } from "../features/tabs";
 import { useSearchStore } from "../features/search";
 import type { FlatTreeNode } from "../features/vault";
@@ -101,6 +102,7 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
         void useSearchStore.getState().openSearchWithQuery(query);
       },
       renameNote: ws.renameNote,
+      resolveLeafType,
       resolveAsset: ws.vaultPath
         ? (target: string) => {
             const absPath = resolveEmbedTarget(

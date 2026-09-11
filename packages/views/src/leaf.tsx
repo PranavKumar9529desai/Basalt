@@ -65,7 +65,7 @@ export interface LeafServices {
   activeNote: { path: string; name: string } | null;
   /** Open a note as a pinned (non-preview) tab — graph node "open in new tab". */
   openPinned: (
-    note: { path: string; title?: string },
+    note: { path: string; title?: string; leafType?: string },
     options?: { activate?: boolean },
   ) => string;
   /** Rename the open note behind a tab (inline-title commit). Repoints the
@@ -80,6 +80,11 @@ export interface LeafServices {
   /** Open search with a pre-filled query (tag pills, future operators).
    * Optional — leaves must tolerate absent search. */
   openSearch?: (query: string) => void;
+  /** Marker-authoritative leaf type for a path: extension fast path, with
+   * the Excalidraw frontmatter marker as the judge for plain `.md` files
+   * (a drawing renamed to `carfleet.md` routes to the drawing leaf).
+   * Always resolves; falls back to `"markdown"`. */
+  resolveLeafType: (path: string) => Promise<string>;
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

@@ -14,6 +14,7 @@ function makeServices(overrides: Partial<LeafServices> = {}): LeafServices {
     onTabStructureChanged: () => () => {},
     activeNote: null,
     openPinned: () => "",
+    resolveLeafType: async () => "markdown",
     renameNote: vi
       .fn()
       .mockResolvedValue({ ok: true as const, path: "/vault/note.md" }),

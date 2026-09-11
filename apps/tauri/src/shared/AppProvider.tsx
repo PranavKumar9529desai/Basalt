@@ -6,6 +6,7 @@ import {
   type FlatTreeNode,
 } from "../features/vault";
 import { useWorkspace } from "./useWorkspace";
+import { resolveLeafType } from "./leafType";
 import { basename, isMarkdownPath } from "@workspace/ui";
 import { type ReactNode, createContext, useCallback, useContext } from "react";
 
@@ -59,18 +60,22 @@ function useWorkspaceState(vaultPath: string, initialTree: FlatTreeNode[]) {
 
   // Open a note by path — the single entry point for wikilinks, backlinks,
   // search, and any view that needs "open this note". Title resolves from
-  // the tree, falling back to the path's basename.
+  // the tree, falling back to the path's basename. Leaf type is
+  // marker-authoritative: a renamed drawing must open as a drawing.
   const openNote = useCallback(
     (path: string, line?: number) => {
       const node = treeNodes.find((n) => n.kind === "file" && n.path === path);
       const name = node?.name ?? basename(path);
-      const tabId = openInPreview({
-        path,
-        title: name,
-        line,
-        focusOnOpen: true,
+      resolveLeafType(path).then((leafType) => {
+        const tabId = openInPreview({
+          path,
+          title: name,
+          line,
+          focusOnOpen: true,
+          leafType,
+        });
+        setTabTitle(tabId, name);
       });
-      setTabTitle(tabId, name);
     },
     [treeNodes, openInPreview, setTabTitle],
   );
