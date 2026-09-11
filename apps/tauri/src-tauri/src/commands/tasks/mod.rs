@@ -13,8 +13,9 @@
 use std::path::Path;
 
 use basalt_task::{
-    build_task_line, collect_tasks, execute_collected_tasks, next_in_cycle, parse_task_line,
-    priority_from_name, status_from_name, status_symbol, TaskLineParts, DEFAULT_STATUS_CYCLE,
+    build_task_line, collect_matching_tasks, execute_collected_tasks, next_in_cycle,
+    parse_task_line, priority_from_name, status_from_name, status_symbol, TaskLineParts,
+    DEFAULT_STATUS_CYCLE,
 };
 use basalt_tables::{QueryResult, TaskQuery};
 use serde::Deserialize;
@@ -139,7 +140,15 @@ pub async fn get_tasks(
     let vault = state.vault.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let guard = vault.read().map_err(|_| AppError::LockPoisoned("vault"))?;
-        let tasks = collect_tasks(&guard);
+        // Fused collect+filter (ADR-045 push-down): filters are evaluated
+        // against borrowed tasks under the lock; only matching tasks are
+        // cloned. The clone is dropped before sorting, so background
+        // indexing never stalls for the query duration.
+        let filters: &[basalt_tables::TaskFilter] = query
+            .as_ref()
+            .map(|q| q.filters.as_slice())
+            .unwrap_or(&[]);
+        let tasks = collect_matching_tasks(&guard, filters);
         drop(guard);
         execute_collected_tasks(tasks, query.as_ref())
             .map_err(|e| AppError::Query(e.to_string()))

@@ -622,13 +622,17 @@ pub fn execute_task_query(
     vault: &Vault,
     query: Option<&TaskQuery>,
 ) -> Result<QueryResult, TaskQueryError> {
-    execute_collected_tasks(collect_tasks(vault), query)
+    let filters = query.map(|q| q.filters.as_slice()).unwrap_or(&[]);
+    execute_collected_tasks(collect_matching_tasks(vault, filters), query)
 }
 
 /// Run the full filter → sort → limit → row pipeline against
 /// already-collected tasks. Does **not** touch the vault — safe to execute
 /// outside any lock (the IPC layer collects under a brief read lock, drops
-/// it, then calls this off-thread).
+/// it, then calls this off-thread). Filters are re-applied here for
+/// robustness; the fused [`collect_matching_tasks`] pass has already
+/// removed non-matching tasks allocation-free, so this pass is cheap
+/// (idempotent on filtered input).
 pub fn execute_collected_tasks(
     tasks: Vec<(String, TaskData)>,
     query: Option<&TaskQuery>,
@@ -667,6 +671,40 @@ pub fn execute_collected_tasks(
         rows,
         total,
     })
+}
+
+/// Fused collect + filter in a single pass over vault metadata
+/// (ADR-045 §2.1 predicate push-down).
+///
+/// The **only** vault-touching phase — the IPC layer scopes the vault lock
+/// to exactly this call. Filters are evaluated against **borrowed** tasks
+/// inside the iteration and `TaskData` clones + path strings are created
+/// ONLY for survivors, so a query matching 500 of 30k tasks clones 500
+/// structs instead of 30k + retaining away the rest.
+///
+/// With no filters this degenerates to [`collect_tasks`].
+pub fn collect_matching_tasks(
+    vault: &Vault,
+    filters: &[TaskFilter],
+) -> Vec<(String, TaskData)> {
+    if filters.is_empty() {
+        return collect_tasks(vault);
+    }
+    let prepared: Vec<PreparedFilter<'_>> = filters.iter().map(prepare_filter).collect();
+    let mut tasks = Vec::new();
+    for (node_id, meta) in &vault.graph.metadata_cache {
+        let path = vault
+            .arena
+            .get_string(*node_id)
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        for task in &meta.tasks {
+            if prepared.iter().all(|pf| matches_prepared(path, task, pf)) {
+                tasks.push((path.to_string(), task.clone()));
+            }
+        }
+    }
+    tasks
 }
 
 #[cfg(test)]
