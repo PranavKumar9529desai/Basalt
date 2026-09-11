@@ -1229,3 +1229,80 @@ These features are explicitly deferred:
 - **Emoji parsing edge cases:** Some emojis are multi-byte (4 bytes in UTF-8). The Tier 1 ASCII fast-path must handle these correctly. Mitigation: thorough unit tests with diverse emoji.
 - **Performance regression in scanner:** Adding task parsing to the hot scan path could slow down indexing for non-task vaults. Mitigation: the `- [` trigger is rare outside list items; benchmark before/after.
 - **Date format ambiguity:** Users may write dates in non-ISO formats. Mitigation: strict YYYY-MM-DD parsing, matching Obsidian Tasks behavior.
+
+---
+
+## 17. Icon Rendering — Custom SVG Glyph Set (2026-09-11)
+
+**Status:** Direction agreed (discussion recorded in
+`docs/task-management-roadmap.md`); implementation pending the task-cleanup
+workstream. Supersedes the emoji-rendering details of §5.1 (priority badge
+content, date/tag chip rendering) — the §2 markdown format itself is unchanged.
+
+### 17.1 Context
+
+The signifier emojis (§2.1) are the **data format**: Obsidian Tasks-compatible
+markdown, keyed on exact codepoints by the Rust scanner, round-tripped
+losslessly by the serializer. They stay in the file, always.
+
+The *rendered* view, however, currently shows raw OS-font emoji, which:
+
+- cannot participate in the `--sat-*` theme system — emoji colors are baked
+  into the platform font, so they ignore every Basalt theme (volcanic, …);
+- looks different on every OS (Apple/Windows/Linux emoji fonts);
+- renders with **zero chrome in reading mode and PDF export** —
+  `taskListPlugin` (checkbox + chips) is edit-mode-only
+  (`packages/editor/src/editor.ts` `input:` array; `readingExtensions()` does
+  not include it) — raw `[x] 🔺 📅 2024-01-07` text is all reading mode shows;
+- duplicates signifiers — the raw emoji stays visible AND identical
+  date/priority chips are appended at end-of-line
+  (`buildInlineDecorations` in `packages/editor/src/input/task-list.ts`).
+
+### 17.2 Decision
+
+Keep emoji as the markdown format; replace emoji **rendering** with a custom
+Basalt SVG glyph set:
+
+- **`packages/icons`** — a glyph module of ~20 themed icon paths (hand-authored
+  or derived from an ISC/Apache-licensed set such as Lucide, which the Obsidian
+  ecosystem already uses for this exact purpose). Shapes use
+  `fill="currentColor"` so they inherit text color by default.
+- **Widget replacement** — each signifier span (`📅`, `🔺`, …) is replaced by a
+  glyph widget using the existing `Decoration.replace` mechanism already used
+  for the checkbox (`TaskCheckboxWidget`). Added to BOTH edit and reading mode
+  (via `readingModeExtras`), closing the reading-mode/PDF-export gap.
+- **Theming** — `currentColor` for base tone; the existing priority/date color
+  maps (`PRIORITY_COLORS` in `task-list.ts` / `--sat-state-error`,
+  `--sat-state-warning`, `--sat-accent-*`) for per-signifier tones (overdue =
+  red, priority-high = orange, …). Theme switching re-themes glyphs instantly
+  because they read runtime CSS tokens.
+- **Source mode** continues to show raw emoji (syntax visibility for editing);
+  rendered views show glyphs. Widgets are `aria-hidden`; task meaning is
+  carried by the description text (the emoji remain in the doc, so
+  screen-reader access to the raw syntax is preserved).
+- **Delete the EOL chip duplication** — signifier glyphs replace the source
+  span; the append-at-lineEnd chip widgets go away.
+- **Optional user setting** `tasks.iconRendering: svg | emoji | off` — a
+  renderer-only toggle; the file format never changes.
+
+### 17.3 Research basis
+
+The Obsidian Tasks team solved the same problem with a webfont hack
+([obsidian-tasks-group/obsidian-tasks-custom-icons](https://github.com/obsidian-tasks-group/obsidian-tasks-custom-icons)):
+woff2 fonts map the emoji codepoints to monochrome glyphs via `@font-face` +
+`unicode-range`. That approach caps out: **monochrome only** (one color per
+font — no per-signifier priority/date theming), **non-interactive**, **manual
+CSS snippet** for users, and font/license asset burden. It is the ceiling of
+styling inside a host app you don't control.
+
+Basalt owns its renderer, so real SVG widgets are strictly superior:
+per-signifier theming via `--sat-*`, interaction states (hover/focus),
+reading-mode + PDF parity, cross-platform consistency, and no font assets. The
+`currentColor` + token model means new themes auto-apply to task glyphs.
+
+### 17.4 Surface expansion (opportunity — not committed)
+
+The Obsidian emoji-format reference lists **20** signifiers; Basalt currently
+parses **~14**. Unparsed: `📍` location, `📝` note, `🔗` link, `⏰` time, `⏩`
+forward. The glyph manifest should cover the full 20 regardless; whether to
+parse the extra 5 is an open decision (roadmap §6).

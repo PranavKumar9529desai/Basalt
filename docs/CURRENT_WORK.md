@@ -88,6 +88,14 @@ never add macOS to per-push triggers; sync version across `tauri.conf.json`,
 `src-tauri/Cargo.toml`, and `apps/tauri/package.json`; regenerate + commit
 WASM before tagging.
 
+## Task management review — DISCUSSED, not started
+
+Full review + roadmap captured in [`docs/task-management-roadmap.md`](./task-management-roadmap.md).
+
+Status: capability matrix + bug list + beyond-Obsidian integration ideas written up; **no code changed**.
+Icon rendering decision (custom SVG glyph set over raw emoji) documented in ADR-048 §17 after web research — emoji stay as the data format.
+Open decisions for next session: `basalt-task` crate (proposed domain layer), bug-fix order, kanban return?, icon authorship/license + manifest + default setting, task-line wikilinks indexing, parse-vs-ignore the 5 unparsed signifiers.
+
 ## Previous Work (completed, for context)
 
 See git log (all merged to main): native task management (ADR-048, kanban
