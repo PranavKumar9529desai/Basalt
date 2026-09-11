@@ -6,7 +6,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { backticksKeymap } from "./input/backticks";
 import { tableNavigationKeymap } from "./input/table-navigation";
 import { tableCursorExtension } from "./input/table-cursor";
-import { pasteImageExtension } from "./input/paste-image";
+import { pasteExtension } from "./input/paste-extension";
 import { embedMediaPlugin, EMBED_MEDIA_THEME } from "./input/embed-media";
 import {
   createSuggestionsPlugin,
@@ -185,7 +185,14 @@ export function createEditorExtensionGroups(
       closeBrackets(),
       keymap.of(backticksKeymap),
       keymap.of(tableNavigationKeymap),
-      pasteImageExtension(config.onPasteImage),
+      pasteExtension({
+        onPasteImage: config.onPasteImage,
+        onPasteHtml: config.onPasteHtml,
+        onPasteFile: config.onPasteFile,
+        urlLinkFormatter: config.urlLinkFormatter,
+        getPasteMode: config.getPasteMode,
+        onAmbiguousPaste: config.onAmbiguousPaste,
+      }),
       ...(config.onTableCursorChange
         ? [tableCursorExtension(config.onTableCursorChange)]
         : []),

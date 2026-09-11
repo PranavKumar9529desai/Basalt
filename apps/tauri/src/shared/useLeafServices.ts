@@ -6,6 +6,7 @@ import { classifyMediaExtension, extensionOf } from "@workspace/editor";
 import { resolveLeafType } from "./leafType";
 import { useTabsStore } from "../features/tabs";
 import { useSearchStore } from "../features/search";
+import { getSetting } from "../features/settings";
 import type { FlatTreeNode } from "../features/vault";
 import { isLinux, mediaUrlFor } from "./mediaServer";
 import type { AppContextValue } from "./AppProvider";
@@ -101,6 +102,12 @@ export function useLeafServices(ws: AppContextValue): LeafServices {
       openSearch: (query: string) => {
         void useSearchStore.getState().openSearchWithQuery(query);
       },
+      // Read at call time (not memoized) so paste settings apply to the very
+      // next paste after a change without a leaf remount.
+      getPastePolicy: () => ({
+        defaultPasteMode: getSetting("defaultPasteMode"),
+        pastedUrlMode: getSetting("pastedUrlMode"),
+      }),
       renameNote: ws.renameNote,
       resolveLeafType,
       resolveAsset: ws.vaultPath

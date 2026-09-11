@@ -82,6 +82,53 @@ export type OnPasteImageFn = (
   filename: string,
 ) => Promise<string | null>;
 
+/**
+ * Convert pasted HTML into Markdown insert text. The feature layer owns the
+ * conversion (and any "paste mode" setting); this package stays pure.
+ * Returns `null` to defer to plain-text pasting.
+ */
+export type OnPasteHtmlFn = (html: string) => Promise<string | null>;
+
+/** The two insertion flavors a rich paste offers (VS Code PostEditWidget). */
+export type PasteRichChoice = "keep-formatting" | "plain-text";
+
+export interface AmbiguousPasteOption {
+  id: PasteRichChoice;
+  label: string;
+}
+
+/** What the extension hands the host when a paste is ambiguous. `anchor` is
+ *  the page coordinate where the chooser should appear (paste point). */
+export interface AmbiguousPasteRequest {
+  options: AmbiguousPasteOption[];
+  defaultId: PasteRichChoice;
+  anchor: { x: number; y: number };
+}
+
+/** Resolve a Paste-As choice; `null` keeps the applied default. */
+export type AmbiguousPasteResolver = (
+  choice: PasteRichChoice | null,
+) => void;
+
+/**
+ * Save an external file (pasted from the OS file manager as a `file://` uri
+ * in the clipboard's uri-list) into the vault. The feature layer owns the IPC;
+ * this package stays pure. Returns the full insert text (`![[rel]]`, `[[rel]]`,
+ * or markdown link) or `null` to cancel.
+ */
+export type OnPasteFileFn = (
+  uri: string,
+  filename: string,
+) => Promise<string | null>;
+
+/**
+ * Format a pasted URL when there is a non-empty selection — the Obsidian
+ * "smart paste": pasting a URL over selected text wraps it as a link.
+ * Returns the replacement text or `null` to use default plain-text paste.
+ * Pure (no IPC) — the feature layer injects the resolved link-format setting.
+ */
+export type UrlLinkFormatterFn = (url: string, selectionText: string) => string | null;
+
 /** Open an external (http/https) URL in the system browser. Injected by the
  * feature layer (Tauri `openUrl`); `packages/editor` stays pure — links are
  * never opened with `window.open`, which behaves wrongly inside a WebView
@@ -100,6 +147,27 @@ export interface EditorConfig {
   openExternalLink?: OpenExternalLinkFn;
   /** Save a pasted image and return its vault-relative path for `![[…]]`. */
   onPasteImage?: OnPasteImageFn;
+  /** Convert pasted HTML to Markdown insert text (rich paste pipeline). */
+  onPasteHtml?: OnPasteHtmlFn;
+  /** Save an external file pasted from the OS into the vault; returns insert text. */
+  onPasteFile?: OnPasteFileFn;
+  /**
+   * Obsidian-style smart paste: wraps a pasted URL around the current
+   * selection as a link. Injected per the `newLinkFormat` + `pasteUrlAsLink`
+   * settings; `null` declines (plain text paste).
+   */
+  urlLinkFormatter?: UrlLinkFormatterFn;
+  /** Current Files & Links paste mode — the extension's default when a rich
+   *  paste is ambiguous (VS Code PostEditWidget-style Paste As picker). */
+  getPasteMode?: () => "smart" | "keep-formatting" | "plain-text";
+  /** Inline Paste-As chooser for ambiguous rich pastes. The default choice
+   *  applies immediately; the host shows a small floating menu near
+   *  `request.anchor` and calls `resolve` (with the picked alternative, or
+   *  `null` to keep the default). */
+  onAmbiguousPaste?: (
+    request: AmbiguousPasteRequest,
+    resolve: AmbiguousPasteResolver,
+  ) => void;
   themeExtensions?: Extension[];
   includeDefaultTheme?: boolean;
   /**

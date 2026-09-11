@@ -105,6 +105,7 @@ export {
 export {
   parseTaskSignifiers,
   cycleStatus,
+  statusFromCheckboxChar,
   statusToCheckboxChar,
   TASK_STATUS_CYCLE,
   type TaskSignifiers,
@@ -173,6 +174,11 @@ export { handleTagsInLine } from "./preview/inline-marks";
 export type { RenderMode } from "./preview/render-mode";
 export { renderModeFacet, renderModeReading } from "./preview/render-mode";
 export { classifyMediaExtension, extensionOf } from "./input/embed-utils";
+export type {
+  AmbiguousPasteRequest,
+  AmbiguousPasteResolver,
+  PasteRichChoice,
+} from "./input/paste-extension";
 export type { WatchdogEvent, WatchdogStats } from "./perf/watchdog";
 export {
   startWatchdog,

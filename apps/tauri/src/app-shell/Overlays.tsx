@@ -1,10 +1,12 @@
 import { ConfirmDialog } from "@workspace/ui/components/confirm-dialog";
 import {
   FileTreeContextMenu,
+  type CopyAsFormat,
   type FileTreeContextTargetKind,
 } from "@workspace/ui/components/file-tree";
 import { lazy, Suspense } from "react";
 import type { PreviewDeps } from "../features/search";
+import { PasteAsPicker } from "../features/editor";
 import { IndexingProgressToast } from "../features/vault";
 
 // Overlay modals are lazy (ADR-020 move 3): none are visible at first paint,
@@ -59,6 +61,8 @@ interface OverlaysProps {
     onMenuPaste: () => Promise<void>;
     onMenuRename: () => void;
     onMenuDelete: () => void;
+    onCopyPath: () => Promise<void>;
+    onCopyAs: (format: CopyAsFormat) => Promise<void>;
   };
   onConfirmDelete: () => void;
   onSearchOpen: (path: string, line?: number) => void;
@@ -94,6 +98,8 @@ export function Overlays({
         onPaste={controller.onMenuPaste}
         onRename={controller.onMenuRename}
         onDelete={controller.onMenuDelete}
+        onCopyPath={controller.onCopyPath}
+        onCopyAs={controller.onCopyAs}
       />
 
       <ConfirmDialog
@@ -124,6 +130,7 @@ export function Overlays({
         <CreateTaskModal getActivePath={taskModal.getActivePath} />
       </Suspense>
 
+      <PasteAsPicker />
       <IndexingProgressToast />
     </>
   );

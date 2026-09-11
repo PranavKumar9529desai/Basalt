@@ -85,6 +85,14 @@ export interface LeafServices {
    * (a drawing renamed to `carfleet.md` routes to the drawing leaf).
    * Always resolves; falls back to `"markdown"`. */
   resolveLeafType: (path: string) => Promise<string>;
+  /** Paste policy read at paste time (Files & links settings): how rich
+   * content is inserted and when pasted URLs become links. Provided by the
+   * shell so leaves honor user settings without importing the settings
+   * feature. Optional — leaves must tolerate its absence. */
+  getPastePolicy?: () => {
+    defaultPasteMode: "smart" | "keep-formatting" | "plain-text";
+    pastedUrlMode: "smart" | "always" | "never";
+  };
 }
 
 const LeafServicesContext = createContext<LeafServices | null>(null);

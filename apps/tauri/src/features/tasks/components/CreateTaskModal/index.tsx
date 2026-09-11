@@ -115,7 +115,10 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
           ),
         );
       })
-      .catch((e) => setError(String(e)));
+      // Fresh-capture target: `- [ ]` typed in the open editor may not be
+      // on disk yet, so `get_task_line` reads a stale/lacking line. Keep the
+      // form at defaults — submit rewrites the open editor's line in place.
+      .catch(() => {});
   }, [isOpen, mode, editTarget, getTaskLine]);
 
   // Reset the form whenever the dialog opens in create mode.
@@ -243,11 +246,12 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
   return (
     <Dialog
       open={isOpen}
+      modal={false}
       onOpenChange={(open) => {
         if (!open) close();
       }}
     >
-      <DialogContent className="sm:max-w-md" showCloseButton>
+      <DialogContent className="sm:max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "New Task" : "Edit Task"}
@@ -271,38 +275,46 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
             value={description}
             onChange={setDescription}
           />
-          {mode === "edit" && (
+
+          {/* ── Row: status (edit-only) + priority ── */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {mode === "edit" && (
+              <LabeledSelect
+                id="task-status"
+                label="Status"
+                value={status}
+                onValueChange={setStatus}
+                options={STATUSES}
+              />
+            )}
             <LabeledSelect
-              id="task-status"
-              label="Status"
-              value={status}
-              onValueChange={setStatus}
-              options={STATUSES}
+              id="task-priority"
+              label="Priority"
+              value={priority}
+              onValueChange={setPriority}
+              options={PRIORITIES}
+              className={mode === "edit" ? undefined : "sm:col-span-2"}
             />
-          )}
-          <LabeledSelect
-            id="task-priority"
-            label="Priority"
-            value={priority}
-            onValueChange={setPriority}
-            options={PRIORITIES}
-          />
-          <div className="grid grid-cols-3 gap-2">
-            <DateField label="Due" value={due} onChange={setDue} />
-            <DateField
-              label="Scheduled"
-              value={scheduled}
-              onChange={setScheduled}
-            />
-            <DateField label="Start" value={start} onChange={setStart} />
           </div>
-          <RecurrenceField
-            preset={recurrencePreset}
-            onPresetChange={setRecurrencePreset}
-            custom={recurrenceCustom}
-            onCustomChange={setRecurrenceCustom}
-            presets={RECURRENCE_PRESETS}
-          />
+
+          {/* ── Row: due + scheduled ── */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DateField label="Due" value={due} onChange={setDue} />
+            <DateField label="Scheduled" value={scheduled} onChange={setScheduled} />
+          </div>
+
+          {/* ── Row: start + recurrence ── */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DateField label="Start" value={start} onChange={setStart} />
+            <RecurrenceField
+              preset={recurrencePreset}
+              onPresetChange={setRecurrencePreset}
+              custom={recurrenceCustom}
+              onCustomChange={setRecurrenceCustom}
+              presets={RECURRENCE_PRESETS}
+            />
+          </div>
+
           <TagField
             tags={tags}
             onRemove={(tag) =>

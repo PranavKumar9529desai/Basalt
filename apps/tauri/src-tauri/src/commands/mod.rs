@@ -31,7 +31,10 @@ pub use notes::{
 
 pub use folders::{create_folder, delete_file, delete_paths, move_paths, rename_path};
 
-pub use assets::{cleanup_assets, get_asset_audit, get_assets, reorganize_assets, save_attachment};
+pub use assets::{
+    cleanup_assets, copy_attachment_from_path, get_asset_audit, get_assets, reorganize_assets,
+    save_attachment,
+};
 pub use media::media_server_url;
 
 pub use canvas::{create_untitled_canvas, open_canvas, parse_canvas, save_canvas};

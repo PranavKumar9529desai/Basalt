@@ -53,7 +53,34 @@ export const FILES_LINKS_SPECS: SettingItemSpec[] = [
       { label: "By note", value: "by_note" },
       { label: "By date", value: "by_date" },
       { label: "By type", value: "by_type" },
+      { label: "Vault root", value: "vault_root" },
+      { label: "Same folder as note", value: "same_folder" },
     ],
     keywords: ["attachment", "organization", "folder"],
+  },
+  {
+    key: "defaultPasteMode",
+    name: "Default paste mode",
+    description:
+      "How rich content pasted from the clipboard is inserted into notes.",
+    type: "dropdown",
+    options: [
+      { label: "Smart", value: "smart" },
+      { label: "Keep formatting", value: "keep-formatting" },
+      { label: "Plain text", value: "plain-text" },
+    ],
+    keywords: ["paste", "clipboard", "html", "formatting"],
+  },
+  {
+    key: "pastedUrlMode",
+    name: "Paste URLs as links",
+    description: "When a pasted URL turns the selected text into a link.",
+    type: "dropdown",
+    options: [
+      { label: "Always", value: "always" },
+      { label: "Smart", value: "smart" },
+      { label: "Never", value: "never" },
+    ],
+    keywords: ["paste", "url", "link", "internal link"],
   },
 ];

@@ -1,5 +1,6 @@
 export { CommandPalette } from "./components/CommandPalette";
 export { EditorView } from "./components/EditorView";
+export { PasteAsPicker } from "./components/PasteAsPicker";
 export {
   useActiveNoteStore,
   useRenameSignalStore,

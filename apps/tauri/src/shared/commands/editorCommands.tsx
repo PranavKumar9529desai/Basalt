@@ -38,6 +38,7 @@ import { commandService } from "@workspace/commands";
 import { keybindingService } from "@workspace/keybindings";
 import { useRenameSignalStore } from "../../features/editor";
 import { resolveActiveController, resolveActiveTab } from "../activeEditor";
+import { clipboardService } from "../clipboardService";
 
 /** The active pane's live CodeMirror view, or null when no editor is active. */
 export function getActiveView(): EditorView | null {
@@ -260,19 +261,32 @@ const editorCommands = [
     name: "Paste",
     category: "Editor",
     icon: <IconClipboard size={16} />,
-    callback: () => {
+    callback: async () => {
       const view = getActiveView();
       if (!view) return;
-      navigator.clipboard
-        .readText()
-        .then((text) => {
-          const { from, to } = view.state.selection.main;
-          view.dispatch({ changes: { from, to, insert: text } });
-          view.focus();
-        })
-        .catch(() => {
-          // Clipboard access can be denied; paste is best-effort here.
-        });
+      // Route through the CM6 paste pipeline (pasteExtension): build a
+      // DataTransfer from the OS clipboard and dispatch a synthetic paste
+      // event on the focused editor. The palette steals focus, so the OS
+      // will never deliver a native paste here; feeding the same handler
+      // keeps image/HTML/file/URL behavior identical to a real Ctrl+V.
+      const dt = new DataTransfer();
+      const text = await clipboardService.readText();
+      if (text) dt.setData("text/plain", text);
+      const image = await clipboardService.readImage();
+      if (image) {
+        dt.items.add(
+          new File([image], "pasted-image.png", { type: "image/png" }),
+        );
+      }
+      if (!text && !image) return;
+      view.focus();
+      view.contentDOM.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: dt,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
     },
   },
 ];

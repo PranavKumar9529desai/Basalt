@@ -15,7 +15,7 @@ mod reorganize;
 mod rewrite;
 mod save;
 pub use reorganize::reorganize_assets;
-pub use save::save_attachment;
+pub use save::{copy_attachment_from_path, save_attachment};
 
 #[derive(Serialize)]
 /// Result of a bulk asset reorganization.

@@ -10,6 +10,7 @@ import {
   IconColorSwatch,
   IconEdit,
   IconBorderCornerRounded,
+  IconClipboard,
   IconCopy,
 } from "@tabler/icons-react";
 import {
@@ -31,6 +32,7 @@ export interface CanvasContextMenuProps {
   onAddTextCard: (wx: number, wy: number) => void;
   onDeleteSelection: () => void;
   onGroupSelection: () => void;
+  onPaste?: () => void;
   onEditEdgeLabel?: (edgeId: string) => void;
 }
 
@@ -41,6 +43,7 @@ export function CanvasContextMenu({
   onAddTextCard,
   onDeleteSelection,
   onGroupSelection,
+  onPaste,
   onEditEdgeLabel,
 }: CanvasContextMenuProps) {
   const menuAnchor = useMemo(() => {
@@ -83,11 +86,11 @@ export function CanvasContextMenu({
             <ContextMenuSeparator />
             <ContextMenuItem
               onClick={() => {
-                // TODO: paste from clipboard
+                onPaste?.();
                 onClose();
               }}
             >
-              <IconCopy size={15} stroke={1.5} />
+              <IconClipboard size={15} stroke={1.5} />
               Paste
             </ContextMenuItem>
           </>

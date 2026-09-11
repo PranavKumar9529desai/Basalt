@@ -289,7 +289,7 @@ src/
 │   ├── table-navigation.ts   # tableNavigationKeymap
 │   ├── backticks.ts / context-menu.ts / suggestions.ts / task-list.ts
 │   ├── embed-media.ts   # EmbedMediaWidget + reading-mode plugin (ADR-034)
-│   ├── embed-utils.ts / paste-image.ts
+│   ├── embed-utils.ts / paste-extension.ts
 │   └── index.ts
 ├── styling/             # CodeMirror editor visual theme (NOT SAT tokens)
 │   ├── base.ts          # EditorView.theme() + HighlightStyle

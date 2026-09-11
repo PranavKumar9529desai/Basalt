@@ -3,6 +3,7 @@ import { mathMarkdownExtension } from "./math";
 import { yamlFrontmatterExtension } from "./frontmatter";
 import { highlightExtension } from "./highlight";
 import { EMBED_MARK, wikiLinkExtension } from "./wiki-links";
+import { taskStatusExtension } from "./task-status";
 
 /**
  * Basalt Markdown Syntax Registry (ADR-033) — the single source of truth for
@@ -96,6 +97,14 @@ export const basaltSyntaxManifests: SyntaxManifest[] = [
       "```dql query blocks — ride the base FencedCode node (semantics via the info string).",
     nodeNames: ["FencedCode"],
     fixtures: ['```dql\nTABLE FROM "docs"\n```'],
+  },
+  {
+    id: "task-status",
+    description:
+      "Task list statuses — custom block parser re-emitting Task/TaskMarker for the wider Basalt status set ([x], [/], [?], [-]), which the base GFM TaskList parser drops.",
+    nodeNames: ["Task", "TaskMarker"],
+    grammar: [taskStatusExtension],
+    fixtures: ["- [x] done\n- [/] in progress\n- [-] cancelled"],
   },
   {
     id: "math",

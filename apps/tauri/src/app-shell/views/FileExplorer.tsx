@@ -1,6 +1,7 @@
 import { SidebarActionButtons } from "@workspace/ui/components/sidebar";
 import { IconFilePlus, IconFolderPlus } from "@tabler/icons-react";
-import { FileTree } from "../../features/vault";
+import { useCallback } from "react";
+import { FileTree, copyPathsAs } from "../../features/vault";
 import { useAppContext } from "../../shared";
 import { FileDragGhost, useFileDrag } from "../../shared/fileDnd";
 
@@ -10,12 +11,32 @@ import { FileDragGhost, useFileDrag } from "../../shared/fileDnd";
  * prop drills from the shell.
  */
 export function FileExplorer() {
-  const { visibleNodes, openFolders, controller, mutations, selection } =
+  const { visibleNodes, openFolders, controller, mutations, selection, vaultPath } =
     useAppContext();
   const { isDraggingFile, handleFilePointerDown } = useFileDrag();
 
+  // Obsidian parity: Ctrl/Cmd+C in the tree copies the selected nodes'
+  // vault-relative paths to the OS clipboard.
+  const handleTreeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod || e.key.toLowerCase() !== "c") return;
+      const selectedNodes = visibleNodes.filter((n) =>
+        selection.selectedIds.has(n.path),
+      );
+      if (selectedNodes.length === 0) return;
+      e.preventDefault();
+      void copyPathsAs(
+        "path",
+        selectedNodes.map((n) => ({ relPath: n.relPath, name: n.name })),
+        vaultPath,
+      );
+    },
+    [visibleNodes, selection.selectedIds, vaultPath],
+  );
+
   return (
-    <>
+    <div onKeyDownCapture={handleTreeKeyDown} className="contents">
       <FileTree
         visibleNodes={visibleNodes}
         openFolders={openFolders}
@@ -34,7 +55,7 @@ export function FileExplorer() {
         onDragStart={handleFilePointerDown}
       />
       {isDraggingFile && <FileDragGhost />}
-    </>
+    </div>
   );
 }
 

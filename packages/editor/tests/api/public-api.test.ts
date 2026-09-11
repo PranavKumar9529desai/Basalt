@@ -92,6 +92,7 @@ const EXPECTED_VALUE_EXPORTS = [
   "setTableRawMode",
   "startWatchdog",
   "stopWatchdog",
+  "statusFromCheckboxChar",
   "statusToCheckboxChar",
   "tableBlockSpec",
   "tableCursorExtension",

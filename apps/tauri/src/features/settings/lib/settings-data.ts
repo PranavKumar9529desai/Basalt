@@ -25,7 +25,13 @@ const DEFAULTS = {
   tabClickOpenBehavior: "vscode" as TabClickOpenBehavior,
   attachmentFolder: ATTACHMENT_FOLDER_DEFAULT as string,
   /** How attachments are organized under the attachment folder. */
-  attachmentOrganization: "flat" as "flat" | "by_note" | "by_type" | "by_date",
+  attachmentOrganization: "flat" as
+    | "flat"
+    | "by_note"
+    | "by_type"
+    | "by_date"
+    | "vault_root"
+    | "same_folder",
   /** Template for attachment file naming. */
   attachmentNaming: "{original_name}" as
     | "{original_name}"
@@ -84,6 +90,11 @@ const DEFAULTS = {
   newLinkFormat: "wikilink" as "wikilink" | "markdown",
   /** Update internal links when a note is renamed or moved (Files & links). */
   autoUpdateLinks: true as boolean,
+  /** Rich-paste insertion mode: Smart/Keep formatting convert pasted HTML to
+   *  Markdown; Plain text declines rich content and pastes raw text only. */
+  defaultPasteMode: "smart" as "smart" | "keep-formatting" | "plain-text",
+  /** When a pasted URL wraps the current selection into a link (Files & links). */
+  pastedUrlMode: "smart" as "smart" | "always" | "never",
   /** Global filter applied to all task queries (Tasks). */
   tasksGlobalFilter: "" as string,
   /** Priority applied to new tasks; "none" omits a signifier (Tasks). */

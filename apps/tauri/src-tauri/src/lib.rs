@@ -45,6 +45,8 @@ use commands::{
     update_task, write_dev_report,
 };
 
+use commands::copy_attachment_from_path;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = PROCESS_START.set(std::time::Instant::now());
@@ -92,6 +94,7 @@ pub fn run() {
             open_file,
             open_files,
             save_attachment,
+            copy_attachment_from_path,
             save_file,
             save_files,
             get_backlinks,

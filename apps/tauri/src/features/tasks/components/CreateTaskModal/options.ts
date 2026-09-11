@@ -7,6 +7,9 @@ export interface SelectOption {
   label: string;
 }
 
+/** Checkbox char → status name — single source in `@workspace/editor`. */
+export { statusFromCheckboxChar as statusFromChar } from "@workspace/editor";
+
 export const PRIORITIES: readonly SelectOption[] = [
   { value: "", label: "None" },
   { value: "highest", label: "Highest" },
@@ -32,20 +35,3 @@ export const RECURRENCE_PRESETS: readonly SelectOption[] = [
   { value: "every month", label: "Every month" },
   { value: "every year", label: "Every year" },
 ];
-
-/** Status name from a checkbox marker text like "[x]" or "[ ]". */
-export function statusFromChar(c: string): string {
-  switch (c) {
-    case "/":
-      return "in_progress";
-    case "?":
-      return "on_hold";
-    case "x":
-    case "X":
-      return "done";
-    case "-":
-      return "cancelled";
-    default:
-      return "todo";
-  }
-}

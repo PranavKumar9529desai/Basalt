@@ -35,17 +35,77 @@ pub fn save_attachment(
     state: State<AppState>,
     app: tauri::AppHandle,
 ) -> AppResult<SaveAttachmentResult> {
-    use crate::config::load_config;
-    use basalt_vault::asset_index::{compute_md5, infer_file_type, infer_mime_type, AssetInfo};
-
-    let vault_path = state
+    let vault_root = state
         .vault_path
         .read()
         .map_err(|_| AppError::LockPoisoned("vault path"))?
         .clone()
         .ok_or(AppError::NoVault)?;
+    let (attachments_dir, organization, naming) = attachment_policy(&app);
+    save_attachment_impl(
+        &name,
+        &data,
+        note_path.as_deref(),
+        &attachments_dir,
+        &organization,
+        &naming,
+        Path::new(&vault_root),
+        &state,
+    )
+}
 
-    let config = load_config(&app);
+/// Copy an external file (delivered as a `file://` URI from an OS paste) into
+/// the vault. Reuses the exact `save_attachment_impl` pipeline so pasted-from-
+/// disk and pasted-from-bytes files take identical organization/naming/dedup.
+#[tauri::command]
+pub fn copy_attachment_from_path(
+    source_path: String,
+    note_path: Option<String>,
+    state: State<AppState>,
+    app: tauri::AppHandle,
+) -> AppResult<SaveAttachmentResult> {
+    let vault_root = state
+        .vault_path
+        .read()
+        .map_err(|_| AppError::LockPoisoned("vault path"))?
+        .clone()
+        .ok_or(AppError::NoVault)?;
+    let (attachments_dir, organization, naming) = attachment_policy(&app);
+
+    let (name, data) = read_external(&source_path)?;
+    save_attachment_impl(
+        &name,
+        &data,
+        note_path.as_deref(),
+        &attachments_dir,
+        &organization,
+        &naming,
+        Path::new(&vault_root),
+        &state,
+    )
+}
+
+/// Read an OS-delivered external file (`file://` URI or plain path) into a
+/// `(name, bytes)` pair for the shared save pipeline.
+fn read_external(source_path: &str) -> AppResult<(String, Vec<u8>)> {
+    let source = source_path.strip_prefix("file://").unwrap_or(source_path);
+    let path = Path::new(source);
+    let data = std::fs::read(path)
+        .map_err(|e| AppError::Io(format!("failed to read external file '{source}': {e}")))?;
+    let name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("attachment")
+        .to_string();
+    Ok((name, data))
+}
+
+/// Read the attachment org policy (`attachmentFolder` / `attachmentOrganization`
+/// / `attachmentNaming`) from user settings so pasted/imported assets share one
+/// code path for placement rules.
+fn attachment_policy(app: &tauri::AppHandle) -> (String, String, String) {
+    use crate::config::load_config;
+    let config = load_config(app);
     let attachments_dir = config
         .settings
         .get("attachmentFolder")
@@ -61,23 +121,55 @@ pub fn save_attachment(
         .get("attachmentNaming")
         .and_then(|v| v.as_str())
         .unwrap_or("{original_name}");
+    (
+        attachments_dir.to_string(),
+        organization.to_string(),
+        naming.to_string(),
+    )
+}
+
+/// Shared save pipeline: resolve ext + org subdir + naming, dedup by content
+/// hash, write, and update the asset index. Used by both paste-from-bytes
+/// (`save_attachment`) and paste-from-disk (`copy_attachment_from_path`).
+fn save_attachment_impl(
+    name: &str,
+    data: &[u8],
+    note_path: Option<&str>,
+    attachments_dir: &str,
+    organization: &str,
+    naming: &str,
+    vault_root: &Path,
+    state: &AppState,
+) -> AppResult<SaveAttachmentResult> {
+    use basalt_vault::asset_index::{compute_md5, infer_file_type, infer_mime_type, AssetInfo};
 
     // Determine extension.
-    let ext = infer_ext_from_name(&name)
-        .or_else(|| infer_ext_from_data(&data))
+    let ext = infer_ext_from_name(name)
+        .or_else(|| infer_ext_from_data(data))
         .unwrap_or("bin");
-    let original_stem = strip_ext_from_name(&name);
+    let original_stem = strip_ext_from_name(name);
 
-    // Compute organization subdirectory.
-    let vault_root = PathBuf::from(&vault_path);
+    // Compute organization subdirectory. `vault_root` and `same_folder`
+    // ignore `attachments_dir` entirely (Obsidian's "vault root" /
+    // "same folder as note" attachment locations).
     let base_dir = vault_root.join(attachments_dir);
     let sub_dir = match organization {
-        "by_note" => {
-            let note_stem = note_path
-                .as_deref()
-                .and_then(|p| Path::new(p).file_stem())
+        "vault_root" => vault_root.to_path_buf(),
+        "same_folder" => {
+            let note_dir = note_path
+                .and_then(|p| Path::new(p).parent())
                 .and_then(|s| s.to_str())
-                .unwrap_or("_unfiled");
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_default();
+            vault_root.join(note_dir)
+        }
+        "by_note" => {
+            let note_stem =
+                note_path
+                    .and_then(|p| Path::new(p).file_stem())
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("_unfiled");
             base_dir.join(note_stem)
         }
         "by_type" => {
@@ -104,7 +196,6 @@ pub fn save_attachment(
     let base_name = match naming {
         "{note_name}-{n}" => {
             let note_stem = note_path
-                .as_deref()
                 .and_then(|p| Path::new(p).file_stem())
                 .and_then(|s| s.to_str())
                 .unwrap_or("note");
@@ -119,7 +210,7 @@ pub fn save_attachment(
     };
 
     // Content hash for dedup check.
-    let content_hash = compute_md5(&data);
+    let content_hash = compute_md5(data);
 
     // Dedup: check if an asset with this content hash already exists.
     if let Ok(vault) = state.vault.read() {
@@ -147,9 +238,9 @@ pub fn save_attachment(
 
     // Register self-write BEFORE writing so the watcher stays silent.
     let abs_path = final_path.to_string_lossy().to_string();
-    register_self_writes(&state, &[final_path.clone()]);
+    register_self_writes(state, &[final_path.clone()]);
 
-    std::fs::write(&final_path, &data).map_err(|e| {
+    std::fs::write(&final_path, data).map_err(|e| {
         if let Ok(mut guard) = state.self_writes.lock() {
             guard.remove(&final_path);
         }
@@ -158,7 +249,7 @@ pub fn save_attachment(
 
     // Rel path is relative to vault root.
     let rel_path = final_path
-        .strip_prefix(&vault_root)
+        .strip_prefix(vault_root)
         .unwrap_or(&final_path)
         .to_string_lossy()
         .to_string();
@@ -182,7 +273,7 @@ pub fn save_attachment(
         // Register note→asset embed if caller provided a source note. Use the
         // full `rel_path` (with extension) — it resolves via exact match, and
         // the pasted note writes `![[rel_path]]` verbatim.
-        if let Some(note) = &note_path {
+        if let Some(note) = note_path {
             vault
                 .asset_index
                 .register_embeds(note, std::slice::from_ref(&rel_path));
@@ -239,6 +330,9 @@ pub(super) fn file_mtime_date(path: &std::path::Path) -> (i32, u32, u32) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    use crate::commands::common::tests::temp_vault;
 
     #[test]
     fn current_date_returns_plausible_values() {
@@ -246,5 +340,125 @@ mod tests {
         assert!((2024..=2030).contains(&y), "year should be around now: {y}");
         assert!((1..=12).contains(&m), "month should be 1..=12: {m}");
         assert!((1..=31).contains(&d), "day should be 1..=31: {d}");
+    }
+
+    #[test]
+    fn read_external_accepts_file_uris_and_plain_paths() {
+        let (root, _state) = temp_vault();
+        let src = root.join("photo.png");
+        std::fs::write(&src, [0x89u8, b'P', b'N', b'G']).unwrap();
+
+        let (name, data) = read_external(&format!("file://{}", src.display())).unwrap();
+        assert_eq!(name, "photo.png");
+        assert_eq!(data, vec![0x89u8, b'P', b'N', b'G']);
+
+        let (plain_name, _) = read_external(&src.to_string_lossy()).unwrap();
+        assert_eq!(plain_name, "photo.png");
+    }
+
+    #[test]
+    fn save_impl_writes_then_dedups_on_content_hash() {
+        let (root, state) = temp_vault();
+        let bytes = b"same-bytes-every-time";
+
+        let first = save_attachment_impl(
+            "pic.png",
+            bytes,
+            None,
+            "_attachments",
+            "flat",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(first.rel_path, "_attachments/pic.png");
+        assert!(root.join("_attachments/pic.png").exists());
+
+        // Same content → dedup returns the existing path rather than pic-1.png.
+        let second = save_attachment_impl(
+            "pic.png",
+            bytes,
+            None,
+            "_attachments",
+            "flat",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(second.rel_path, "_attachments/pic.png");
+        assert!(!root.join("_attachments/pic-1.png").exists());
+
+        // Different bytes → collision counter kicks in.
+        let third = save_attachment_impl(
+            "pic.png",
+            b"different-bytes",
+            None,
+            "_attachments",
+            "flat",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(third.rel_path, "_attachments/pic-1.png");
+    }
+
+    #[test]
+    fn save_impl_by_note_org_places_under_note_stem() {
+        let (root, state) = temp_vault();
+
+        let res = save_attachment_impl(
+            "scan.pdf",
+            b"%PDF-1.7",
+            Some("projects/report.md"),
+            "_attachments",
+            "by_note",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(res.rel_path, "_attachments/report/scan.pdf");
+        assert!(root.join("_attachments/report/scan.pdf").exists());
+    }
+
+    #[test]
+    fn save_impl_same_folder_places_beside_the_note() {
+        let (root, state) = temp_vault();
+
+        let res = save_attachment_impl(
+            "report.png",
+            &[1u8, 2, 3],
+            Some("notes/report.md"),
+            "_attachments",
+            "same_folder",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(res.rel_path, "notes/report.png");
+        assert!(root.join("notes/report.png").exists());
+    }
+
+    #[test]
+    fn save_impl_vault_root_ignores_attachment_folder() {
+        let (root, state) = temp_vault();
+
+        let res = save_attachment_impl(
+            "photo.png",
+            b"PNGDATA",
+            None,
+            "_attachments",
+            "vault_root",
+            "{original_name}",
+            &root,
+            &state,
+        )
+        .unwrap();
+        assert_eq!(res.rel_path, "photo.png");
+        assert!(root.join("photo.png").exists());
     }
 }

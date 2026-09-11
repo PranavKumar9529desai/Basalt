@@ -1,9 +1,12 @@
 import {
   IconArrowRight,
+  IconBrackets,
   IconCopy,
   IconCut,
   IconFilePlus,
   IconFolderPlus,
+  IconLink,
+  IconMarkdown,
   IconPencil,
   IconTrash,
   IconWindow,
@@ -13,6 +16,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
 } from "@workspace/ui/components/ui/context-menu";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
@@ -27,6 +33,20 @@ function ContextMenuItemIcon({ children }: { children: ReactNode }) {
 
 export type FileTreeContextTargetKind = "file" | "folder" | "root";
 
+/** Copy As formats offered in the file-tree context menu. */
+export type CopyAsFormat = "wikilink" | "markdown" | "path" | "url";
+
+const COPY_AS_ITEMS: Array<{
+  format: CopyAsFormat;
+  label: string;
+  icon: ReactNode;
+}> = [
+  { format: "wikilink", label: "Copy as Wikilink", icon: <IconBrackets size={14} /> },
+  { format: "markdown", label: "Copy as Markdown", icon: <IconMarkdown size={14} /> },
+  { format: "path", label: "Copy as Path", icon: <IconCopy size={14} /> },
+  { format: "url", label: "Copy as URL", icon: <IconLink size={14} /> },
+];
+
 export interface FileTreeContextMenuProps {
   open: boolean;
   anchor: { x: number; y: number } | null;
@@ -40,6 +60,8 @@ export interface FileTreeContextMenuProps {
   onPaste: () => void;
   onRename: () => void;
   onDelete: () => void;
+  onCopyPath: () => void;
+  onCopyAs: (format: CopyAsFormat) => void;
 }
 
 export function FileTreeContextMenu({
@@ -55,6 +77,8 @@ export function FileTreeContextMenu({
   onPaste,
   onRename,
   onDelete,
+  onCopyPath,
+  onCopyAs,
 }: FileTreeContextMenuProps) {
   const menuAnchor = useMemo(() => {
     if (!anchor) return null;
@@ -150,12 +174,31 @@ export function FileTreeContextMenu({
                 </ContextMenuItemIcon>
                 Rename
               </ContextMenuItem>
-              <ContextMenuItem disabled>
+              <ContextMenuItem disabled={isRoot} onClick={onCopyPath}>
                 <ContextMenuItemIcon>
                   <IconCopy size={14} />
                 </ContextMenuItemIcon>
                 Copy Path
               </ContextMenuItem>
+              <ContextMenuSub>
+                <ContextMenuSubTrigger disabled={isRoot}>
+                  <ContextMenuItemIcon>
+                    <IconCopy size={14} />
+                  </ContextMenuItemIcon>
+                  Copy As
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent>
+                  {COPY_AS_ITEMS.map(({ format, label, icon }) => (
+                    <ContextMenuItem
+                      key={format}
+                      onClick={() => onCopyAs(format)}
+                    >
+                      <ContextMenuItemIcon>{icon}</ContextMenuItemIcon>
+                      {label}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
               <ContextMenuItem disabled>
                 <ContextMenuItemIcon>
                   <IconWindow size={14} />

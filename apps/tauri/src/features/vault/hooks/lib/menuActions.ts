@@ -3,6 +3,8 @@ import type { UseVaultMutationsReturn } from "../useVaultMutations";
 import type { VaultClipboardApi } from "../useVaultClipboard";
 import type { VaultContextMenuApi } from "../useVaultContextMenu";
 import type { VaultSelectionApi } from "../useVaultSelection";
+import type { CopyAsFormat } from "./copyActions";
+import { copyNodeAs } from "./copyActions";
 import type { VaultNoteController } from "./types";
 
 export interface MenuActionsDeps {
@@ -12,6 +14,7 @@ export interface MenuActionsDeps {
   clipboard: VaultClipboardApi;
   editor: VaultNoteController;
   treeNodes: FlatTreeNode[];
+  vaultPath: string | null;
   deriveParentContextFromMenuTarget: () => {
     parentRelPath: string;
     depth: number;
@@ -30,6 +33,8 @@ export interface MenuActions {
   onMenuPaste: () => Promise<void>;
   onMenuDelete: () => void;
   handleDeleteFromCommands: () => void;
+  onCopyPath: () => Promise<void>;
+  onCopyAs: (format: CopyAsFormat) => Promise<void>;
 }
 
 /** Context-menu actions + the delete paths shared with command palette.
@@ -43,11 +48,33 @@ export function createMenuActions(deps: MenuActionsDeps): MenuActions {
     clipboard,
     editor,
     treeNodes,
+    vaultPath,
     deriveParentContextFromMenuTarget,
     openFolder,
     refreshTree,
     onPathsMoved,
   } = deps;
+
+  /** The node the context menu was opened on (null for root / no target). */
+  const menuTargetNode = (): FlatTreeNode | null => {
+    const target = contextMenu.menuState.target;
+    if (!target || target.kind === "root" || !target.node) return null;
+    return target.node;
+  };
+
+  const onCopyPath = async () => {
+    const node = menuTargetNode();
+    if (!node) return;
+    await copyNodeAs("path", { relPath: node.relPath, name: node.name }, vaultPath);
+    contextMenu.closeMenu();
+  };
+
+  const onCopyAs = async (format: CopyAsFormat) => {
+    const node = menuTargetNode();
+    if (!node) return;
+    await copyNodeAs(format, { relPath: node.relPath, name: node.name }, vaultPath);
+    contextMenu.closeMenu();
+  };
 
   const onMenuRename = () => {
     const target = contextMenu.menuState.target;
@@ -191,5 +218,7 @@ export function createMenuActions(deps: MenuActionsDeps): MenuActions {
     onMenuPaste,
     onMenuDelete,
     handleDeleteFromCommands,
+    onCopyPath,
+    onCopyAs,
   };
 }

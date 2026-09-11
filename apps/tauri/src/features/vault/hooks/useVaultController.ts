@@ -15,6 +15,7 @@ import { createCommitActions } from "./lib/commitActions";
 import { createCreateActions } from "./lib/createActions";
 import { createMenuActions } from "./lib/menuActions";
 import { createTreeEvents } from "./lib/treeEvents";
+import type { CopyAsFormat } from "./lib/copyActions";
 import { parseInlineName, resolveRenameName } from "./lib/names";
 import { parentContextFor } from "./lib/parentContext";
 import type { RenameTarget, VaultNoteController } from "./lib/types";
@@ -76,6 +77,8 @@ export interface UseVaultControllerReturn {
   onMenuPaste: () => Promise<void>;
   onMenuRename: () => void;
   onMenuDelete: () => void;
+  onCopyPath: () => Promise<void>;
+  onCopyAs: (format: CopyAsFormat) => Promise<void>;
   selection: VaultSelectionApi;
   contextMenu: VaultContextMenuApi;
 }
@@ -209,6 +212,8 @@ export function useVaultController(
     onMenuPaste,
     onMenuDelete,
     handleDeleteFromCommands,
+    onCopyPath,
+    onCopyAs,
   } = useMemo(
     () =>
       createMenuActions({
@@ -218,6 +223,7 @@ export function useVaultController(
         clipboard,
         editor,
         treeNodes,
+        vaultPath,
         deriveParentContextFromMenuTarget,
         openFolder,
         refreshTree,
@@ -230,6 +236,7 @@ export function useVaultController(
       clipboard,
       editor,
       treeNodes,
+      vaultPath,
       deriveParentContextFromMenuTarget,
       openFolder,
       refreshTree,
@@ -290,6 +297,8 @@ export function useVaultController(
     onMenuPaste,
     onMenuRename,
     onMenuDelete,
+    onCopyPath,
+    onCopyAs,
     selection,
     contextMenu,
   };

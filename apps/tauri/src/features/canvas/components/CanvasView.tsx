@@ -35,6 +35,7 @@ import { useCanvasGuidelines } from "../hooks/useCanvasGuidelines";
 import { useCanvasKeyboard } from "../hooks/useCanvasKeyboard";
 import { useCanvasSelection } from "../hooks/useCanvasSelection";
 import { useCanvasModals } from "../hooks/useCanvasModals";
+import { useCanvasClipboard } from "../hooks/useCanvasClipboard";
 
 const nodeTypes = {
   canvasText: TextCardNode,
@@ -90,6 +91,16 @@ function CanvasFlow({ tab, paneId }: LeafProps) {
   });
   useCanvasKeyboard({ saveCanvasNow });
   const { handleDeleteSelection, handleGroupSelection } = useCanvasSelection({
+    setNodes,
+    setEdges,
+    nodesRef,
+    edgesRef,
+    saveCanvasNow,
+  });
+  const { handlePasteNow } = useCanvasClipboard({
+    tab,
+    reactFlowInstance,
+    containerRef,
     setNodes,
     setEdges,
     nodesRef,
@@ -169,7 +180,8 @@ function CanvasFlow({ tab, paneId }: LeafProps) {
     >
       <div
         ref={containerRef}
-        className="relative h-full w-full bg-[var(--sat-surface-0)]"
+        tabIndex={-1}
+        className="relative h-full w-full bg-[var(--sat-surface-0)] outline-none"
         onContextMenu={handleContextMenu}
         onDoubleClick={handleDoubleClick}
       >
@@ -246,6 +258,7 @@ function CanvasFlow({ tab, paneId }: LeafProps) {
             onAddTextCard={(wx, wy) => handleAddTextCard(wx, wy)}
             onDeleteSelection={handleDeleteSelection}
             onGroupSelection={handleGroupSelection}
+            onPaste={() => void handlePasteNow()}
           />
           <NotePickerModal
             isOpen={isNotePickerOpen}

@@ -9,6 +9,8 @@ export type { UseVaultMutationsReturn } from "./hooks/useVaultMutations";
 export { useVaultMutations } from "./hooks/useVaultMutations";
 export type { UseVaultTreeReturn } from "./hooks/useVaultTree";
 export { findNoteByName, useVaultTree } from "./hooks/useVaultTree";
+export { copyPathsAs } from "./hooks/lib/copyActions";
+export type { CopyAsFormat } from "./hooks/lib/copyActions";
 export type { UseIndexingProgressReturn } from "./hooks/useIndexingProgress";
 export { useIndexingProgress } from "./hooks/useIndexingProgress";
 export type {

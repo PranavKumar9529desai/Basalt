@@ -19,6 +19,7 @@ import { editFrontmatter, initFrontmatterWasm } from "../lib/frontmatter";
 import { AUTOSAVE_DEBOUNCE_MS } from "../lib/saveManager";
 import { openExternalUrl, openLinkedNote } from "./lib/linkFetch";
 import { createDocChangedListener } from "./lib/viewEvents";
+import { showPasteAsPicker } from "../lib/pasteAsPicker";
 
 /**
  * The note I/O surface the controller talks to — a structural subset of
@@ -39,6 +40,9 @@ export interface NoteIO {
   runTasksQuery: (query: TaskQuery) => Promise<QueryResult>;
   parseFrontmatter: (text: string) => FrontmatterModel | null;
   onPasteImage?: (data: Uint8Array, filename: string) => Promise<string | null>;
+  onPasteHtml?: (html: string) => Promise<string | null>;
+  onPasteFile?: (uri: string, filename: string) => Promise<string | null>;
+  urlLinkFormatter?: (url: string, selectionText: string) => string | null;
 }
 
 export interface EditorControllerOptions {
@@ -155,6 +159,26 @@ export class EditorController {
       onOpenLink: this.handleOpenLink,
       onOpenTag: this.handleOpenTag,
       onPasteImage: this.io.onPasteImage,
+      // Rich-paste policy (Files & links settings) applied at paste time via
+      // the shell-provided seam — the feature never imports settings. The
+      // extension owns the mode decision so an ambiguous paste can offer
+      // BOTH flavors through the Paste-As chooser.
+      onPasteHtml: this.io.onPasteHtml,
+      getPasteMode: () =>
+        this.services.getPastePolicy?.().defaultPasteMode ?? "smart",
+      onAmbiguousPaste: (request, resolve) =>
+        showPasteAsPicker(request, resolve),
+      onPasteFile: this.io.onPasteFile,
+      urlLinkFormatter: (url, selected) => {
+        const mode = this.services.getPastePolicy?.().pastedUrlMode ?? "smart";
+        const inner = selected.trim()
+          ? this.io.urlLinkFormatter?.(url, selected)
+          : null;
+        if (mode === "never") return null;
+        if (inner) return inner;
+        if (mode === "always") return `[${url}](${url})`;
+        return null;
+      },
       parseFrontmatter: this.io.parseFrontmatter,
       editFrontmatter,
       runQuery: this.io.runQuery,

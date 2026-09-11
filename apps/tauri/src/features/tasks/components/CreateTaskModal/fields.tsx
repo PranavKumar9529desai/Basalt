@@ -3,24 +3,19 @@
 //! options in via props, changes out via callbacks — the modal keeps all
 //! state and submit logic in the index.
 
-import { IconChevronDown, IconX } from "@tabler/icons-react";
+import { IconCheck, IconChevronDown, IconX } from "@tabler/icons-react";
 import type { KeyboardEvent, RefObject } from "react";
 import { Badge } from "@workspace/ui/components/ui/badge";
 import { Button } from "@workspace/ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/ui/dropdown-menu";
 import { Input } from "@workspace/ui/components/ui/input";
 import { Label } from "@workspace/ui/components/ui/label";
-import {
-  SelectIcon,
-  SelectItem,
-  SelectItemText,
-  SelectList,
-  SelectPopup,
-  SelectPositioner,
-  SelectPortal,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-} from "@workspace/ui/components/ui/select";
+import { cn } from "@workspace/ui/lib/utils";
 import type { SelectOption } from "./options";
 
 interface LabeledSelectProps {
@@ -29,51 +24,65 @@ interface LabeledSelectProps {
   value: string;
   onValueChange: (v: string) => void;
   options: readonly SelectOption[];
+  /** Grid classes on the wrapper — lets a row pair/layout dropdowns. */
+  className?: string;
 }
 
-/** Label + single-select from the shared shadcn Select primitive. */
+/**
+ * Label + single-select dropdown. Built on the shadcn DropdownMenu (base-ui
+ * Menu) rather than the Select primitive — a click-to-open menu is the
+ * dependable single-select primitive inside a modal (the Select popup and the
+ * dialog's focus/portal layers fight in the desktop WebView, and base-ui
+ * Select ties a popup to a hidden input). Controlled: selected option is
+ * checked; trigger mirrors a select control's chrome.
+ */
 export function LabeledSelect({
   id,
   label,
   value,
   onValueChange,
   options,
+  className,
 }: LabeledSelectProps) {
+  const selected = options.find((o) => o.value === value);
   return (
-    <div className="flex flex-col gap-1.5">
-      {label !== undefined && (
-        <Label htmlFor={id}>
-          {label}
-        </Label>
-      )}
-      <SelectRoot
-        value={value}
-        onValueChange={(v) => {
-          // Base UI reports null when the selection is cleared — ignore it.
-          if (v !== null) onValueChange(v);
-        }}
-        items={options}
-      >
-        <SelectTrigger id={id}>
-          <SelectValue />
-          <SelectIcon>
-            <IconChevronDown size={12} />
-          </SelectIcon>
-        </SelectTrigger>
-        <SelectPortal>
-          <SelectPositioner sideOffset={4} align="start">
-            <SelectPopup className="z-[60]">
-              <SelectList>
-                {options.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    <SelectItemText>{o.label}</SelectItemText>
-                  </SelectItem>
-                ))}
-              </SelectList>
-            </SelectPopup>
-          </SelectPositioner>
-        </SelectPortal>
-      </SelectRoot>
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {label !== undefined && <Label htmlFor={id}>{label}</Label>}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          id={id}
+          className="flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)] px-2.5 text-xs text-[var(--sat-text-primary)] outline-none transition-colors hover:border-[var(--sat-text-muted)] focus:ring-1 focus:ring-[var(--sat-accent-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+        >
+          <span
+            className={cn(
+              "truncate",
+              selected === undefined && "text-[var(--sat-text-muted)]",
+            )}
+          >
+            {selected?.label ?? "Select…"}
+          </span>
+          <IconChevronDown
+            size={12}
+            className="flex-shrink-0 text-[var(--sat-text-muted)]"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={4}>
+          {options.map((o) => (
+            <DropdownMenuItem
+              key={o.value}
+              onClick={() => onValueChange(o.value)}
+            >
+              <span className="truncate">{o.label}</span>
+              {o.value === value && (
+                <IconCheck
+                  size={12}
+                  className="ml-auto flex-shrink-0 text-[var(--sat-accent-primary)]"
+                />
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

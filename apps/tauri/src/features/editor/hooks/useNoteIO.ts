@@ -5,6 +5,7 @@ import { useActiveNoteStore } from "../store";
 import type { BacklinkEntry, LinkSuggestion, SaveStatus } from "../types";
 
 import { parseFrontmatter } from "../lib/frontmatter";
+import { htmlToMarkdown } from "../lib/htmlToMarkdown";
 
 /**
  * Single-flight dedup for task queries — if multiple widgets fire the same
@@ -110,6 +111,41 @@ export function useNoteIO() {
     },
     [],
   );
+
+  const onPasteHtml = useCallback(
+    async (html: string): Promise<string | null> => {
+      const md = htmlToMarkdown(html);
+      return md ? md : null;
+    },
+    [],
+  );
+
+  const onPasteFile = useCallback(
+    async (uri: string, _filename: string): Promise<string | null> => {
+      try {
+        const notePath = useActiveNoteStore.getState().activeNote?.path ?? null;
+        const result = await invoke<{
+          rel_path: string;
+          abs_path: string;
+          name: string;
+        }>("copy_attachment_from_path", {
+          sourcePath: uri,
+          notePath,
+        });
+        // The paste pipeline inserts this string verbatim — emit the embed.
+        return `![[${result.rel_path}]]`;
+      } catch (err) {
+        console.error("[useNoteIO] copy_attachment_from_path failed:", err);
+        return null;
+      }
+    },
+    [],
+  );
+
+  const urlLinkFormatter = useCallback(
+    (url: string, selectionText: string): string => `[${selectionText}](${url})`,
+    [],
+  );
   return {
     status,
     setStatus,
@@ -123,6 +159,9 @@ export function useNoteIO() {
     runQuery,
     runTasksQuery,
     onPasteImage,
+    onPasteHtml,
+    onPasteFile,
+    urlLinkFormatter,
     parseFrontmatter,
   };
 }
