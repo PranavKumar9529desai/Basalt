@@ -38,11 +38,7 @@ fn parse_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
 
 #[inline]
 pub fn extract_target(link_content: &str) -> &str {
-    link_content
-        .split(['|', '#'])
-        .next()
-        .unwrap_or("")
-        .trim()
+    link_content.split(['|', '#']).next().unwrap_or("").trim()
 }
 
 #[inline]
@@ -184,9 +180,7 @@ fn scan_heading_or_tag_ascii(
         let mut end = start;
 
         while end < bytes.len()
-            && (bytes[end].is_ascii_alphanumeric()
-                || bytes[end] == b'_'
-                || bytes[end] == b'-')
+            && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_' || bytes[end] == b'-')
         {
             end += 1;
         }

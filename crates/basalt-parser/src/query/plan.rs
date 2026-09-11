@@ -1,3 +1,6 @@
+use super::ast::*;
+use super::expr::{field_ref, quoted_string, simple_expr, where_expr};
+use super::source::from_clause;
 use nom::{
     branch::alt,
     bytes::complete::tag_no_case,
@@ -7,9 +10,6 @@ use nom::{
     sequence::{pair, preceded, tuple},
     IResult,
 };
-use super::ast::*;
-use super::expr::{field_ref, quoted_string, simple_expr, where_expr};
-use super::source::from_clause;
 
 // ---------------------------------------------------------------------------
 // Query planning
