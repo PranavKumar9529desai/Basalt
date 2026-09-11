@@ -7,6 +7,25 @@ import type { BacklinkEntry, LinkSuggestion, SaveStatus } from "../types";
 import { parseFrontmatter } from "../lib/frontmatter";
 
 /**
+ * Single-flight dedup for task queries — if multiple widgets fire the same
+ * query simultaneously (e.g. multiple ```tasks blocks in one note), only one
+ * IPC round-trip is made. The entry is removed once the promise settles so
+ * stale results never stick around.
+ */
+const inFlightTasks = new Map<string, Promise<QueryResult>>();
+
+function runTasksQueryOnce(query: TaskQuery): Promise<QueryResult> {
+  const key = JSON.stringify(query);
+  const existing = inFlightTasks.get(key);
+  if (existing) return existing;
+  const p = invoke<QueryResult>("get_tasks", { query }).finally(() => {
+    inFlightTasks.delete(key);
+  });
+  inFlightTasks.set(key, p);
+  return p;
+}
+
+/**
  * useNoteIO — thin invoke wrappers for note file I/O (Phase 2 editor split).
  *
  * Owns NO document state: the document lives in CodeMirror (per-tab
@@ -65,7 +84,7 @@ export function useNoteIO() {
 
   const runTasksQuery = useCallback(
     async (query: TaskQuery): Promise<QueryResult> => {
-      return invoke<QueryResult>("get_tasks", { query });
+      return runTasksQueryOnce(query);
     },
     [],
   );
