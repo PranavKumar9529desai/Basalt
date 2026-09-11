@@ -358,64 +358,152 @@ fn date_field_cmp(
     }
 }
 
-/// Sort a task list according to `TaskSort` specifications.
-fn sort_tasks(tasks: &mut [(String, TaskData)], sorts: &[TaskSort]) {
+/// Precomputed, copy-cheap sort keys for one task row (ADR-045 §2.2
+/// Schwartzian transform). Built once per task — comparators never
+/// recompute urgency, `happens()` or date math during O(N log N) sorting.
+#[derive(Clone, Copy)]
+struct TaskSortKey<'a> {
+    path: &'a str,
+    description: &'a str,
+    status_name: &'static str,
+    line: u32,
+    urgency: i32,
+    due: Option<NaiveDate>,
+    scheduled: Option<NaiveDate>,
+    start: Option<NaiveDate>,
+    created: Option<NaiveDate>,
+    happens: Option<NaiveDate>,
+    priority: u8,
+}
+
+impl<'a> TaskSortKey<'a> {
+    fn build(path: &'a str, task: &'a TaskData, today: NaiveDate) -> Self {
+        Self {
+            path,
+            description: &task.description,
+            status_name: task.status.name(),
+            line: task.line,
+            urgency: calculate_urgency(task, today),
+            due: task.due,
+            scheduled: task.scheduled,
+            start: task.start,
+            created: task.created,
+            happens: task.happens(),
+            priority: task.priority.numeric(),
+        }
+    }
+}
+
+/// Compare one sort field against precomputed keys. Returns the comparison
+/// and whether the direction was already baked in (`true` for date fields,
+/// which keep undated tasks last in BOTH directions — the generic
+/// `reverse` must not flip that precedence).
+fn field_cmp(
+    a: &TaskSortKey<'_>,
+    b: &TaskSortKey<'_>,
+    field: &str,
+    reverse: bool,
+) -> (std::cmp::Ordering, bool) {
+    match field {
+        "due" => (date_field_cmp(&a.due, &b.due, reverse), true),
+        "scheduled" => (date_field_cmp(&a.scheduled, &b.scheduled, reverse), true),
+        "start" => (date_field_cmp(&a.start, &b.start, reverse), true),
+        "created" => (date_field_cmp(&a.created, &b.created, reverse), true),
+        "happens" => (date_field_cmp(&a.happens, &b.happens, reverse), true),
+        "urgency" => (a.urgency.cmp(&b.urgency), false),
+        "priority" => (a.priority.cmp(&b.priority), false),
+        "status" => (a.status_name.cmp(b.status_name), false),
+        "description" => (a.description.cmp(b.description), false),
+        "path" => (a.path.cmp(b.path), false),
+        "line" => (a.line.cmp(&b.line), false),
+        _ => (std::cmp::Ordering::Equal, false),
+    }
+}
+
+/// Compare two key buffers by the full sort spec list (applied in reverse
+/// order — the last `sort by` line is the primary key, matching the previous
+/// stable sequential sorts). A final `(path, line)` tie-break keeps output
+/// deterministic even though `collect_tasks` iterates a HashMap and its
+/// input order is not stable across runs.
+fn compare_keys(
+    a: &TaskSortKey<'_>,
+    b: &TaskSortKey<'_>,
+    sorts: &[TaskSort],
+) -> std::cmp::Ordering {
     if sorts.is_empty() {
-        // Default sort: urgency desc, then due asc, then priority asc, then path asc.
-        let today = chrono::Local::now().date_naive();
-        tasks.sort_by(|a, b| {
-            let urg_a = calculate_urgency(&a.1, today);
-            let urg_b = calculate_urgency(&b.1, today);
-            urg_b
-                .cmp(&urg_a)
-                .then_with(|| opt_date_cmp(&a.1.due, &b.1.due))
-                .then_with(|| a.1.priority.numeric().cmp(&b.1.priority.numeric()))
-                .then_with(|| a.0.cmp(&b.0))
-        });
+        // Default sort: urgency desc, due asc, priority asc, path asc, line asc.
+        return b
+            .urgency
+            .cmp(&a.urgency)
+            .then_with(|| opt_date_cmp(&a.due, &b.due))
+            .then_with(|| a.priority.cmp(&b.priority))
+            .then_with(|| a.path.cmp(b.path))
+            .then_with(|| a.line.cmp(&b.line));
+    }
+    for sort in sorts.iter().rev() {
+        let (mut cmp, handled) = field_cmp(a, b, &sort.field, sort.reverse);
+        if !handled && sort.reverse {
+            cmp = cmp.reverse();
+        }
+        if cmp != std::cmp::Ordering::Equal {
+            return cmp;
+        }
+    }
+    a.path.cmp(b.path).then_with(|| a.line.cmp(&b.line))
+}
+
+/// Build the contiguous sort-key buffer (O(N), once per query).
+fn build_sort_keys(tasks: &[(String, TaskData)], today: NaiveDate) -> Vec<TaskSortKey<'_>> {
+    tasks
+        .iter()
+        .map(|(path, t)| TaskSortKey::build(path, t, today))
+        .collect()
+}
+
+/// Apply an index permutation to a slice in place via cycle-following:
+/// `order[k]` = source index that belongs at position k. O(N) swaps, one
+/// scratch index vector.
+fn apply_permutation(tasks: &mut [(String, TaskData)], order: &[usize]) {
+    let n = order.len();
+    if n < 2 {
         return;
     }
-
-    // Apply sorts in reverse order (last sort = primary key).
-    for sort in sorts.iter().rev() {
-        let today = chrono::Local::now().date_naive();
-        tasks.sort_by(|a, b| {
-            // Each arm computes its FINAL ordering. Date fields are already
-            // direction-aware (`date_field_cmp` keeps undated last in both
-            // directions), so they report `reversed: true` and the generic
-            // reverse below is skipped for them.
-            let (cmp, reversed) = match sort.field.as_str() {
-                "urgency" => (
-                    calculate_urgency(&a.1, today).cmp(&calculate_urgency(&b.1, today)),
-                    false,
-                ),
-                "due" => (date_field_cmp(&a.1.due, &b.1.due, sort.reverse), true),
-                "priority" => (a.1.priority.numeric().cmp(&b.1.priority.numeric()), false),
-                "status" => (a.1.status.name().cmp(b.1.status.name()), false),
-                "description" => (a.1.description.cmp(&b.1.description), false),
-                "path" => (a.0.cmp(&b.0), false),
-                "scheduled" => (
-                    date_field_cmp(&a.1.scheduled, &b.1.scheduled, sort.reverse),
-                    true,
-                ),
-                "start" => (date_field_cmp(&a.1.start, &b.1.start, sort.reverse), true),
-                "created" => (
-                    date_field_cmp(&a.1.created, &b.1.created, sort.reverse),
-                    true,
-                ),
-                "happens" => (
-                    date_field_cmp(&a.1.happens(), &b.1.happens(), sort.reverse),
-                    true,
-                ),
-                "line" => (a.1.line.cmp(&b.1.line), false),
-                _ => (std::cmp::Ordering::Equal, false),
-            };
-            if !reversed && sort.reverse {
-                cmp.reverse()
-            } else {
-                cmp
-            }
-        });
+    // inv[old_index] = target position in the sorted layout. order is a
+    // permutation, so inv is well-defined.
+    let mut inv = vec![0usize; n];
+    for (target, &src) in order.iter().enumerate() {
+        inv[src] = target;
     }
+    for i in 0..n {
+        while inv[i] != i {
+            let j = inv[i];
+            tasks.swap(i, j);
+            inv.swap(i, j);
+        }
+    }
+}
+
+/// Sort a task list according to `TaskSort` specifications.
+///
+/// ADR-045 §2.2 Schwartzian transform: sort fields are pre-evaluated once
+/// per task into [`TaskSortKey`]s, then an index permutation is sorted with
+/// cheap precomputed-key comparisons — the previous comparator ran
+/// `calculate_urgency`, `happens()` and date math on every comparison
+/// (O(N log N) recomputations).
+fn sort_tasks(tasks: &mut Vec<(String, TaskData)>, sorts: &[TaskSort]) {
+    let today = chrono::Local::now().date_naive();
+
+    // Phase 1 — pre-evaluate keys (borrowing from the still-stable `tasks`
+    // buffer) and sort an index permutation with precomputed comparisons.
+    let permutation = {
+        let keys = build_sort_keys(tasks, today);
+        let mut order: Vec<usize> = (0..tasks.len()).collect();
+        order.sort_by(|&a, &b| compare_keys(&keys[a], &keys[b], sorts));
+        order
+    };
+    // Phase 2 — apply the permutation. `keys` is out of scope, so its
+    // borrows of `tasks` have ended and elements may be moved freely.
+    apply_permutation(tasks, &permutation);
 }
 
 /// Collect all tasks from the vault, with their source file paths.
