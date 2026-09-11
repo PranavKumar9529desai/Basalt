@@ -8,16 +8,23 @@ import type {
   ExcalidrawElementStub,
   ExcalidrawSceneData,
 } from "../types";
-import {
-  parseDrawingContent,
-  serializeDrawingMarkdown,
-  getEditorBg,
-  makeEmptyDrawingJson,
-} from "../lib/parser";
+import { makeEmptySceneJson, resolveCanvasBg } from "../lib/scene";
 
 export interface UseDrawingStateOptions {
   tab: { id: string; path: string };
 }
+
+interface SceneState {
+  elements: readonly ExcalidrawElementStub[];
+  appState: Partial<ExcalidrawAppStateStub>;
+  files: Record<string, unknown>;
+}
+
+const EMPTY_SCENE: SceneState = {
+  elements: [],
+  appState: {},
+  files: {},
+};
 
 export function useDrawingState({ tab }: UseDrawingStateOptions) {
   let services: LeafServices | null = null;
@@ -34,76 +41,64 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
   const [initialData, setInitialData] = useState<Partial<ExcalidrawSceneData> | null>(null);
   const [rawMarkdown, setRawMarkdownState] = useState("");
 
-  const sceneDataRef = useRef<{
-    elements: readonly ExcalidrawElementStub[];
-    appState: Partial<ExcalidrawAppStateStub>;
-    files: Record<string, unknown>;
-  }>({
-    elements: [],
-    appState: {},
-    files: {},
-  });
-
+  const sceneDataRef = useRef<SceneState>(EMPTY_SCENE);
   const isLoadedRef = useRef(false);
   const isDirtyRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load drawing on mount or path change
+  /** Load drawing on mount or path change. */
   useEffect(() => {
     let isCancelled = false;
     isLoadedRef.current = false;
     setIsLoaded(false);
 
     async function load() {
+      const fallback = (): Partial<ExcalidrawSceneData> => {
+        let empty: Partial<ExcalidrawSceneData>;
+        try {
+          empty = JSON.parse(makeEmptySceneJson());
+        } catch {
+          empty = EMPTY_SCENE;
+        }
+        sceneDataRef.current = {
+          elements: (empty.elements || []).filter((e) => !e.isDeleted),
+          appState: empty.appState || {},
+          files: empty.files || {},
+        };
+        return sceneDataRef.current;
+      };
+
       try {
         const payload = await invoke<DrawingPayload>("read_drawing", {
           path: tab.path,
         });
         if (isCancelled) return;
 
-        let parsedScene: Partial<ExcalidrawSceneData> = {};
+        let scene: Partial<ExcalidrawSceneData>;
         try {
-          parsedScene = JSON.parse(payload.data_json);
+          scene = JSON.parse(payload.data_json);
         } catch {
-          parsedScene = JSON.parse(makeEmptyDrawingJson());
+          scene = fallback();
         }
 
-        // Default to the current editor background so the canvas feels like a
-        // native continuation of the editor surface. Also migrate old drawings
-        // that still have the Excalidraw default white (#ffffff).
-        const storedBg = parsedScene.appState?.viewBackgroundColor;
-        const editorBg = getEditorBg();
-        const resolvedBg =
-          storedBg && storedBg !== "#ffffff" ? storedBg : editorBg;
-
         sceneDataRef.current = {
-          elements: (parsedScene.elements || []).filter((e) => !e.isDeleted),
+          elements: (scene.elements || []).filter((e) => !e.isDeleted),
           appState: {
-            ...parsedScene.appState,
-            viewBackgroundColor: resolvedBg,
+            ...scene.appState,
+            viewBackgroundColor: resolveCanvasBg(scene.appState?.viewBackgroundColor),
           },
-          files: parsedScene.files || {},
+          files: scene.files || {},
         };
-
-        setInitialData({
-          elements: sceneDataRef.current.elements,
-          appState: sceneDataRef.current.appState,
-          files: sceneDataRef.current.files,
-        });
+        setInitialData(sceneDataRef.current);
         setRawMarkdownState(payload.raw_markdown);
         isLoadedRef.current = true;
         setIsLoaded(true);
       } catch (err) {
         console.error("Failed to load drawing:", err);
         if (isCancelled) return;
-        const empty = JSON.parse(makeEmptyDrawingJson());
-        sceneDataRef.current = {
-          elements: [],
-          appState: empty.appState,
-          files: {},
-        };
-        setInitialData(empty);
-        setRawMarkdownState(serializeDrawingMarkdown(makeEmptyDrawingJson()));
+        fallback();
+        setInitialData(sceneDataRef.current);
+        setRawMarkdownState("");
         isLoadedRef.current = true;
         setIsLoaded(true);
       }
@@ -120,7 +115,23 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
     };
   }, [tab.path]);
 
-  // Save current drawing immediately
+  /** Build the scene JSON payload for save/serialize calls. */
+  const buildSceneJson = useCallback((): string => {
+    const cleanElements = sceneDataRef.current.elements.filter((e) => !e.isDeleted);
+    return JSON.stringify({
+      type: "excalidraw",
+      version: 2,
+      source: "basalt",
+      elements: cleanElements,
+      appState: {
+        viewBackgroundColor: resolveCanvasBg(sceneDataRef.current.appState.viewBackgroundColor),
+        gridSize: sceneDataRef.current.appState.gridSize ?? 20,
+      },
+      files: sceneDataRef.current.files,
+    });
+  }, []);
+
+  /** Save current drawing immediately. */
   const saveNow = useCallback(async () => {
     if (!isLoadedRef.current) return;
     if (saveTimeoutRef.current) {
@@ -129,47 +140,20 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
     }
 
     try {
-      if (viewMode === "raw") {
-        await invoke("save_drawing", {
-          path: tab.path,
-          dataJson: "",
-          rawMarkdown,
-        });
-      } else {
-        const cleanElements = sceneDataRef.current.elements.filter(
-          (e) => !e.isDeleted,
-        );
-        const dataJson = JSON.stringify({
-          type: "excalidraw",
-          version: 2,
-          source: "basalt",
-          elements: cleanElements,
-          appState: {
-            // Migrate old drawings that still have Excalidraw's default white.
-            viewBackgroundColor:
-              sceneDataRef.current.appState.viewBackgroundColor !== "#ffffff"
-                ? sceneDataRef.current.appState.viewBackgroundColor || getEditorBg()
-                : getEditorBg(),
-            gridSize: sceneDataRef.current.appState.gridSize ?? 20,
-          },
-          files: sceneDataRef.current.files,
-        });
-
-        await invoke("save_drawing", {
-          path: tab.path,
-          dataJson,
-          rawMarkdown: null,
-        });
-      }
+      await invoke("save_drawing", {
+        path: tab.path,
+        dataJson: viewMode === "raw" ? "" : buildSceneJson(),
+        rawMarkdown: viewMode === "raw" ? rawMarkdown : null,
+      });
 
       isDirtyRef.current = false;
       servicesRef.current?.markTabDirty(tab.id, false);
     } catch (err) {
       console.error("Failed to save drawing:", err);
     }
-  }, [tab.path, tab.id, viewMode, rawMarkdown]);
+  }, [tab.path, tab.id, viewMode, rawMarkdown, buildSceneJson]);
 
-  // Debounced auto-save (400ms trailing)
+  /** Debounced auto-save (400ms trailing). */
   const scheduleSave = useCallback(() => {
     if (!isLoadedRef.current) return;
     if (!isDirtyRef.current) {
@@ -186,7 +170,7 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
     }, 400);
   }, [saveNow, tab.id]);
 
-  // Handle scene mutation from Excalidraw onChange
+  /** Handle scene mutation from Excalidraw onChange. */
   const onSceneChange = useCallback(
     (
       elements: readonly ExcalidrawElementStub[],
@@ -204,7 +188,7 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
     [scheduleSave],
   );
 
-  // Handle raw markdown edits
+  /** Handle raw markdown edits. */
   const setRawMarkdown = useCallback(
     (newMarkdown: string) => {
       setRawMarkdownState(newMarkdown);
@@ -213,34 +197,26 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
     [scheduleSave],
   );
 
-  // Toggle between Canvas mode and Raw Markdown mode
-  const toggleViewMode = useCallback(() => {
+  /** Toggle between Canvas mode and Raw Markdown mode. */
+  const toggleViewMode = useCallback(async () => {
     if (viewMode === "canvas") {
-      // Transitioning to raw markdown: serialize current scene to markdown
-      const cleanElements = sceneDataRef.current.elements.filter(
-        (e) => !e.isDeleted,
-      );
-      const dataJson = JSON.stringify({
-        type: "excalidraw",
-        version: 2,
-        source: "basalt",
-        elements: cleanElements,
-        appState: {
-          viewBackgroundColor:
-            sceneDataRef.current.appState.viewBackgroundColor !== "#ffffff"
-              ? sceneDataRef.current.appState.viewBackgroundColor || getEditorBg()
-              : getEditorBg(),
-          gridSize: sceneDataRef.current.appState.gridSize ?? 20,
-        },
-        files: sceneDataRef.current.files,
-      });
-      const generated = serializeDrawingMarkdown(dataJson, rawMarkdown);
-      setRawMarkdownState(generated);
-      setViewMode("raw");
-    } else {
-      // Transitioning to canvas: parse current raw markdown into scene data
-      const parsed = parseDrawingContent(rawMarkdown);
+      // Canvas → raw: ask Rust to serialize the scene into the hybrid format.
       try {
+        const generated = await invoke<string>("serialize_drawing", {
+          dataJson: buildSceneJson(),
+          existingMarkdown: rawMarkdown,
+        });
+        setRawMarkdownState(generated);
+        setViewMode("raw");
+      } catch (err) {
+        console.error("Failed to serialize drawing markdown:", err);
+      }
+    } else {
+      // Raw → canvas: ask Rust to parse the markdown back into a scene.
+      try {
+        const parsed = await invoke<DrawingPayload>("parse_drawing", {
+          content: rawMarkdown,
+        });
         const scene = JSON.parse(parsed.data_json) as Partial<ExcalidrawSceneData>;
         const elements = (scene.elements || []).filter((e) => !e.isDeleted);
         sceneDataRef.current = {
@@ -248,17 +224,13 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
           appState: scene.appState || {},
           files: scene.files || {},
         };
-        setInitialData({
-          elements,
-          appState: sceneDataRef.current.appState,
-          files: sceneDataRef.current.files,
-        });
+        setInitialData(sceneDataRef.current);
+        setViewMode("canvas");
       } catch (err) {
         console.error("Failed to parse drawing data from raw markdown:", err);
       }
-      setViewMode("canvas");
     }
-  }, [viewMode, rawMarkdown]);
+  }, [viewMode, rawMarkdown, buildSceneJson]);
 
   return {
     isLoaded,

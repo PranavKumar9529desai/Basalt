@@ -37,9 +37,11 @@ use commands::{
     get_asset_audit, get_assets, get_backlinks, get_graph, get_settings, get_tag_counts, get_task_line,
     get_tasks, get_vault_tree, get_workspace,
     list_templates, media_server_url, move_paths, open_canvas, open_daily_note, open_file,
-    open_files, open_vault_dialog, parse_canvas, parse_frontmatter, read_drawing, read_template, reindex_vault,
+    open_files, open_vault_dialog, parse_canvas, parse_drawing, parse_frontmatter,
+    read_drawing, read_template, reindex_vault,
     rename_note, rename_path, reorganize_assets,
-    run_query, save_attachment, save_canvas, save_drawing, save_file, save_files, search_content, search_files,
+    run_query, save_attachment, save_canvas, save_drawing, save_file, save_files,
+    search_content, search_files, serialize_drawing,
     set_setting, set_vault, set_workspace_key, toggle_task, update_task, write_dev_report,
 };
 
@@ -124,6 +126,8 @@ pub fn run() {
             parse_canvas,
             read_drawing,
             save_drawing,
+            parse_drawing,
+            serialize_drawing,
             create_untitled_drawing,
             get_tasks,
             toggle_task,

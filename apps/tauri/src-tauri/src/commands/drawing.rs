@@ -63,6 +63,25 @@ fn resolve_drawing_path(path: &str, state: &AppState) -> AppResult<PathBuf> {
 }
 
 /// Read a drawing file from disk and return its structured DrawingPayload.
+/// Parse drawing content (hybrid `.drawing.md`, Obsidian `.excalidraw.md`, or
+/// raw `.excalidraw` JSON) into a structured payload. Used by the view-mode
+/// toggle to rebuild the scene from raw markdown edits without a TS re-parse.
+#[tauri::command]
+pub fn parse_drawing(content: String) -> DrawingPayload {
+    parse_drawing_content(&content)
+}
+
+/// Serialize a scene into the hybrid `.drawing.md` backplane without writing
+/// to disk. Used by the view-mode toggle to preview the generated markdown.
+#[tauri::command]
+pub fn serialize_drawing(
+    data_json: String,
+    existing_markdown: Option<String>,
+) -> Result<String, String> {
+    serialize_drawing_markdown(&data_json, existing_markdown.as_deref())
+}
+
+/// Read a drawing file from disk and return its structured DrawingPayload.
 #[tauri::command]
 pub fn read_drawing(path: String, state: State<AppState>) -> AppResult<DrawingPayload> {
     let abs = resolve_drawing_path(&path, &state)?;

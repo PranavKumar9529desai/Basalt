@@ -25,7 +25,6 @@
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
     "@workspace/editor": "workspace:*",
-    "lz-string": "^1.5.0",
     "react": "catalog:default",
     "react-dom": "catalog:default",
     "zustand": "^5.0.11"

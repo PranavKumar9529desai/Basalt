@@ -2,11 +2,17 @@ import { memo } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import type {
+  AppState,
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import type {
   ExcalidrawAppStateStub,
   ExcalidrawElementStub,
   ExcalidrawSceneData,
 } from "../types";
-import { useExcalidrawTheme } from "../hooks/useExcalidrawTheme";
+import { resolveCanvasBg } from "../lib/scene";
 
 export interface ExcalidrawWrapperProps {
   initialData: Partial<ExcalidrawSceneData> | null;
@@ -15,7 +21,19 @@ export interface ExcalidrawWrapperProps {
     appState: Partial<ExcalidrawAppStateStub>,
     files?: Record<string, unknown>,
   ) => void;
-  onApiReady?: (api: any) => void;
+  onApiReady?: (api: ExcalidrawImperativeAPI) => void;
+}
+
+/** Detect light/dark from the document's data-theme attribute. */
+function detectTheme(): "light" | "dark" {
+  if (typeof document === "undefined") return "dark";
+  const t = document.documentElement.dataset.theme ?? "";
+  if (["light", "latte", "solarized-light"].some((l) => t.includes(l)))
+    return "light";
+  if (t) return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
@@ -23,39 +41,24 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
   onChange,
   onApiReady,
 }: ExcalidrawWrapperProps) {
-  const { theme, cssOverride } = useExcalidrawTheme();
-
-  // The canvas background is whatever sat-surface-1 resolves to.
-  // We read it directly via the CSS var so it matches cssOverride.
-  const canvasBg =
-    typeof document !== "undefined"
-      ? window.getComputedStyle(document.documentElement)
-          .getPropertyValue("--sat-surface-1")
-          .trim() || (theme === "light" ? "#f8fafc" : "#0d0e12")
-      : theme === "light"
-        ? "#f8fafc"
-        : "#0d0e12";
+  const theme = detectTheme();
 
   return (
-    // excalidraw-basalt-host is the scope selector for the CSS override block
-    // injected by useExcalidrawTheme — it maps Basalt's --sat-* tokens onto
-    // Excalidraw's own CSS variable namespace.
-    <div className="excalidraw-basalt-host relative w-full h-full overflow-hidden">
-      {/* Inject scoped CSS that maps sat-* tokens → Excalidraw vars */}
-      <style>{cssOverride}</style>
+    <div className="relative w-full h-full overflow-hidden">
       <Excalidraw
         excalidrawAPI={onApiReady}
         initialData={
           initialData
             ? {
-                elements: initialData.elements as any,
+                elements: initialData.elements as unknown as readonly ExcalidrawElement[],
                 appState: {
                   ...initialData.appState,
                   theme,
-                  viewBackgroundColor:
-                    initialData.appState?.viewBackgroundColor || canvasBg,
-                } as any,
-                files: initialData.files as any,
+                  viewBackgroundColor: resolveCanvasBg(
+                    initialData.appState?.viewBackgroundColor,
+                  ),
+                } as unknown as Partial<AppState>,
+                files: initialData.files as unknown as BinaryFiles,
               }
             : null
         }
@@ -64,7 +67,7 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
           onChange(
             elements as unknown as readonly ExcalidrawElementStub[],
             appState as unknown as Partial<ExcalidrawAppStateStub>,
-            files,
+            files as unknown as Record<string, unknown>,
           );
         }}
         UIOptions={{
@@ -79,4 +82,3 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
     </div>
   );
 });
-

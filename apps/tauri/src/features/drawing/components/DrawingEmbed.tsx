@@ -50,10 +50,7 @@ export const DrawingEmbed = memo(function DrawingEmbed({
         let elements = (scene.elements || []).filter((e) => !e.isDeleted);
         if (frame) {
           elements = elements.filter(
-            (el) =>
-              (el as any).frameId === frame ||
-              (el as any).id === frame ||
-              (el as any).name === frame,
+            (el) => el.frameId === frame || el.id === frame || el.name === frame,
           );
         }
 

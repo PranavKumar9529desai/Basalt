@@ -20,7 +20,7 @@ fn drawing_heading_span(content: &str) -> Option<(usize, usize)> {
 
 /// True when content uses the Obsidian Excalidraw plugin's hybrid layout:
 /// `# Excalidraw Data` header, a Drawing section, or plugin frontmatter.
-pub(crate) fn is_obsidian_excalidraw_format(content: &str) -> bool {
+pub fn is_obsidian_excalidraw_format(content: &str) -> bool {
     content.contains("# Excalidraw Data")
         || content.contains("excalidraw-plugin: parsed")
         || content.contains("```compressed-json")
@@ -47,7 +47,8 @@ pub(crate) fn parse_obsidian_excalidraw(content: &str) -> ParsedObsidianDrawing 
 /// `compressed-json` block, or legacy unfenced JSON directly under the heading.
 fn extract_scene_json(content: &str) -> Option<String> {
     let (_, heading_end) = drawing_heading_span(content)?;
-    let rest = &content[heading_end + 1..];
+    // heading may be the last line without a trailing newline
+    let rest = &content[(heading_end + 1).min(content.len())..];
     let mut lines = rest.lines();
 
     for line in lines.by_ref() {
@@ -96,10 +97,7 @@ fn extract_scene_json(content: &str) -> Option<String> {
 
 fn decode_fenced_scene(buf: &str, kind: &str) -> Option<String> {
     if kind == "compressed-json" {
-        let cleaned: String = buf
-            .chars()
-            .filter(|c| *c != '\n' && *c != '\r')
-            .collect();
+        let cleaned: String = buf.chars().filter(|c| *c != '\n' && *c != '\r').collect();
         let json = decompress_from_base64(&cleaned)?;
         // Validate — a corrupted payload must degrade to the empty scene, not
         // garbage text.
@@ -169,7 +167,7 @@ fn strip_block_ref(s: &str) -> &str {
 /// fenced block is replaced, every other section is preserved byte-for-byte.
 /// The plugin reads uncompressed `json` fences, so no recompression is needed.
 /// When the file has no Drawing section, a fresh one is appended.
-pub(crate) fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
+pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
     let lines: Vec<&str> = existing.split('\n').collect();
     let mut out = String::with_capacity(existing.len() + data_json.len());
     let mut replaced = false;
@@ -200,9 +198,8 @@ pub(crate) fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> St
             break; // heading not followed by a fence — leave untouched
         }
 
-        let fence_close = fence_open.and_then(|open| {
-            (open + 1..lines.len()).find(|&k| lines[k].trim() == "```")
-        });
+        let fence_close =
+            fence_open.and_then(|open| (open + 1..lines.len()).find(|&k| lines[k].trim() == "```"));
 
         if let (Some(_), Some(close)) = (fence_open, fence_close) {
             out.push_str(lines[i]);
@@ -286,7 +283,7 @@ fn value_at(input: &[u8], index: usize) -> i64 {
 }
 
 /// LZString `decompressFromBase64`. Returns `None` on malformed input.
-pub(crate) fn decompress_from_base64(input: &str) -> Option<String> {
+pub fn decompress_from_base64(input: &str) -> Option<String> {
     if input.is_empty() {
         return Some(String::new());
     }
@@ -396,6 +393,7 @@ fn code_units_to_string(units: &[u16]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{parse_drawing_content, EMPTY_DRAWING_JSON};
 
     /// Small scene compressed with the reference `compressToBase64`.
     const COMPRESSED_FIXTURE: &str = "N4IgLgngDgpiBcIYA8DGBDANgSwCYCd0B3EAGhADcZ8BnbAewDsEAmcm+gV31TkXoBGdXNnSMAtCgw4CxcVEycA5tmbkYmGAFsYjMDQQBtUJFgJwKMGRB5zYAIzWwl8wAkNmegAIAZvnpaXgDyQniiajY0ACIaMM64CD5YNDAAvgC65OhQUADKYOjOCMCp5D7YmgbwJalAA=";
@@ -446,6 +444,24 @@ mod tests {
         let content = "---\nexcalidraw-plugin: parsed\n---\n# Excalidraw Data\nNot a drawing\n";
         let parsed = parse_obsidian_excalidraw(content);
         assert!(parsed.data_json.is_none());
+    }
+
+    #[test]
+    fn test_drawing_heading_as_last_line_without_newline_does_not_panic() {
+        // Heading at EOF with no trailing newline — the old slice
+        // `&content[heading_end + 1..]` walked past the end of the buffer.
+        let content = "# Excalidraw Data\n## Drawing";
+        let parsed = parse_obsidian_excalidraw(content);
+        assert!(parsed.data_json.is_none());
+        assert!(parsed.text_elements.is_empty());
+    }
+
+    #[test]
+    fn test_obsidian_format_detection_without_trailing_newline() {
+        let content = "# Excalidraw Data\n## Drawing";
+        assert!(is_obsidian_excalidraw_format(content));
+        let parsed = parse_drawing_content(content);
+        assert_eq!(parsed.data_json, EMPTY_DRAWING_JSON);
     }
 
     #[test]

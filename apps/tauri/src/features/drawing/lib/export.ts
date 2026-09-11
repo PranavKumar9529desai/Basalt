@@ -1,5 +1,7 @@
+import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement, NonDeleted } from "@excalidraw/excalidraw/element/types";
 import type { ExcalidrawElementStub, ExcalidrawAppStateStub } from "../types";
-import { getEditorBg } from "./parser";
+import { resolveCanvasBg } from "./scene";
 
 /**
  * Triggers a browser download for a given Blob.
@@ -26,15 +28,13 @@ export async function exportSceneToSvg(
 ): Promise<SVGSVGElement> {
   const { exportToSvg } = await import("@excalidraw/excalidraw");
   return exportToSvg({
-    elements: elements as any,
+    elements: elements as unknown as readonly NonDeleted<ExcalidrawElement>[],
     appState: {
       ...appState,
       exportBackground: true,
-      viewBackgroundColor: appState?.viewBackgroundColor !== "#ffffff"
-        ? (appState?.viewBackgroundColor || getEditorBg())
-        : getEditorBg(),
-    } as any,
-    files: (files || {}) as any,
+      viewBackgroundColor: resolveCanvasBg(appState?.viewBackgroundColor),
+    } as unknown as Partial<Omit<AppState, "offsetTop" | "offsetLeft">>,
+    files: (files || {}) as unknown as BinaryFiles,
   });
 }
 
@@ -48,15 +48,13 @@ export async function exportSceneToBlob(
 ): Promise<Blob> {
   const { exportToBlob } = await import("@excalidraw/excalidraw");
   return exportToBlob({
-    elements: elements as any,
+    elements: elements as unknown as readonly NonDeleted<ExcalidrawElement>[],
     appState: {
       ...appState,
       exportBackground: true,
-      viewBackgroundColor: appState?.viewBackgroundColor !== "#ffffff"
-        ? (appState?.viewBackgroundColor || getEditorBg())
-        : getEditorBg(),
-    } as any,
-    files: (files || {}) as any,
+      viewBackgroundColor: resolveCanvasBg(appState?.viewBackgroundColor),
+    } as unknown as Partial<Omit<AppState, "offsetTop" | "offsetLeft">>,
+    files: (files || {}) as unknown as BinaryFiles,
     mimeType: "image/png",
   });
 }

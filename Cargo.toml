@@ -8,6 +8,7 @@ members = [
   "crates/basalt-tables",
   "crates/basalt-search",
   "crates/basalt-canvas",
+  "crates/basalt-drawing",
   "apps/tauri/src-tauri",
 ]
 

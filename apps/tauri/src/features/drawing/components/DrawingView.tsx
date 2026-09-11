@@ -1,9 +1,10 @@
 import { memo, useCallback, useRef } from "react";
 import type { LeafProps } from "@workspace/views";
-import { useDrawingState } from "./hooks/useDrawingState";
-import { ExcalidrawWrapper } from "./components/ExcalidrawWrapper";
-import { DrawingHeaderActions } from "./components/DrawingHeaderActions";
-import { downloadBlob, exportSceneToBlob, exportSceneToSvg } from "./lib/export";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { useDrawingState } from "../hooks/useDrawingState";
+import { ExcalidrawWrapper } from "./ExcalidrawWrapper";
+import { DrawingHeaderActions } from "./DrawingHeaderActions";
+import { downloadBlob, exportSceneToBlob, exportSceneToSvg } from "../lib/export";
 import { stemOf } from "@workspace/ui";
 
 export const DrawingView = memo(function DrawingView({ tab }: LeafProps) {
@@ -18,9 +19,9 @@ export const DrawingView = memo(function DrawingView({ tab }: LeafProps) {
     toggleViewMode,
   } = useDrawingState({ tab });
 
-  const apiRef = useRef<any>(null);
+  const apiRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
-  const handleApiReady = useCallback((api: any) => {
+  const handleApiReady = useCallback((api: ExcalidrawImperativeAPI) => {
     apiRef.current = api;
   }, []);
 

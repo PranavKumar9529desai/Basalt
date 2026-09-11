@@ -34,7 +34,9 @@ pub use assets::{cleanup_assets, get_asset_audit, get_assets, reorganize_assets,
 pub use media::media_server_url;
 
 pub use canvas::{create_untitled_canvas, open_canvas, parse_canvas, save_canvas};
-pub use drawing::{create_untitled_drawing, read_drawing, save_drawing};
+pub use drawing::{
+    create_untitled_drawing, parse_drawing, read_drawing, save_drawing, serialize_drawing,
+};
 pub use dailies::open_daily_note;
 pub use frontmatter::parse_frontmatter;
 pub use templates::{list_templates, read_template};
