@@ -2,6 +2,11 @@ import { memo, useEffect, useState } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import "../drawing-chrome.css";
+// WebKit canvas-filter polyfill: re-applies Excalidraw's dark-mode image
+// counter-invert (@excalidraw/excalidraw 0.18.1 relies on ctx.filter, which
+// is silently disabled in WebKitGTK/WKWebView — images render as negatives).
+// No-op on Chromium, where the native filter works.
+import "../lib/canvasFilterShim";
 import type {
   AppState,
   BinaryFiles,

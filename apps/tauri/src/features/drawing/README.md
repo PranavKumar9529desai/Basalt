@@ -69,6 +69,28 @@ mid-session theme switches keep grid and chrome consistent. Only the background
 needs no handling; the rest of Excalidraw's theming still keys off its own
 light/dark mode.
 
+## WebKit canvas-filter shim (`lib/canvasFilterShim.ts`)
+
+Excalidraw 0.18.1 implements dark mode by CSS-inverting the whole canvas
+(`--theme-filter: invert(93%) hue-rotate(180deg)`) and then counter-inverting
+image elements so they stay readable (`ctx.filter = "invert(100%) hue-rotate(180deg) saturate(1.25)"`).
+`CanvasRenderingContext2D.filter` is silently disabled in WebKitGTK / WKWebView
+(Tauri's Linux and macOS webviews), so the counter-invert no-ops and images
+render as colour negatives. Chrome/WebView2 are unaffected.
+
+The shim feature-detects the broken filter at runtime and, only then, patches
+the 2D context to apply just that counter-invert (a pixel transform after
+`drawImage`; safes/restores tracked, dest rect mapped through `getTransform()`
+for dpr/zoom). It intercepts exactly one filter string, so every other
+assignment — including the dark `THEME_FILTER` export path — passes through
+native untouched. Upstream fixed this in excalidraw/excalidraw #10578, but that
+is not in any released `@excalidraw/excalidraw`; it shipped only to `@next` and
+the Obsidian Excalidraw plugin 2.20.0. On the next upgrade the shim should be
+reprobed, then deleted.
+
+Known leaves on WebKit: dark-mode **export** (PNG via `exportToBlob`) still
+mixes raw images with the theme filter (#8365) — out of scope for the shim.
+
 ## Known boundaries
 
 - Grid dots are Excalidraw's hardcoded per-theme colours (not token-derived);
