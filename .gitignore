@@ -8,3 +8,7 @@ apps/tauri/.tmp/.f896fdffefef933b-00000000.hm
 .superpowers/
 .worktrees/
 .omp/
+
+# Local scratch vaults (test data, not part of the repo)
+/Excalidraw/
+/local/
