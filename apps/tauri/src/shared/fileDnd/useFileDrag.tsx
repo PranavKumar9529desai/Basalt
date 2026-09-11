@@ -9,6 +9,7 @@
  */
 import { useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { stemOf } from "@workspace/ui";
 import type { DraggedFile, FlatTreeNode } from "../../features/vault";
 import { dispatchFileDrop } from "./drop";
 import {
@@ -124,7 +125,7 @@ export function useFileDrag() {
 }
 
 function ghostLabel(file: DraggedFile): string {
-  return file.name.replace(/\.(md|canvas)$/i, "") || file.name;
+  return stemOf(file.name) || file.name;
 }
 
 /** Floating note pill that follows the cursor while a file drag is in flight.

@@ -36,6 +36,19 @@ describe("ViewHeader", () => {
     expect(screen.queryByText("Source mode")).not.toBeInTheDocument();
   });
 
+  it("hides the drawing extension in the title (.excalidraw.md → base name)", () => {
+    const drawTab: LeafTabInfo = {
+      id: "tab:/vault/Excalidraw/Drawing 2026-09-06 18.21.42.excalidraw.md",
+      path: "/vault/Excalidraw/Drawing 2026-09-06 18.21.42.excalidraw.md",
+      title: "Drawing 2026-09-06 18.21.42.excalidraw.md",
+    };
+    render(<ViewHeader tab={drawTab} vaultPath="/vault" canRename />);
+
+    expect(
+      screen.getByText("Excalidraw / Drawing 2026-09-06 18.21.42"),
+    ).toBeInTheDocument();
+  });
+
   it("handles back and forward navigation clicks when history is present", () => {
     const tabWithHistory: LeafTabInfo = {
       id: "tab:/vault/Notes/B.md",

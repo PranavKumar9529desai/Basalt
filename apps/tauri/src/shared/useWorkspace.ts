@@ -24,7 +24,7 @@ import type { TabModel } from "../features/tabs";
 import { useTabsStore } from "../features/tabs";
 import type { FlatTreeNode } from "../features/vault";
 import { useVaultController, useVaultMutations } from "../features/vault";
-import { isMarkdownPath } from "@workspace/ui";
+import { isMarkdownPath, stemOf } from "@workspace/ui";
 import { useSetting } from "../features/settings";
 
 interface NoteSelection {
@@ -123,12 +123,15 @@ export function useWorkspace({
       const effectiveMode =
         tabClickOpenBehavior === "vscode" ? mode : tabClickOpenBehavior;
       return resolveLeafType(node.path).then((leafType) => {
-        const input = { path: node.path, title: node.name, leafType };
+        // Tab label = base name without the storage extension
+        // (`.md` / `.excalidraw.md` / `.excalidraw` / `.canvas`).
+        const displayName = stemOf(node.name) || node.name;
+        const input = { path: node.path, title: displayName, leafType };
         const tabId =
           effectiveMode === "pinned"
             ? openPinned(input)
             : openInPreview(input);
-        setTabTitle(tabId, node.name);
+        setTabTitle(tabId, displayName);
       });
     },
     [tabClickOpenBehavior, openPinned, openInPreview, setTabTitle],

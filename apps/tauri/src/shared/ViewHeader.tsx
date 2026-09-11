@@ -9,6 +9,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { commandService } from "@workspace/commands";
+import { stemOf } from "@workspace/ui";
 import { Button } from "@workspace/ui/components/ui/button";
 import { BookOpenIcon, PenLineIcon } from "@workspace/ui/components/icons";
 import {
@@ -80,13 +81,12 @@ export function ViewHeader({
       vaultPath && tab.path.startsWith(`${vaultPath}/`)
         ? tab.path.slice(vaultPath.length + 1)
         : tab.path;
-    const parts = relative
-      .replace(/\.(md|canvas)$/i, "")
-      .split("/")
-      .filter(Boolean);
-    return parts.length >= 2
-      ? `${parts[parts.length - 2]} / ${parts[parts.length - 1]}`
-      : (parts[0] ?? "");
+    const parts = relative.split("/").filter(Boolean);
+    const lastPart = parts[parts.length - 1] ?? "";
+    // stemOf hides the full storage extension (`.md`, `.excalidraw.md`,
+    // `.excalidraw`, `.canvas`) — a drawing shows its base name only.
+    const name = stemOf(lastPart) || lastPart;
+    return parts.length >= 2 ? `${parts[parts.length - 2]} / ${name}` : name;
   })();
   const relativePath =
     vaultPath && tab.path.startsWith(`${vaultPath}/`)
