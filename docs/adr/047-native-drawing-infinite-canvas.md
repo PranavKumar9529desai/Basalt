@@ -1,6 +1,6 @@
 # ADR-047: Native Drawing and Infinite Whiteboard Integration
 
-**Status:** Proposed  
+**Status:** Accepted · Amended 2026-09-11 — drawing format decision revised (§4 + §9)
 **Date:** 2026-09-10  
 **Extends:** ADR-018 (registry-driven workbench), ADR-020 (desktop-tier performance), ADR-029 (single renderer), ADR-032 (split pane layout tree), ADR-034 (embed rendering), ADR-035 (infinite canvas), ADR-042 (vault parallel indexing and binary cache), ADR-043 (full-text and fuzzy search)
 
@@ -62,7 +62,7 @@ We adopt **`@excalidraw/excalidraw`** for the frontend canvas rendering and gest
 │                                  BACKEND (Rust Core)                                   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │  • Hybrid File Parser & Serializer (`core/drawing.rs`)                                 │
-│    - Deconstructs `.drawing.md` into YAML frontmatter, plain text, and JSON payload    │
+│    - Deconstructs `.excalidraw.md` into the Obsidian shell (frontmatter, text mirror, scene block)    │
 │    - Atomic file saving (`tempfile` + rename) to guarantee zero file corruption        │
 │  • Search & Indexing Engine (Tantivy / Nucleo)                                         │
 │    - Extracts text inside drawings so Quick Switcher and Global Search find them       │
@@ -76,35 +76,67 @@ We adopt **`@excalidraw/excalidraw`** for the frontend canvas rendering and gest
 
 ---
 
-## 4. File Format Specification: The Hybrid `.drawing.md` Backplane
+## 4. File Format Specification: Obsidian Excalidraw Shell (adopted)
 
-To ensure complete interoperability with Markdown vaults, Git versioning, and Tantivy full-text search, drawing files are stored with the extension `.drawing.md` (or `.excalidraw.md`) using a three-tier format:
+> **Amended 2026-09-11.** The original three-tier `.drawing.md` backplane was
+> replaced after a real-vault compatibility audit (§9). It remains read-only
+> legacy — never written again.
 
-```markdown
+Basalt's single on-disk drawing format is the **Obsidian Excalidraw plugin
+shell**, with Basalt always writing plain `json` scene blocks:
+
+````markdown
 ---
-type: excalidraw
-version: 2
-created: 2026-09-10T11:00:00Z
-updated: 2026-09-10T11:05:00Z
+excalidraw-plugin: parsed
+tags: [excalidraw]
+created: 2026-09-11T11:00:00Z
+updated: 2026-09-11T11:05:00Z
+basalt: { format: "obsidian-shell", encoding: "json" }
 ---
 
-# Drawing Text & Elements
+==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==
 
-- [[System Architecture]]
-- Load Balancer
-- PostgreSQL Cluster
-- Worker Pool
+# Excalidraw Data
 
-%%#drawing-data
-{"type":"excalidraw","version":2,"source":"basalt","elements":[{"type":"rectangle","id":"rect-1","x":100,"y":100,"width":200,"height":120,"strokeColor":"#ff5722","backgroundColor":"transparent","fillStyle":"hachure","strokeWidth":1,"roughness":1,"opacity":100}],"appState":{"viewBackgroundColor":"#121110","gridSize":20},"files":{}}
-%%
+## Text Elements
+Load Balancer ^eH1aB2c3
+Worker Pool ^fH2aB2c4
+
+## Drawing
+```json
+{"type":"excalidraw","version":2,"source":"basalt","elements":[...],"appState":{...},"files":{}}
 ```
+````
 
-### Advantages of the Hybrid Backplane:
+### Contract
 
-1. **Searchability**: Tantivy and Nucleo index the `# Drawing Text & Elements` section automatically without needing to decompress the JSON scene.
-2. **Graph View & Backlinks**: `[[wikilinks]]` placed inside drawing text boxes automatically generate edges in Basalt’s Graph View.
-3. **Safety & Portability**: If opened in any plain text editor, the note is completely legible.
+1. **Hull**: frontmatter marker `excalidraw-plugin: parsed` plus additive keys
+   (`tags`, `created`, `updated`, Basalt-owned `basalt:`) — `# Excalidraw
+   Data` — `## Text Elements` (bare lines, each suffixed ` ^<id>`) — `##
+   Drawing` code fence. Only this shell is ever written by Basalt.
+2. **Encoding**: Basalt writes plain `json`; reads both plain `json` and
+   LZString `compressed-json`. If Obsidian re-compresses on its own save, the
+   compressed form is accepted and preserved — never rewritten by Basalt unless
+   the scene actually changes.
+3. **Fence invariant**: every emitted file contains the `## Drawing` fence —
+   never scene data hidden inside `%%` comments (the pre-amendment
+   corrupt-empty bug class).
+4. **Text Elements mirror**: regenerated from the scene on save, bare lines +
+   `^id`; the scene JSON is the single source of truth.
+5. **Basalt extension strip**: Basalt-specific metadata lives in the `basalt:`
+   frontmatter key and element `customData` — preserved and ignored by the
+   plugin, and the designated place for future Basalt-only utilities.
+6. **Search & graph**: `[[wikilinks]]` inside text survive verbatim in the
+   mirror, feeding Tantivy/Nucleo and the graph without decompression.
+
+### Advantages retained
+
+1. **Searchability**: Tantivy and Nucleo index the `## Text Elements` mirror
+   without decompressing the scene.
+2. **Graph View & Backlinks**: `[[wikilinks]]` inside drawing text boxes
+   generate edges in Basalt's Graph View.
+3. **Safety & Portability**: readable in any plain-text editor; plain `json` is
+   git-diffable while `compressed-json` stays accepted.
 
 ---
 
@@ -124,7 +156,7 @@ apps/tauri/src/features/drawing/
 │   ├── useDrawingState.ts            # Manages dirty state, debounced auto-save (400ms)
 │   └── useExcalidrawTheme.ts         # Bridges --sat-* theme tokens to .excalidraw classes
 ├── lib/
-│   ├── parser.ts                     # TypeScript parser for .drawing.md hybrid format
+│   ├── parser.ts                     # Scene helpers (empty scene, bg colour) — parsing is Rust-side
 │   └── export.ts                     # exportToSvg / exportToBlob helpers
 ├── DrawingView.tsx                   # The Workbench Leaf component
 ├── types.ts                          # TypeScript types for scenes, files, and IPC payloads
@@ -154,7 +186,7 @@ apps/tauri/src-tauri/src/
     type: "drawing",
     name: "Drawing",
     icon: IconPencil,
-    extensions: [".drawing.md", ".excalidraw.md", ".excalidraw"],
+    extensions: [".excalidraw.md", ".excalidraw"],  // legacy ".drawing.md" read-only
     component: Drawing,
   });
   ```
@@ -181,8 +213,8 @@ apps/tauri/src-tauri/src/
 
 Drawings can be embedded anywhere within standard Markdown notes:
 
-- **Full Canvas Embed**: `![[Architecture.drawing.md]]`
-- **Marker Frame Slicing**: `![[Architecture.drawing.md#^frame=BackendCluster]]`
+- **Full Canvas Embed**: `![[Architecture.excalidraw.md]]`
+- **Marker Frame Slicing**: `![[Architecture.excalidraw.md#^frame=BackendCluster]]`
 - Rendered via `DrawingEmbed.tsx` using `exportToSvg`, creating zero overhead (does not mount the full Excalidraw editor instance).
 
 ---
@@ -193,3 +225,64 @@ Drawings can be embedded anywhere within standard Markdown notes:
 2. **Scale Testing**: Verify smooth panning and zooming on scenes with up to 3,000 mixed elements.
 3. **Atomic Safety & Crash Resilience**: Verify that unexpected app termination during an active drawing session results in zero corrupted or truncated files.
 4. **Search Parity**: Verify that words written inside drawings are immediately discoverable in Quick Switcher and Tantivy full-text search.
+
+---
+
+## 9. Amendment 2026-09-11: Adopt the Obsidian Excalidraw Shell
+
+### 9.1 Why this amendment exists
+
+The original §4 specified a Basalt-native hybrid backplane (`.drawing.md`,
+`# Drawing Text & Elements`, `%%#drawing-data`). A compatibility audit against
+real vault fixtures (copied 2026-09-10) proved that this format breaks Obsidian
+interoperability:
+
+| Finding | Evidence |
+| --- | --- |
+| Two disjoint file hulls in the wild | 11 plugin files (`# Excalidraw Data` + `compressed-json`) vs 8 Basalt files (`# Drawing Text & Elements` + `%%#drawing-data`); zero overlap |
+| Basalt empties unreadable by the plugin | 355-byte files carry no `## Drawing` fence — scene lives only in a `%%` markdown comment; the plugin parses fences, not comments → blank canvas / loss on Obsidian save |
+| Text mirror is bare lines, not bullets | real files: `target ^tZMHYgSv` — parser handled only `- bullet` lines |
+| Rename defeats extension classifiers | `carfleet.md` / `kubernates.md` are drawings (frontmatter marker present); extension-only sniffing opens them as plain notes |
+| Folder/file collision | `Fixing Bugs of Table.excalidraw/` is an attachment folder; `Fixing Bugs of Table.excalidraw.md` is the (empty) drawing |
+
+### 9.2 Decision
+
+Adopt the Obsidian Excalidraw plugin shell as Basalt's single on-disk drawing
+format (§4), write plain `json`, read both encodings, ban the old writer and
+`%%`-comment scene storage, and carry Basalt-specific data in the extension
+strip.
+
+### 9.3 Capability assignment — two surfaces, one format
+
+- `features/drawing/` (this ADR): shape/diagram editor — Excalidraw-conformant.
+- `features/canvas/` (ADR-035, JSON Canvas v1.0): semantic surface (note nodes,
+  links, embeds, tasks). New deep integrations land there; the drawing surface
+  stays schema-conformant so interop is never jeopardised.
+
+### 9.4 Classification
+
+Extension remains a fast path (`.excalidraw.md`, `.excalidraw`); the
+frontmatter marker `excalidraw-plugin: parsed` is the **authority** — it covers
+renamed drawings. Folders named `*.excalidraw` are asset directories, never
+drawings.
+
+### 9.5 Migration & editing policy
+
+- **Obsidian-authored files**: open read/editable; save is surgical — only the
+  `## Drawing` block changes, all other sections byte-identical; compressed
+  stays compressed until the scene changes.
+- **Legacy Basalt-hull / `.drawing.md` files**: read-only legacy; migrated to
+  the shell in place on first save.
+- **New files**: created as `.excalidraw.md` with the full shell from creation
+  (fence included).
+
+### 9.6 Verification gates (extends §8)
+
+1. **Round-trip harness**: every real plugin fixture → parse → serialize →
+   parse: scene equality (elements/appState/files) + preserved text elements.
+2. **Live Obsidian check**: open a Basalt-written shell file (plain `json`) in
+   Obsidian; renders and re-saves without loss.
+3. **Writer lint**: every emitted file contains the marker and the `## Drawing`
+   fence.
+4. **Classifier check**: renamed drawings open as drawings in tree, leaf,
+   embed, and search surfaces.
