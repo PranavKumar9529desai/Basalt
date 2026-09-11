@@ -29,6 +29,7 @@ basalt-vault = { path = "../../../crates/basalt-vault" }
 basalt-search = { path = "../../../crates/basalt-search" }
 basalt-parser = { path = "../../../crates/basalt-parser" }
 basalt-tables = { path = "../../../crates/basalt-tables" }
+basalt-task = { path = "../../../crates/basalt-task" }
 basalt-canvas = { path = "../../../crates/basalt-canvas" }
 basalt-drawing = { path = "../../../crates/basalt-drawing" }
 thiserror = "2"

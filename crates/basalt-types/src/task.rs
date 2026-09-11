@@ -29,7 +29,37 @@ pub enum TaskPriority {
     Lowest,
 }
 
+impl TaskStatus {
+    /// Wire/display name (matches the serde `snake_case` rename, NOT the
+    /// `Debug` spelling — `InProgress`/`OnHold` debug to "inprogress"/
+    /// "onhold", which is the status-filter bug this method exists to fix).
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Todo => "todo",
+            Self::InProgress => "in_progress",
+            Self::OnHold => "on_hold",
+            Self::Done => "done",
+            Self::Cancelled => "cancelled",
+            Self::NonTask => "non_task",
+        }
+    }
+}
+
 impl TaskPriority {
+    /// Wire/display name (matches the serde `snake_case` rename).
+    #[must_use]
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Highest => "highest",
+            Self::High => "high",
+            Self::Medium => "medium",
+            Self::None => "none",
+            Self::Low => "low",
+            Self::Lowest => "lowest",
+        }
+    }
+
     /// Stable numeric rank, 0 (highest) → 5 (lowest). Used for sorting and
     /// the urgency score.
     #[must_use]

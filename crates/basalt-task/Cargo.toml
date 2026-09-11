@@ -1,0 +1,8 @@
+[package]
+name = "basalt-task"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+basalt-types = { path = "../basalt-types" }
+chrono = { version = "0.4", features = ["serde"] }
