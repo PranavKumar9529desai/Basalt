@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { IconSearch, IconFileText, IconX } from "@tabler/icons-react";
+import { segmentsOf } from "@workspace/ui";
 
 interface NoteSuggestion {
   name: string;
@@ -149,7 +150,7 @@ export function NotePickerModal({
                     {note.name.replace(/\.md$/, "")}
                   </span>
                   <span className="text-xs text-[var(--sat-text-muted)] truncate max-w-[140px]">
-                    {note.path.split("/").slice(-2).join("/")}
+                    {segmentsOf(note.path).slice(-2).join("/")}
                   </span>
                 </button>
               );

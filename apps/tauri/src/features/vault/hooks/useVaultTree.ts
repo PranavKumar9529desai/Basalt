@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FileChangeEvent, FlatTreeNode } from "../types";
+import { segmentsOf } from "@workspace/ui";
 
 /**
  * Find a file node by its display name (with or without .md extension).
@@ -117,7 +118,7 @@ export function useVaultTree(initialTree: FlatTreeNode[]): UseVaultTreeReturn {
   // folder reveal, all of which need the full ancestor chain visible.
   const openFolder = useCallback((relPath: string) => {
     if (!relPath) return;
-    const parts = relPath.split("/").filter(Boolean);
+    const parts = segmentsOf(relPath);
     setOpenFolders((prev) => {
       const next = new Set(prev);
       let acc = "";

@@ -40,6 +40,36 @@ export function stemOf(path: string): string {
 }
 
 /**
+ * Returns the file extension without the dot, lowercased (`""` when none).
+ *
+ * @example
+ * extensionOf("docs/notes/meeting.md") // "md"
+ * extensionOf("archive.tar.gz")        // "gz" (last suffix only)
+ * extensionOf("untitled")              // ""
+ */
+export function extensionOf(path: string): string {
+  const base = basename(path);
+  const dotIndex = base.lastIndexOf(".");
+  if (dotIndex <= 0) return "";
+  return base.slice(dotIndex + 1).toLowerCase();
+}
+
+/**
+ * Returns the path's components with empty segments removed (leading,
+ * trailing, and duplicate separators), normalized to forward slashes.
+ *
+ * @example
+ * segmentsOf("/docs//notes/meeting.md/") // ["docs", "notes", "meeting.md"]
+ * segmentsOf("untitled")                 // ["untitled"]
+ * segmentsOf("")                         // []
+ */
+export function segmentsOf(path: string): string[] {
+  return normalizePath(path)
+    .split("/")
+    .filter((s) => s.length > 0);
+}
+
+/**
  * Checks if a path or filename ends with a Markdown extension (`.md`). Case-insensitive.
  */
 export function isMarkdownPath(path: string): boolean {

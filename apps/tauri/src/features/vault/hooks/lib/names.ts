@@ -1,4 +1,4 @@
-import { isMarkdownPath, stemOf } from "@workspace/ui";
+import { isMarkdownPath, segmentsOf, stemOf } from "@workspace/ui";
 
 /** Inline-name parsing for tree creates/renames: "a/b/New Note" → leaf name
  * + resolved parent path; a trailing "/" marks a folder. Returns null for
@@ -12,12 +12,12 @@ export function parseInlineName(
   const isFolder = trimmed.endsWith("/");
   const withoutTrailing = trimmed.replace(/[\\/]+$/, "");
   if (!withoutTrailing) return null;
-  const segments = withoutTrailing.split("/").filter(Boolean);
+  const segments = segmentsOf(withoutTrailing);
   const leaf = segments.pop();
   if (!leaf) return null;
   const parentSegments = segments;
   if (baseParent)
-    parentSegments.unshift(...baseParent.split("/").filter(Boolean));
+    parentSegments.unshift(...segmentsOf(baseParent));
   return {
     leaf,
     parentRelPath: parentSegments.join("/"),

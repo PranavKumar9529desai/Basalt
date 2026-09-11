@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   basename,
+  extensionOf,
   isCanvasPath,
   isDocumentPath,
   isDrawingPath,
   isMarkdownPath,
   normalizePath,
+  segmentsOf,
   stemOf,
 } from "./paths";
 
@@ -101,5 +103,45 @@ describe("paths utility", () => {
     it("handles empty string", () => {
       expect(normalizePath("")).toBe("");
     });
+  });
+});
+
+describe("extensionOf", () => {
+  it("returns the lowercase suffix", () => {
+    expect(extensionOf("docs/notes/meeting.md")).toBe("md");
+    expect(extensionOf("image.PNG")).toBe("png");
+  });
+
+  it("returns last suffix only for dotted names", () => {
+    expect(extensionOf("archive.tar.gz")).toBe("gz");
+  });
+
+  it("returns empty when no extension", () => {
+    expect(extensionOf("untitled")).toBe("");
+    expect(extensionOf("folder/")).toBe("");
+    expect(extensionOf("")).toBe("");
+  });
+});
+
+describe("segmentsOf", () => {
+  it("splits normalized segments", () => {
+    expect(segmentsOf("/docs//notes/meeting.md/")).toEqual([
+      "docs",
+      "notes",
+      "meeting.md",
+    ]);
+  });
+
+  it("handles windows separators", () => {
+    expect(segmentsOf("folder\\sub\\file.md")).toEqual([
+      "folder",
+      "sub",
+      "file.md",
+    ]);
+  });
+
+  it("returns [] for empty or root-only paths", () => {
+    expect(segmentsOf("")).toEqual([]);
+    expect(segmentsOf("/")).toEqual([]);
   });
 });

@@ -2,6 +2,7 @@
 // graph split). `readThemeColors` resolves CSS custom properties once per
 // theme change; `colorFor` maps a full-graph node to its drawn RGB triple.
 import type { GraphColorMode } from "../components/GraphControls";
+import { segmentsOf } from "@workspace/ui";
 
 export interface ThemeColors {
   note: [number, number, number];
@@ -118,7 +119,7 @@ export function colorFor(
   }
   if (mode === "folder") {
     const p = ctx.paths[full] ?? "";
-    const seg = p.split("/");
+    const seg = segmentsOf(p);
     const folder = seg.length > 1 ? seg[0] : "";
     if (folder) {
       let h = 0;

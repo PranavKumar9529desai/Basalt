@@ -7,11 +7,13 @@
 export { cn } from "./lib/utils";
 export {
   basename,
+  extensionOf,
   isCanvasPath,
   isDocumentPath,
   isDrawingPath,
   isMarkdownPath,
   normalizePath,
+  segmentsOf,
   stemOf,
 } from "./lib/paths";
 
