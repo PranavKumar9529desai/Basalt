@@ -20,8 +20,14 @@ export interface DrawingHeaderActionsProps {
 }
 
 const ICON_BTN =
-  "h-8 w-8 p-0 flex items-center justify-center rounded-md text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]";
+  "h-7 w-7 p-0 flex items-center justify-center rounded-md text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]";
 
+/**
+ * Drawing pane settings strip — floats at the top-right of the pane, above
+ * the Excalidraw surface, as a compact vertical button. The expanded panel
+ * opens to the left of the strip so it never covers the canvas area directly
+ * under the button.
+ */
 export const DrawingHeaderActions = memo(function DrawingHeaderActions({
   viewMode,
   onToggleViewMode,
@@ -32,28 +38,25 @@ export const DrawingHeaderActions = memo(function DrawingHeaderActions({
   const [panelOpen, setPanelOpen] = useState(false);
 
   return (
-    <>
-      {/* Vertical icon strip — pinned to the top-right edge, above Excalidraw's own toolbar */}
-      <div
-        className="absolute top-3 right-3 z-30 flex flex-col items-center gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/90 backdrop-blur-md p-1 shadow-sm"
-        aria-label="Drawing actions"
+    <div
+      className="absolute top-[72px] right-3 z-30 flex flex-col items-center gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/90 backdrop-blur-md p-1 shadow-sm"
+      aria-label="Drawing actions"
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        className={ICON_BTN}
+        onClick={() => setPanelOpen((v) => !v)}
+        title="Drawing settings"
+        aria-expanded={panelOpen}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className={ICON_BTN}
-          onClick={() => setPanelOpen((v) => !v)}
-          title="Drawing settings"
-          aria-expanded={panelOpen}
-        >
-          {panelOpen ? <IconX size={15} /> : <IconSettings size={15} />}
-        </Button>
-      </div>
+        {panelOpen ? <IconX size={15} /> : <IconSettings size={15} />}
+      </Button>
 
-      {/* Expanded panel — shown when the settings button is toggled */}
+      {/* Dropdown panel — anchored left of the floating strip */}
       {panelOpen && (
         <div
-          className="absolute top-3 right-14 z-30 flex flex-col gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/95 backdrop-blur-md p-2 shadow-md min-w-[160px]"
+          className="absolute top-[72px] right-14 z-30 flex flex-col gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/95 backdrop-blur-md p-2 shadow-md min-w-[160px]"
           aria-label="Drawing action panel"
         >
           <p className="text-[10px] uppercase tracking-wide text-[var(--sat-text-muted)] px-1 pb-0.5 font-medium">
@@ -118,7 +121,6 @@ export const DrawingHeaderActions = memo(function DrawingHeaderActions({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 });
-

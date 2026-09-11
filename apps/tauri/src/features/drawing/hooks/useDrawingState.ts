@@ -8,7 +8,7 @@ import type {
   ExcalidrawElementStub,
   ExcalidrawSceneData,
 } from "../types";
-import { makeEmptySceneJson, resolveCanvasBg } from "../lib/scene";
+import { CANVAS_BG, makeEmptySceneJson } from "../lib/scene";
 
 export interface UseDrawingStateOptions {
   tab: { id: string; path: string };
@@ -85,7 +85,7 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
           elements: (scene.elements || []).filter((e) => !e.isDeleted),
           appState: {
             ...scene.appState,
-            viewBackgroundColor: resolveCanvasBg(scene.appState?.viewBackgroundColor),
+            viewBackgroundColor: CANVAS_BG,
           },
           files: scene.files || {},
         };
@@ -124,7 +124,7 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
       source: "basalt",
       elements: cleanElements,
       appState: {
-        viewBackgroundColor: resolveCanvasBg(sceneDataRef.current.appState.viewBackgroundColor),
+        viewBackgroundColor: CANVAS_BG,
         gridSize: sceneDataRef.current.appState.gridSize ?? 20,
       },
       files: sceneDataRef.current.files,

@@ -58,6 +58,7 @@ export const DrawingEmbed = memo(function DrawingEmbed({
           elements,
           scene.appState,
           scene.files,
+          { background: "none" },
         );
         if (cancelled) return;
 

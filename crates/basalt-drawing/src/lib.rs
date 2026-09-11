@@ -35,8 +35,9 @@ pub struct DrawingPayload {
     pub updated: Option<String>,
 }
 
-/// Fallback empty Excalidraw scene JSON.
-pub const EMPTY_DRAWING_JSON: &str = r##"{"type":"excalidraw","version":2,"source":"basalt","elements":[],"appState":{"viewBackgroundColor":"#121110","gridSize":20},"files":{}}"##;
+/// Fallback empty Excalidraw scene JSON. The canvas is transparent so the
+/// editor surface colour shows through (see apps/tauri drawing lib/scene.ts).
+pub const EMPTY_DRAWING_JSON: &str = r##"{"type":"excalidraw","version":2,"source":"basalt","elements":[],"appState":{"viewBackgroundColor":"transparent","gridSize":20},"files":{}}"##;
 
 /// Extract non-empty text values from active (non-deleted) text elements in an Excalidraw JSON payload.
 pub fn extract_text_elements_from_json(data_json: &str) -> Vec<String> {
@@ -300,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_round_trip_parse_and_serialize() {
-        let json = r##"{"type":"excalidraw","version":2,"source":"basalt","elements":[{"type":"text","id":"t1","text":"[[Node]]","isDeleted":false}],"appState":{"viewBackgroundColor":"#121110"},"files":{}}"##;
+        let json = r##"{"type":"excalidraw","version":2,"source":"basalt","elements":[{"type":"text","id":"t1","text":"[[Node]]","isDeleted":false}],"appState":{"viewBackgroundColor":"transparent"},"files":{}}"##;
 
         let serialized = serialize_drawing_markdown(json, None).expect("serialization failed");
         assert!(serialized.contains("type: excalidraw"));

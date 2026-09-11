@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import type {
@@ -12,7 +12,7 @@ import type {
   ExcalidrawElementStub,
   ExcalidrawSceneData,
 } from "../types";
-import { resolveCanvasBg } from "../lib/scene";
+import { CANVAS_BG } from "../lib/scene";
 
 export interface ExcalidrawWrapperProps {
   initialData: Partial<ExcalidrawSceneData> | null;
@@ -41,7 +41,19 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
   onChange,
   onApiReady,
 }: ExcalidrawWrapperProps) {
-  const theme = detectTheme();
+  const [theme, setTheme] = useState<"light" | "dark">(detectTheme);
+
+  /**
+   * Keep Excalidraw's theme (grid dots, element dark-filtering, chrome class)
+   * in sync with Basalt's theme switches. The canvas background itself needs
+   * no handling — it is transparent and shows the pane's theme-driven colour.
+   */
+  useEffect(() => {
+    const el = document.documentElement;
+    const observer = new MutationObserver(() => setTheme(detectTheme()));
+    observer.observe(el, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="relative w-full h-full overflow-hidden">
@@ -54,9 +66,7 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
                 appState: {
                   ...initialData.appState,
                   theme,
-                  viewBackgroundColor: resolveCanvasBg(
-                    initialData.appState?.viewBackgroundColor,
-                  ),
+                  viewBackgroundColor: CANVAS_BG,
                 } as unknown as Partial<AppState>,
                 files: initialData.files as unknown as BinaryFiles,
               }
@@ -75,6 +85,10 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
             loadScene: false,
             saveToActiveFile: false,
             toggleTheme: false,
+            // The canvas background is transparent so the pane's theme-driven
+            // surface shows through; a user-picked solid colour would break
+            // that invariant (and fight Excalidraw's dark-mode colour filter).
+            changeViewBackgroundColor: false,
           },
           welcomeScreen: false,
         }}
