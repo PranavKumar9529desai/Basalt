@@ -40,6 +40,23 @@ export function statusToCheckboxChar(status: string): string {
   }
 }
 
+/** Checkbox character (e.g. from "[x]" → "x") → status name. */
+export function statusFromCheckboxChar(c: string): string {
+  switch (c) {
+    case "/":
+      return "in_progress";
+    case "?":
+      return "on_hold";
+    case "x":
+    case "X":
+      return "done";
+    case "-":
+      return "cancelled";
+    default:
+      return "todo";
+  }
+}
+
 /** Cycle a status name to the next in the default cycle (after done → todo). */
 export function cycleStatus(current: string): string {
   const idx = TASK_STATUS_CYCLE.indexOf(current);

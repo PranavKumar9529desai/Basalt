@@ -112,7 +112,7 @@ function renderRow(row: TypedValue[], parsed: ParsedTaskQuery): string {
       : "";
 
   return `<li class="cm-task-item">
-    <span class="cm-task-check ${statusCheckedClass(status)}">${statusSymbol(status)}</span>
+    <span class="cm-task-checkbox" data-status="${escapeHtml(status)}"></span>
     <span class="cm-task-body">
       <span class="cm-task-desc">${desc || "<em>Untitled task</em>"}</span>
       ${chipsHtml}
@@ -178,23 +178,4 @@ function priorityLabel(priority: string): string {
     lowest: "⏬",
   };
   return symbols[priority] ?? "";
-}
-
-function statusCheckedClass(status: string): string {
-  return status === "done" ? "cm-task-check--on" : "cm-task-check--off";
-}
-
-function statusSymbol(status: string): string {
-  switch (status) {
-    case "done":
-      return "✓";
-    case "cancelled":
-      return "✕";
-    case "in_progress":
-      return "◐";
-    case "deferred":
-      return "➤";
-    default:
-      return "○";
-  }
 }

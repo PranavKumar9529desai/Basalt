@@ -57,7 +57,8 @@ describe("renderTaskQueryResult", () => {
 
   it("renders checkbox status, priority badge, tags and urgency chip", () => {
     const html = renderTaskQueryResult(TASK_RESULT, parsed);
-    expect(html).toContain("cm-task-check--off");
+    expect(html).toContain('data-status="in_progress"');
+    expect(html).toContain('data-status="todo"');
     expect(html).toContain("Ship ADR-048");
     expect(html).toContain("cm-task-priority--high");
     expect(html).toContain("#work");

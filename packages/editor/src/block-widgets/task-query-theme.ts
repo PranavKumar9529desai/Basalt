@@ -1,4 +1,5 @@
 import { EditorView } from "@codemirror/view";
+import { TASK_CHECKBOX_STYLE } from "../styling/task-checkbox";
 
 export const TASK_WIDGET_THEME = EditorView.baseTheme({
   ".cm-task-result": {
@@ -31,18 +32,13 @@ export const TASK_WIDGET_THEME = EditorView.baseTheme({
     padding: "3px 0",
     fontSize: "13px",
   },
-  ".cm-task-check": {
-    flexShrink: "0",
-    width: "18px",
-    textAlign: "center",
-    fontFamily: "var(--sat-font-mono, monospace)",
+  // Task status box — CSS-drawn checkbox shared with the inline editor
+  // (see src/styling/task-checkbox.ts). Static (not clickable) here.
+  ".cm-task-item .cm-task-checkbox": {
+    marginTop: "3px",
+    cursor: "default",
   },
-  ".cm-task-check--on": {
-    color: "var(--sat-state-success, #22c55e)",
-  },
-  ".cm-task-check--off": {
-    color: "var(--sat-text-muted, #94a3b8)",
-  },
+  ...TASK_CHECKBOX_STYLE,
   ".cm-task-body": {
     flex: "1 1 auto",
     minWidth: "0",

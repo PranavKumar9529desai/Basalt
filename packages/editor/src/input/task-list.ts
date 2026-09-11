@@ -11,9 +11,11 @@ import {
 import {
   cycleStatus,
   parseTaskSignifiers,
+  statusFromCheckboxChar,
   statusToCheckboxChar,
   type TaskSignifiers,
 } from "./task-signifiers";
+import { TASK_CHECKBOX_STYLE } from "../styling/task-checkbox";
 
 // ---------------------------------------------------------------------------
 // Theme
@@ -43,11 +45,11 @@ export const TASK_CHECKBOX_THEME = EditorView.baseTheme({
     alignItems: "center",
     verticalAlign: "middle",
   },
-  ".cm-task-checkbox": {
-    accentColor: "var(--sat-accent-primary, #3b82f6)",
-    cursor: "pointer",
-    marginRight: "4px",
+  ".cm-task-marker .cm-task-checkbox": {
+    marginRight: "6px",
   },
+  // CSS-drawn checkbox box + per-status glyphs (shared with DQL query rows)
+  ...TASK_CHECKBOX_STYLE,
   ".cm-task-done": {
     textDecoration: "line-through",
     opacity: "0.5",
@@ -156,15 +158,30 @@ export class TaskCheckboxWidget extends WidgetType {
     const wrapper = document.createElement("span");
     wrapper.className = "cm-task-marker";
 
-    // Checkbox input — visual state maps 1:1 to the status character so a
-    // click visibly cycles: [ ] (off) → [/] (indeterminate) → [x] (on) → [ ]
+    // Checkbox box — the CSS-drawn box + status glyph (TASK_CHECKBOX_STYLE);
+    // the wrapped input is the invisible, box-covering click + a11y surface.
+    // Visual state maps 1:1 to the status character so a click visibly
+    // cycles: [ ] (todo) → [/] (in_progress) → [x] (done) → [ ]
+    const c = this.statusChar;
+    const box = document.createElement("span");
+    box.className = "cm-task-checkbox";
+    box.dataset.status =
+      this.signifiers?.status ?? statusFromCheckboxChar(this.statusChar);
+
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.className = "cm-task-checkbox";
-
-    const c = this.statusChar;
-    input.checked = c === "x" || c === "X" || c === "-";
+    input.className = "cm-task-checkbox-input";
+    input.checked = c === "x" || c === "X";
     input.indeterminate = c === "/" || c === "?";
+    const labels: Record<string, string> = {
+      " ": "To-do task",
+      "/": "Task in progress",
+      "?": "Task on hold",
+      x: "Completed task",
+      X: "Completed task",
+      "-": "Cancelled task",
+    };
+    input.setAttribute("aria-label", labels[c] ?? "Task checkbox");
     if (c === "/" || c === "?") {
       input.title = c === "/" ? "In progress" : "On hold";
     }
@@ -172,8 +189,15 @@ export class TaskCheckboxWidget extends WidgetType {
     input.addEventListener("click", (event) => {
       event.preventDefault();
       const currentStatus =
-        this.signifiers?.status ?? (input.checked ? "done" : "todo");
-      const nextStatus = cycleStatus(currentStatus);
+        this.signifiers?.status ?? statusFromCheckboxChar(this.statusChar);
+      // Ctrl/Cmd+click fast-toggles done (Obsidian parity): in_progress
+      // and on_hold go straight to done, done/cancelled back to todo.
+      const fastToggle = event.ctrlKey || event.metaKey;
+      const nextStatus = fastToggle
+        ? currentStatus === "done" || currentStatus === "cancelled"
+          ? "todo"
+          : "done"
+        : cycleStatus(currentStatus);
       const newChar = statusToCheckboxChar(nextStatus);
       const replacement = `[${newChar}]`;
       view.dispatch({
@@ -182,7 +206,8 @@ export class TaskCheckboxWidget extends WidgetType {
       view.focus();
     });
 
-    wrapper.appendChild(input);
+    box.appendChild(input);
+    wrapper.appendChild(box);
 
     // Priority badge
     if (this.signifiers && this.signifiers.priority !== "none") {
