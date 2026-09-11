@@ -42,9 +42,7 @@ pub fn parse_task_line(line: &str) -> Option<TaskLineRef<'_>> {
     }
     let indent = &line[..content_start];
 
-    let bracket = line[content_start..]
-        .find('[')
-        .map(|p| p + content_start)?;
+    let bracket = line[content_start..].find('[').map(|p| p + content_start)?;
     if bracket < content_start + 2 || bytes.get(bracket - 1) != Some(&b' ') {
         return None;
     }
@@ -111,7 +109,10 @@ mod tests {
 
     #[test]
     fn parses_indent_blockquote_and_numbered_markers() {
-        assert_eq!(parse_task_line("  - [x] a").unwrap().status, TaskStatus::Done);
+        assert_eq!(
+            parse_task_line("  - [x] a").unwrap().status,
+            TaskStatus::Done
+        );
         assert_eq!(parse_task_line("> - [ ] q").unwrap().description, "q");
         assert_eq!(parse_task_line("  1. [ ] n").unwrap().description, "n");
         assert_eq!(parse_task_line("10. [ ] d").unwrap().description, "d");

@@ -31,16 +31,12 @@
 
 /** CSS 180° hue-rotation matrix (row-major) — values from upstream cssHueRotate. */
 export const HUE_ROTATE_180: readonly number[] = [
-  -0.574, 1.43, 0.144,
-  0.426, 0.43, 0.144,
-  0.426, 1.43, -0.856,
+  -0.574, 1.43, 0.144, 0.426, 0.43, 0.144, 0.426, 1.43, -0.856,
 ];
 
 /** CSS saturate(1.25) matrix (row-major). */
 export const SATURATE_125: readonly number[] = [
-  1.197, -0.179, -0.018,
-  -0.053, 1.071, -0.018,
-  -0.053, -0.179, 1.232,
+  1.197, -0.179, -0.018, -0.053, 1.071, -0.018, -0.053, -0.179, 1.232,
 ];
 
 /** Row-major 3×3 matrix multiply. */
@@ -82,8 +78,12 @@ export function applyCounterInvert(
     const g = data[i + 1];
     const b = data[i + 2];
     data[i] = clamp255(IMAGE_INVERT_BIAS - (m[0] * r + m[1] * g + m[2] * b));
-    data[i + 1] = clamp255(IMAGE_INVERT_BIAS - (m[3] * r + m[4] * g + m[5] * b));
-    data[i + 2] = clamp255(IMAGE_INVERT_BIAS - (m[6] * r + m[7] * g + m[8] * b));
+    data[i + 1] = clamp255(
+      IMAGE_INVERT_BIAS - (m[3] * r + m[4] * g + m[5] * b),
+    );
+    data[i + 2] = clamp255(
+      IMAGE_INVERT_BIAS - (m[6] * r + m[7] * g + m[8] * b),
+    );
   }
 }
 
@@ -254,10 +254,7 @@ function deviceDestRect(
     [dx + dw, dy],
     [dx, dy + dh],
     [dx + dw, dy + dh],
-  ].map(([px, py]) => [
-    t.a * px + t.c * py + t.e,
-    t.b * px + t.d * py + t.f,
-  ]);
+  ].map(([px, py]) => [t.a * px + t.c * py + t.e, t.b * px + t.d * py + t.f]);
   const xs = corners.map((c) => c[0]);
   const ys = corners.map((c) => c[1]);
   const x = Math.min(...xs);

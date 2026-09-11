@@ -38,7 +38,8 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<DrawingViewMode>("canvas");
-  const [initialData, setInitialData] = useState<Partial<ExcalidrawSceneData> | null>(null);
+  const [initialData, setInitialData] =
+    useState<Partial<ExcalidrawSceneData> | null>(null);
   const [rawMarkdown, setRawMarkdownState] = useState("");
 
   const sceneDataRef = useRef<SceneState>(EMPTY_SCENE);
@@ -117,7 +118,9 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
 
   /** Build the scene JSON payload for save/serialize calls. */
   const buildSceneJson = useCallback((): string => {
-    const cleanElements = sceneDataRef.current.elements.filter((e) => !e.isDeleted);
+    const cleanElements = sceneDataRef.current.elements.filter(
+      (e) => !e.isDeleted,
+    );
     return JSON.stringify({
       type: "excalidraw",
       version: 2,
@@ -217,7 +220,9 @@ export function useDrawingState({ tab }: UseDrawingStateOptions) {
         const parsed = await invoke<DrawingPayload>("parse_drawing", {
           content: rawMarkdown,
         });
-        const scene = JSON.parse(parsed.data_json) as Partial<ExcalidrawSceneData>;
+        const scene = JSON.parse(
+          parsed.data_json,
+        ) as Partial<ExcalidrawSceneData>;
         const elements = (scene.elements || []).filter((e) => !e.isDeleted);
         sceneDataRef.current = {
           elements,

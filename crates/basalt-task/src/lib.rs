@@ -24,7 +24,6 @@ pub use query::{
 pub use serializer::{build_task_line, TaskLineParts};
 pub use signifiers::{
     is_signifier_token, next_in_cycle, parse_signifiers, priority_emoji, priority_from_emoji,
-    priority_from_name, status_from_name, status_symbol, DEFAULT_STATUS_CYCLE,
-    Signifiers,
+    priority_from_name, status_from_name, status_symbol, Signifiers, DEFAULT_STATUS_CYCLE,
 };
 pub use urgency::calculate_urgency;

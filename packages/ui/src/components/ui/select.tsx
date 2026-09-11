@@ -91,13 +91,16 @@ function SelectPopup({
 }
 
 function SelectList({ className, ...props }: SelectPrimitive.List.Props) {
-  return <SelectPrimitive.List data-slot="select-list" className={cn(className)} {...props} />;
+  return (
+    <SelectPrimitive.List
+      data-slot="select-list"
+      className={cn(className)}
+      {...props}
+    />
+  );
 }
 
-function SelectItem({
-  className,
-  ...props
-}: SelectPrimitive.Item.Props) {
+function SelectItem({ className, ...props }: SelectPrimitive.Item.Props) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"

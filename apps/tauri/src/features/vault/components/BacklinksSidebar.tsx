@@ -179,16 +179,16 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                       <ul>
                         {entry.mentions.map((m) => (
                           <li key={m.line}>
-<Button
-                                type="button"
-                                variant="sat-ghost"
-                                size="xs"
-                                onClick={() => onOpenNote(entry.path, m.line)}
-                                title={`Line ${m.line}`}
-                                className="w-full justify-start truncate leading-6 px-1.5"
-                              >
-                                {m.excerpt}
-                              </Button>
+                            <Button
+                              type="button"
+                              variant="sat-ghost"
+                              size="xs"
+                              onClick={() => onOpenNote(entry.path, m.line)}
+                              title={`Line ${m.line}`}
+                              className="w-full justify-start truncate leading-6 px-1.5"
+                            >
+                              {m.excerpt}
+                            </Button>
                           </li>
                         ))}
                       </ul>

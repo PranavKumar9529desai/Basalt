@@ -12,12 +12,12 @@
 
 use std::path::Path;
 
+use basalt_tables::{QueryResult, TaskQuery};
 use basalt_task::{
     build_task_line, collect_matching_tasks, execute_collected_tasks, next_in_cycle,
     parse_task_line, priority_from_name, status_from_name, status_symbol, TaskLineParts,
     DEFAULT_STATUS_CYCLE,
 };
-use basalt_tables::{QueryResult, TaskQuery};
 use serde::Deserialize;
 use tauri::State;
 
@@ -144,14 +144,11 @@ pub async fn get_tasks(
         // against borrowed tasks under the lock; only matching tasks are
         // cloned. The clone is dropped before sorting, so background
         // indexing never stalls for the query duration.
-        let filters: &[basalt_tables::TaskFilter] = query
-            .as_ref()
-            .map(|q| q.filters.as_slice())
-            .unwrap_or(&[]);
+        let filters: &[basalt_tables::TaskFilter] =
+            query.as_ref().map(|q| q.filters.as_slice()).unwrap_or(&[]);
         let tasks = collect_matching_tasks(&guard, filters);
         drop(guard);
-        execute_collected_tasks(tasks, query.as_ref())
-            .map_err(|e| AppError::Query(e.to_string()))
+        execute_collected_tasks(tasks, query.as_ref()).map_err(|e| AppError::Query(e.to_string()))
     })
     .await
     .map_err(|e| AppError::Io(format!("task query task failed: {e}")))?
@@ -204,23 +201,27 @@ pub fn toggle_task(
         .iter()
         .map(|s| s.to_string())
         .collect();
-    let new_line = replace_line(&content, line_number, &build_task_line(&TaskLineParts {
-        indent: parsed.indent,
-        status: next,
-        description: &parsed.description,
-        priority: parsed.signifiers.priority,
-        created: parsed.signifiers.created,
-        due: parsed.signifiers.due,
-        scheduled: parsed.signifiers.scheduled,
-        start: parsed.signifiers.start,
-        done: parsed.signifiers.done,
-        cancelled: parsed.signifiers.cancelled,
-        recurrence: parsed.signifiers.recurrence.as_deref(),
-        id: parsed.signifiers.id,
-        depends_on: &depends_on,
-        on_completion: parsed.signifiers.on_completion,
-        tags: None,
-    }));
+    let new_line = replace_line(
+        &content,
+        line_number,
+        &build_task_line(&TaskLineParts {
+            indent: parsed.indent,
+            status: next,
+            description: &parsed.description,
+            priority: parsed.signifiers.priority,
+            created: parsed.signifiers.created,
+            due: parsed.signifiers.due,
+            scheduled: parsed.signifiers.scheduled,
+            start: parsed.signifiers.start,
+            done: parsed.signifiers.done,
+            cancelled: parsed.signifiers.cancelled,
+            recurrence: parsed.signifiers.recurrence.as_deref(),
+            id: parsed.signifiers.id,
+            depends_on: &depends_on,
+            on_completion: parsed.signifiers.on_completion,
+            tags: None,
+        }),
+    );
 
     write_and_reindex(&abs, &new_line, &path, &state)?;
 
@@ -242,7 +243,7 @@ pub fn create_task(input: CreateTaskInput, state: State<AppState>) -> AppResult<
     let task_line = build_task_line(&TaskLineParts {
         indent: "",
         status: basalt_types::TaskStatus::Todo,
-        description: &input.description.trim(),
+        description: input.description.trim(),
         priority: input.priority.as_deref().and_then(priority_from_name),
         created: None,
         due: input.due.as_deref().filter(|s| !s.is_empty()),
@@ -290,9 +291,8 @@ pub fn update_task(input: UpdateTaskInput, state: State<AppState>) -> AppResult<
         .ok_or_else(|| AppError::Validation("line is not a task checkbox".into()))?;
 
     let new_status = match input.status.as_deref() {
-        Some(name) => status_from_name(name).ok_or_else(|| {
-            AppError::Validation(format!("unknown status: {name}"))
-        })?,
+        Some(name) => status_from_name(name)
+            .ok_or_else(|| AppError::Validation(format!("unknown status: {name}")))?,
         None => parsed.status,
     };
     let new_priority = input
@@ -379,7 +379,12 @@ pub fn get_task_line(path: String, line_number: usize) -> AppResult<TaskLineResu
                 .map(|s| s.to_string())
                 .collect(),
             on_completion: parsed.signifiers.on_completion.map(String::from),
-            tags: parsed.signifiers.tags.iter().map(|s| s.to_string()).collect(),
+            tags: parsed
+                .signifiers
+                .tags
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
         },
     })
 }
@@ -392,9 +397,11 @@ pub fn get_task_line(path: String, line_number: usize) -> AppResult<TaskLineResu
 fn line_at(content: &str, line_number: usize) -> AppResult<&str> {
     let line = content
         .lines()
-        .nth(line_number.checked_sub(1).ok_or_else(|| {
-            AppError::Validation(format!("line {line_number} out of range"))
-        })?)
+        .nth(
+            line_number
+                .checked_sub(1)
+                .ok_or_else(|| AppError::Validation(format!("line {line_number} out of range")))?,
+        )
         .ok_or_else(|| {
             AppError::Validation(format!(
                 "line {line_number} out of range (1–{})",
@@ -407,7 +414,11 @@ fn line_at(content: &str, line_number: usize) -> AppResult<&str> {
 /// Replace one content line (1-indexed), preserving the file's line-ending
 /// style (`\n` vs `\r\n`) — the scanner handles CRLF; the writers must too.
 fn replace_line(content: &str, line_number: usize, new_line: &str) -> String {
-    let eol = if content.contains("\r\n") { "\r\n" } else { "\n" };
+    let eol = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
     let mut out = String::with_capacity(content.len() + new_line.len());
     for (idx, line) in content.lines().enumerate() {
         if idx > 0 {

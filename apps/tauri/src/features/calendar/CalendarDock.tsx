@@ -1,8 +1,15 @@
 import { useMemo } from "react";
 import type { DayButton } from "react-day-picker";
-import { Calendar, CalendarDayButton } from "@workspace/ui/components/ui/calendar";
+import {
+  Calendar,
+  CalendarDayButton,
+} from "@workspace/ui/components/ui/calendar";
 import { Button } from "@workspace/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -192,7 +199,11 @@ export function CalendarDock({
         weekStartsOn={weekStartsOn}
         // Navigation lives in the custom header — hide built-in chevrons
         // and the caption label (the header already shows the month name).
-        classNames={{ nav: "hidden", caption_label: "hidden", dropdowns: "hidden" }}
+        classNames={{
+          nav: "hidden",
+          caption_label: "hidden",
+          dropdowns: "hidden",
+        }}
         components={{
           DayButton: (props) => (
             <CalendarDockDay

@@ -15,16 +15,26 @@ describe("clipboardService typed store", () => {
     vi.restoreAllMocks();
   });
 
-  async function freshService(): Promise<{ svc: ClipboardService; keys: typeof CLIPBOARD_KEYS }> {
-    const { clipboardService, CLIPBOARD_KEYS } = await import("./clipboardService");
+  async function freshService(): Promise<{
+    svc: ClipboardService;
+    keys: typeof CLIPBOARD_KEYS;
+  }> {
+    const { clipboardService, CLIPBOARD_KEYS } =
+      await import("./clipboardService");
     clipboardService.clearAllTyped();
     return { svc: clipboardService, keys: CLIPBOARD_KEYS };
   }
 
   it("stores and reads typed entries", async () => {
     const { svc, keys } = await freshService();
-    svc.writeTyped(keys.VAULT_FILES, { operation: "cut", paths: ["a.md", "b.md"] });
-    expect(svc.readTyped(keys.VAULT_FILES)).toEqual({ operation: "cut", paths: ["a.md", "b.md"] });
+    svc.writeTyped(keys.VAULT_FILES, {
+      operation: "cut",
+      paths: ["a.md", "b.md"],
+    });
+    expect(svc.readTyped(keys.VAULT_FILES)).toEqual({
+      operation: "cut",
+      paths: ["a.md", "b.md"],
+    });
     expect(svc.hasTyped(keys.VAULT_FILES)).toBe(true);
   });
 

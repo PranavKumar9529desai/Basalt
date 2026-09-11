@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
@@ -35,9 +41,7 @@ function viewFor(doc: string, cursor = doc.length): FakeView {
 }
 
 function setup() {
-  render(
-    <CreateTaskModal getActivePath={() => "notes/tasks.md"} />,
-  );
+  render(<CreateTaskModal getActivePath={() => "notes/tasks.md"} />);
 }
 
 describe("CreateTaskModal", () => {
@@ -154,10 +158,9 @@ describe("CreateTaskModal", () => {
       target: { value: "Recurring chore" },
     });
     // Custom recurrence rule with no dates.
-    fireEvent.change(
-      screen.getByPlaceholderText(/Custom rule/),
-      { target: { value: "every 2 weeks" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText(/Custom rule/), {
+      target: { value: "every 2 weeks" },
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -219,7 +222,8 @@ describe("CreateTaskModal", () => {
       return Promise.resolve(undefined);
     });
     // 3-line doc; the task lives on line 3 ("- [x] Ship release ⏫ …").
-    const doc = "title\n\n- [x] Ship release ⏫ 📅2024-02-01 🔁every week #release";
+    const doc =
+      "title\n\n- [x] Ship release ⏫ 📅2024-02-01 🔁every week #release";
     const view = viewFor(doc);
     (findActiveMarkdownView as unknown as Mock).mockReturnValue(view);
 

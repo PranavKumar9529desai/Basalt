@@ -7,7 +7,11 @@ import {
   IconCheck,
 } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import { CardHandles } from "./CardHandles";

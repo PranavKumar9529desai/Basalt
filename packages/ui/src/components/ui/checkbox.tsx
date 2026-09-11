@@ -8,10 +8,7 @@ import { cn } from "@workspace/ui/lib/utils";
  * when checked.
  */
 
-function CheckboxRoot({
-  className,
-  ...props
-}: CheckboxPrimitive.Root.Props) {
+function CheckboxRoot({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"

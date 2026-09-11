@@ -37,9 +37,9 @@ pub use assets::{
 };
 pub use media::media_server_url;
 
+pub use calendar::calendar_activity;
 pub use canvas::{create_untitled_canvas, open_canvas, parse_canvas, save_canvas};
 pub use dailies::open_daily_note;
-pub use calendar::calendar_activity;
 pub use drawing::{
     create_untitled_drawing, is_drawing_file, parse_drawing, read_drawing, save_drawing,
     serialize_drawing,

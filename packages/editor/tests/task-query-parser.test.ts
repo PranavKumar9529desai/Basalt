@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseTaskQuery, splitInstructions } from "../src/block-widgets/task-query-parser";
+import {
+  parseTaskQuery,
+  splitInstructions,
+} from "../src/block-widgets/task-query-parser";
 
 describe("splitInstructions", () => {
   it("splits lines and skips empty + comment lines", () => {
@@ -77,13 +80,17 @@ describe("parseTaskQuery — dates", () => {
       op: "equals",
       value: "2026-09-01",
     });
-    expect(parseTaskQuery("due after 2026-09-01", today).query.filters[0]).toEqual({
+    expect(
+      parseTaskQuery("due after 2026-09-01", today).query.filters[0],
+    ).toEqual({
       field: "due",
       op: "after",
       value: "2026-09-01",
     });
     // on-or-before is preserved as an inclusive bound (engine: d <= target)
-    expect(parseTaskQuery("due on or before 2026-09-01", today).query.filters[0]).toEqual({
+    expect(
+      parseTaskQuery("due on or before 2026-09-01", today).query.filters[0],
+    ).toEqual({
       field: "due",
       op: "on_or_before",
       value: "2026-09-01",
@@ -126,18 +133,24 @@ describe("parseTaskQuery — dates", () => {
   });
 
   it("supports scheduled/start/created/happens fields", () => {
-    expect(parseTaskQuery("happens before 2026-10-01", today).query.filters[0]).toEqual({
+    expect(
+      parseTaskQuery("happens before 2026-10-01", today).query.filters[0],
+    ).toEqual({
       field: "happens",
       op: "before",
       value: "2026-10-01",
     });
-    expect(parseTaskQuery("created after 2026-01-01", today).query.filters[0].field).toBe("created");
+    expect(
+      parseTaskQuery("created after 2026-01-01", today).query.filters[0].field,
+    ).toBe("created");
   });
 });
 
 describe("parseTaskQuery — text fields", () => {
   it("parses description includes with quotes stripped", () => {
-    expect(parseTaskQuery('description includes "buy milk"').query.filters[0]).toEqual({
+    expect(
+      parseTaskQuery('description includes "buy milk"').query.filters[0],
+    ).toEqual({
       field: "description",
       op: "includes",
       value: "buy milk",
@@ -156,8 +169,12 @@ describe("parseTaskQuery — text fields", () => {
       op: "includes",
       value: "Projects/",
     });
-    expect(parseTaskQuery("folder includes work").query.filters[0].field).toBe("folder");
-    expect(parseTaskQuery("filename includes plan").query.filters[0].field).toBe("filename");
+    expect(parseTaskQuery("folder includes work").query.filters[0].field).toBe(
+      "folder",
+    );
+    expect(
+      parseTaskQuery("filename includes plan").query.filters[0].field,
+    ).toBe("filename");
   });
 });
 
@@ -190,12 +207,16 @@ describe("parseTaskQuery — recurrence and dependencies", () => {
 
 describe("parseTaskQuery — sorts, groups, limit", () => {
   it("parses sort by field with optional reverse", () => {
-    expect(parseTaskQuery("sort by due").query.sorts).toEqual([{ field: "due", reverse: false }]);
+    expect(parseTaskQuery("sort by due").query.sorts).toEqual([
+      { field: "due", reverse: false },
+    ]);
     expect(parseTaskQuery("sort by priority reverse").query.sorts[0]).toEqual({
       field: "priority",
       reverse: true,
     });
-    expect(parseTaskQuery("sort by status.type").query.sorts[0].field).toBe("status");
+    expect(parseTaskQuery("sort by status.type").query.sorts[0].field).toBe(
+      "status",
+    );
   });
 
   it("parses group by", () => {
@@ -216,7 +237,9 @@ describe("parseTaskQuery — display options", () => {
   });
 
   it("applies individual hide options", () => {
-    const { display } = parseTaskQuery("hide priority\nhide due date\nshow urgency");
+    const { display } = parseTaskQuery(
+      "hide priority\nhide due date\nshow urgency",
+    );
     expect(display.hidePriority).toBe(true);
     expect(display.hideDue).toBe(true);
     expect(display.showUrgency).toBe(true);

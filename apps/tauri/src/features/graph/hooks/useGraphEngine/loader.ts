@@ -5,7 +5,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { EngineContext } from "./context";
-import { decodeBinaryGraphSnapshot, snapshotToGraphData } from "../../lib/graphData";
+import {
+  decodeBinaryGraphSnapshot,
+  snapshotToGraphData,
+} from "../../lib/graphData";
 
 export interface Loader {
   /** Terminate the worker, stop listening, clear the refresh timer. */
@@ -20,9 +23,12 @@ export interface Loader {
  * main-thread code never statically bundles it.
  */
 export function initLoader(ctx: EngineContext): Loader {
-  const worker = new Worker(new URL("../../lib/graphWorker.ts", import.meta.url), {
-    type: "module",
-  });
+  const worker = new Worker(
+    new URL("../../lib/graphWorker.ts", import.meta.url),
+    {
+      type: "module",
+    },
+  );
   ctx.workerRef.current = worker;
   worker.onmessage = (e: MessageEvent) => {
     const data = e.data;

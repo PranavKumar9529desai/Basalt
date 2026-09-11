@@ -93,11 +93,7 @@ const ISO_DATE_RE = /\d{4}-\d{2}-\d{2}/;
 /** Is the code point at `i` in `chars` a task signifier emoji? */
 function isSignifierAt(chars: string[], i: number): boolean {
   const ch = chars[i];
-  return (
-    ch in PRIORITY_MAP ||
-    ch in DATE_SIGNIFIERS ||
-    ch === RECURRENCE_EMOJI
-  );
+  return ch in PRIORITY_MAP || ch in DATE_SIGNIFIERS || ch === RECURRENCE_EMOJI;
 }
 
 /**

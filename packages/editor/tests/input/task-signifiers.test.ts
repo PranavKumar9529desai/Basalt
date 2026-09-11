@@ -69,9 +69,7 @@ describe("parseTaskSignifiers", () => {
   });
 
   it("stops recurrence at the next signifier", () => {
-    const r = parseTaskSignifiers(
-      "- [ ] Walk 🔁 every day 📅 2024-01-07",
-    );
+    const r = parseTaskSignifiers("- [ ] Walk 🔁 every day 📅 2024-01-07");
     expect(r!.recurrence).toBe("every day");
     expect(r!.due).toBe("2024-01-07");
   });

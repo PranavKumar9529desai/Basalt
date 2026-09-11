@@ -106,9 +106,7 @@ export interface AmbiguousPasteRequest {
 }
 
 /** Resolve a Paste-As choice; `null` keeps the applied default. */
-export type AmbiguousPasteResolver = (
-  choice: PasteRichChoice | null,
-) => void;
+export type AmbiguousPasteResolver = (choice: PasteRichChoice | null) => void;
 
 /**
  * Save an external file (pasted from the OS file manager as a `file://` uri
@@ -127,7 +125,10 @@ export type OnPasteFileFn = (
  * Returns the replacement text or `null` to use default plain-text paste.
  * Pure (no IPC) — the feature layer injects the resolved link-format setting.
  */
-export type UrlLinkFormatterFn = (url: string, selectionText: string) => string | null;
+export type UrlLinkFormatterFn = (
+  url: string,
+  selectionText: string,
+) => string | null;
 
 /** Open an external (http/https) URL in the system browser. Injected by the
  * feature layer (Tauri `openUrl`); `packages/editor` stays pure — links are

@@ -3,6 +3,7 @@
 //! Gates (at 25k note vaults, release profile):
 //!   - full task query < 50 ms   (ADR-048 §14.2)
 //!   - urgency sort < 10 ms      (ADR-048 §14.2)
+//!
 //! Run with: `cargo bench -p basalt-task`.
 
 use basalt_task::{execute_task_query, TaskFilter, TaskQuery, TaskSort};
@@ -41,10 +42,7 @@ fn populate_vault(notes: usize) -> Vault {
         } else {
             String::new()
         };
-        let content = format!(
-            "# Note {}\n\n- {} Review quarterly report {}", 
-            i, status, i
-        );
+        let content = format!("# Note {}\n\n- {} Review quarterly report {}", i, status, i);
         let content = format!("{}{}{}\n", content, priority, due);
         vault.add_document(&path, &content);
     }

@@ -16,7 +16,8 @@ export const TASKS_SPECS: SettingItemSpec[] = [
   {
     key: "tasksDefaultPriority",
     name: "Default priority",
-    description: "Priority applied to newly created tasks. None omits the signifier.",
+    description:
+      "Priority applied to newly created tasks. None omits the signifier.",
     type: "dropdown",
     options: [
       { value: "none", label: "None" },
@@ -65,7 +66,8 @@ export const TASKS_SPECS: SettingItemSpec[] = [
   {
     key: "tasksNewTaskPosition",
     name: "New task position",
-    description: "Where a task from the create command is inserted relative to the cursor.",
+    description:
+      "Where a task from the create command is inserted relative to the cursor.",
     type: "dropdown",
     options: [
       { value: "above", label: "Above the cursor" },

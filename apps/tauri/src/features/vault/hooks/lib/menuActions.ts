@@ -65,14 +65,22 @@ export function createMenuActions(deps: MenuActionsDeps): MenuActions {
   const onCopyPath = async () => {
     const node = menuTargetNode();
     if (!node) return;
-    await copyNodeAs("path", { relPath: node.relPath, name: node.name }, vaultPath);
+    await copyNodeAs(
+      "path",
+      { relPath: node.relPath, name: node.name },
+      vaultPath,
+    );
     contextMenu.closeMenu();
   };
 
   const onCopyAs = async (format: CopyAsFormat) => {
     const node = menuTargetNode();
     if (!node) return;
-    await copyNodeAs(format, { relPath: node.relPath, name: node.name }, vaultPath);
+    await copyNodeAs(
+      format,
+      { relPath: node.relPath, name: node.name },
+      vaultPath,
+    );
     contextMenu.closeMenu();
   };
 

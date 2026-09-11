@@ -5,13 +5,13 @@ use basalt_parser::query::{DataCommand, QueryType, SortDirection};
 use basalt_types::{QueryResult, TypedValue};
 use basalt_vault::Vault;
 
+use crate::execute_task_query;
 use crate::expr::{
     collect_query_projection, compare_typed, eval_expr, eval_to_typed, field_value, EvalCtx,
 };
 use crate::grouping::group_rows;
 use crate::output::{execute_list_query, execute_table_query, expr_text};
 use crate::page_row::{build_page_rows_projected, PageRow};
-use crate::execute_task_query;
 
 /// Runtime errors during DQL query execution.
 #[derive(Debug, thiserror::Error)]
@@ -308,7 +308,8 @@ pub fn execute_query(vault: &Vault, dql: &str) -> Result<QueryResult, DqlError> 
     match plan.query_type {
         QueryType::Table => execute_table_query(&plan, &rows, total),
         QueryType::List => execute_list_query(&rows, total),
-        QueryType::Task => execute_task_query(vault, None)
-            .map_err(|e| DqlError::Runtime(e.to_string())),
+        QueryType::Task => {
+            execute_task_query(vault, None).map_err(|e| DqlError::Runtime(e.to_string()))
+        }
     }
 }

@@ -7,11 +7,7 @@
 //! returning its own cleanup.
 
 import { useCallback, useEffect } from "react";
-import type {
-  EngineContext,
-  GraphEngine,
-  GraphEngineOptions,
-} from "./context";
+import type { EngineContext, GraphEngine, GraphEngineOptions } from "./context";
 import { createEngineContext } from "./context";
 import { initScene } from "./scene";
 import { initLoader } from "./loader";

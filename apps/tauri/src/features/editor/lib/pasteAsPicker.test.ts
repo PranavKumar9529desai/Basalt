@@ -46,10 +46,7 @@ describe("pasteAsPicker store", () => {
     mod.showPasteAsPicker(request, vi.fn());
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
-    mod.showPasteAsPicker(
-      { ...request, defaultId: "plain-text" },
-      vi.fn(),
-    );
+    mod.showPasteAsPicker({ ...request, defaultId: "plain-text" }, vi.fn());
     expect(listener).toHaveBeenCalledTimes(1);
   });
 

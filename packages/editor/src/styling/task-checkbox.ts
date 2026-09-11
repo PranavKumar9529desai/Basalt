@@ -15,9 +15,7 @@ import { EditorView } from "@codemirror/view";
  * on_hold ("?" glyph), done (success fill + checkmark), cancelled (muted
  * dash). Colors are `--sat-*` tokens only (ADR-002).
  */
-export const TASK_CHECKBOX_STYLE: Parameters<
-  typeof EditorView.baseTheme
->[0] = {
+export const TASK_CHECKBOX_STYLE: Parameters<typeof EditorView.baseTheme>[0] = {
   // --- Box ---------------------------------------------------------------
   ".cm-task-checkbox": {
     display: "inline-flex",
@@ -58,14 +56,14 @@ export const TASK_CHECKBOX_STYLE: Parameters<
   },
 
   // --- in_progress: half-filled with the warning color ------------------
-  ".cm-task-checkbox[data-status=\"in_progress\"]": {
+  '.cm-task-checkbox[data-status="in_progress"]': {
     borderColor: "var(--sat-state-warning, #f59e0b)",
     backgroundImage:
       "linear-gradient(90deg, var(--sat-state-warning, #f59e0b) 50%, transparent 50%)",
   },
 
   // --- on_hold: question-mark glyph -------------------------------------
-  ".cm-task-checkbox[data-status=\"on_hold\"]::after": {
+  '.cm-task-checkbox[data-status="on_hold"]::after': {
     content: '"?"',
     position: "absolute",
     inset: "0",
@@ -79,11 +77,11 @@ export const TASK_CHECKBOX_STYLE: Parameters<
   },
 
   // --- done: success fill + white checkmark -----------------------------
-  ".cm-task-checkbox[data-status=\"done\"]": {
+  '.cm-task-checkbox[data-status="done"]': {
     backgroundColor: "var(--sat-state-success, #22c55e)",
     borderColor: "var(--sat-state-success, #22c55e)",
   },
-  ".cm-task-checkbox[data-status=\"done\"]::after": {
+  '.cm-task-checkbox[data-status="done"]::after': {
     content: '""',
     position: "absolute",
     top: "50%",
@@ -97,11 +95,11 @@ export const TASK_CHECKBOX_STYLE: Parameters<
   },
 
   // --- cancelled: muted border + horizontal dash ------------------------
-  ".cm-task-checkbox[data-status=\"cancelled\"]": {
+  '.cm-task-checkbox[data-status="cancelled"]': {
     borderColor: "var(--sat-text-muted, #64748b)",
     opacity: "0.8",
   },
-  ".cm-task-checkbox[data-status=\"cancelled\"]::after": {
+  '.cm-task-checkbox[data-status="cancelled"]::after': {
     content: '""',
     position: "absolute",
     left: "3px",

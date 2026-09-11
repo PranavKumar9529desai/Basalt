@@ -78,10 +78,7 @@ function Calendar({
           "relative rounded-(--cell-radius)",
           defaultClassNames.dropdown_root,
         ),
-        dropdown: cn(
-          "absolute inset-0 opacity-0",
-          defaultClassNames.dropdown,
-        ),
+        dropdown: cn("absolute inset-0 opacity-0", defaultClassNames.dropdown),
         caption_label: cn(
           "font-medium select-none",
           captionLayout === "label"
@@ -163,10 +160,7 @@ function Calendar({
           }
 
           return (
-            <IconChevronDown
-              className={cn("size-4", className)}
-              {...props}
-            />
+            <IconChevronDown className={cn("size-4", className)} {...props} />
           );
         },
         DayButton: ({ ...props }) => (

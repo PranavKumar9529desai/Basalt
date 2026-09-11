@@ -360,11 +360,11 @@ open:
 oxlint rules in `oxlint-plugins/basalt-architecture.mjs`, wired as errors in
 `.oxlintrc.json`, so a violation fails `bun run lint` and CI:
 
-| Bullet above                                   | Rule                                   | Exempt sites (inline `eslint-disable-next-line`) |
-| ---------------------------------------------- | -------------------------------------- | ------------------------------------------------ |
-| direct `@base-ui/react` import from `apps/`    | `basalt/no-base-ui-imports-in-apps`     | — none (only via `@workspace/ui`)                |
-| hand-rolled dialog/menu/dropdown                | *(structural — the migration plan covers it)* | —                                          |
-| raw `<button>` instead of `Button`              | `basalt/no-raw-button-in-apps`          | modal backdrops, `SplitPane` sash, `InlineTitle` |
+| Bullet above                                | Rule                                          | Exempt sites (inline `eslint-disable-next-line`) |
+| ------------------------------------------- | --------------------------------------------- | ------------------------------------------------ |
+| direct `@base-ui/react` import from `apps/` | `basalt/no-base-ui-imports-in-apps`           | — none (only via `@workspace/ui`)                |
+| hand-rolled dialog/menu/dropdown            | _(structural — the migration plan covers it)_ | —                                                |
+| raw `<button>` instead of `Button`          | `basalt/no-raw-button-in-apps`                | modal backdrops, `SplitPane` sash, `InlineTitle` |
 
 Do **not** add disables for convenience — a disable comment names the exempt
 category (`-- Modal backdrop`, `-- SplitPane sash`, `-- Editor chrome`). A bare

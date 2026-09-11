@@ -136,12 +136,10 @@ fn match_date(stem: &str, parts: &[Part]) -> Option<(i32, u32, u32)> {
 
     for part in parts {
         match part {
-            Part::Literal(lit) => {
-                match chars.next() {
-                    Some((_, c)) if c == *lit => {}
-                    _ => return None,
-                }
-            }
+            Part::Literal(lit) => match chars.next() {
+                Some((_, c)) if c == *lit => {}
+                _ => return None,
+            },
             Part::YearDigits(width) => {
                 let mut s = String::new();
                 for _ in 0..*width {
@@ -248,10 +246,7 @@ fn count_unfinished_tasks(content: &str) -> u32 {
         }
         let c = rest.chars().nth(1).unwrap_or(' ');
         let status = status_from_symbol(c);
-        if !matches!(
-            status,
-            TaskStatus::Done | TaskStatus::Cancelled
-        ) {
+        if !matches!(status, TaskStatus::Done | TaskStatus::Cancelled) {
             n += 1;
         }
     }
@@ -294,9 +289,8 @@ pub fn calendar_activity(
     let parts = compile_format(&date_format);
 
     let mut files: Vec<std::path::PathBuf> = Vec::new();
-    walk_md_files(&parent_dir, &mut files).map_err(|e| {
-        crate::error::AppError::Io(format!("failed to scan daily folder: {e}"))
-    })?;
+    walk_md_files(&parent_dir, &mut files)
+        .map_err(|e| crate::error::AppError::Io(format!("failed to scan daily folder: {e}")))?;
 
     let mut result: HashMap<String, DayActivity> = HashMap::with_capacity(31);
     for file in files {

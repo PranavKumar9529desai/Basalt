@@ -9,10 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { EditorView } from "@codemirror/view";
-import {
-  buildTaskLine,
-  findActiveMarkdownView,
-} from "@workspace/editor";
+import { buildTaskLine, findActiveMarkdownView } from "@workspace/editor";
 import { Button } from "@workspace/ui/components/ui/button";
 import {
   Dialog,
@@ -110,9 +107,7 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
         setRecurrencePreset(preset);
         setRecurrenceCustom(preset ? "" : rec);
         setTags(
-          line.signifiers.tags.map((t) =>
-            t.startsWith("#") ? t.slice(1) : t,
-          ),
+          line.signifiers.tags.map((t) => (t.startsWith("#") ? t.slice(1) : t)),
         );
       })
       // Fresh-capture target: `- [ ]` typed in the open editor may not be
@@ -234,14 +229,7 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
     } finally {
       setIsSaving(false);
     }
-  }, [
-    validate,
-    getActivePath,
-    mode,
-    editTarget,
-    composeLine,
-    close,
-  ]);
+  }, [validate, getActivePath, mode, editTarget, composeLine, close]);
 
   return (
     <Dialog
@@ -300,7 +288,11 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
           {/* ── Row: due + scheduled ── */}
           <div className="grid gap-3 sm:grid-cols-2">
             <DateField label="Due" value={due} onChange={setDue} />
-            <DateField label="Scheduled" value={scheduled} onChange={setScheduled} />
+            <DateField
+              label="Scheduled"
+              value={scheduled}
+              onChange={setScheduled}
+            />
           </div>
 
           {/* ── Row: start + recurrence ── */}
@@ -317,9 +309,7 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
 
           <TagField
             tags={tags}
-            onRemove={(tag) =>
-              setTags((prev) => prev.filter((t) => t !== tag))
-            }
+            onRemove={(tag) => setTags((prev) => prev.filter((t) => t !== tag))}
             input={tagInput}
             onInputChange={setTagInput}
             onInputKeyDown={handleTagKeyDown}
@@ -341,11 +331,7 @@ export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
               Cancel
             </Button>
             <Button type="submit" variant="default" disabled={isSaving}>
-              {isSaving
-                ? "Saving…"
-                : mode === "create"
-                  ? "Create"
-                  : "Save"}
+              {isSaving ? "Saving…" : mode === "create" ? "Create" : "Save"}
             </Button>
           </DialogFooter>
         </form>

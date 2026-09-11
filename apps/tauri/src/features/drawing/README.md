@@ -11,9 +11,9 @@
    `"transparent"` as "clear the canvas, paint nothing" (`bootstrapCanvas` in
    upstream `renderer/helpers.ts` skips the fill).
 
-2. **The editor pane *is* the canvas background.** `DrawingView` paints
+2. **The editor pane _is_ the canvas background.** `DrawingView` paints
    `bg-[var(--sat-surface-1)]` behind the Excalidraw wrapper. Because the
-   canvas is transparent, those tokens show through and *are* the drawing
+   canvas is transparent, those tokens show through and _are_ the drawing
    surface. The tokens are theme-derived CSS custom properties, so:
 
    - select any theme (Volcanic Dark, Dracula, Solarized, Catppuccin…) and the
@@ -22,7 +22,7 @@
    - light/dark theme switches repaint the pane and the canvas follows for free.
 
 3. **The canvas-background picker is disabled** (`UIOptions.canvasActions.
-   changeViewBackgroundColor: false`) so a user-picked solid colour can't break
+changeViewBackgroundColor: false`) so a user-picked solid colour can't break
    the invariant.
 
 ## Why it was hard (and why the naive fix fails)

@@ -15,16 +15,16 @@ function SliderRoot<Value extends number | readonly number[] = number>({
   return (
     <SliderPrimitive.Root
       data-slot="slider"
-      className={cn("relative flex w-full touch-none select-none items-center", className)}
+      className={cn(
+        "relative flex w-full touch-none select-none items-center",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-function SliderControl({
-  className,
-  ...props
-}: SliderPrimitive.Control.Props) {
+function SliderControl({ className, ...props }: SliderPrimitive.Control.Props) {
   return (
     <SliderPrimitive.Control
       data-slot="slider-control"
@@ -34,14 +34,14 @@ function SliderControl({
   );
 }
 
-function SliderTrack({
-  className,
-  ...props
-}: SliderPrimitive.Track.Props) {
+function SliderTrack({ className, ...props }: SliderPrimitive.Track.Props) {
   return (
     <SliderPrimitive.Track
       data-slot="slider-track"
-      className={cn("relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--sat-surface-3)]", className)}
+      className={cn(
+        "relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--sat-surface-3)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -63,10 +63,7 @@ function SliderIndicator({
   );
 }
 
-function SliderThumb({
-  className,
-  ...props
-}: SliderPrimitive.Thumb.Props) {
+function SliderThumb({ className, ...props }: SliderPrimitive.Thumb.Props) {
   return (
     <SliderPrimitive.Thumb
       data-slot="slider-thumb"

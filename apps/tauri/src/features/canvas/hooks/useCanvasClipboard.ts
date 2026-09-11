@@ -56,7 +56,10 @@ export function useCanvasClipboard(opts: UseCanvasClipboardOptions) {
     const o = optsRef.current;
     const xy = mapToXYFlow(doc);
     o.setNodes((prev) => {
-      const next = [...prev, ...xy.nodes.map((n) => ({ ...n, selected: true }))];
+      const next = [
+        ...prev,
+        ...xy.nodes.map((n) => ({ ...n, selected: true })),
+      ];
       o.nodesRef.current = next;
       return next;
     });
@@ -117,8 +120,10 @@ export function useCanvasClipboard(opts: UseCanvasClipboardOptions) {
   const addFileNode = useCallback(
     (relPath: string, fileType: "image" | "audio" | "file") => {
       const center = flowCenter();
-      const width = fileType === "image" ? 360 : fileType === "audio" ? 320 : 380;
-      const height = fileType === "image" ? 280 : fileType === "audio" ? 120 : 260;
+      const width =
+        fileType === "image" ? 360 : fileType === "audio" ? 320 : 380;
+      const height =
+        fileType === "image" ? 280 : fileType === "audio" ? 120 : 260;
       appendNode({
         id: `file-${Date.now()}`,
         type: "canvasFile",
@@ -177,8 +182,7 @@ export function useCanvasClipboard(opts: UseCanvasClipboardOptions) {
   /** Paste right now — snapshot first (canvas × canvas), then the OS
    *  clipboard. Also the context-menu "Paste" handler. */
   const handlePasteNow = useCallback(async () => {
-    const snapshot =
-      readCanvasTyped<CanvasClipboardSnapshot>(CANVAS_NODES_KEY);
+    const snapshot = readCanvasTyped<CanvasClipboardSnapshot>(CANVAS_NODES_KEY);
     if (snapshot && snapshot.v === 1 && snapshot.doc.nodes?.length) {
       appendDocument(remapSnapshotForPaste(snapshot));
       return;

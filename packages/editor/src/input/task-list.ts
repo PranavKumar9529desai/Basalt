@@ -101,7 +101,6 @@ export const TASK_CHECKBOX_THEME = EditorView.baseTheme({
   },
 });
 
-
 // ---------------------------------------------------------------------------
 // Format date for display: "Jan 7" or "Jan 7, 2024"
 // ---------------------------------------------------------------------------
@@ -109,8 +108,18 @@ export const TASK_CHECKBOX_THEME = EditorView.baseTheme({
 function formatDateChip(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const month = months[d.getMonth()];
   const day = d.getDate();
@@ -278,10 +287,7 @@ function buildInlineDecorations(
   // Add a space separator + chips as a single decoration at line end
   const spacerText = " ";
   const chipHtml = chips
-    .map(
-      (c) =>
-        `<span class="${c.className}">${escapeHtml(c.text)}</span>`,
-    )
+    .map((c) => `<span class="${c.className}">${escapeHtml(c.text)}</span>`)
     .join("");
 
   builder.add(
@@ -339,7 +345,8 @@ export function buildTaskDecorations(view: EditorView) {
         const marker = view.state.doc.sliceString(node.from, node.to);
         const statusChar = marker[1] ?? " ";
         // Done and cancelled render as checked + struck-through (Obsidian parity).
-        const checked = statusChar === "x" || statusChar === "X" || statusChar === "-";
+        const checked =
+          statusChar === "x" || statusChar === "X" || statusChar === "-";
 
         // Parse signifiers from the full line text
         const lineText = view.state.doc.lineAt(node.from).text;

@@ -128,9 +128,7 @@ const AUDIO_EXT_RE = /\.(mp3|wav|ogg|oga|m4a|aac|flac|opus)$/i;
 
 /** Broad media classification for node sizing — the FileNode card renders
  *  audio and images at content-appropriate dimensions. */
-export function classifyFileType(
-  relPath: string,
-): "image" | "audio" | "file" {
+export function classifyFileType(relPath: string): "image" | "audio" | "file" {
   if (IMAGE_EXT_RE.test(relPath)) return "image";
   if (AUDIO_EXT_RE.test(relPath)) return "audio";
   return "file";
@@ -212,9 +210,8 @@ export async function readPastePayload(
   if (event?.clipboardData) {
     const files = Array.from(event.clipboardData.files ?? []);
     const imageFile = files.find((f) => f.type.startsWith("image/"));
-    const image =
-      imageFile ?
-        {
+    const image = imageFile
+      ? {
           bytes: new Uint8Array(await imageFile.arrayBuffer()),
           name: imageFile.name || "pasted-image.png",
         }

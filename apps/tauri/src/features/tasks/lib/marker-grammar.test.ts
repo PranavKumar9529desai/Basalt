@@ -15,7 +15,12 @@ const config: EditorConfig = {
   onOpenTag: () => {},
   resolveAsset: () => null,
   runQuery: async () => ({ columns: [], rows: [], total: 0, elapsedMs: 0 }),
-  runTasksQuery: async () => ({ columns: [], rows: [], total: 0, elapsedMs: 0 }),
+  runTasksQuery: async () => ({
+    columns: [],
+    rows: [],
+    total: 0,
+    elapsedMs: 0,
+  }),
   parseFrontmatter: () => null,
   editFrontmatter: () => {},
 };

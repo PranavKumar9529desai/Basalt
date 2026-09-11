@@ -5,7 +5,11 @@ import type { EngineContext } from "./context";
 import { centerView, fitView, toScreen } from "../../lib/geometry";
 
 /** World → screen projection under the current view transform. */
-export function project(ctx: EngineContext, wx: number, wy: number): [number, number] {
+export function project(
+  ctx: EngineContext,
+  wx: number,
+  wy: number,
+): [number, number] {
   return toScreen(wx, wy, ctx.viewRef.current);
 }
 

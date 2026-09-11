@@ -8,10 +8,7 @@ import { cn } from "@workspace/ui/lib/utils";
  * graph controls, and any future toggle share one look.
  */
 
-function SwitchRoot({
-  className,
-  ...props
-}: SwitchPrimitive.Root.Props) {
+function SwitchRoot({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
@@ -24,10 +21,7 @@ function SwitchRoot({
   );
 }
 
-function SwitchThumb({
-  className,
-  ...props
-}: SwitchPrimitive.Thumb.Props) {
+function SwitchThumb({ className, ...props }: SwitchPrimitive.Thumb.Props) {
   return (
     <SwitchPrimitive.Thumb
       data-slot="switch-thumb"

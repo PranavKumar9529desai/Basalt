@@ -19,9 +19,8 @@ export function useShellCommands(ws: AppContextValue) {
     const openToday = () => openDailyNoteAt(new Date(), openNote);
 
     commandService.registerCommand("dailies:open-today", openToday);
-    commandService.registerCommand(
-      "calendar:open-today",
-      () => openDailyNoteAt(new Date(), openNote),
+    commandService.registerCommand("calendar:open-today", () =>
+      openDailyNoteAt(new Date(), openNote),
     );
     commandService.registerCommand(
       "app:new-file",

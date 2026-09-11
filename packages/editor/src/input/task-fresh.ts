@@ -1,6 +1,10 @@
 import { syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
-import { StateField, type EditorState, type Extension } from "@codemirror/state";
+import {
+  StateField,
+  type EditorState,
+  type Extension,
+} from "@codemirror/state";
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
 
 /**
@@ -62,8 +66,7 @@ export function freshTaskExtension(
         }
 
         update(update: ViewUpdate) {
-          const next =
-            update.view.state.field(freshTaskField, false) ?? null;
+          const next = update.view.state.field(freshTaskField, false) ?? null;
           if (next === this.last) return;
           this.last = next;
           onChange(next);

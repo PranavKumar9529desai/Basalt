@@ -95,15 +95,17 @@ updated: 2026-09-11T11:05:00Z
 basalt: { format: "obsidian-shell", encoding: "json" }
 ---
 
-==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==
+==⚠ Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==
 
 # Excalidraw Data
 
 ## Text Elements
+
 Load Balancer ^eH1aB2c3
 Worker Pool ^fH2aB2c4
 
 ## Drawing
+
 ```json
 {"type":"excalidraw","version":2,"source":"basalt","elements":[...],"appState":{...},"files":{}}
 ```
@@ -113,8 +115,8 @@ Worker Pool ^fH2aB2c4
 
 1. **Hull**: frontmatter marker `excalidraw-plugin: parsed` plus additive keys
    (`tags`, `created`, `updated`, Basalt-owned `basalt:`) — `# Excalidraw
-   Data` — `## Text Elements` (bare lines, each suffixed ` ^<id>`) — `##
-   Drawing` code fence. Only this shell is ever written by Basalt.
+Data` — `## Text Elements` (bare lines, each suffixed ` ^<id>`) — `##
+Drawing` code fence. Only this shell is ever written by Basalt.
 2. **Encoding**: Basalt writes plain `json`; reads both plain `json` and
    LZString `compressed-json`. If Obsidian re-compresses on its own save, the
    compressed form is accepted and preserved — never rewritten by Basalt unless
@@ -238,13 +240,13 @@ The original §4 specified a Basalt-native hybrid backplane (`.drawing.md`,
 real vault fixtures (copied 2026-09-10) proved that this format breaks Obsidian
 interoperability:
 
-| Finding | Evidence |
-| --- | --- |
-| Two disjoint file hulls in the wild | 11 plugin files (`# Excalidraw Data` + `compressed-json`) vs 8 Basalt files (`# Drawing Text & Elements` + `%%#drawing-data`); zero overlap |
+| Finding                                 | Evidence                                                                                                                                                                |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Two disjoint file hulls in the wild     | 11 plugin files (`# Excalidraw Data` + `compressed-json`) vs 8 Basalt files (`# Drawing Text & Elements` + `%%#drawing-data`); zero overlap                             |
 | Basalt empties unreadable by the plugin | 355-byte files carry no `## Drawing` fence — scene lives only in a `%%` markdown comment; the plugin parses fences, not comments → blank canvas / loss on Obsidian save |
-| Text mirror is bare lines, not bullets | real files: `target ^tZMHYgSv` — parser handled only `- bullet` lines |
-| Rename defeats extension classifiers | `carfleet.md` / `kubernates.md` are drawings (frontmatter marker present); extension-only sniffing opens them as plain notes |
-| Folder/file collision | `Fixing Bugs of Table.excalidraw/` is an attachment folder; `Fixing Bugs of Table.excalidraw.md` is the (empty) drawing |
+| Text mirror is bare lines, not bullets  | real files: `target ^tZMHYgSv` — parser handled only `- bullet` lines                                                                                                   |
+| Rename defeats extension classifiers    | `carfleet.md` / `kubernates.md` are drawings (frontmatter marker present); extension-only sniffing opens them as plain notes                                            |
+| Folder/file collision                   | `Fixing Bugs of Table.excalidraw/` is an attachment folder; `Fixing Bugs of Table.excalidraw.md` is the (empty) drawing                                                 |
 
 ### 9.2 Decision
 

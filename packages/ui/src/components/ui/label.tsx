@@ -8,10 +8,7 @@ import * as React from "react";
  * The a11y rule fires on the bare element; call sites always pass `htmlFor`.
  */
 // eslint-disable-next-line jsx-a11y/label-has-associated-control
-function Label({
-  className,
-  ...props
-}: React.ComponentProps<"label">) {
+function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
     // oxlint-disable-next-line jsx-a11y/label-has-associated-control -- primitives can't know the control id; call sites pass htmlFor
     <label

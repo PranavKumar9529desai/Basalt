@@ -16,8 +16,7 @@ export function parseInlineName(
   const leaf = segments.pop();
   if (!leaf) return null;
   const parentSegments = segments;
-  if (baseParent)
-    parentSegments.unshift(...segmentsOf(baseParent));
+  if (baseParent) parentSegments.unshift(...segmentsOf(baseParent));
   return {
     leaf,
     parentRelPath: parentSegments.join("/"),

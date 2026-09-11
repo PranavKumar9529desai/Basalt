@@ -72,8 +72,7 @@ pub fn status_from_name(name: &str) -> Option<TaskStatus> {
 /// A cycle is the circular list `[Todo] ++ cycle`; the first entry is the
 /// "in progress" step, the last is the "done" step. Mirrors the
 /// `tasksStatusSequence` setting default (`in_progress,done`).
-pub const DEFAULT_STATUS_CYCLE: &[TaskStatus] =
-    &[TaskStatus::InProgress, TaskStatus::Done];
+pub const DEFAULT_STATUS_CYCLE: &[TaskStatus] = &[TaskStatus::InProgress, TaskStatus::Done];
 
 /// Next status in the circular cycle `[Todo, ...cycle]`:
 /// `todo → cycle[0] → … → cycle.last → todo`. Statuses outside the cycle
@@ -379,7 +378,10 @@ mod tests {
     #[test]
     fn status_names_are_snake_case() {
         assert_eq!(status_from_name("todo"), Some(TaskStatus::Todo));
-        assert_eq!(status_from_name("in_progress"), Some(TaskStatus::InProgress));
+        assert_eq!(
+            status_from_name("in_progress"),
+            Some(TaskStatus::InProgress)
+        );
         assert_eq!(status_from_name("on_hold"), Some(TaskStatus::OnHold));
         assert_eq!(status_from_name("done"), Some(TaskStatus::Done));
         assert_eq!(status_from_name("cancelled"), Some(TaskStatus::Cancelled));
@@ -390,8 +392,14 @@ mod tests {
     #[test]
     fn cycle_matches_settings_default() {
         let cycle = DEFAULT_STATUS_CYCLE;
-        assert_eq!(next_in_cycle(TaskStatus::Todo, cycle), TaskStatus::InProgress);
-        assert_eq!(next_in_cycle(TaskStatus::InProgress, cycle), TaskStatus::Done);
+        assert_eq!(
+            next_in_cycle(TaskStatus::Todo, cycle),
+            TaskStatus::InProgress
+        );
+        assert_eq!(
+            next_in_cycle(TaskStatus::InProgress, cycle),
+            TaskStatus::Done
+        );
         assert_eq!(next_in_cycle(TaskStatus::Done, cycle), TaskStatus::Todo);
     }
 
@@ -401,7 +409,10 @@ mod tests {
         assert_eq!(next_in_cycle(TaskStatus::Todo, &cycle), TaskStatus::Done);
         assert_eq!(next_in_cycle(TaskStatus::Done, &cycle), TaskStatus::Todo);
         // In-progress tasks fall into the cycle from the start.
-        assert_eq!(next_in_cycle(TaskStatus::InProgress, &cycle), TaskStatus::Done);
+        assert_eq!(
+            next_in_cycle(TaskStatus::InProgress, &cycle),
+            TaskStatus::Done
+        );
     }
 
     #[test]

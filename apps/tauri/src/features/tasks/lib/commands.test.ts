@@ -65,7 +65,9 @@ describe("tasks:toggle with full real extension group", () => {
     const { view, parent } = buildView(doc, doc.length);
     view.focus();
     commandService.execute("tasks:toggle");
-    expect(view.state.doc.toString()).toBe("- [x] Buy milk \u{1F4C5}2026-09-12");
+    expect(view.state.doc.toString()).toBe(
+      "- [x] Buy milk \u{1F4C5}2026-09-12",
+    );
     parent.remove();
   });
 

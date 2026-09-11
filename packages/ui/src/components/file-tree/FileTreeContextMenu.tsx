@@ -41,8 +41,16 @@ const COPY_AS_ITEMS: Array<{
   label: string;
   icon: ReactNode;
 }> = [
-  { format: "wikilink", label: "Copy as Wikilink", icon: <IconBrackets size={14} /> },
-  { format: "markdown", label: "Copy as Markdown", icon: <IconMarkdown size={14} /> },
+  {
+    format: "wikilink",
+    label: "Copy as Wikilink",
+    icon: <IconBrackets size={14} />,
+  },
+  {
+    format: "markdown",
+    label: "Copy as Markdown",
+    icon: <IconMarkdown size={14} />,
+  },
   { format: "path", label: "Copy as Path", icon: <IconCopy size={14} /> },
   { format: "url", label: "Copy as URL", icon: <IconLink size={14} /> },
 ];

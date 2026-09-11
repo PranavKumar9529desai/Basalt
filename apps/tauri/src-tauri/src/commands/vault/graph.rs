@@ -252,6 +252,5 @@ pub fn encode_graph_snapshot_binary(snap: &GraphSnapshot) -> AppResult<Vec<u8>> 
     Ok(out)
 }
 
-
 #[cfg(test)]
 mod tests;

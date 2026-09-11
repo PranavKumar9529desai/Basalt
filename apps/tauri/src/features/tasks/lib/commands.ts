@@ -33,9 +33,7 @@ export function setTaskContext(ctx: typeof taskContext): void {
  * one. Same DOM-level access as `features/templates/lib/commands.ts`.
  */
 function findActiveMarkdownView(): EditorView | null {
-  const focused = EditorView.findFromDOM(
-    document.activeElement as HTMLElement,
-  );
+  const focused = EditorView.findFromDOM(document.activeElement as HTMLElement);
   if (focused) return focused;
   const els = document.querySelectorAll<HTMLElement>(".cm-editor");
   for (const el of els) {
@@ -176,7 +174,10 @@ export function registerTaskCommands() {
     const due = parseTaskSignifiers(line.text)?.due;
     const insert =
       due !== undefined
-        ? line.text.replace(/\u{1F4C5}\d{4}-\d{2}-\d{2}/u, `\u{1F4C5}${tomorrow}`)
+        ? line.text.replace(
+            /\u{1F4C5}\d{4}-\d{2}-\d{2}/u,
+            `\u{1F4C5}${tomorrow}`,
+          )
         : `${line.text} \u{1F4C5}${tomorrow}`;
     view.dispatch({
       changes: { from: line.from, to: line.to, insert },

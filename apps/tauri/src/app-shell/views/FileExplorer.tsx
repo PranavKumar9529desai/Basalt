@@ -11,8 +11,14 @@ import { FileDragGhost, useFileDrag } from "../../shared/fileDnd";
  * prop drills from the shell.
  */
 export function FileExplorer() {
-  const { visibleNodes, openFolders, controller, mutations, selection, vaultPath } =
-    useAppContext();
+  const {
+    visibleNodes,
+    openFolders,
+    controller,
+    mutations,
+    selection,
+    vaultPath,
+  } = useAppContext();
   const { isDraggingFile, handleFilePointerDown } = useFileDrag();
 
   // Obsidian parity: Ctrl/Cmd+C in the tree copies the selected nodes'

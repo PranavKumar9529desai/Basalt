@@ -219,7 +219,9 @@ describe("readPastePayload", () => {
 
   it("appends non-image OS files to uris", async () => {
     const files = [new File(["x"], "some.doc", { type: "application/msword" })];
-    const event = { clipboardData: { getData: () => "", files } } as unknown as ClipboardEvent;
+    const event = {
+      clipboardData: { getData: () => "", files },
+    } as unknown as ClipboardEvent;
     const payload = await readPastePayload(event, os);
     expect(payload.uris).toEqual(["some.doc"]);
   });

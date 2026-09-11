@@ -25,15 +25,12 @@ export interface TaskLineResult {
 
 export function useTaskActions() {
   /** Read a single task line's parsed components (for the edit modal). */
-  const getTaskLine = useCallback(
-    async (path: string, lineNumber: number) => {
-      return invoke<TaskLineResult>("get_task_line", {
-        path,
-        lineNumber,
-      });
-    },
-    [],
-  );
+  const getTaskLine = useCallback(async (path: string, lineNumber: number) => {
+    return invoke<TaskLineResult>("get_task_line", {
+      path,
+      lineNumber,
+    });
+  }, []);
 
   return { getTaskLine };
 }

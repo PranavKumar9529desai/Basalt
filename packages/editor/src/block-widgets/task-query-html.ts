@@ -73,19 +73,25 @@ function renderRow(row: TypedValue[], parsed: ParsedTaskQuery): string {
   if (!display.hidePriority) {
     const prioClass = priorityClass(cellText(row[COL.priority]));
     if (prioClass) {
-      chips.push(`<span class="cm-task-chip ${prioClass}">${priorityLabel(cellText(row[COL.priority]))}</span>`);
+      chips.push(
+        `<span class="cm-task-chip ${prioClass}">${priorityLabel(cellText(row[COL.priority]))}</span>`,
+      );
     }
   }
   if (!display.hideDue) {
     const due = row[COL.due];
     if (due && due.type === "date") {
-      chips.push(`<span class="cm-task-chip cm-task-date--due">📅 ${escapeHtml(due.value)}</span>`);
+      chips.push(
+        `<span class="cm-task-chip cm-task-date--due">📅 ${escapeHtml(due.value)}</span>`,
+      );
     }
   }
   if (!display.hideScheduled) {
     const scheduled = row[COL.scheduled];
     if (scheduled && scheduled.type === "date") {
-      chips.push(`<span class="cm-task-chip cm-task-date--scheduled">🛫 ${escapeHtml(scheduled.value)}</span>`);
+      chips.push(
+        `<span class="cm-task-chip cm-task-date--scheduled">🛫 ${escapeHtml(scheduled.value)}</span>`,
+      );
     }
   }
   if (!display.hideTags) {
@@ -93,7 +99,9 @@ function renderRow(row: TypedValue[], parsed: ParsedTaskQuery): string {
     if (tagsCell && tagsCell.type === "list") {
       for (const item of tagsCell.items) {
         if (item.type === "text") {
-          chips.push(`<span class="cm-task-chip cm-task-tag">#${escapeHtml(item.value)}</span>`);
+          chips.push(
+            `<span class="cm-task-chip cm-task-tag">#${escapeHtml(item.value)}</span>`,
+          );
         }
       }
     }
@@ -101,10 +109,14 @@ function renderRow(row: TypedValue[], parsed: ParsedTaskQuery): string {
   if (display.showUrgency) {
     const urgency = row[COL.urgency];
     if (urgency && urgency.type === "number") {
-      chips.push(`<span class="cm-task-chip cm-task-urgency">urgency ${urgency.value}</span>`);
+      chips.push(
+        `<span class="cm-task-chip cm-task-urgency">urgency ${urgency.value}</span>`,
+      );
     }
   }
-  const chipsHtml = chips.length ? `<span class="cm-task-chips">${chips.join("")}</span>` : "";
+  const chipsHtml = chips.length
+    ? `<span class="cm-task-chips">${chips.join("")}</span>`
+    : "";
 
   const linkHtml =
     link?.type === "link"

@@ -65,7 +65,8 @@ let pendingPasteAs: PendingPasteAs | null = null;
  * is supplied (no-op).
  */
 export function pasteExtension(callbacks: PasteCallbacks): Extension {
-  const { onPasteImage, onPasteHtml, onPasteFile, urlLinkFormatter } = callbacks;
+  const { onPasteImage, onPasteHtml, onPasteFile, urlLinkFormatter } =
+    callbacks;
   if (!onPasteImage && !onPasteHtml && !onPasteFile && !urlLinkFormatter) {
     return [];
   }
@@ -89,7 +90,10 @@ export function pasteExtension(callbacks: PasteCallbacks): Extension {
             const file = item.getAsFile();
             if (!file) return null;
             const buf = await file.arrayBuffer();
-            return onPasteImage(new Uint8Array(buf), file.name || "pasted-image.png");
+            return onPasteImage(
+              new Uint8Array(buf),
+              file.name || "pasted-image.png",
+            );
           });
           void Promise.all(jobs).then((relPaths) => {
             const inserts = relPaths
@@ -137,7 +141,13 @@ export function pasteExtension(callbacks: PasteCallbacks): Extension {
           const mode = callbacks.getPasteMode?.() ?? "smart";
           const choices = buildRichPasteChoices(md, plain, mode);
           if (choices.ambiguous && callbacks.onAmbiguousPaste) {
-            insertRichWithPicker(view, md, plain, choices, callbacks.onAmbiguousPaste);
+            insertRichWithPicker(
+              view,
+              md,
+              plain,
+              choices,
+              callbacks.onAmbiguousPaste,
+            );
           } else if (choices.lead === "keep-formatting") {
             dispatchInsert(view, md);
           } else {
@@ -182,7 +192,9 @@ function dispatchPlainFallback(view: EditorView, data: DataTransfer) {
 }
 
 /** `file://` entries from a uri-list, decoded to a filename each. */
-export function extractFileUris(data: DataTransfer): Array<{ uri: string; filename: string }> {
+export function extractFileUris(
+  data: DataTransfer,
+): Array<{ uri: string; filename: string }> {
   const raw = data.getData("text/uri-list");
   if (!raw) return [];
   const out: Array<{ uri: string; filename: string }> = [];
@@ -249,8 +261,7 @@ function insertRichWithPicker(
 ) {
   const { from, to } = view.state.selection.main;
   const leadText = choices.lead === "keep-formatting" ? md : plain;
-  const alternative =
-    choices.alternative === "keep-formatting" ? md : plain;
+  const alternative = choices.alternative === "keep-formatting" ? md : plain;
 
   const pending: PendingPasteAs = {
     view,
@@ -278,7 +289,10 @@ function insertRichWithPicker(
 
 /** Swap the just-inserted paste for the alternative flavor, only while the
  *  range still holds exactly what we wrote (user hasn't kept typing there). */
-function applyPasteAsChoice(pending: PendingPasteAs, id: PasteRichChoice | null) {
+function applyPasteAsChoice(
+  pending: PendingPasteAs,
+  id: PasteRichChoice | null,
+) {
   if (pendingPasteAs !== pending) return;
   pendingPasteAs = null;
   if (id === null || id === pending.defaultId) return;

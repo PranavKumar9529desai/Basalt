@@ -43,7 +43,11 @@ interface EditorInterface {
     renameOnOpen?: boolean;
     leafType?: string;
   }) => string;
-  openPinned: (opts: { path: string; title: string; leafType?: string }) => string;
+  openPinned: (opts: {
+    path: string;
+    title: string;
+    leafType?: string;
+  }) => string;
   setTabTitle: (tabId: string, title: string) => void;
   closeTab: (tabId: string, opts: { force: boolean }) => void;
 }
@@ -128,9 +132,7 @@ export function useWorkspace({
         const displayName = stemOf(node.name) || node.name;
         const input = { path: node.path, title: displayName, leafType };
         const tabId =
-          effectiveMode === "pinned"
-            ? openPinned(input)
-            : openInPreview(input);
+          effectiveMode === "pinned" ? openPinned(input) : openInPreview(input);
         setTabTitle(tabId, displayName);
       });
     },

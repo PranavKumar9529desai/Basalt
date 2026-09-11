@@ -115,7 +115,11 @@ describe("TaskQueryWidget layout + async result", () => {
   it("renders cached results synchronously", () => {
     // Prime the cache with the same body for today, then render again.
     const view = { requestMeasure: vi.fn() } as unknown as EditorView;
-    const first = new TaskQueryWidget("not done", async () => TASK_RESULT, undefined);
+    const first = new TaskQueryWidget(
+      "not done",
+      async () => TASK_RESULT,
+      undefined,
+    );
     const dom = first.toDOM(view);
     document.body.appendChild(dom);
     void dom; // async settles into cache via the promise chain
@@ -131,7 +135,9 @@ describe("TaskQueryWidget layout + async result", () => {
   it("shows an error state when the engine rejects", async () => {
     const runTasks = vi.fn().mockRejectedValue(new Error("boom"));
     const widget = new TaskQueryWidget("not done", runTasks, undefined);
-    const dom = widget.toDOM({ requestMeasure: vi.fn() } as unknown as EditorView);
+    const dom = widget.toDOM({
+      requestMeasure: vi.fn(),
+    } as unknown as EditorView);
     document.body.appendChild(dom);
     // The widget's own .catch paints the error; flush the microtask queue.
     for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -176,7 +182,7 @@ describe("```tasks block end-to-end through createEditorExtensions", () => {
 
     const view = new EditorView({
       state: EditorState.create({
-        doc: "```dql\nTABLE FROM \"/\"\n```",
+        doc: '```dql\nTABLE FROM "/"\n```',
         extensions: createEditorExtensions({ runTasksQuery: runTasks }),
       }),
       parent,

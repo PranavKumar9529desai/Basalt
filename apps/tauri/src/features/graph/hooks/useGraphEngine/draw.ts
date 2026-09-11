@@ -9,10 +9,7 @@ import { createRenderer } from "./scene";
 import { buildColorArray } from "../../lib/themeColors";
 import { buildColorContext } from "./theme";
 import { drawOverlayLabels } from "../../lib/labels";
-import {
-  ARROW_EDGE_CAP,
-  buildArrows,
-} from "../../lib/geometry";
+import { ARROW_EDGE_CAP, buildArrows } from "../../lib/geometry";
 import { project } from "./camera";
 
 export interface DrawLoop {
@@ -132,7 +129,9 @@ function reinitRenderer(
     window.devicePixelRatio || 1,
   );
   renderer.setSizes(ctx.sizesRef.current);
-  renderer.setColors(buildColorArray(ctx.activeMapRef.current, buildColorContext(ctx)));
+  renderer.setColors(
+    buildColorArray(ctx.activeMapRef.current, buildColorContext(ctx)),
+  );
   renderer.setEdges(
     ctx.activeEdgesRef.current,
     ctx.activeEdgesRef.current.length / 2,

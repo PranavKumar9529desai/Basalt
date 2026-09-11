@@ -71,7 +71,9 @@ describe("canvasFilterShim transform math", () => {
 
 describe("canvasFilterShim filter matching", () => {
   it("matches the exact Excalidraw counter filter", () => {
-    expect(isImageInvertFilter("invert(100%) hue-rotate(180deg) saturate(1.25)")).toBe(true);
+    expect(
+      isImageInvertFilter("invert(100%) hue-rotate(180deg) saturate(1.25)"),
+    ).toBe(true);
   });
 
   it("rejects the dark canvas theme filter and light-mode filters", () => {
@@ -88,7 +90,10 @@ describe("canvasFilterShim feature detection", () => {
 });
 
 /** Apply a row-major 3×3 matrix to an [r,g,b] tuple. */
-function applyMatrix(m: readonly number[], [r, g, b]: readonly number[]): number[] {
+function applyMatrix(
+  m: readonly number[],
+  [r, g, b]: readonly number[],
+): number[] {
   return [
     m[0] * r + m[1] * g + m[2] * b,
     m[3] * r + m[4] * g + m[5] * b,

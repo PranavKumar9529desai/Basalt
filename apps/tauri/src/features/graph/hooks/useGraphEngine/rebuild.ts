@@ -55,16 +55,13 @@ export function initRebuild(ctx: EngineContext): void {
     // Keep the current camera when narrowing the graph. The initial graph
     // still auto-fits because `fitted` starts false; users can explicitly
     // reframe any subset with the Fit graph action.
-    ctx.viewRef.current.fitted =
-      ctx.viewRef.current.fitted && map.length > 0;
+    ctx.viewRef.current.fitted = ctx.viewRef.current.fitted && map.length > 0;
 
     // Rebuild renderer color + reset hover flags for the new subset.
     const renderer = ctx.rendererRef.current;
     if (!renderer) return;
     renderer.setSizes(subset.sizes);
-    renderer.setColors(
-      buildColorArray(map, buildColorContext(ctx)),
-    );
+    renderer.setColors(buildColorArray(map, buildColorContext(ctx)));
     renderer.setEdges(Uint32Array.from(subset.edges), subset.edges.length / 2);
     renderer.setEdgeWeights(Float32Array.from(subset.edgeWeights));
     if (ctx.flagsRef.current.length !== map.length) {

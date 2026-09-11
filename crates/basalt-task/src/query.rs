@@ -342,6 +342,7 @@ fn matches_prepared(path: &str, task: &TaskData, pf: &PreparedFilter<'_>) -> boo
 /// Thin shim over [`prepare_filter`] + [`matches_prepared`]; used by the
 /// unit tests. The production hot loop calls `matches_prepared` directly
 /// with a pre-lowered `PreparedFilter`.
+#[cfg(test)]
 fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
     matches_prepared(path, task, &prepare_filter(filter))
 }
@@ -683,10 +684,7 @@ pub fn execute_collected_tasks(
 /// structs instead of 30k + retaining away the rest.
 ///
 /// With no filters this degenerates to [`collect_tasks`].
-pub fn collect_matching_tasks(
-    vault: &Vault,
-    filters: &[TaskFilter],
-) -> Vec<(String, TaskData)> {
+pub fn collect_matching_tasks(vault: &Vault, filters: &[TaskFilter]) -> Vec<(String, TaskData)> {
     if filters.is_empty() {
         return collect_tasks(vault);
     }
@@ -746,11 +744,23 @@ mod tests {
             op: op.into(),
             value: value.into(),
         };
-        assert!(matches_filter("n.md", &in_progress, &f("equals", "in_progress")));
-        assert!(matches_filter("n.md", &in_progress, &f("equals", "in progress")));
+        assert!(matches_filter(
+            "n.md",
+            &in_progress,
+            &f("equals", "in_progress")
+        ));
+        assert!(matches_filter(
+            "n.md",
+            &in_progress,
+            &f("equals", "in progress")
+        ));
         assert!(matches_filter("n.md", &on_hold, &f("equals", "on_hold")));
         assert!(matches_filter("n.md", &on_hold, &f("equals", "on hold")));
-        assert!(!matches_filter("n.md", &in_progress, &f("equals", "on_hold")));
+        assert!(!matches_filter(
+            "n.md",
+            &in_progress,
+            &f("equals", "on_hold")
+        ));
     }
 
     #[test]
@@ -803,10 +813,12 @@ mod tests {
             ("undated.md".to_string(), undated),
             ("dated.md".to_string(), dated),
         ];
-        let sort = |reverse: bool| vec![TaskSort {
-            field: "happens".into(),
-            reverse,
-        }];
+        let sort = |reverse: bool| {
+            vec![TaskSort {
+                field: "happens".into(),
+                reverse,
+            }]
+        };
         sort_tasks(&mut tasks, &sort(false), None);
         assert_eq!(tasks[0].0, "dated.md");
         assert_eq!(tasks[1].0, "undated.md");
@@ -818,9 +830,18 @@ mod tests {
     #[test]
     fn status_sort_uses_wire_names() {
         let mut tasks = vec![
-            ("on_hold.md".to_string(), task(TaskStatus::OnHold, TaskPriority::None)),
-            ("todo.md".to_string(), task(TaskStatus::Todo, TaskPriority::None)),
-            ("in_progress.md".to_string(), task(TaskStatus::InProgress, TaskPriority::None)),
+            (
+                "on_hold.md".to_string(),
+                task(TaskStatus::OnHold, TaskPriority::None),
+            ),
+            (
+                "todo.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::None),
+            ),
+            (
+                "in_progress.md".to_string(),
+                task(TaskStatus::InProgress, TaskPriority::None),
+            ),
         ];
         sort_tasks(
             &mut tasks,
@@ -839,19 +860,42 @@ mod tests {
         // Build 8 tasks with distinct urgency (highest priority + overdue = high urgency,
         // lowest priority + no date = low urgency). sort_tasks with limit=3 must return
         // the same top 3 as a full sort followed by truncate(3).
-        let today = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
         let overdue = NaiveDate::from_ymd_opt(2024, 1, 10).unwrap();
         let soon = NaiveDate::from_ymd_opt(2024, 1, 18).unwrap();
 
         let mut tasks = vec![
-            ("c.md".to_string(), task(TaskStatus::Todo, TaskPriority::Low)),
-            ("a.md".to_string(), task(TaskStatus::Todo, TaskPriority::Highest)),
-            ("f.md".to_string(), task(TaskStatus::Done, TaskPriority::None)),
-            ("d.md".to_string(), task(TaskStatus::Todo, TaskPriority::Medium)),
-            ("b.md".to_string(), task(TaskStatus::Todo, TaskPriority::High)),
-            ("g.md".to_string(), task(TaskStatus::Todo, TaskPriority::Lowest)),
-            ("e.md".to_string(), task(TaskStatus::Todo, TaskPriority::None)),
-            ("h.md".to_string(), task(TaskStatus::Todo, TaskPriority::None)),
+            (
+                "c.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::Low),
+            ),
+            (
+                "a.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::Highest),
+            ),
+            (
+                "f.md".to_string(),
+                task(TaskStatus::Done, TaskPriority::None),
+            ),
+            (
+                "d.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::Medium),
+            ),
+            (
+                "b.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::High),
+            ),
+            (
+                "g.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::Lowest),
+            ),
+            (
+                "e.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::None),
+            ),
+            (
+                "h.md".to_string(),
+                task(TaskStatus::Todo, TaskPriority::None),
+            ),
         ];
         // Assign dates that create a spread of urgency scores.
         tasks[0].1.due = Some(overdue);
@@ -869,7 +913,10 @@ mod tests {
         sort_tasks(&mut tasks, &[], Some(3));
         let topk_paths: Vec<&str> = tasks.iter().map(|(p, _)| p.as_str()).collect();
 
-        assert_eq!(topk_paths, expected_paths, "top-k must match full sort + truncate");
+        assert_eq!(
+            topk_paths, expected_paths,
+            "top-k must match full sort + truncate"
+        );
     }
 
     #[test]

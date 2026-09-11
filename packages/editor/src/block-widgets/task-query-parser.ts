@@ -90,7 +90,10 @@ interface ParserState {
  * Unrecognized instructions are collected (not fatal) and surfaced via
  * `unsupported` so the widget can show an explain footer.
  */
-export function parseTaskQuery(body: string, now: Date = new Date()): ParsedTaskQuery {
+export function parseTaskQuery(
+  body: string,
+  now: Date = new Date(),
+): ParsedTaskQuery {
   const state: ParserState = {
     filters: [],
     sorts: [],
@@ -179,11 +182,18 @@ function parsePriorityFilter(rest: string, state: ParserState): boolean {
   return false;
 }
 
-const DATE_FIELDS = /^(due|scheduled|start|created|happens|done|cancelled)\s+(.+)$/;
+const DATE_FIELDS =
+  /^(due|scheduled|start|created|happens|done|cancelled)\s+(.+)$/;
 
-function parseDateFilter(rest: string, state: ParserState, today: Date): boolean {
+function parseDateFilter(
+  rest: string,
+  state: ParserState,
+  today: Date,
+): boolean {
   // "no due date" / "no scheduled date" — field is empty.
-  const none = rest.match(/^no\s+(due|scheduled|start|created|happens|done|cancelled)\s+date$/);
+  const none = rest.match(
+    /^no\s+(due|scheduled|start|created|happens|done|cancelled)\s+date$/,
+  );
   if (none) {
     state.filters.push({ field: none[1], op: "is_empty", value: "" });
     return true;
@@ -204,7 +214,9 @@ function parseDateFilter(rest: string, state: ParserState, today: Date): boolean
   }
 
   // Optional comparison operator; a bare date means "on <date>".
-  const opMatch = /^(before|on or before|on or after|after|on)\s+(.+)$/.exec(expr);
+  const opMatch = /^(before|on or before|on or after|after|on)\s+(.+)$/.exec(
+    expr,
+  );
   const dateToken = opMatch ? opMatch[2] : expr;
   const dateRange = parseDate(dateToken, today);
   if (!dateRange) {

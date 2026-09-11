@@ -5,7 +5,11 @@ import { IconAlertCircle, IconRotate, IconUnlink } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 
 interface HotkeyRow {
   command: Command;
@@ -230,7 +234,9 @@ export function HotkeysSection() {
                                 </Button>
                               }
                             />
-                            <TooltipContent>Reset to default keybinding</TooltipContent>
+                            <TooltipContent>
+                              Reset to default keybinding
+                            </TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger

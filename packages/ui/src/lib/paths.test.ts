@@ -45,7 +45,9 @@ describe("paths utility", () => {
 
     it("strips .excalidraw.md and .excalidraw extensions", () => {
       expect(stemOf("sketch.excalidraw.md")).toBe("sketch");
-      expect(stemOf("diagrams/architecture.EXCALIDRAW.MD")).toBe("architecture");
+      expect(stemOf("diagrams/architecture.EXCALIDRAW.MD")).toBe(
+        "architecture",
+      );
       expect(stemOf("whiteboard.excalidraw")).toBe("whiteboard");
     });
 

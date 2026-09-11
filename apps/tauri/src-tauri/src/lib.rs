@@ -33,16 +33,15 @@ pub fn process_uptime_ms() -> Option<u64> {
 
 use commands::{
     autocomplete_links, autocomplete_tags, boot, calendar_activity, cleanup_assets, create_folder,
-    create_note,
-    create_task, create_untitled_canvas, create_untitled_drawing, create_untitled_note,
-    delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks, get_graph, get_settings,
-    get_tag_counts, get_task_line, get_tasks, get_vault_tree, get_workspace, is_drawing_file,
-    list_templates, media_server_url, move_paths, open_canvas, open_daily_note, open_file,
-    open_files, open_vault_dialog, parse_canvas, parse_drawing, parse_frontmatter, read_drawing,
-    read_template, reindex_vault, rename_note, rename_path, reorganize_assets, run_query,
-    save_attachment, save_canvas, save_drawing, save_file, save_files, search_content,
-    search_files, serialize_drawing, set_setting, set_vault, set_workspace_key, toggle_task,
-    update_task, write_dev_report,
+    create_note, create_task, create_untitled_canvas, create_untitled_drawing,
+    create_untitled_note, delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks,
+    get_graph, get_settings, get_tag_counts, get_task_line, get_tasks, get_vault_tree,
+    get_workspace, is_drawing_file, list_templates, media_server_url, move_paths, open_canvas,
+    open_daily_note, open_file, open_files, open_vault_dialog, parse_canvas, parse_drawing,
+    parse_frontmatter, read_drawing, read_template, reindex_vault, rename_note, rename_path,
+    reorganize_assets, run_query, save_attachment, save_canvas, save_drawing, save_file,
+    save_files, search_content, search_files, serialize_drawing, set_setting, set_vault,
+    set_workspace_key, toggle_task, update_task, write_dev_report,
 };
 
 use commands::copy_attachment_from_path;

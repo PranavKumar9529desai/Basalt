@@ -67,11 +67,7 @@ export const DrawingHeaderActions = memo(function DrawingHeaderActions({
                 aria-label="Drawing settings"
                 aria-expanded={panelOpen}
               >
-                {panelOpen ? (
-                  <IconX size={15} />
-                ) : (
-                  <IconSettings size={15} />
-                )}
+                {panelOpen ? <IconX size={15} /> : <IconSettings size={15} />}
               </Button>
             }
           />

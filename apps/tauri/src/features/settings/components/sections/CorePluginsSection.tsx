@@ -12,7 +12,11 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 import { useEnabledSections } from "../../lib/registry";
 import { setSetting, useSetting } from "../../lib/settings-data";
 import { useSettingsModalStore } from "../../store";
@@ -118,21 +122,21 @@ export function CorePluginsSection() {
           >
             {section && (
               <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setActiveSection(section.id)}
-                    aria-label={`Open ${plugin.name} settings`}
-                    className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-                  >
-                    <IconSettings size={14} />
-                  </Button>
-                }
-              />
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setActiveSection(section.id)}
+                      aria-label={`Open ${plugin.name} settings`}
+                      className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+                    >
+                      <IconSettings size={14} />
+                    </Button>
+                  }
+                />
+                <TooltipContent>Settings</TooltipContent>
+              </Tooltip>
             )}
             <SettingToggle
               checked={checked}

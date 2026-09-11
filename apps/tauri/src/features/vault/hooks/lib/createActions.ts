@@ -74,5 +74,10 @@ export function createCreateActions(deps: CreateActionsDeps): CreateActions {
     mutations.createFolderInline(ctx);
   };
 
-  return { createNoteInstant, createCanvasInstant, createDrawingInstant, startFolderInline };
+  return {
+    createNoteInstant,
+    createCanvasInstant,
+    createDrawingInstant,
+    startFolderInline,
+  };
 }

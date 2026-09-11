@@ -4,7 +4,11 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { useDrawingState } from "../hooks/useDrawingState";
 import { ExcalidrawWrapper } from "./ExcalidrawWrapper";
 import { DrawingHeaderActions } from "./DrawingHeaderActions";
-import { downloadBlob, exportSceneToBlob, exportSceneToSvg } from "../lib/export";
+import {
+  downloadBlob,
+  exportSceneToBlob,
+  exportSceneToSvg,
+} from "../lib/export";
 import { stemOf } from "@workspace/ui";
 
 export const DrawingView = memo(function DrawingView({ tab }: LeafProps) {
@@ -34,7 +38,9 @@ export const DrawingView = memo(function DrawingView({ tab }: LeafProps) {
         { background: "theme" },
       );
       const svgString = new XMLSerializer().serializeToString(svg);
-      const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const blob = new Blob([svgString], {
+        type: "image/svg+xml;charset=utf-8",
+      });
       const filename = `${stemOf(tab.path) || "drawing"}.svg`;
       downloadBlob(blob, filename);
     } catch (err) {
@@ -58,7 +64,10 @@ export const DrawingView = memo(function DrawingView({ tab }: LeafProps) {
   }, [tab.path, sceneDataRef]);
 
   const handleZoomToFit = useCallback(() => {
-    if (apiRef.current && typeof apiRef.current.scrollToContent === "function") {
+    if (
+      apiRef.current &&
+      typeof apiRef.current.scrollToContent === "function"
+    ) {
       apiRef.current.scrollToContent(undefined, { fitToViewport: true });
     }
   }, []);

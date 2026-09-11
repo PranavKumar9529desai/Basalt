@@ -67,7 +67,10 @@ function parseHex(hex: string): [number, number, number] {
 }
 
 function toHex(r: number, g: number, b: number): string {
-  const c = (v: number) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, "0");
+  const c = (v: number) =>
+    Math.round(clamp(v, 0, 255))
+      .toString(16)
+      .padStart(2, "0");
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
@@ -82,14 +85,26 @@ function cssHueRotate(
   const b = blue / 255;
   // 180°: cos(π) = -1, sin(π) = 0
   const matrix = [
-    -0.574, 1.43, 0.144, //
-    0.426, 0.43, 0.144, //
-    0.426, 1.43, -0.856, //
+    -0.574,
+    1.43,
+    0.144, //
+    0.426,
+    0.43,
+    0.144, //
+    0.426,
+    1.43,
+    -0.856, //
   ];
   return {
-    r: Math.round(clamp((r * matrix[0] + g * matrix[1] + b * matrix[2]) * 255, 0, 255)),
-    g: Math.round(clamp((r * matrix[3] + g * matrix[4] + b * matrix[5]) * 255, 0, 255)),
-    b: Math.round(clamp((r * matrix[6] + g * matrix[7] + b * matrix[8]) * 255, 0, 255)),
+    r: Math.round(
+      clamp((r * matrix[0] + g * matrix[1] + b * matrix[2]) * 255, 0, 255),
+    ),
+    g: Math.round(
+      clamp((r * matrix[3] + g * matrix[4] + b * matrix[5]) * 255, 0, 255),
+    ),
+    b: Math.round(
+      clamp((r * matrix[6] + g * matrix[7] + b * matrix[8]) * 255, 0, 255),
+    ),
   };
 }
 

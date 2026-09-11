@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(parsed.signifiers.due, p.due);
         assert_eq!(parsed.signifiers.scheduled, p.scheduled);
         assert_eq!(parsed.signifiers.start, p.start);
-        assert_eq!(parsed.signifiers.recurrence.as_deref(), p.recurrence.as_deref());
+        assert_eq!(parsed.signifiers.recurrence.as_deref(), p.recurrence);
         assert_eq!(parsed.signifiers.tags, vec!["release", "ops"]);
     }
 

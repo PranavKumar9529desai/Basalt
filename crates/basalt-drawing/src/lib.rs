@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn test_missing_file_creates_fresh_shell() {
         let json = r##"{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}"##;
-        let out = serialize_drawing_content(&json, None);
+        let out = serialize_drawing_content(json, None);
         assert!(out.starts_with("---\nexcalidraw-plugin: parsed\n"));
         assert!(out.contains("## Drawing\n```json\n"));
     }

@@ -125,9 +125,7 @@ export interface EngineContext {
   menu: MenuState | null;
 }
 
-export function createEngineContext(
-  opts: GraphEngineOptions,
-): EngineContext {
+export function createEngineContext(opts: GraphEngineOptions): EngineContext {
   const glRef = useRef<HTMLCanvasElement | null>(null);
   const labelRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);

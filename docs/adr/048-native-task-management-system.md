@@ -16,14 +16,14 @@ The [Obsidian Tasks plugin](https://github.com/obsidian-tasks-group/obsidian-tas
 
 **Basalt already has the foundational pieces to build a strictly superior native implementation:**
 
-| Obsidian Tasks Capability | Basalt Existing Piece | Gap |
-|---|---|---|
-| Regex task scanning | ADR-041 SIMD metadata scanner (`basalt-parser/src/metadata.rs`) | Scanner does not parse `- [ ]` lines today |
-| Query language (custom) | DQL engine (`basalt-tables`) with `DataCommand::Task` + `execute_task_query` | No task-specific WHERE/SORT/GROUP predicates |
-| Code block rendering | DQL widget (`packages/editor/src/block-widgets/dql-widget.ts`) detects `tasks` lang tag | No dedicated task query widget with task-specific UX |
-| Checkbox toggle | `task-list.ts` (`packages/editor/src/input/`) renders and toggles checkboxes | No status cycle, no signifier parsing, no date handling |
-| Settings | Zustand settings store (`features/settings/settings-data.ts`) + declarative sections | No task-specific settings |
-| Dock panels | View registry (`app-shell/registrations.ts`) + SideDock pattern | No Tasks board view |
+| Obsidian Tasks Capability | Basalt Existing Piece                                                                   | Gap                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Regex task scanning       | ADR-041 SIMD metadata scanner (`basalt-parser/src/metadata.rs`)                         | Scanner does not parse `- [ ]` lines today              |
+| Query language (custom)   | DQL engine (`basalt-tables`) with `DataCommand::Task` + `execute_task_query`            | No task-specific WHERE/SORT/GROUP predicates            |
+| Code block rendering      | DQL widget (`packages/editor/src/block-widgets/dql-widget.ts`) detects `tasks` lang tag | No dedicated task query widget with task-specific UX    |
+| Checkbox toggle           | `task-list.ts` (`packages/editor/src/input/`) renders and toggles checkboxes            | No status cycle, no signifier parsing, no date handling |
+| Settings                  | Zustand settings store (`features/settings/settings-data.ts`) + declarative sections    | No task-specific settings                               |
+| Dock panels               | View registry (`app-shell/registrations.ts`) + SideDock pattern                         | No Tasks board view                                     |
 
 **The opportunity:** build a native task management system that is architecturally identical to Obsidian Tasks (same emoji signifiers, same query semantics, same user expectations) but runs 10–50× faster due to Rust scanning, and extends it with a kanban board view, native date pickers, and zero-plugin-load-time integration.
 
@@ -54,23 +54,23 @@ A task line follows the Obsidian Tasks convention:
 
 The line is decomposed into:
 
-| Component | Position | Example |
-|---|---|---|
-| List marker | Start | `- `, `* `, `1. ` |
-| Checkbox | After marker | `[x]` |
-| Description | After checkbox, before first signifier | `Buy groceries` |
-| Priority signifier | Inline, any position | `🔺` (highest), `⏫` (high), `🔼` (medium), `🔽` (low), `⏬` (lowest) |
-| Recurrence signifier | Inline, any position | `🔁 every week on Monday` |
-| Start date | Inline, any position | `🛫 2024-01-01` |
-| Due date | Inline, any position | `📅 2024-01-07` |
-| Scheduled date | Inline, any position | `⏳ 2024-01-05` |
-| Created date | Inline, any position | `➕ 2024-01-01` |
-| Done date | Inline, any position | `✅ 2024-01-07` |
-| Cancelled date | Inline, any position | `❌ 2024-01-06` |
-| Task ID | Inline, any position | `🆔 task-1` |
-| Depends-on | Inline, any position | `⛔ task-1` |
-| On-completion | Inline, any position | `🏁 delete` or `🏁 keep` |
-| Tags | Inline, any position | `#work`, `#urgent` |
+| Component            | Position                               | Example                                                               |
+| -------------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| List marker          | Start                                  | `- `, `* `, `1. `                                                     |
+| Checkbox             | After marker                           | `[x]`                                                                 |
+| Description          | After checkbox, before first signifier | `Buy groceries`                                                       |
+| Priority signifier   | Inline, any position                   | `🔺` (highest), `⏫` (high), `🔼` (medium), `🔽` (low), `⏬` (lowest) |
+| Recurrence signifier | Inline, any position                   | `🔁 every week on Monday`                                             |
+| Start date           | Inline, any position                   | `🛫 2024-01-01`                                                       |
+| Due date             | Inline, any position                   | `📅 2024-01-07`                                                       |
+| Scheduled date       | Inline, any position                   | `⏳ 2024-01-05`                                                       |
+| Created date         | Inline, any position                   | `➕ 2024-01-01`                                                       |
+| Done date            | Inline, any position                   | `✅ 2024-01-07`                                                       |
+| Cancelled date       | Inline, any position                   | `❌ 2024-01-06`                                                       |
+| Task ID              | Inline, any position                   | `🆔 task-1`                                                           |
+| Depends-on           | Inline, any position                   | `⛔ task-1`                                                           |
+| On-completion        | Inline, any position                   | `🏁 delete` or `🏁 keep`                                              |
+| Tags                 | Inline, any position                   | `#work`, `#urgent`                                                    |
 
 **Order of signifiers does not matter.** The scanner processes them greedily left-to-right, consuming each emoji + its value.
 
@@ -78,28 +78,28 @@ The line is decomposed into:
 
 The checkbox character determines the status type:
 
-| Character | Status Type | Matches `not done`? | Behavior |
-|---|---|---|---|
-| ` ` (space) | `NON_TASK` | No | Not a task — ignored by queries |
-| ` ` (empty) | `TODO` | Yes | Default task state |
-| `/` | `IN_PROGRESS` | Yes | Currently being worked on |
-| `?` | `ON_HOLD` | Yes | Paused / awaiting input |
-| `x` | `DONE` | No | Completed — auto-adds done date |
-| `X` | `DONE` | No | Completed (alternate symbol) |
-| `-` | `CANCELLED` | No | Cancelled — auto-adds cancelled date |
+| Character   | Status Type   | Matches `not done`? | Behavior                             |
+| ----------- | ------------- | ------------------- | ------------------------------------ |
+| ` ` (space) | `NON_TASK`    | No                  | Not a task — ignored by queries      |
+| ` ` (empty) | `TODO`        | Yes                 | Default task state                   |
+| `/`         | `IN_PROGRESS` | Yes                 | Currently being worked on            |
+| `?`         | `ON_HOLD`     | Yes                 | Paused / awaiting input              |
+| `x`         | `DONE`        | No                  | Completed — auto-adds done date      |
+| `X`         | `DONE`        | No                  | Completed (alternate symbol)         |
+| `-`         | `CANCELLED`   | No                  | Cancelled — auto-adds cancelled date |
 
 **Unknown symbols** (any character not in the above set) are treated as `TODO` with status name `Unknown` and next symbol `x`.
 
 ### 2.3 Priority Levels
 
-| Emoji | Name | Numeric Rank | Display |
-|---|---|---|---|
-| `🔺` | Highest | 0 | Red badge |
-| `⏫` | High | 1 | Orange badge |
-| `🔼` | Medium | 2 | Yellow badge |
-| _(none)_ | None | 3 | No badge (default) |
-| `🔽` | Low | 4 | Blue badge |
-| `⏬` | Lowest | 5 | Gray badge |
+| Emoji    | Name    | Numeric Rank | Display            |
+| -------- | ------- | ------------ | ------------------ |
+| `🔺`     | Highest | 0            | Red badge          |
+| `⏫`     | High    | 1            | Orange badge       |
+| `🔼`     | Medium  | 2            | Yellow badge       |
+| _(none)_ | None    | 3            | No badge (default) |
+| `🔽`     | Low     | 4            | Blue badge         |
+| `⏬`     | Lowest  | 5            | Gray badge         |
 
 ### 2.4 Recurrence Rules
 
@@ -591,7 +591,7 @@ In `execute_query()`, the `DataCommand::Task` branch already exists but delegate
 
 ### 4.6 Query Execution Flow
 
-```
+````
 ```tasks code block content
         │
         ▼
@@ -616,7 +616,7 @@ Returns QueryResult { columns, rows, total }
         │
         ▼
 task-query-widget.ts renders results in CM6 block widget
-```
+````
 
 ---
 
@@ -658,9 +658,10 @@ Current behavior: renders `[ ]` / `[x]` as interactive checkbox widgets. Click t
 
 ```typescript
 interface TaskMeta {
-  status: 'todo' | 'in_progress' | 'on_hold' | 'done' | 'cancelled' | 'non_task';
-  priority: 'highest' | 'high' | 'medium' | 'none' | 'low' | 'lowest';
-  due?: string;        // YYYY-MM-DD
+  status:
+    "todo" | "in_progress" | "on_hold" | "done" | "cancelled" | "non_task";
+  priority: "highest" | "high" | "medium" | "none" | "low" | "lowest";
+  due?: string; // YYYY-MM-DD
   scheduled?: string;
   start?: string;
   created?: string;
@@ -714,14 +715,17 @@ When `group by` is active, results are divided under markdown heading elements:
 
 ```markdown
 ## Overdue (3)
+
 - [ ] Task 1
 - [ ] Task 2
 - [ ] Task 3
 
 ## Today (1)
+
 - [ ] Task 4
 
 ## Tomorrow (2)
+
 - [ ] Task 5
 - [ ] Task 6
 ```
@@ -740,20 +744,20 @@ Bottom of results: `50 of 286 tasks` (when `limit` truncates). Per-group counts 
 
 A modal dialog (shadcn `Dialog`) with form fields:
 
-| Field | Input Type | Notes |
-|---|---|---|
-| Description | Text input | Required. Auto-focused on open. |
-| Status | Select dropdown | Options: Todo, In Progress, On Hold, Done, Cancelled |
-| Priority | Select dropdown | Options: Highest, High, Medium, None, Low, Lowest |
-| Due Date | Date picker | Optional. Clearable. |
-| Scheduled Date | Date picker | Optional. Clearable. |
-| Start Date | Date picker | Optional. Clearable. |
-| Recurrence | Select + text | Preset rules or custom text input. Presets: "every day", "every weekday", "every week on Monday", "every 2 weeks", "every month", "every year". Custom: free text starting with "every". |
-| Tags | Multi-select / text | Type to add tags. |
-| Depends On | Multi-select | Pick from existing task IDs in vault. |
-| On Completion | Select | Keep / Delete |
-| Created Date | Auto-populated | Set automatically if `createdDateAutoAdd` is enabled. |
-| Done Date | Auto-populated | Set automatically when status changes to Done. |
+| Field          | Input Type          | Notes                                                                                                                                                                                    |
+| -------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Description    | Text input          | Required. Auto-focused on open.                                                                                                                                                          |
+| Status         | Select dropdown     | Options: Todo, In Progress, On Hold, Done, Cancelled                                                                                                                                     |
+| Priority       | Select dropdown     | Options: Highest, High, Medium, None, Low, Lowest                                                                                                                                        |
+| Due Date       | Date picker         | Optional. Clearable.                                                                                                                                                                     |
+| Scheduled Date | Date picker         | Optional. Clearable.                                                                                                                                                                     |
+| Start Date     | Date picker         | Optional. Clearable.                                                                                                                                                                     |
+| Recurrence     | Select + text       | Preset rules or custom text input. Presets: "every day", "every weekday", "every week on Monday", "every 2 weeks", "every month", "every year". Custom: free text starting with "every". |
+| Tags           | Multi-select / text | Type to add tags.                                                                                                                                                                        |
+| Depends On     | Multi-select        | Pick from existing task IDs in vault.                                                                                                                                                    |
+| On Completion  | Select              | Keep / Delete                                                                                                                                                                            |
+| Created Date   | Auto-populated      | Set automatically if `createdDateAutoAdd` is enabled.                                                                                                                                    |
+| Done Date      | Auto-populated      | Set automatically when status changes to Done.                                                                                                                                           |
 
 ### 7.2 Validation
 
@@ -771,6 +775,7 @@ A modal dialog (shadcn `Dialog`) with form fields:
 ### 7.4 Write-back
 
 On save, the modal either:
+
 - **Creates:** Inserts a new task line at the cursor position (or end of current section).
 - **Updates:** Replaces the existing task line at the known line number, preserving the description and signifiers.
 
@@ -807,6 +812,7 @@ A dock panel registered via `viewRegistry.register()` in `app-shell/registration
 ### 8.3 Card Rendering
 
 Each card shows:
+
 - Description (truncated to 2 lines)
 - Priority badge (if not None)
 - Due date (with overdue highlighting)
@@ -824,6 +830,7 @@ Each card shows:
 Default columns: TODO, IN_PROGRESS, ON_HOLD, DONE.
 
 Settings allow customizing:
+
 - Which status types to show as columns
 - Column order
 - Whether to show CANCELLED as a separate column
@@ -904,7 +911,8 @@ scattered `@tabler/icons-react` imports.
 { "id": "tasks:set-scheduled", "name": "Tasks: Set scheduled date", "category": "Tasks", "icon": "IconCalendarDue" },
 { "id": "tasks:board-view", "name": "Tasks: Open board view", "category": "Tasks", "icon": "IconLayoutKanban" },
 { "id": "tasks:postpone", "name": "Tasks: Postpone to tomorrow", "category": "Tasks", "icon": "IconCalendarOff" }
-```
+
+````
 
 ### 10.2 Keybindings
 
@@ -912,13 +920,14 @@ scattered `@tabler/icons-react` imports.
 
 ```json
 { "command": "tasks:toggle", "key": "Mod+Enter", "description": "Toggle task done" }
-```
+````
 
 ### 10.3 Command Callbacks
 
 **File:** `apps/tauri/src/features/tasks/lib/commands.ts` (NEW)
 
 Each command callback:
+
 1. Gets the active editor view from the editor store.
 2. Finds the task line at the cursor (if any).
 3. Executes the action (toggle, create, edit, set priority, etc.).
@@ -1003,7 +1012,7 @@ tasks::toggle_task, tasks::create_task, tasks::update_task, tasks::get_tasks,
 
 ### New Files
 
-```
+````
 crates/basalt-types/src/task.rs                    — TaskData, TaskStatus, TaskPriority structs
 crates/basalt-parser/src/task_scan.rs              — scan_task_line() scanner function
 packages/editor/src/block-widgets/task-query-widget.ts  — ```tasks``` block renderer
@@ -1028,7 +1037,7 @@ apps/tauri/src/features/tasks/                           — Task feature direct
       ├── TaskBadge.tsx                                   — Priority/status badge
       └── TaskSettingsSection.tsx                         — Settings section
 apps/tauri/src-tauri/src/commands/tasks.rs               — Tauri command handlers
-```
+````
 
 ### Modified Files
 
@@ -1153,30 +1162,30 @@ apps/tauri/src-tauri/src/lib.rs                       — Register task commands
 
 ### 14.1 Edge Case Matrix
 
-| Edge Case | Behavior |
-|---|---|
-| Task line with no dates | Valid. Filterable by `no due date` etc. Recurring requires ≥1 date. |
-| Task with recurrence but no dates | Stored but not searchable by date. Modal warns. |
-| Unknown status symbol (e.g. `[z]`) | Treated as `TODO` with status name `Unknown`, next symbol `x`. |
-| Task in indented list (`  - [ ] ...`) | Parsed. Indentation is part of the description context, not a separate task. |
-| Task with emoji in description | Signifiers are only recognized at word boundaries. Description text after last signifier is preserved. |
-| Task line exceeds 1000 chars | Truncated for display but full text preserved in metadata. |
-| Multiple tasks on same line | Not supported. Only first checkbox per line is parsed. |
-| Task in code block | Scanner skips content inside fenced code blocks (` ``` `). |
-| Task in blockquote (`> - [ ] ...`) | Parsed. Blockquote prefix is stripped for signifier scanning. |
-| Task in table row | Not supported (tables don't have checkbox semantics). |
-| Vault switch during task query | Same generation-cancel mechanism as DQL queries. |
-| Empty vault | No tasks. Board view shows empty columns with "No tasks" message. |
+| Edge Case                             | Behavior                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Task line with no dates               | Valid. Filterable by `no due date` etc. Recurring requires ≥1 date.                                    |
+| Task with recurrence but no dates     | Stored but not searchable by date. Modal warns.                                                        |
+| Unknown status symbol (e.g. `[z]`)    | Treated as `TODO` with status name `Unknown`, next symbol `x`.                                         |
+| Task in indented list (`  - [ ] ...`) | Parsed. Indentation is part of the description context, not a separate task.                           |
+| Task with emoji in description        | Signifiers are only recognized at word boundaries. Description text after last signifier is preserved. |
+| Task line exceeds 1000 chars          | Truncated for display but full text preserved in metadata.                                             |
+| Multiple tasks on same line           | Not supported. Only first checkbox per line is parsed.                                                 |
+| Task in code block                    | Scanner skips content inside fenced code blocks (` ``` `).                                             |
+| Task in blockquote (`> - [ ] ...`)    | Parsed. Blockquote prefix is stripped for signifier scanning.                                          |
+| Task in table row                     | Not supported (tables don't have checkbox semantics).                                                  |
+| Vault switch during task query        | Same generation-cancel mechanism as DQL queries.                                                       |
+| Empty vault                           | No tasks. Board view shows empty columns with "No tasks" message.                                      |
 
 ### 14.2 Performance Targets
 
-| Metric | Target | How |
-|---|---|---|
-| Task parsing overhead per file | < 0.01ms | Runs in existing SIMD scan pass, no extra I/O |
-| Task query on 25k vault | < 50ms | Iterates `metadata_cache`, applies filters, returns |
-| Board view load | < 100ms | Reads from vault metadata, groups by status |
-| Checkbox toggle → source update | < 5ms | Direct document edit, no re-index triggered |
-| Urgency calculation (25k tasks) | < 10ms | Simple arithmetic per task, no allocations |
+| Metric                          | Target   | How                                                 |
+| ------------------------------- | -------- | --------------------------------------------------- |
+| Task parsing overhead per file  | < 0.01ms | Runs in existing SIMD scan pass, no extra I/O       |
+| Task query on 25k vault         | < 50ms   | Iterates `metadata_cache`, applies filters, returns |
+| Board view load                 | < 100ms  | Reads from vault metadata, groups by status         |
+| Checkbox toggle → source update | < 5ms    | Direct document edit, no re-index triggered         |
+| Urgency calculation (25k tasks) | < 10ms   | Simple arithmetic per task, no allocations          |
 
 ### 14.3 Backward Compatibility
 
@@ -1191,16 +1200,16 @@ apps/tauri/src-tauri/src/lib.rs                       — Register task commands
 
 These features are explicitly deferred:
 
-| Feature | Why Deferred | Phase |
-|---|---|---|
-| Recurrence expansion on completion | Requires `rrule` crate integration + write-back logic | Phase 2 |
-| On-completion actions (keep/delete) | Depends on recurrence expansion | Phase 2 |
-| Custom status collections UI | Needs settings UI for status symbol/name/type configuration | Phase 2 |
-| Urgency as a query-able field in DQL (non-task queries) | Task-specific for now | Phase 2 |
-| Task dependencies DAG visualization | Complex UI, low priority | Phase 3 |
-| `filter by function` / `sort by function` (JS execution) | Security concern (ADR-002). Defer to plugin host phase. | Phase 3 |
-| Calendar view of tasks | Separate feature (Calendar dock) | Phase 3 |
-| Task duration tracking | New feature not in Obsidian Tasks | Future |
+| Feature                                                  | Why Deferred                                                | Phase   |
+| -------------------------------------------------------- | ----------------------------------------------------------- | ------- |
+| Recurrence expansion on completion                       | Requires `rrule` crate integration + write-back logic       | Phase 2 |
+| On-completion actions (keep/delete)                      | Depends on recurrence expansion                             | Phase 2 |
+| Custom status collections UI                             | Needs settings UI for status symbol/name/type configuration | Phase 2 |
+| Urgency as a query-able field in DQL (non-task queries)  | Task-specific for now                                       | Phase 2 |
+| Task dependencies DAG visualization                      | Complex UI, low priority                                    | Phase 3 |
+| `filter by function` / `sort by function` (JS execution) | Security concern (ADR-002). Defer to plugin host phase.     | Phase 3 |
+| Calendar view of tasks                                   | Separate feature (Calendar dock)                            | Phase 3 |
+| Task duration tracking                                   | New feature not in Obsidian Tasks                           | Future  |
 
 ---
 
@@ -1245,7 +1254,7 @@ The signifier emojis (§2.1) are the **data format**: Obsidian Tasks-compatible
 markdown, keyed on exact codepoints by the Rust scanner, round-tripped
 losslessly by the serializer. They stay in the file, always.
 
-The *rendered* view, however, currently shows raw OS-font emoji, which:
+The _rendered_ view, however, currently shows raw OS-font emoji, which:
 
 - cannot participate in the `--sat-*` theme system — emoji colors are baked
   into the platform font, so they ignore every Basalt theme (volcanic, …);

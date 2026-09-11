@@ -143,7 +143,8 @@ export function useNoteIO() {
   );
 
   const urlLinkFormatter = useCallback(
-    (url: string, selectionText: string): string => `[${selectionText}](${url})`,
+    (url: string, selectionText: string): string =>
+      `[${selectionText}](${url})`,
     [],
   );
   return {

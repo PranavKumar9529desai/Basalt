@@ -48,8 +48,7 @@ export const DAILIES_SPECS: SettingItemSpec[] = [
   {
     key: "calendarShowWeekNumbers",
     name: "Show week numbers",
-    description:
-      "Display ISO week numbers in the calendar sidebar.",
+    description: "Display ISO week numbers in the calendar sidebar.",
     type: "toggle",
     keywords: ["calendar", "week", "numbers"],
   },

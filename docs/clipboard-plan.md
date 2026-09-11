@@ -7,15 +7,15 @@
 
 ## Current State (verified in code)
 
-| Surface | Current impl | What's missing |
-|---------|--------------|----------------|
-| **Editor image paste** | `pasteImageExtension` CM6 → `onPasteImage` → Rust `save_attachment` | ✅ works; but `editor:paste` command uses `navigator.clipboard.readText()` only |
-| **Editor paste command** | `editorCommands.tsx:editor:paste` → `navigator.clipboard.readText()` | No image/file/HTML support; no native fallback; not atomic |
-| **Canvas paste** | `// TODO: paste from clipboard` stub in `CanvasContextMenu.tsx` | Nothing |
-| **File tree cut/paste** | `useVaultClipboard` React state | Dies on restart; no copy-as-path |
-| **ViewHeader copy-as** | `navigator.clipboard?.writeText(relativePath)` | Only relative path; no wikilink/markdown submenu |
-| **Rust save** | `save_attachment` — 4 org modes, dedup, infer | ✅ Ready; `by_note`/`flat`/`by_type`/`by_date` |
-| **Settings** | `filesLinks.ts` — attachmentFolder, attachmentOrganization | Missing: attachmentNaming modes, `same-folder` location mode |
+| Surface                  | Current impl                                                         | What's missing                                                                  |
+| ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Editor image paste**   | `pasteImageExtension` CM6 → `onPasteImage` → Rust `save_attachment`  | ✅ works; but `editor:paste` command uses `navigator.clipboard.readText()` only |
+| **Editor paste command** | `editorCommands.tsx:editor:paste` → `navigator.clipboard.readText()` | No image/file/HTML support; no native fallback; not atomic                      |
+| **Canvas paste**         | `// TODO: paste from clipboard` stub in `CanvasContextMenu.tsx`      | Nothing                                                                         |
+| **File tree cut/paste**  | `useVaultClipboard` React state                                      | Dies on restart; no copy-as-path                                                |
+| **ViewHeader copy-as**   | `navigator.clipboard?.writeText(relativePath)`                       | Only relative path; no wikilink/markdown submenu                                |
+| **Rust save**            | `save_attachment` — 4 org modes, dedup, infer                        | ✅ Ready; `by_note`/`flat`/`by_type`/`by_date`                                  |
+| **Settings**             | `filesLinks.ts` — attachmentFolder, attachmentOrganization           | Missing: attachmentNaming modes, `same-folder` location mode                    |
 
 **`@tauri-apps/plugin-clipboard-manager` is NOT installed** — must add.
 
@@ -63,6 +63,7 @@ cargo add tauri-plugin-clipboard-manager
 ```
 
 Register in `lib.rs`:
+
 ```rust
 app.plugin(tauri_plugin_clipboard_manager::init())?;
 ```
@@ -96,10 +97,11 @@ export interface ClipboardService {
 ```
 
 Internal typed keys (registered constants):
+
 ```typescript
 export const CLIPBOARD_KEYS = {
-  VAULT_FILES: "vault:files",         // { operation: "cut"|"copy", paths: string[] }
-  CANVAS_NODES: "canvas:nodes",       // { snapshot: CanvasNodeSnapshot[], offset: {x,y} }
+  VAULT_FILES: "vault:files", // { operation: "cut"|"copy", paths: string[] }
+  CANVAS_NODES: "canvas:nodes", // { snapshot: CanvasNodeSnapshot[], offset: {x,y} }
   EDITOR_SELECTION: "editor:selection", // { text: string, format: "plain"|"html"|"wikilink" }
 } as const;
 ```
@@ -116,6 +118,7 @@ outside the app), so `clearAllTyped()`. This mirrors VS Code's
 (imported by vault, editor, canvas, shell) so it lives in `shared/`.
 
 Export from `shared/index.ts`:
+
 ```typescript
 export { clipboardService, CLIPBOARD_KEYS } from "./clipboardService";
 ```
@@ -158,6 +161,7 @@ Each handler is a callback, keeping `packages/editor/` pure (no Tauri).
 ### 2.2 Update `EditorController` NoteIO interface
 
 Add to `NoteIO`:
+
 ```typescript
 onPasteHtml?: (html: string) => Promise<string | null>;  // → markdown
 onPasteFile?: (uri: string, filename: string) => Promise<string | null>;
@@ -214,6 +218,7 @@ export function useCanvasPaste(options: {
 
 In `useCanvasState.ts`, add a `paste` event listener on the ReactFlow
 container (or on the canvas `div`). On paste:
+
 1. Check `clipboardService.readTyped(CLIPBOARD_KEYS.CANVAS_NODES)` —
    if present, duplicate nodes at an offset.
 2. Otherwise, read system clipboard via `clipboardService.readImage()` or
@@ -223,6 +228,7 @@ container (or on the canvas `div`). On paste:
 
 In `CanvasContextMenu.tsx`, replace the `// TODO: paste from clipboard`
 stub with:
+
 ```typescript
 <ContextMenuItem onClick={() => { onPaste(); onClose(); }}>
   <IconClipboard size={15} stroke={1.5} /> Paste
@@ -249,7 +255,7 @@ clipboard.setCutItems(items);
 // AFTER
 clipboardService.writeTyped(CLIPBOARD_KEYS.VAULT_FILES, {
   operation: "cut",
-  paths: items.map(i => i.path),
+  paths: items.map((i) => i.path),
 });
 ```
 
@@ -260,13 +266,14 @@ this with `useSyncExternalStore` or zustand for reactive updates.
 ### 4.2 Cut flow (unchanged conceptually)
 
 - `Ctrl+X` on selected files → `clipboardService.writeTyped(VAULT_FILES, { operation: "cut", paths })`
-  + `clipboardService.writeText(relativePath)` to system clipboard (for external use)
+  - `clipboardService.writeText(relativePath)` to system clipboard (for external use)
 - `Ctrl+V` anywhere → read typed → if `operation === "cut"`, call `invoke("move_file", { from, to })` for each path, then `clipboardService.clearTyped(VAULT_FILES)`
 - On restart: `clearAllTyped()` in `Boot.tsx`
 
 ### 4.3 Copy As submenu
 
 Add `Copy As` submenu to the vault context menu:
+
 ```typescript
 [
   { label: "Wikilink", action: () => writeText(`[[${stem}]]`) },
@@ -274,7 +281,7 @@ Add `Copy As` submenu to the vault context menu:
   { label: "Relative path", action: () => writeText(relPath) },
   { label: "Absolute path", action: () => writeText(absPath) },
   { label: "File URL", action: () => writeText(`file://${absPath}`) },
-]
+];
 ```
 
 These all write to the **system clipboard** (survives restart, works
@@ -336,6 +343,7 @@ as `[[url]]` or `[selected](url)`.
 ### 6.1 Implementation in paste pipeline
 
 In the CM6 paste extension:
+
 1. On `text/plain` paste, check if the pasted text is a URL
    (`/^https?:\/\//`)
 2. Check if there's a selection (`view.state.selection.main.from !== to`)
@@ -346,6 +354,7 @@ In the CM6 paste extension:
 ### 6.2 Smart paste detection (Obsidian-style)
 
 Per `CONVENTIONS.md` — keep it simple:
+
 - If selection is already a link → don't double-wrap
 - If cursor is inside code block → paste plain
 - If selection is multi-line → paste plain
@@ -354,13 +363,13 @@ Per `CONVENTIONS.md` — keep it simple:
 
 ## File Budget Check
 
-| File | Location | Lines (est.) | Constraint |
-|------|----------|-------------|------------|
-| `clipboardService.ts` | `shared/` | ~150 | Not in a feature → no file budget |
-| `paste-extension.ts` | `packages/editor/src/input/` | ~120 | Replaces `paste-image.ts` |
-| `useCanvasPaste.ts` | `features/canvas/hooks/` | ~100 | Canvas feature hook #6 (budget: 4) ⚠️ |
-| `useVaultClipboard.ts` | `features/vault/hooks/` | ~80 | Rewrite of existing (same count) |
-| `editorCommands.tsx` | `shared/commands/` | +10 | Existing file, small delta |
+| File                   | Location                     | Lines (est.) | Constraint                            |
+| ---------------------- | ---------------------------- | ------------ | ------------------------------------- |
+| `clipboardService.ts`  | `shared/`                    | ~150         | Not in a feature → no file budget     |
+| `paste-extension.ts`   | `packages/editor/src/input/` | ~120         | Replaces `paste-image.ts`             |
+| `useCanvasPaste.ts`    | `features/canvas/hooks/`     | ~100         | Canvas feature hook #6 (budget: 4) ⚠️ |
+| `useVaultClipboard.ts` | `features/vault/hooks/`      | ~80          | Rewrite of existing (same count)      |
+| `editorCommands.tsx`   | `shared/commands/`           | +10          | Existing file, small delta            |
 
 ⚠️ Canvas hooks budget: canvas already has 6 hooks (existing debt over
 the 4-hook budget). Adding a 7th would make it worse. **Mitigation:**
@@ -372,14 +381,14 @@ and calls `addNode` / `onPasteImage` passed via options. No new file.
 
 ## Implementation Order
 
-| Phase | Depends on | Gate |
-|-------|-----------|------|
-| **Phase 1**: ClipboardService + Tauri plugin | Nothing | `tsc` clean, `bun run lint` clean, manual paste test |
-| **Phase 2**: Editor rich paste pipeline | Phase 1 | Image paste works, HTML paste works, URL smart paste works, single undo |
-| **Phase 3**: Canvas paste | Phase 1 | Image → image node, text → text card, internal copy → duplicate |
-| **Phase 4**: File tree cut/copy/Copy As | Phase 1 | Cut/move works, Ctrl+C copies path, Copy As submenu works |
-| **Phase 5**: Settings + missing attachment modes | Phase 2 | All 6 attachment location modes work, paste mode setting takes effect |
-| **Phase 6**: Smart paste URL → link | Phase 2 | Paste URL over selection → auto-wraps as link |
+| Phase                                            | Depends on | Gate                                                                    |
+| ------------------------------------------------ | ---------- | ----------------------------------------------------------------------- |
+| **Phase 1**: ClipboardService + Tauri plugin     | Nothing    | `tsc` clean, `bun run lint` clean, manual paste test                    |
+| **Phase 2**: Editor rich paste pipeline          | Phase 1    | Image paste works, HTML paste works, URL smart paste works, single undo |
+| **Phase 3**: Canvas paste                        | Phase 1    | Image → image node, text → text card, internal copy → duplicate         |
+| **Phase 4**: File tree cut/copy/Copy As          | Phase 1    | Cut/move works, Ctrl+C copies path, Copy As submenu works               |
+| **Phase 5**: Settings + missing attachment modes | Phase 2    | All 6 attachment location modes work, paste mode setting takes effect   |
+| **Phase 6**: Smart paste URL → link              | Phase 2    | Paste URL over selection → auto-wraps as link                           |
 
 ---
 

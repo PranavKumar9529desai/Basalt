@@ -165,11 +165,10 @@ fn save_attachment_impl(
             vault_root.join(note_dir)
         }
         "by_note" => {
-            let note_stem =
-                note_path
-                    .and_then(|p| Path::new(p).file_stem())
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("_unfiled");
+            let note_stem = note_path
+                .and_then(|p| Path::new(p).file_stem())
+                .and_then(|s| s.to_str())
+                .unwrap_or("_unfiled");
             base_dir.join(note_stem)
         }
         "by_type" => {

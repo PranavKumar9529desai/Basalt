@@ -13,14 +13,14 @@
 The "task feature" isn't one folder — it's six surfaces that currently disagree
 with each other in places (§3):
 
-| Surface | Location |
-|---|---|
-| Frontend feature | `apps/tauri/src/features/tasks/` (components, hooks, store, lib/commands) |
-| Editor package | `packages/editor/src/input/task-signifiers.ts`, `task-list.ts`, `block-widgets/task-query-*` |
-| Rust IPC commands | `apps/tauri/src-tauri/src/commands/tasks/{mod,line,signifiers,serializer}.rs` |
-| Rust types | `crates/basalt-types/src/task.rs` (`TaskData`, `TaskStatus`, `TaskPriority`) |
-| Rust scanner | `crates/basalt-parser/src/task_scan.rs` (fused into the ADR-041 metadata pass) |
-| Rust query engine | `crates/basalt-tables/src/output.rs` (`execute_task_query`, urgency) |
+| Surface           | Location                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Frontend feature  | `apps/tauri/src/features/tasks/` (components, hooks, store, lib/commands)                    |
+| Editor package    | `packages/editor/src/input/task-signifiers.ts`, `task-list.ts`, `block-widgets/task-query-*` |
+| Rust IPC commands | `apps/tauri/src-tauri/src/commands/tasks/{mod,line,signifiers,serializer}.rs`                |
+| Rust types        | `crates/basalt-types/src/task.rs` (`TaskData`, `TaskStatus`, `TaskPriority`)                 |
+| Rust scanner      | `crates/basalt-parser/src/task_scan.rs` (fused into the ADR-041 metadata pass)               |
+| Rust query engine | `crates/basalt-tables/src/output.rs` (`execute_task_query`, urgency)                         |
 
 ---
 
@@ -29,6 +29,7 @@ with each other in places (§3):
 ### 2.1 What works today (confirmed in code)
 
 **Authoring**
+
 - Checkbox tasks: `- [ ]`, `* [ ]`, `1. [ ]`, indented, blockquotes (`> - [ ]`) —
   scanned natively during indexing, no JS regex pass
 - 6 statuses via checkbox char: todo `[ ]`, in_progress `[/]`, on_hold `[?]`,
@@ -44,20 +45,22 @@ with each other in places (§3):
   end; edit rewrites the line in place (CM6 doc is the source of truth)
 
 **Querying (` ```tasks ``` ` blocks)**
+
 - Filters: status is / `done` / `not done`, priority (is/above/below), date
   filters with relative tokens (`today`, `this week`, `next week`, `last
-  week`), `no <field> date` / `exists`, description/tags/path/folder/filename
+week`), `no <field> date` / `exists`, description/tags/path/folder/filename
   includes, `is recurring`, `is blocked` / `is not blocked`
 - Sort: 11 fields (+`reverse`); Group: 8 fields with per-group counts;
   `limit N`; short/full mode + hide-switches; urgency score (Rust); unsupported
   instruction footer
 
-**Glue** — 8 palette commands, `Mod+Enter` keybinding, settings *declarations*
+**Glue** — 8 palette commands, `Mod+Enter` keybinding, settings _declarations_
 (specs in `features/settings/specs/tasks.ts`)
 
 ### 2.2 What does NOT work today
 
 **Parity gaps vs Obsidian Tasks**
+
 1. **Recurrence never advances** — `🔁 every week` is stored/displayed but
    completion does nothing. No next-occurrence computation, no auto-rewrite of
    reference dates, no `when done` scheduling. (ADR Phase 2, never built.)
@@ -77,6 +80,7 @@ with each other in places (§3):
 8. **No board/kanban** (excluded by user), **no calendar**, **no task duration**.
 
 **Bugs found in review (verified)**
+
 - `status is in progress` / `status is on hold` filters never match — engine
   compares `format!("{:?}", status).to_lowercase()` (`"inprogress"`/`"onhold"`)
   against snake_case wire values; the parser additionally keeps the space
@@ -86,12 +90,13 @@ with each other in places (§3):
   `update_task` / `create_task` (scanner handles CRLF; commands don't).
 - Status cycle divergence: TS `todo → in_progress → done` (editor toggle) vs
   Rust `todo → done → cancelled` (`toggle_task` IPC). One gesture, two machines.
-- `sort by happens` sorts undated tasks *first* (`None < Some` in derived Ord)
+- `sort by happens` sorts undated tasks _first_ (`None < Some` in derived Ord)
   — contradicts `date_field_cmp`'s undated-last rule elsewhere.
 - Task-line `[[wikilinks]]` deliberately **not** indexed as links
   (`task_scan.rs` test asserts `meta.links.is_empty()`).
 
 **Quality debt (sloppy / AI-generated smells)**
+
 - `CreateTaskModal.tsx` ~560 lines vs 200 budget; three copy-pasted
   `<Select.Root>` blocks with identical class strings
 - Fabricated "legacy" priority tokens in `signifiers.rs` (`🔴🟡🔵`, `最低`,
@@ -110,12 +115,13 @@ with each other in places (§3):
 
 ## 3. Structural decision: a `basalt-task` crate
 
-Proposed: **create `crates/basalt-task/`** as the task *domain layer*.
+Proposed: **create `crates/basalt-task/`** as the task _domain layer_.
 
 **Dependency chain works:** `basalt-tables → basalt-task → basalt-vault →
 basalt-parser → basalt-types`. No cycle (vault does not depend on tables).
 
 **Moves in:**
+
 - Signifier grammar — single source of truth for emoji↔field, checkbox-char↔
   status, status cycle, priority rank (today exists 3× and disagrees)
 - Line parse/serialize round-trip (`line.rs` + `serializer.rs` — now pure
@@ -128,6 +134,7 @@ basalt-parser → basalt-types`. No cycle (vault does not depend on tables).
   in strings but not the enum)
 
 **Stays where it is:**
+
 - `TaskData`/`TaskStatus`/`TaskPriority` in `basalt-types` (leaf type everyone
   consumes; moving it up creates a cycle)
 - `task_scan.rs` in `basalt-parser` (fused into the hot scan pass; moving it
@@ -140,18 +147,18 @@ basalt-parser → basalt-types`. No cycle (vault does not depend on tables).
 Target crate: `crates/basalt-task/` (lib name `basalt_task`).
 
 **Dependencies:** `basalt-types`, `basalt-vault`, `chrono` (dates), `serde`
-(wire structs). No `basalt-parser` dep — the crate parses *lines*, not
+(wire structs). No `basalt-parser` dep — the crate parses _lines_, not
 files; the scanner stays in `basalt-parser`.
 
 **New file map** (pure moves today, typed rewrites where noted):
 
-| Source (today) | Target | Change |
-|---|---|---|
-| `src-tauri/commands/tasks/signifiers.rs` | `basalt-task/src/signifiers.rs` | Typed rewrite: `checkbox_char_to_status`/`status_to_checkbox_char` → return `TaskStatus`; delete `"deferred"` string status + fabricated legacy tokens (`🔴🟡🔵 最低 p0–p4`) + `DEFAULT_STATUS_CYCLE`; priority maps → `TaskPriority` |
-| `src-tauri/commands/tasks/line.rs` | `basalt-task/src/line.rs` | Move as-is (unify `parse_checkbox_line`/`parse_task_line_parts` into one strict parser while here) |
-| `src-tauri/commands/tasks/serializer.rs` | `basalt-task/src/serializer.rs` | Move; merge `build_task_line` + `build_task_line_from_parts` into one builder |
-| `basalt-tables/src/output.rs` (task section) | `basalt-task/src/query.rs` | Move + fix bugs in place (typed status matching, `not done` excludes cancelled, `happens` undated-last) |
-| `basalt-tables/src/urgency.rs` | `basalt-task/src/urgency.rs` | Move as-is |
+| Source (today)                               | Target                          | Change                                                                                                                                                                                                                                |
+| -------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src-tauri/commands/tasks/signifiers.rs`     | `basalt-task/src/signifiers.rs` | Typed rewrite: `checkbox_char_to_status`/`status_to_checkbox_char` → return `TaskStatus`; delete `"deferred"` string status + fabricated legacy tokens (`🔴🟡🔵 最低 p0–p4`) + `DEFAULT_STATUS_CYCLE`; priority maps → `TaskPriority` |
+| `src-tauri/commands/tasks/line.rs`           | `basalt-task/src/line.rs`       | Move as-is (unify `parse_checkbox_line`/`parse_task_line_parts` into one strict parser while here)                                                                                                                                    |
+| `src-tauri/commands/tasks/serializer.rs`     | `basalt-task/src/serializer.rs` | Move; merge `build_task_line` + `build_task_line_from_parts` into one builder                                                                                                                                                         |
+| `basalt-tables/src/output.rs` (task section) | `basalt-task/src/query.rs`      | Move + fix bugs in place (typed status matching, `not done` excludes cancelled, `happens` undated-last)                                                                                                                               |
+| `basalt-tables/src/urgency.rs`               | `basalt-task/src/urgency.rs`    | Move as-is                                                                                                                                                                                                                            |
 
 `TaskQuery`/`TaskFilter`/`TaskSort` + `execute_task_query` move to `basalt-task`;
 `basalt-tables` **re-exports** them so `engine.rs` (DQL TASK branch) and the
@@ -182,9 +189,9 @@ The command names (`get_tasks`, `toggle_task`, …) and `generate_handler!`
 registration are untouched.
 
 **Icons — direction agreed (2026-09-11), recorded in ADR-048 §17:** emoji
-signifiers are the *data format* (markdown syntax, Obsidian-compatible, scanned
+signifiers are the _data format_ (markdown syntax, Obsidian-compatible, scanned
 by Rust) — they stay in the file, always. What looked unprofessional is the
-*rendering*: raw OS-font emoji with baked-in colors (can't obey `--sat-*`),
+_rendering_: raw OS-font emoji with baked-in colors (can't obey `--sat-*`),
 plus EOL chip duplication, plus **zero chrome in reading mode / PDF export**
 (`taskListPlugin` is edit-mode-only).
 
@@ -209,17 +216,17 @@ found: the Obsidian emoji-format surface is **20 signifiers**; we parse ~14
 
 ## 4. Beyond Obsidian — integration ideas (ranked)
 
-| # | Idea | Integrates with | Why it beats Obsidian Tasks |
-|---|---|---|---|
-| 1 | **Live task blocks** — toggle/edit/postpone inside ```tasks``` results as CM6 transactions (undoable) | single renderer, editor widgets | Obsidian's result edits bypass undo |
-| 2 | **Task lines in the link graph** — index `[[wikilinks]]` in task descriptions (small scanner change) → tasks become graph nodes + backlinks | graph view (WASM), backlinks panel | Obsidian Tasks has zero graph presence |
-| 3 | **Daily-note rollover** — unfinished tasks from yesterday appear today; `🔁` advances reference dates | Daily notes core plugin + templates | Combo Obsidian needs 2 plugins to fake |
-| 4 | **Task search in quick switcher** — fuzzy-jump to task lines; `task:open due:today` operators | tantivy + nucleo | Obsidian's switcher never searches tasks |
-| 5 | **Focus/inbox dock** — urgency-sorted "due soon" panel + overdue counter in status bar | registry side docks, status bar | Native GTD layer Obsidian lacks |
-| 6 | **Natural-language dates in modal** — type "next friday" → writes `📅` | reuse query parser's date tokens | Better than Obsidian's picker-only UI |
-| 7 | **Blocked ⚠ + dependency DAG** — "blocked by" chips, dependency chains | `depends_on` already parsed; graph view | Obsidian shows flat ⚠ only |
-| 8 | **PDF task reports** — "due this week" export | reading-mode export | Obsidian needs 3rd-party export |
-| 9 | **Native speed moat** — scanner fused into SIMD index pass; task queries at 25k scale | ADR-041/042/045 | Obsidian re-regexes in JS on every save |
+| #   | Idea                                                                                                                                        | Integrates with                         | Why it beats Obsidian Tasks              |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------- |
+| 1   | **Live task blocks** — toggle/edit/postpone inside `tasks` results as CM6 transactions (undoable)                                           | single renderer, editor widgets         | Obsidian's result edits bypass undo      |
+| 2   | **Task lines in the link graph** — index `[[wikilinks]]` in task descriptions (small scanner change) → tasks become graph nodes + backlinks | graph view (WASM), backlinks panel      | Obsidian Tasks has zero graph presence   |
+| 3   | **Daily-note rollover** — unfinished tasks from yesterday appear today; `🔁` advances reference dates                                       | Daily notes core plugin + templates     | Combo Obsidian needs 2 plugins to fake   |
+| 4   | **Task search in quick switcher** — fuzzy-jump to task lines; `task:open due:today` operators                                               | tantivy + nucleo                        | Obsidian's switcher never searches tasks |
+| 5   | **Focus/inbox dock** — urgency-sorted "due soon" panel + overdue counter in status bar                                                      | registry side docks, status bar         | Native GTD layer Obsidian lacks          |
+| 6   | **Natural-language dates in modal** — type "next friday" → writes `📅`                                                                      | reuse query parser's date tokens        | Better than Obsidian's picker-only UI    |
+| 7   | **Blocked ⚠ + dependency DAG** — "blocked by" chips, dependency chains                                                                      | `depends_on` already parsed; graph view | Obsidian shows flat ⚠ only               |
+| 8   | **PDF task reports** — "due this week" export                                                                                               | reading-mode export                     | Obsidian needs 3rd-party export          |
+| 9   | **Native speed moat** — scanner fused into SIMD index pass; task queries at 25k scale                                                       | ADR-041/042/045                         | Obsidian re-regexes in JS on every save  |
 
 ---
 
@@ -245,7 +252,7 @@ found: the Obsidian emoji-format surface is **20 signifiers**; we parse ~14
 - Icon rendering setting: default `svg` or `emoji` initially (ADR-048 §17.2 lists
   `tasks.iconRendering: svg | emoji | off`)?
 - Parse the 5 unparsed Obsidian signifiers (`📍 location, 📝 note, 🔗 link,
-  ⏰ time, ⏩ forward`) or declare them non-goals? (ADR-048 §17.4)
+⏰ time, ⏩ forward`) or declare them non-goals? (ADR-048 §17.4)
 - Should task-line wikilinks be indexed (graph/backlinks integration) or stay
   excluded (current behavior)?
 - Recurrence engine scope: Obsidian-parity rules only, or also Basalt-only

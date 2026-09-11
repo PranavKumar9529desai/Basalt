@@ -116,8 +116,8 @@ const DEFAULTS = {
   tasksNewTaskPosition: "above" as "above" | "below",
   /** Remove the scheduled signifier when a recurring task is completed. */
   tasksRemoveScheduledOnRecurrence: false as boolean,
-   /** Per-core-plugin enabled state (Core plugins manager). Absent = enabled. */
-   enabledPlugins: {} as Record<string, boolean>,
+  /** Per-core-plugin enabled state (Core plugins manager). Absent = enabled. */
+  enabledPlugins: {} as Record<string, boolean>,
 };
 
 type SettingsKey = keyof typeof DEFAULTS;

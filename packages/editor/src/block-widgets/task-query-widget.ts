@@ -121,7 +121,8 @@ export class TaskQueryWidget extends WidgetType {
           notifyViewOfSizeChange(div, view);
         });
     } else {
-      content.innerHTML = '<div class="cm-task-error">Task engine not available</div>';
+      content.innerHTML =
+        '<div class="cm-task-error">Task engine not available</div>';
     }
 
     return div;
@@ -132,7 +133,9 @@ export class TaskQueryWidget extends WidgetType {
     const onOpenLink = this.onOpenLink;
     if (!onOpenLink) return;
     div.addEventListener("click", (event) => {
-      const anchor = (event.target as HTMLElement | null)?.closest?.("a.internal-link");
+      const anchor = (event.target as HTMLElement | null)?.closest?.(
+        "a.internal-link",
+      );
       if (!anchor) return;
       event.preventDefault();
       const name = anchor.getAttribute("data-name") ?? anchor.textContent ?? "";
@@ -172,7 +175,8 @@ const parse = (
   const endLine = doc.lineAt(node.to);
   const bodyStart = startLine.to + 1;
   const bodyEnd = endLine.from;
-  const body = bodyStart < bodyEnd ? doc.sliceString(bodyStart, bodyEnd).trim() : "";
+  const body =
+    bodyStart < bodyEnd ? doc.sliceString(bodyStart, bodyEnd).trim() : "";
 
   if (!body) return null;
 

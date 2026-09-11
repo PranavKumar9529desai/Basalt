@@ -68,7 +68,8 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
         initialData={
           initialData
             ? {
-                elements: initialData.elements as unknown as readonly ExcalidrawElement[],
+                elements:
+                  initialData.elements as unknown as readonly ExcalidrawElement[],
                 appState: {
                   ...initialData.appState,
                   theme,

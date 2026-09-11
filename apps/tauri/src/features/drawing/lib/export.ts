@@ -1,5 +1,8 @@
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement, NonDeleted } from "@excalidraw/excalidraw/element/types";
+import type {
+  ExcalidrawElement,
+  NonDeleted,
+} from "@excalidraw/excalidraw/element/types";
 import type { ExcalidrawElementStub, ExcalidrawAppStateStub } from "../types";
 import { CANVAS_BG, darkModePreInvert, getSurfaceColor } from "./scene";
 

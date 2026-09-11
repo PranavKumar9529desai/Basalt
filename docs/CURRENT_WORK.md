@@ -40,6 +40,7 @@ frontend tests, prod build). Not yet committed.
   v9 + `date-fns` added), adapted to `--sat-*` tokens.
 
 ### Deferred (v2 candidates)
+
 - Weekly notes support (week-number click → weekly note; needs 3 settings + reuse of command).
 - Activity-dot levels (multi-dot for word-count ranges, like the Obsidian plugin buckets).
 - ADR write-up if we want to record the format-compiler decision.
@@ -52,16 +53,17 @@ frontend tests, prod build). Not yet committed.
 
 ### Phase log
 
-| Phase | Commit | What | Gate |
-|-------|---------|------|------|
-| 1 | `f05e96a` | ADR-047 doc — Obsidian shell spec, evidence table, capabilities | doc written |
-| 2 | `72b0303` | Rust core — `create_drawing_file` emitter, bare-line text elements, tighter marker | 21 tests pass |
-| 3 | `36ef4b4` | Marker-authoritative classification in command layer (`is_drawing_content`, `read_drawing` gate) | 22 tests pass |
-| 4 | `4468d95` | TS surface — `resolveLeafType` + `is_drawing_file` IPC, `leafType` hint through tabs/openers, mocks + unit tests | tsc clean, 74 tests |
-| 5 | `e2f63b6` | Legacy format removed per user (test files deleted) — `basalt.rs` deleted, `.drawing.md` purged from registry/paths/rename/classifiers, migration flow dropped, in-place writer normalizes malformed plugin files to canonical shell; round-trip harness over all 13 real fixtures | 19 + harness + 67 + 358 tests, tsc/oxlint clean |
-| 6 | — | Docs: `features/drawing/README.md` | |
+| Phase | Commit    | What                                                                                                                                                                                                                                                                               | Gate                                            |
+| ----- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| 1     | `f05e96a` | ADR-047 doc — Obsidian shell spec, evidence table, capabilities                                                                                                                                                                                                                    | doc written                                     |
+| 2     | `72b0303` | Rust core — `create_drawing_file` emitter, bare-line text elements, tighter marker                                                                                                                                                                                                 | 21 tests pass                                   |
+| 3     | `36ef4b4` | Marker-authoritative classification in command layer (`is_drawing_content`, `read_drawing` gate)                                                                                                                                                                                   | 22 tests pass                                   |
+| 4     | `4468d95` | TS surface — `resolveLeafType` + `is_drawing_file` IPC, `leafType` hint through tabs/openers, mocks + unit tests                                                                                                                                                                   | tsc clean, 74 tests                             |
+| 5     | `e2f63b6` | Legacy format removed per user (test files deleted) — `basalt.rs` deleted, `.drawing.md` purged from registry/paths/rename/classifiers, migration flow dropped, in-place writer normalizes malformed plugin files to canonical shell; round-trip harness over all 13 real fixtures | 19 + harness + 67 + 358 tests, tsc/oxlint clean |
+| 6     | —         | Docs: `features/drawing/README.md`                                                                                                                                                                                                                                                 |                                                 |
 
 ### Remaining after Phase 6
+
 - Rust batched IPC (separate workstream)
 - Plugin host (ADR-018 Phase 5)
 
