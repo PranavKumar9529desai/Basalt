@@ -176,18 +176,81 @@ fn task_to_row(task: &TaskData, path: &str) -> Vec<TypedValue> {
 // Filtering
 // ---------------------------------------------------------------------------
 
-/// Apply a single filter predicate to a task. `path` is the source file's
-/// vault-relative path (needed for path/folder/filename predicates).
-fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
-    match filter.field.as_str() {
-        "status" => match filter.op.as_str() {
+/// ASCII fast-path, case-insensitive `contains`. Zero allocation for the
+/// common ASCII case (byte-window scan + `eq_ignore_ascii_case`, ADR-030);
+/// falls back to Unicode-aware (allocating) matching if either side has
+/// non-ASCII text, preserving the old `to_lowercase().contains()` semantics.
+fn contains_ignore_case(haystack: &str, needle: &str) -> bool {
+    if haystack.is_ascii() && needle.is_ascii() {
+        needle.is_empty()
+            || (needle.len() <= haystack.len()
+                && haystack
+                    .as_bytes()
+                    .windows(needle.len())
+                    .any(|w| w.eq_ignore_ascii_case(needle.as_bytes())))
+    } else {
+        haystack.to_lowercase().contains(&needle.to_lowercase())
+    }
+}
+
+/// ASCII fast-path, case-insensitive equality; Unicode-aware fallback.
+fn equals_ignore_case(a: &str, b: &str) -> bool {
+    if a.is_ascii() && b.is_ascii() {
+        a.eq_ignore_ascii_case(b)
+    } else {
+        a.to_lowercase() == b.to_lowercase()
+    }
+}
+
+/// A filter with its per-task work hoisted OUT of the retain loop
+/// (ADR-030): `value_lower` and the normalized status target are computed
+/// once per query, not once per task — the old `matches_filter` rebuilt
+/// `filter.value.to_lowercase()` for every task, one heap allocation per
+/// task per filter.
+struct PreparedFilter<'a> {
+    field: &'a str,
+    op: &'a str,
+    value: &'a str,
+    value_lower: String,
+    /// Normalized status name ("in progress" → "in_progress"); only
+    /// meaningful when `field == "status"`.
+    status_target: Option<&'a str>,
+}
+
+fn prepare_filter(filter: &TaskFilter) -> PreparedFilter<'_> {
+    let value_lower = filter.value.to_lowercase();
+    let status_target = (filter.field == "status").then(|| {
+        let lowered = value_lower.replace(' ', "_");
+        match lowered.as_str() {
+            "in_progress" => "in_progress",
+            "on_hold" => "on_hold",
+            // Common cases map to the wire spelling; anything else keeps
+            // its trimmed original (same semantics as the old normalizer).
+            _ => filter.value.trim(),
+        }
+    });
+    PreparedFilter {
+        field: &filter.field,
+        op: &filter.op,
+        value: &filter.value,
+        value_lower,
+        status_target,
+    }
+}
+
+/// Apply a single filter predicate to a task (allocation-free hot path).
+/// `path` is the source file's vault-relative path (needed for
+/// path/folder/filename predicates).
+fn matches_prepared(path: &str, task: &TaskData, pf: &PreparedFilter<'_>) -> bool {
+    match pf.field {
+        "status" => match pf.op {
             // Parser-emitted semantics — exclude done AND cancelled.
             "done" => task.is_done(),
             "not_done" => task.is_todo(),
             // Name comparison, normalized ("in progress" → "in_progress").
             _ => {
-                let target = normalize_status_name(&filter.value);
-                match filter.op.as_str() {
+                let target = pf.status_target.unwrap_or_else(|| pf.value.trim());
+                match pf.op {
                     "equals" => task.status.name() == target,
                     "not_equals" => task.status.name() != target,
                     _ => false,
@@ -195,39 +258,35 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
             }
         },
         "priority" => {
-            let target = filter.value.to_lowercase();
             let priority_name = task.priority.name();
-            match filter.op.as_str() {
-                "equals" => priority_name == target,
-                "not_equals" => priority_name != target,
+            match pf.op {
+                "equals" => priority_name == pf.value_lower.as_str(),
+                "not_equals" => priority_name != pf.value_lower.as_str(),
                 "above" => {
                     // "above X" means numeric rank < X's rank.
-                    let target_rank = priority_rank_from_name(&target);
+                    let target_rank = priority_rank_from_name(&pf.value_lower);
                     task.priority.numeric() < target_rank
                 }
                 "below" => {
-                    let target_rank = priority_rank_from_name(&target);
+                    let target_rank = priority_rank_from_name(&pf.value_lower);
                     task.priority.numeric() > target_rank
                 }
                 _ => false,
             }
         }
-        "due" => compare_date_field(task.due, &filter.op, &filter.value),
-        "scheduled" => compare_date_field(task.scheduled, &filter.op, &filter.value),
-        "start" => compare_date_field(task.start, &filter.op, &filter.value),
-        "created" => compare_date_field(task.created, &filter.op, &filter.value),
-        "happens" => compare_date_field(task.happens(), &filter.op, &filter.value),
-        "description" => match filter.op.as_str() {
-            "includes" => task
-                .description
-                .to_lowercase()
-                .contains(&filter.value.to_lowercase()),
-            "equals" => task.description.to_lowercase() == filter.value.to_lowercase(),
+        "due" => compare_date_field(task.due, pf.op, pf.value),
+        "scheduled" => compare_date_field(task.scheduled, pf.op, pf.value),
+        "start" => compare_date_field(task.start, pf.op, pf.value),
+        "created" => compare_date_field(task.created, pf.op, pf.value),
+        "happens" => compare_date_field(task.happens(), pf.op, pf.value),
+        "description" => match pf.op {
+            "includes" => contains_ignore_case(&task.description, pf.value),
+            "equals" => equals_ignore_case(&task.description, pf.value),
             _ => false,
         },
         "tags" => {
-            let tag = filter.value.trim_start_matches('#');
-            match filter.op.as_str() {
+            let tag = pf.value.trim_start_matches('#');
+            match pf.op {
                 "includes" => task.tags.iter().any(|t| {
                     let t_clean = t.trim_start_matches('#');
                     t_clean == tag
@@ -236,39 +295,43 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
                 _ => false,
             }
         }
-        "path" => match filter.op.as_str() {
-            "includes" => path.to_lowercase().contains(&filter.value.to_lowercase()),
-            "equals" => path.eq_ignore_ascii_case(&filter.value),
+        "path" => match pf.op {
+            "includes" => contains_ignore_case(path, pf.value),
+            "equals" => equals_ignore_case(path, pf.value),
             _ => false,
         },
         "folder" => {
             let folder = path.rfind('/').map(|i| &path[..i]).unwrap_or("");
-            match filter.op.as_str() {
-                "includes" => folder.to_lowercase().contains(&filter.value.to_lowercase()),
-                "equals" => folder.eq_ignore_ascii_case(&filter.value),
+            match pf.op {
+                "includes" => contains_ignore_case(folder, pf.value),
+                "equals" => equals_ignore_case(folder, pf.value),
                 _ => false,
             }
         }
         "filename" => {
-            let name = path.rsplit('/').next().unwrap_or(path).trim_end_matches(".md");
-            match filter.op.as_str() {
-                "includes" => name.to_lowercase().contains(&filter.value.to_lowercase()),
-                "equals" => name.eq_ignore_ascii_case(&filter.value),
+            let name = path
+                .rsplit('/')
+                .next()
+                .unwrap_or(path)
+                .trim_end_matches(".md");
+            match pf.op {
+                "includes" => contains_ignore_case(name, pf.value),
+                "equals" => equals_ignore_case(name, pf.value),
                 _ => false,
             }
         }
-        "depends_on" => match filter.op.as_str() {
+        "depends_on" => match pf.op {
             "exists" => !task.depends_on.is_empty(),
             "is_empty" => task.depends_on.is_empty(),
             _ => false,
         },
-        "recurrence" => match filter.op.as_str() {
+        "recurrence" => match pf.op {
             "exists" => task.recurrence.is_some(),
             "is_empty" => task.recurrence.is_none(),
             "includes" => task
                 .recurrence
-                .as_ref()
-                .map(|r| r.to_lowercase().contains(&filter.value.to_lowercase()))
+                .as_deref()
+                .map(|r| contains_ignore_case(r, pf.value))
                 .unwrap_or(false),
             _ => false,
         },
@@ -276,16 +339,11 @@ fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
     }
 }
 
-/// Normalize a status filter value: "in progress" / "on hold" → the
-/// `snake_case` wire spelling.
-fn normalize_status_name(value: &str) -> &str {
-    match value.trim().to_lowercase().replace(' ', "_").as_str() {
-        "in_progress" => "in_progress",
-        "on_hold" => "on_hold",
-        // Keep the borrow simple: the common cases are the ones that need
-        // mapping; everything else is already snake_case or lowercase.
-        _ => value.trim(),
-    }
+/// Thin shim over [`prepare_filter`] + [`matches_prepared`]; used by the
+/// unit tests. The production hot loop calls `matches_prepared` directly
+/// with a pre-lowered `PreparedFilter`.
+fn matches_filter(path: &str, task: &TaskData, filter: &TaskFilter) -> bool {
+    matches_prepared(path, task, &prepare_filter(filter))
 }
 
 /// Compare an optional date field against a filter value.
@@ -578,10 +636,13 @@ pub fn execute_collected_tasks(
     let columns = task_columns();
     let mut tasks = tasks;
 
-    // Apply filters.
+    // Apply filters. Values are pre-lowered once per query (ADR-030) — the
+    // per-task retain loop only touches `matches_prepared` (allocation-free
+    // for ASCII text; no per-task `.to_lowercase()`).
     if let Some(q) = query {
-        for filter in &q.filters {
-            tasks.retain(|(path, t)| matches_filter(path, t, filter));
+        let prepared: Vec<PreparedFilter<'_>> = q.filters.iter().map(prepare_filter).collect();
+        for pf in &prepared {
+            tasks.retain(|(path, t)| matches_prepared(path, t, pf));
         }
     }
 
