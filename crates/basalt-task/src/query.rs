@@ -490,20 +490,45 @@ fn apply_permutation(tasks: &mut [(String, TaskData)], order: &[usize]) {
 /// cheap precomputed-key comparisons — the previous comparator ran
 /// `calculate_urgency`, `happens()` and date math on every comparison
 /// (O(N log N) recomputations).
-fn sort_tasks(tasks: &mut Vec<(String, TaskData)>, sorts: &[TaskSort]) {
+///
+/// When `limit` is `Some(k)` with `k < n`, applies **top-K selection**
+/// (ADR-045 §2.2): `select_nth_unstable_by` partitions in O(N), then only
+/// the selected prefix is sorted — O(N + k log k) instead of O(N log N).
+/// The partition comparator is a strict total order (see [`compare_keys`]
+/// path/line tie-break), which `select_nth_unstable_by` requires.
+fn sort_tasks(tasks: &mut Vec<(String, TaskData)>, sorts: &[TaskSort], limit: Option<usize>) {
     let today = chrono::Local::now().date_naive();
+    let n = tasks.len();
+    let k = limit.map(|k| k.min(n));
+
+    if k == Some(0) {
+        tasks.clear();
+        return;
+    }
 
     // Phase 1 — pre-evaluate keys (borrowing from the still-stable `tasks`
-    // buffer) and sort an index permutation with precomputed comparisons.
+    // buffer) and order an index permutation with precomputed comparisons.
     let permutation = {
         let keys = build_sort_keys(tasks, today);
-        let mut order: Vec<usize> = (0..tasks.len()).collect();
-        order.sort_by(|&a, &b| compare_keys(&keys[a], &keys[b], sorts));
+        let mut order: Vec<usize> = (0..n).collect();
+        let cmp = |&a: &usize, &b: &usize| compare_keys(&keys[a], &keys[b], sorts);
+        match k {
+            // Top-K: O(N) partial partition, then sort only the winner prefix.
+            Some(k) if k < n => {
+                order.select_nth_unstable_by(k - 1, cmp);
+                order[..k].sort_by(cmp);
+            }
+            _ => order.sort_by(cmp),
+        }
         order
     };
-    // Phase 2 — apply the permutation. `keys` is out of scope, so its
-    // borrows of `tasks` have ended and elements may be moved freely.
+    // Phase 2 — apply the permutation (`order` is a full, valid permutation
+    // in both branches: the k winners land in positions 0..k). `keys` is out
+    // of scope, so its borrows of `tasks` have ended and elements may move.
     apply_permutation(tasks, &permutation);
+    if let Some(k) = k {
+        tasks.truncate(k);
+    }
 }
 
 /// Collect all tasks from the vault, with their source file paths.
@@ -562,18 +587,12 @@ pub fn execute_collected_tasks(
 
     let total = tasks.len();
 
-    // Apply sorts.
+    // Sort (+ top-K limit selection in a single pass). `total` stays
+    // pre-limit so the "X of Y tasks" footer shows the full match count.
     if let Some(q) = query {
-        sort_tasks(&mut tasks, &q.sorts);
+        sort_tasks(&mut tasks, &q.sorts, q.limit);
     } else {
-        sort_tasks(&mut tasks, &[]);
-    }
-
-    // Apply limit.
-    if let Some(q) = query {
-        if let Some(limit) = q.limit {
-            tasks.truncate(limit);
-        }
+        sort_tasks(&mut tasks, &[], None);
     }
 
     // Build rows.
@@ -689,10 +708,10 @@ mod tests {
             field: "happens".into(),
             reverse,
         }];
-        sort_tasks(&mut tasks, &sort(false));
+        sort_tasks(&mut tasks, &sort(false), None);
         assert_eq!(tasks[0].0, "dated.md");
         assert_eq!(tasks[1].0, "undated.md");
-        sort_tasks(&mut tasks, &sort(true));
+        sort_tasks(&mut tasks, &sort(true), None);
         assert_eq!(tasks[0].0, "dated.md");
         assert_eq!(tasks[1].0, "undated.md");
     }
@@ -710,9 +729,48 @@ mod tests {
                 field: "status".into(),
                 reverse: false,
             }],
+            None,
         );
         let names: Vec<&str> = tasks.iter().map(|(p, _)| p.as_str()).collect();
         assert_eq!(names, vec!["in_progress.md", "on_hold.md", "todo.md"]);
+    }
+
+    #[test]
+    fn top_k_matches_full_sort_then_truncate() {
+        // Build 8 tasks with distinct urgency (highest priority + overdue = high urgency,
+        // lowest priority + no date = low urgency). sort_tasks with limit=3 must return
+        // the same top 3 as a full sort followed by truncate(3).
+        let today = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        let overdue = NaiveDate::from_ymd_opt(2024, 1, 10).unwrap();
+        let soon = NaiveDate::from_ymd_opt(2024, 1, 18).unwrap();
+
+        let mut tasks = vec![
+            ("c.md".to_string(), task(TaskStatus::Todo, TaskPriority::Low)),
+            ("a.md".to_string(), task(TaskStatus::Todo, TaskPriority::Highest)),
+            ("f.md".to_string(), task(TaskStatus::Done, TaskPriority::None)),
+            ("d.md".to_string(), task(TaskStatus::Todo, TaskPriority::Medium)),
+            ("b.md".to_string(), task(TaskStatus::Todo, TaskPriority::High)),
+            ("g.md".to_string(), task(TaskStatus::Todo, TaskPriority::Lowest)),
+            ("e.md".to_string(), task(TaskStatus::Todo, TaskPriority::None)),
+            ("h.md".to_string(), task(TaskStatus::Todo, TaskPriority::None)),
+        ];
+        // Assign dates that create a spread of urgency scores.
+        tasks[0].1.due = Some(overdue);
+        tasks[1].1.due = Some(overdue);
+        tasks[2].1.due = Some(overdue);
+        tasks[4].1.due = Some(soon);
+
+        // Full sort + truncate(3) for reference.
+        let mut expected = tasks.clone();
+        sort_tasks(&mut expected, &[], None);
+        expected.truncate(3);
+        let expected_paths: Vec<&str> = expected.iter().map(|(p, _)| p.as_str()).collect();
+
+        // Top-K selection.
+        sort_tasks(&mut tasks, &[], Some(3));
+        let topk_paths: Vec<&str> = tasks.iter().map(|(p, _)| p.as_str()).collect();
+
+        assert_eq!(topk_paths, expected_paths, "top-k must match full sort + truncate");
     }
 
     #[test]
