@@ -1,9 +1,11 @@
 //! Obsidian Excalidraw plugin compatibility (`.excalidraw.md`).
 //!
 //! The plugin persists hybrid markdown: `# Excalidraw Data` with a `## Text
-//! Elements` bullet section, `## Element Links`, `## Embedded Files`, and a
-//! fenced `## Drawing` scene block whose body is either raw `json` or
+//! Elements` section (bare lines, each suffixed ` ^id`), `%%` omittable zone,
+//! and a fenced `## Drawing` scene block whose body is either raw `json` or
 //! LZString `compressed-json` (base64, chunked into 256-char lines).
+
+use chrono::Utc;
 
 /// Byte span `(start, end)` of the `# Drawing`/`## Drawing` heading line.
 fn drawing_heading_span(content: &str) -> Option<(usize, usize)> {
@@ -19,12 +21,15 @@ fn drawing_heading_span(content: &str) -> Option<(usize, usize)> {
 }
 
 /// True when content uses the Obsidian Excalidraw plugin's hybrid layout:
-/// `# Excalidraw Data` header, a Drawing section, or plugin frontmatter.
+/// `# Excalidraw Data` header, plugin frontmatter, or a compressed scene.
+///
+/// Deliberately does NOT treat a lone `## Drawing` heading as a drawing — a
+/// plain markdown note documenting JSON under such a heading would false-
+/// positive. The three signals below are the plugin's own markers.
 pub fn is_obsidian_excalidraw_format(content: &str) -> bool {
     content.contains("# Excalidraw Data")
         || content.contains("excalidraw-plugin: parsed")
         || content.contains("```compressed-json")
-        || drawing_heading_span(content).is_some()
 }
 
 #[derive(Debug, Default)]
@@ -137,6 +142,10 @@ fn extract_text_elements(content: &str) -> Vec<String> {
             if !val.is_empty() {
                 result.push(strip_block_ref(val).to_string());
             }
+        } else {
+            // The plugin writes bare lines (`Load Balancer ^id`), not bullets;
+            // legacy Basalt hybrids used `- bullet` lines (handled above).
+            result.push(strip_block_ref(t).to_string());
         }
     }
 
@@ -224,6 +233,92 @@ pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
         out.push_str("\n```\n");
     }
 
+    out
+}
+
+/// Build a brand-new drawing file in the Obsidian Excalidraw shell: plugin
+/// frontmatter, the `EXCALIDRAW VIEW` notice, `# Excalidraw Data`, a
+/// `## Text Elements` mirror (bare lines + `^id`), and a `## Drawing` block
+/// with the scene as a plain `json` fence. Always includes the fence — scene
+/// data is never hidden inside `%%` comments.
+pub fn create_drawing_file(data_json: &str) -> String {
+    create_drawing_file_with_created(data_json, None)
+}
+
+/// [`create_drawing_file`] with an explicit `created` timestamp (used when
+/// migrating legacy Basalt hybrids, whose creation date must be preserved).
+pub(crate) fn create_drawing_file_with_created(data_json: &str, created: Option<String>) -> String {
+    let now_iso = Utc::now().to_rfc3339();
+    let created = created.unwrap_or_else(|| now_iso.clone());
+
+    let mut out = String::new();
+    out.push_str("---\n");
+    out.push_str("excalidraw-plugin: parsed\n");
+    out.push_str("tags: [excalidraw]\n");
+    out.push_str(&format!("created: {created}\n"));
+    out.push_str(&format!("updated: {now_iso}\n"));
+    // Basalt-owned extension strip: unknown frontmatter keys are preserved
+    // and ignored by the plugin — the designated home for Basalt-only data.
+    out.push_str("basalt:\n");
+    out.push_str("  format: obsidian-shell\n");
+    out.push_str("  encoding: json\n");
+    out.push_str("---\n\n");
+    out.push_str("==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠==\n\n");
+    out.push_str("# Excalidraw Data\n");
+    out.push_str("## Text Elements\n");
+    let mirror = text_element_lines(data_json);
+    if !mirror.is_empty() {
+        out.push_str(&mirror);
+        out.push('\n');
+    }
+    out.push_str("\n%%\n");
+    out.push_str("## Drawing\n```json\n");
+    out.push_str(data_json.trim());
+    out.push_str("\n```\n");
+    out
+}
+
+/// Render the `## Text Elements` mirror from a scene: one block per active
+/// text element, element text verbatim (may span lines) with the block ref
+/// ` ^<element-id>` appended to its last line, matching the plugin's layout.
+fn text_element_lines(data_json: &str) -> String {
+    let Ok(val) = serde_json::from_str::<serde_json::Value>(data_json) else {
+        return String::new();
+    };
+    let Some(elements) = val.get("elements").and_then(|e| e.as_array()) else {
+        return String::new();
+    };
+
+    let mut out = String::new();
+    for elem in elements {
+        let is_deleted = elem
+            .get("isDeleted")
+            .and_then(|d| d.as_bool())
+            .unwrap_or(false);
+        if is_deleted {
+            continue;
+        }
+        let Some(text) = elem.get("text").and_then(|t| t.as_str()) else {
+            continue;
+        };
+        let lines: Vec<&str> = text.lines().map(str::trim_end).filter(|l| !l.is_empty()).collect();
+        if lines.is_empty() {
+            continue;
+        }
+
+        let id = elem.get("id").and_then(|i| i.as_str());
+        let mut block = lines.join("\n");
+        if let Some(id) = id {
+            if !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+                block.push_str(" ^");
+                block.push_str(id);
+            }
+        }
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(&block);
+    }
     out
 }
 
@@ -496,5 +591,47 @@ mod tests {
         assert!(rewritten.contains("```json\n"));
         assert!(rewritten.contains("\"text\":\"Edited\""));
         assert!(!rewritten.contains(COMPRESSED_FIXTURE));
+    }
+
+    #[test]
+    fn test_bare_line_text_elements() {
+        // The plugin writes bare lines — not bullets.
+        let content = "---\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n---\n\n# Excalidraw Data\n## Text Elements\ntarget ^tZMHYgSv\n\n(8,1) ^ipekGSpj\n\ntwo ^ref2 one ^notref\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n";
+        let parsed = parse_obsidian_excalidraw(content);
+        // ^ stripping applies only to the trailing block ref.
+        assert_eq!(parsed.text_elements, vec!["target", "(8,1)", "two ^ref2 one"]);
+    }
+
+    #[test]
+    fn test_create_drawing_file_shape() {
+        let json = r##"{"type":"excalidraw","version":2,"elements":[{"type":"text","id":"aBc123","text":"Hello\nWorld","isDeleted":false}],"appState":{},"files":{}}"##;
+        let out = create_drawing_file(json);
+
+        assert!(out.starts_with("---\nexcalidraw-plugin: parsed\n"));
+        assert!(out.contains("tags: [excalidraw]\n"));
+        assert!(out.contains("basalt:\n  format: obsidian-shell\n"));
+        assert!(out.contains("==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS"));
+        assert!(out.contains("# Excalidraw Data\n## Text Elements\n"));
+        assert!(out.contains("Hello\nWorld ^aBc123"));
+        assert!(out.contains("%%\n## Drawing\n```json\n"));
+        assert!(out.ends_with("\n```\n"));
+        assert!(!out.contains("compressed-json"));
+        assert!(!out.contains("# Drawing Text & Elements"));
+    }
+
+    #[test]
+    fn test_plain_note_with_drawing_heading_is_not_drawing() {
+        // A markdown note documenting JSON under a `## Drawing` heading must
+        // not be classified as an Obsidian drawing file.
+        let content = "## Drawing\n```json\n{\"x\":1}\n```\n";
+        assert!(!is_obsidian_excalidraw_format(content));
+    }
+
+    #[test]
+    fn test_legacy_bullet_text_elements_still_parse() {
+        // Legacy Basalt hybrids wrote `- bullet` lines; those must keep parsing.
+        let content = "---\nexcalidraw-plugin: parsed\n---\n# Excalidraw Data\n## Text Elements\n- routes ^Jzdcv7eT\n- First item ^abc\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n";
+        let parsed = parse_obsidian_excalidraw(content);
+        assert_eq!(parsed.text_elements, vec!["routes", "First item"]);
     }
 }

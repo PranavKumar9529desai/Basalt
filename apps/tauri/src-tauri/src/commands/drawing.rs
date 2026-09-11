@@ -5,10 +5,9 @@ use tauri::State;
 
 use super::common::{ensure_inside_vault, index_upsert, register_self_writes};
 use crate::app_state::AppState;
-use crate::core::drawing::obsidian::{is_obsidian_excalidraw_format, serialize_obsidian_markdown};
 use crate::core::drawing::{
-    atomic_write_file, parse_drawing_content, serialize_drawing_markdown, DrawingPayload,
-    EMPTY_DRAWING_JSON,
+    atomic_write_file, create_drawing_file, parse_drawing_content, serialize_drawing_content,
+    DrawingPayload, EMPTY_DRAWING_JSON,
 };
 use crate::error::{AppError, AppResult};
 
@@ -71,14 +70,11 @@ pub fn parse_drawing(content: String) -> DrawingPayload {
     parse_drawing_content(&content)
 }
 
-/// Serialize a scene into the hybrid `.drawing.md` backplane without writing
-/// to disk. Used by the view-mode toggle to preview the generated markdown.
+/// Serialize a scene into the Obsidian Excalidraw shell without writing to
+/// disk. Used by the view-mode toggle to preview the generated markdown.
 #[tauri::command]
-pub fn serialize_drawing(
-    data_json: String,
-    existing_markdown: Option<String>,
-) -> Result<String, String> {
-    serialize_drawing_markdown(&data_json, existing_markdown.as_deref())
+pub fn serialize_drawing(data_json: String, existing_markdown: Option<String>) -> String {
+    serialize_drawing_content(&data_json, existing_markdown.as_deref())
 }
 
 /// Read a drawing file from disk and return its structured DrawingPayload.
@@ -104,15 +100,10 @@ pub fn save_drawing(
         raw
     } else {
         let existing = std::fs::read_to_string(&abs).ok();
-        match existing.as_deref() {
-            // Preserve Obsidian Excalidraw plugin files: update only the
-            // Drawing block so the file stays round-trippable in Obsidian.
-            Some(existing) if is_obsidian_excalidraw_format(existing) => {
-                serialize_obsidian_markdown(&data_json, existing)
-            }
-            _ => serialize_drawing_markdown(&data_json, existing.as_deref())
-                .map_err(AppError::Validation)?,
-        }
+        // Obsidian-shell files get a surgical in-place update (only the
+        // `## Drawing` block changes); legacy Basalt hybrids are migrated to
+        // the shell; missing files are created fresh with the full shell.
+        serialize_drawing_content(&data_json, existing.as_deref())
     };
 
     register_self_writes(&state, std::slice::from_ref(&abs));
@@ -181,7 +172,7 @@ pub fn create_untitled_drawing(
             format!("Untitled {i}")
         };
 
-        let file_path = parent_dir.join(format!("{name}.drawing.md"));
+        let file_path = parent_dir.join(format!("{name}.excalidraw.md"));
         if file_path.exists() {
             continue;
         }
@@ -191,8 +182,7 @@ pub fn create_untitled_drawing(
                 .map_err(|e| AppError::Io(format!("failed to create directory: {e}")))?;
         }
 
-        let content = serialize_drawing_markdown(EMPTY_DRAWING_JSON, None)
-            .map_err(AppError::Validation)?;
+        let content = create_drawing_file(EMPTY_DRAWING_JSON);
 
         register_self_writes(&state, std::slice::from_ref(&file_path));
         if let Err(e) = atomic_write_file(&file_path, &content) {

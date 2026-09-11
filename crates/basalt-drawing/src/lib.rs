@@ -1,21 +1,26 @@
-//! Drawing file format — parse and serialize `.drawing.md`, `.excalidraw.md`,
-//! and raw `.excalidraw` files.
+//! Drawing file format — parse and serialize `.excalidraw.md` and raw
+//! `.excalidraw` files in the Obsidian Excalidraw plugin's shell.
 //!
-//! Implements three format variants:
-//! - **Basalt hybrid** (`.drawing.md`): frontmatter + `%%#drawing-data` + text elements
-//! - **Obsidian Excalidraw plugin** (`.excalidraw.md`): `# Excalidraw Data` with compressed scene blocks
-//! - **Raw Excalidraw JSON** (`.excalidraw`): direct JSON scene file
+//! Implements:
+//! - **Obsidian Excalidraw plugin** (`.excalidraw.md`): `# Excalidraw Data`
+//!   with a `## Drawing` scene block — plain `json` or LZString
+//!   `compressed-json`. Basalt always writes plain `json`.
+//! - **Raw Excalidraw JSON** (`.excalidraw`): direct JSON scene file.
+//! - **Legacy Basalt hybrid** (`.drawing.md`, read-only): frontmatter +
+//!   `%%#drawing-data`; never written, migrated to the shell on save.
 //!
 //! The crate is self-contained: no Tauri, no business state.
 
 mod basalt;
 pub mod obsidian;
 
+pub use obsidian::create_drawing_file;
+pub use obsidian::serialize_obsidian_markdown;
+
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
@@ -188,72 +193,29 @@ pub fn parse_drawing_content(content: &str) -> DrawingPayload {
     }
 }
 
-/// Serializes drawing data and element texts into the hybrid `.drawing.md` Markdown backplane.
-pub fn serialize_drawing_markdown(
-    data_json: &str,
-    existing_markdown: Option<&str>,
-) -> Result<String, String> {
-    let text_elements = extract_text_elements_from_json(data_json);
-    let now_iso = Utc::now().to_rfc3339();
-
-    let mut created = now_iso.clone();
-    let mut custom_frontmatter_lines: Vec<&str> = Vec::new();
-
-    if let Some(existing) = existing_markdown {
-        let trimmed = existing.trim_start();
-        if trimmed.starts_with("---") {
-            let after_first_fence = &existing[3..];
-            if let Some(second_fence_idx) = after_first_fence.find("\n---") {
-                for line in after_first_fence[..second_fence_idx].lines() {
-                    let line_trim = line.trim();
-                    if let Some(rest) = line_trim.strip_prefix("created:") {
-                        let val = rest
-                            .trim()
-                            .trim_matches('\'')
-                            .trim_matches('\"')
-                            .to_string();
-                        if !val.is_empty() {
-                            created = val;
-                        }
-                    } else if !line_trim.starts_with("updated:")
-                        && !line_trim.starts_with("type:")
-                        && !line_trim.starts_with("version:")
-                        && !line_trim.is_empty()
-                    {
-                        custom_frontmatter_lines.push(line);
-                    }
-                }
-            }
+/// Serialize a scene into the Obsidian Excalidraw shell, choosing the writer
+/// by what exists on disk:
+/// - no existing file → a brand-new shell file ([`create_drawing_file`])
+/// - existing Obsidian-shell file → surgical in-place update
+///   ([`serialize_obsidian_markdown`]: only the `## Drawing` block changes)
+/// - existing legacy Basalt hybrid (`.drawing.md`) → migrated to a clean
+///   shell, preserving the original `created` timestamp
+pub fn serialize_drawing_content(data_json: &str, existing_markdown: Option<&str>) -> String {
+    match existing_markdown {
+        None => obsidian::create_drawing_file(data_json),
+        Some(existing) if obsidian::is_obsidian_excalidraw_format(existing) => {
+            obsidian::serialize_obsidian_markdown(data_json, existing)
         }
+        Some(existing) => migrate_legacy_basalt(data_json, existing),
     }
+}
 
-    let mut out = String::new();
-    out.push_str("---\n");
-    out.push_str("type: excalidraw\n");
-    out.push_str("version: 2\n");
-    out.push_str(&format!("created: {created}\n"));
-    out.push_str(&format!("updated: {now_iso}\n"));
-    for custom in &custom_frontmatter_lines {
-        out.push_str(custom);
-        out.push('\n');
-    }
-    out.push_str("---\n\n");
-    out.push_str("# Drawing Text & Elements\n\n");
-
-    if text_elements.is_empty() {
-        out.push('\n');
-    } else {
-        for text in &text_elements {
-            out.push_str(&format!("- {text}\n"));
-        }
-        out.push('\n');
-    }
-
-    out.push_str("%%#drawing-data\n");
-    out.push_str(data_json.trim());
-    out.push_str("\n%%\n");
-
-    Ok(out)
+/// Rebuild a legacy Basalt hybrid (`.drawing.md` / `%%#drawing-data`) as a
+/// clean Obsidian shell. Legacy sections are dropped wholesale; only the
+/// original `created` timestamp is carried over.
+fn migrate_legacy_basalt(data_json: &str, existing: &str) -> String {
+    let (created, _, _) = parse_frontmatter(existing);
+    obsidian::create_drawing_file_with_created(data_json, created)
 }
 
 /// Atomically write content to disk via a temporary file in the same directory,
@@ -300,21 +262,50 @@ mod tests {
     }
 
     #[test]
-    fn test_round_trip_parse_and_serialize() {
+    fn test_round_trip_create_parse_shell() {
         let json = r##"{"type":"excalidraw","version":2,"source":"basalt","elements":[{"type":"text","id":"t1","text":"[[Node]]","isDeleted":false}],"appState":{"viewBackgroundColor":"transparent"},"files":{}}"##;
 
-        let serialized = serialize_drawing_markdown(json, None).expect("serialization failed");
-        assert!(serialized.contains("type: excalidraw"));
-        assert!(serialized.contains("version: 2"));
-        assert!(serialized.contains("# Drawing Text & Elements"));
-        assert!(serialized.contains("- [[Node]]"));
-        assert!(serialized.contains("%%#drawing-data"));
+        let serialized = create_drawing_file(json);
+        assert!(serialized.contains("excalidraw-plugin: parsed"));
+        assert!(serialized.contains("tags: [excalidraw]"));
+        assert!(serialized.contains("basalt:"));
+        assert!(serialized.contains("# Excalidraw Data"));
+        assert!(serialized.contains("## Text Elements"));
+        assert!(serialized.contains("[[Node]] ^t1"));
+        assert!(serialized.contains("## Drawing"));
+        assert!(serialized.contains("```json"));
 
         let parsed = parse_drawing_content(&serialized);
         assert_eq!(parsed.data_json.trim(), json.trim());
         assert_eq!(parsed.text_elements, vec!["[[Node]]".to_string()]);
         assert!(parsed.created.is_some());
         assert!(parsed.updated.is_some());
+    }
+
+    #[test]
+    fn test_legacy_hybrid_migrates_to_shell() {
+        let legacy = "---\ntype: excalidraw\nversion: 2\ncreated: 2026-01-01T00:00:00Z\nupdated: 2026-01-02T00:00:00Z\n---\n# Drawing Text & Elements\n- [[Node]]\n\n%%#drawing-data\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[{\"type\":\"text\",\"text\":\"x\",\"isDeleted\":false}],\"appState\":{},\"files\":{}}\n%%\n";
+        let json = r##"{"type":"excalidraw","version":2,"elements":[{"type":"text","text":"migrated","isDeleted":false}],"appState":{},"files":{}}"##;
+
+        let out = serialize_drawing_content(&json, Some(legacy));
+
+        // Legacy sections are dropped in favour of a clean Obsidian shell.
+        assert!(!out.contains("# Drawing Text & Elements"));
+        assert!(!out.contains("%%#drawing-data"));
+        assert!(!out.contains("type: excalidraw"));
+        assert!(out.contains("excalidraw-plugin: parsed"));
+        assert!(out.contains("# Excalidraw Data"));
+        assert!(out.contains("## Drawing"));
+        // The original created timestamp survives the migration.
+        assert!(out.contains("created: 2026-01-01T00:00:00Z"));
+    }
+
+    #[test]
+    fn test_missing_file_creates_fresh_shell() {
+        let json = r##"{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}"##;
+        let out = serialize_drawing_content(&json, None);
+        assert!(out.starts_with("---\nexcalidraw-plugin: parsed\n"));
+        assert!(out.contains("## Drawing\n```json\n"));
     }
 
     #[test]
