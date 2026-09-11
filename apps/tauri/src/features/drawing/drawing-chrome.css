@@ -1,25 +1,32 @@
 /*
  * Bridge Excalidraw's chrome palette to Basalt theme tokens.
  *
- * Excalidraw themes its toolbar/dialog chrome through ~100 CSS custom
- * properties declared on `.excalidraw` (upstream css/theme.scss). This file
- * maps the accent-related ones to the `--sat-excalidraw-*` tokens emitted by
- * packages/theme (component.json → globals.css), so the chrome echoes the
- * active theme's accent colour (orange on dark themes, blue on light) without
- * repeating colour values in feature code.
+ * Excalidraw themes its toolbar/dialog chrome through CSS custom properties
+ * declared on `.excalidraw` — and REDECLARED with higher specificity on
+ * `.excalidraw.theme--dark` when dark mode is active (upstream css/theme.scss;
+ * the dark rule wins over any plain `.excalidraw` override — this is the
+ * well-known "can't override Excalidraw colours" trap). The upstream docs
+ * (dev-docs/docs/@excalidraw/excalidraw/customizing-styles.mdx) recommend
+ * overriding on BOTH selectors, prefixed with a host-app selector for extra
+ * specificity.
  *
- * The canvas itself is transparent (lib/scene.ts) — this file only tones the
+ * We scope with `.basalt-drawing` (the wrapper div in ExcalidrawWrapper) so
+ * both rules beat upstream, and map the accent-related variables to the
+ * `--sat-excalidraw-*` tokens emitted by packages/theme (component.json →
+ * globals.css). Chrome echoes the active theme accent — orange on dark
+ * themes, blue on light — without repeating colour values in feature code.
+ *
+ * The canvas itself is transparent (lib/scene.ts); this file only tones the
  * floating chrome, never the drawing surface.
- *
- * Scoped to `.excalidraw`; must be imported AFTER @excalidraw/excalidraw
- * styles so the overrides win at equal specificity.
  */
-.excalidraw {
+.basalt-drawing .excalidraw,
+.basalt-drawing .excalidraw.theme--dark {
   --color-primary: var(--sat-excalidraw-primary);
   --color-primary-darker: var(--sat-excalidraw-primary-darker);
   --color-primary-darkest: var(--sat-excalidraw-primary-darkest);
   --color-primary-hover: var(--sat-excalidraw-primary-hover);
   --color-primary-light: var(--sat-excalidraw-primary-light);
+  --color-primary-contrast-offset: var(--sat-excalidraw-primary-darker);
   --color-brand-hover: var(--sat-excalidraw-primary-hover);
   --color-brand-active: var(--sat-excalidraw-primary-darker);
   --select-highlight-color: var(--sat-excalidraw-select-highlight);

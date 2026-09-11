@@ -57,7 +57,7 @@ export const ExcalidrawWrapper = memo(function ExcalidrawWrapper({
   }, []);
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="basalt-drawing relative w-full h-full overflow-hidden">
       <Excalidraw
         excalidrawAPI={onApiReady}
         initialData={

@@ -73,9 +73,12 @@ light/dark mode.
 
 - Grid dots are Excalidraw's hardcoded per-theme colours (not token-derived);
   subtle on dark surfaces. Only fixable by forking upstream.
-- Floating chrome (toolbars, dialogs, the library panel) uses Excalidraw's own
-  palette. The canvas melts into the editor; chrome theming is separate
-  (CSS-variable mapping) work.
+- Floating chrome (toolbars, dialogs, the library panel) is toned by the
+  `drawing-chrome.css` bridge: Excalidraw's `--color-primary*`/accent vars
+  map to `--sat-excalidraw-*` theme tokens (orange on dark themes, blue on
+  light). It must target BOTH `.excalidraw` and `.excalidraw.theme--dark`
+  with a host-app prefix — dark mode redeclares the palette with higher
+  specificity, which is why a plain `.excalidraw` override silently fails.
 - Persisted scenes store `viewBackgroundColor: "transparent"` — a stable,
   theme-independent value. Legacy files carrying `#ffffff` are loaded
   transparent too.
