@@ -162,7 +162,7 @@ describe("```tasks block end-to-end through createEditorExtensions", () => {
     // The query sent to the engine is the parsed TaskQuery.
     expect(runTasks).toHaveBeenCalledWith(
       expect.objectContaining({
-        filters: [{ field: "status", op: "not_equals", value: "done" }],
+        filters: [{ field: "status", op: "not_done", value: "" }],
       }),
     );
     view.destroy();

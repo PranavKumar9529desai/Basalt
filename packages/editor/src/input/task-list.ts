@@ -130,21 +130,24 @@ function isOverdue(dateStr: string): boolean {
 // ---------------------------------------------------------------------------
 
 export class TaskCheckboxWidget extends WidgetType {
+  /** The checkbox status character: ' ', '/', '?', 'x', 'X', '-'. */
+  private readonly statusChar: string;
+
   constructor(
     private readonly from: number,
     private readonly to: number,
-    private readonly checked: boolean,
+    private readonly marker: string,
     private readonly signifiers: TaskSignifiers | null,
   ) {
     super();
+    this.statusChar = marker[1] ?? " ";
   }
 
   eq(other: TaskCheckboxWidget) {
     return (
-      other.checked === this.checked &&
+      other.marker === this.marker &&
       other.from === this.from &&
       other.to === this.to &&
-      other.signifiers?.status === this.signifiers?.status &&
       other.signifiers?.priority === this.signifiers?.priority
     );
   }
@@ -153,15 +156,23 @@ export class TaskCheckboxWidget extends WidgetType {
     const wrapper = document.createElement("span");
     wrapper.className = "cm-task-marker";
 
-    // Checkbox input
+    // Checkbox input — visual state maps 1:1 to the status character so a
+    // click visibly cycles: [ ] (off) → [/] (indeterminate) → [x] (on) → [ ]
     const input = document.createElement("input");
     input.type = "checkbox";
     input.className = "cm-task-checkbox";
-    input.checked = this.checked;
+
+    const c = this.statusChar;
+    input.checked = c === "x" || c === "X" || c === "-";
+    input.indeterminate = c === "/" || c === "?";
+    if (c === "/" || c === "?") {
+      input.title = c === "/" ? "In progress" : "On hold";
+    }
 
     input.addEventListener("click", (event) => {
       event.preventDefault();
-      const currentStatus = this.signifiers?.status ?? (this.checked ? "done" : "todo");
+      const currentStatus =
+        this.signifiers?.status ?? (input.checked ? "done" : "todo");
       const nextStatus = cycleStatus(currentStatus);
       const newChar = statusToCheckboxChar(nextStatus);
       const replacement = `[${newChar}]`;
@@ -301,7 +312,9 @@ export function buildTaskDecorations(view: EditorView) {
       enter: (node) => {
         if (node.type.name !== "TaskMarker") return;
         const marker = view.state.doc.sliceString(node.from, node.to);
-        const checked = marker.toLowerCase() === "[x]";
+        const statusChar = marker[1] ?? " ";
+        // Done and cancelled render as checked + struck-through (Obsidian parity).
+        const checked = statusChar === "x" || statusChar === "X" || statusChar === "-";
 
         // Parse signifiers from the full line text
         const lineText = view.state.doc.lineAt(node.from).text;
@@ -315,7 +328,7 @@ export function buildTaskDecorations(view: EditorView) {
             widget: new TaskCheckboxWidget(
               node.from,
               node.to,
-              checked,
+              marker,
               signifiers,
             ),
           }),

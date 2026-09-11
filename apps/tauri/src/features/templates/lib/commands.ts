@@ -1,26 +1,10 @@
-import { EditorView } from "@codemirror/view";
+import { findActiveMarkdownView } from "@workspace/editor";
 import { invoke } from "@tauri-apps/api/core";
 import { commandService } from "@workspace/commands";
 
 import { expandTemplate } from "./expand-template";
 import { splitTemplateFrontmatter } from "./split-frontmatter";
 import { useTemplatePickerStore } from "../picker-store";
-
-/**
- * Active markdown view: the focused editor if any, else the first visible
- * one. Same DOM-level access as `features/export/commands.ts` — keeps this
- * feature self-contained (no cross-feature imports).
- */
-function findActiveMarkdownView(): EditorView | null {
-  const focused = EditorView.findFromDOM(document.activeElement as HTMLElement);
-  if (focused) return focused;
-  const els = document.querySelectorAll<HTMLElement>(".cm-editor");
-  for (const el of els) {
-    const view = EditorView.findFromDOM(el);
-    if (view) return view;
-  }
-  return null;
-}
 
 /** Derive the note title from the first H1 (matching the inline-title model). */
 function getActiveNoteTitle(): string {

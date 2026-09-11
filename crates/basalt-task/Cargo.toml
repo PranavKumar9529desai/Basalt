@@ -5,4 +5,7 @@ edition = "2021"
 
 [dependencies]
 basalt-types = { path = "../basalt-types" }
+basalt-vault = { path = "../basalt-vault" }
 chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"

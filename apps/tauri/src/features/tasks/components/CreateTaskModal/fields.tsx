@@ -1,11 +1,25 @@
-//! Presentational form fields for the task modal. Each field is a dumb
-//! component: values/options in via props, changes out via callbacks — the
-//! modal keeps all state and submit logic in the index.
+//! Presentational form fields for the task modal. Built entirely on shadcn
+//! primitives (ui/select, ui/input, ui/label, ui/badge — ADR-003): values/
+//! options in via props, changes out via callbacks — the modal keeps all
+//! state and submit logic in the index.
 
 import { IconChevronDown, IconX } from "@tabler/icons-react";
-import { Select } from "@base-ui/react/select";
 import type { KeyboardEvent, RefObject } from "react";
+import { Badge } from "@workspace/ui/components/ui/badge";
 import { Input } from "@workspace/ui/components/ui/input";
+import { Label } from "@workspace/ui/components/ui/label";
+import {
+  SelectIcon,
+  SelectItem,
+  SelectItemText,
+  SelectList,
+  SelectPopup,
+  SelectPositioner,
+  SelectPortal,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/ui/select";
 import type { SelectOption } from "./options";
 
 interface LabeledSelectProps {
@@ -16,7 +30,7 @@ interface LabeledSelectProps {
   options: readonly SelectOption[];
 }
 
-/** Label + single-select with the shared popup styling. */
+/** Label + single-select from the shared shadcn Select primitive. */
 export function LabeledSelect({
   id,
   label,
@@ -27,50 +41,38 @@ export function LabeledSelect({
   return (
     <div className="flex flex-col gap-1.5">
       {label !== undefined && (
-        <label
-          htmlFor={id}
-          className="text-xs font-medium text-[var(--sat-text-secondary)]"
-        >
+        <Label htmlFor={id}>
           {label}
-        </label>
+        </Label>
       )}
-      <Select.Root
+      <SelectRoot
         value={value}
         onValueChange={(v) => {
+          // Base UI reports null when the selection is cleared — ignore it.
           if (v !== null) onValueChange(v);
         }}
         items={options}
       >
-        <Select.Trigger
-          id={id}
-          className="flex h-8 min-w-0 items-center justify-between gap-2 rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)] px-2.5 text-xs text-[var(--sat-text-primary)] hover:border-[var(--sat-text-muted)] focus:ring-1 focus:ring-[var(--sat-accent-primary)] focus:outline-none cursor-pointer"
-        >
-          <Select.Value />
-          <Select.Icon>
-            <IconChevronDown
-              size={12}
-              className="flex-shrink-0 text-[var(--sat-text-muted)]"
-            />
-          </Select.Icon>
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Positioner sideOffset={4} align="start">
-            <Select.Popup className="z-50 min-w-[160px] rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)] p-1 shadow-2xl">
-              <Select.List>
+        <SelectTrigger id={id}>
+          <SelectValue />
+          <SelectIcon>
+            <IconChevronDown size={12} />
+          </SelectIcon>
+        </SelectTrigger>
+        <SelectPortal>
+          <SelectPositioner sideOffset={4} align="start">
+            <SelectPopup>
+              <SelectList>
                 {options.map((o) => (
-                  <Select.Item
-                    key={o.value}
-                    value={o.value}
-                    className="flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-xs text-[var(--sat-text-secondary)] data-[highlighted]:bg-[var(--sat-surface-3)] data-[highlighted]:text-[var(--sat-text-primary)] data-[selected]:text-[var(--sat-accent-primary)] select-none outline-none"
-                  >
-                    <Select.ItemText>{o.label}</Select.ItemText>
-                  </Select.Item>
+                  <SelectItem key={o.value} value={o.value}>
+                    <SelectItemText>{o.label}</SelectItemText>
+                  </SelectItem>
                 ))}
-              </Select.List>
-            </Select.Popup>
-          </Select.Positioner>
-        </Select.Portal>
-      </Select.Root>
+              </SelectList>
+            </SelectPopup>
+          </SelectPositioner>
+        </SelectPortal>
+      </SelectRoot>
     </div>
   );
 }
@@ -88,12 +90,7 @@ export function DescriptionField({
 }: DescriptionFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="task-description"
-        className="text-xs font-medium text-[var(--sat-text-secondary)]"
-      >
-        Description
-      </label>
+      <Label htmlFor="task-description">Description</Label>
       <Input
         id="task-description"
         ref={ref}
@@ -115,12 +112,7 @@ interface DateFieldProps {
 export function DateField({ label, value, onChange }: DateFieldProps) {
   return (
     <div key={label} className="flex flex-col gap-1.5">
-      <label
-        htmlFor={`task-${label.toLowerCase()}`}
-        className="text-xs font-medium text-[var(--sat-text-secondary)]"
-      >
-        {label}
-      </label>
+      <Label htmlFor={`task-${label.toLowerCase()}`}>{label}</Label>
       <Input
         id={`task-${label.toLowerCase()}`}
         type="date"
@@ -176,7 +168,7 @@ interface TagFieldProps {
   onInputKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
 }
 
-/** Tag chips + the add-tag input (Enter adds, empty Backspace pops). */
+/** Tag chips (shadcn Badge) + the add-tag input (Enter adds, empty Backspace pops). */
 export function TagField({
   tags,
   onRemove,
@@ -186,29 +178,21 @@ export function TagField({
 }: TagFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="task-tag-input"
-        className="text-xs font-medium text-[var(--sat-text-secondary)]"
-      >
-        Tags
-      </label>
+      <Label htmlFor="task-tag-input">Tags</Label>
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           {tags.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-1 rounded-full bg-[var(--sat-surface-2)] border border-[var(--sat-layout-border)] px-2 py-0.5 text-[11px] text-[var(--sat-text-secondary)]"
-            >
+            <Badge key={tag}>
               #{tag}
               <button
                 type="button"
                 aria-label={`Remove tag ${tag}`}
                 onClick={() => onRemove(tag)}
-                className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+                className="cursor-pointer text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
               >
                 <IconX size={11} />
               </button>
-            </span>
+            </Badge>
           ))}
         </div>
         <Input

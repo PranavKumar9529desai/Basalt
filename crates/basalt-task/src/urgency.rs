@@ -1,7 +1,8 @@
 //! Urgency scoring for task management (ADR-048 §4.4).
 //!
 //! Composite score combining priority, due-date proximity, scheduled-date
-//! proximity, and recurrence. Higher score = more urgent.
+//! proximity, and recurrence. Higher score = more urgent. Moved from
+//! `basalt-tables` with the query engine (roadmap §3).
 
 use chrono::NaiveDate;
 
@@ -18,10 +19,10 @@ use basalt_types::TaskData;
 pub fn calculate_urgency(task: &TaskData, today: NaiveDate) -> i32 {
     let mut score: i32 = 0;
 
-    // Priority component (0–5 → score 0–25)
+    // Priority component (0–5 → score 0–25).
     score += (5 - task.priority.numeric() as i32) * 5;
 
-    // Due date proximity
+    // Due date proximity.
     if let Some(due) = task.due {
         let days_overdue = (today - due).num_days();
         if days_overdue > 0 {
@@ -35,14 +36,14 @@ pub fn calculate_urgency(task: &TaskData, today: NaiveDate) -> i32 {
         }
     }
 
-    // Scheduled date proximity
+    // Scheduled date proximity.
     if let Some(scheduled) = task.scheduled {
         if scheduled <= today {
             score += 5;
         }
     }
 
-    // Recurring tasks get a small boost
+    // Recurring tasks get a small boost.
     if task.recurrence.is_some() {
         score += 2;
     }
@@ -122,7 +123,7 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
         let due = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
         let task = make_task(TaskPriority::None, Some(due), None, None);
-        // priority: 10, overdue 14 days: 20+14 = 34 (min caps at 30 for ≥31 days)
+        // priority: 10, overdue 14 days: 20+14 = 34 (cap only bites at ≥31 days)
         // total: 10 + 34 = 44
         assert_eq!(calculate_urgency(&task, today), 44);
     }

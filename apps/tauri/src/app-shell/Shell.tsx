@@ -285,7 +285,6 @@ function WorkspaceShell({
         previewDeps={previewDeps}
         taskModal={{
           getActivePath: () => ws.activeNote?.path ?? null,
-          onTaskCreated: ws.openNote,
         }}
       />
 

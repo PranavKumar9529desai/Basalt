@@ -184,3 +184,8 @@ export function registerTaskCommands() {
     view.focus();
   });
 }
+
+// Register at module scope — the codebase convention (search/settings/
+// tabCommands all register on import). Without this the palette and the
+// CmdOrCtrl+Enter binding find no handler for any tasks:* command.
+registerTaskCommands();

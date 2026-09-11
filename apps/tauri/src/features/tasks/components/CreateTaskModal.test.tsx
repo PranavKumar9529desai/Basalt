@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { EditorState } from "@codemirror/state";
 
 import { useTaskModalStore } from "../store";
 import { CreateTaskModal } from "./CreateTaskModal";
@@ -10,23 +11,39 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
-// vi.mocked is not wired in this repo's vitest setup; type the mock directly.
+// Partial mock: keep the real `buildTaskLine` composer (tests assert the
+// exact text it produces) and stub only the DOM view lookup.
+vi.mock("@workspace/editor", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@workspace/editor")>()),
+  findActiveMarkdownView: vi.fn(),
+}));
+
 const mockInvoke = invoke as unknown as Mock;
 
+interface FakeView {
+  state: EditorState;
+  dispatch: ReturnType<typeof vi.fn>;
+}
+
+/** A real CM state (doc + cursor) with a recording dispatch — enough to
+ * assert the insert/replace transaction the modal dispatches. */
+function viewFor(doc: string, cursor = doc.length): FakeView {
+  return {
+    state: EditorState.create({ doc, selection: { anchor: cursor } }),
+    dispatch: vi.fn(),
+  };
+}
+
 function setup() {
-  const onTaskCreated = vi.fn();
   render(
-    <CreateTaskModal
-      getActivePath={() => "notes/tasks.md"}
-      onTaskCreated={onTaskCreated}
-    />,
+    <CreateTaskModal getActivePath={() => "notes/tasks.md"} />,
   );
-  return { onTaskCreated };
 }
 
 describe("CreateTaskModal", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
+    (findActiveMarkdownView as unknown as Mock).mockReset();
     useTaskModalStore.setState({
       isOpen: false,
       mode: "create",
@@ -39,9 +56,10 @@ describe("CreateTaskModal", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("creates a task and navigates to the new line", async () => {
-    mockInvoke.mockResolvedValue(5);
-    const { onTaskCreated } = setup();
+  it("inserts the composed task line at the caret (no IPC write)", async () => {
+    const view = viewFor("hello world");
+    (findActiveMarkdownView as unknown as Mock).mockReturnValue(view);
+    setup();
     act(() => useTaskModalStore.getState().openCreate());
 
     fireEvent.change(screen.getByLabelText("Description"), {
@@ -51,15 +69,36 @@ describe("CreateTaskModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Create" }));
     });
 
-    expect(invoke).toHaveBeenCalledWith("create_task", {
-      input: { path: "notes/tasks.md", description: "Ship release" },
+    expect(invoke).not.toHaveBeenCalled(); // mutations never touch Rust
+    expect(view.dispatch).toHaveBeenCalledWith({
+      changes: { from: 11, insert: "\n- [ ] Ship release" },
+      selection: { anchor: 11 + "\n- [ ] Ship release".length },
     });
     expect(useTaskModalStore.getState().isOpen).toBe(false);
-    expect(onTaskCreated).toHaveBeenCalledWith("notes/tasks.md", 5);
   });
 
-  it("serializes signifiers into the create input", async () => {
-    mockInvoke.mockResolvedValue(1);
+  it("fills an empty line without a leading newline", async () => {
+    const view = viewFor("hello\n", 6); // cursor on the empty second line
+    (findActiveMarkdownView as unknown as Mock).mockReturnValue(view);
+    setup();
+    act(() => useTaskModalStore.getState().openCreate());
+
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "First task" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    });
+
+    expect(view.dispatch).toHaveBeenCalledWith({
+      changes: { from: 6, insert: "- [ ] First task" },
+      selection: { anchor: 6 + "- [ ] First task".length },
+    });
+  });
+
+  it("serializes signifiers into the dispatched line text", async () => {
+    const view = viewFor("hello\nworld", 11);
+    (findActiveMarkdownView as unknown as Mock).mockReturnValue(view);
     setup();
     act(() => useTaskModalStore.getState().openCreate());
 
@@ -85,16 +124,13 @@ describe("CreateTaskModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Create" }));
     });
 
-    expect(invoke).toHaveBeenCalledWith("create_task", {
-      input: {
-        path: "notes/tasks.md",
-        description: "Fix bug",
-        due: "2024-02-01",
-        scheduled: "2024-01-25",
-        start: "2024-01-20",
-        tags: ["release"],
-      },
+    const insert =
+      "- [ ] Fix bug 📅2024-02-01 ⏳2024-01-25 🛫2024-01-20 #release";
+    expect(view.dispatch).toHaveBeenCalledWith({
+      changes: { from: 11, insert: `\n${insert}` },
+      selection: { anchor: 11 + insert.length + 1 },
     });
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("requires a description", async () => {
@@ -108,7 +144,6 @@ describe("CreateTaskModal", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Description is required.",
     );
-    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("requires at least one date for recurring tasks", async () => {
@@ -131,7 +166,6 @@ describe("CreateTaskModal", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Recurring tasks need at least one date",
     );
-    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("removes a tag chip with the × button", async () => {
@@ -148,7 +182,24 @@ describe("CreateTaskModal", () => {
     expect(screen.queryByText("#alpha")).not.toBeInTheDocument();
   });
 
-  it("hydrates edit mode from get_task_line and updates in place", async () => {
+  it("errors when no editor is open", async () => {
+    (findActiveMarkdownView as unknown as Mock).mockReturnValue(null);
+    setup();
+    act(() => useTaskModalStore.getState().openCreate());
+
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Orphan" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "No editor is open to add the task to.",
+    );
+  });
+
+  it("hydrates edit mode from get_task_line and replaces the line in place", async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "get_task_line") {
         return Promise.resolve({
@@ -167,6 +218,11 @@ describe("CreateTaskModal", () => {
       }
       return Promise.resolve(undefined);
     });
+    // 3-line doc; the task lives on line 3 ("- [x] Ship release ⏫ …").
+    const doc = "title\n\n- [x] Ship release ⏫ 📅2024-02-01 🔁every week #release";
+    const view = viewFor(doc);
+    (findActiveMarkdownView as unknown as Mock).mockReturnValue(view);
+
     setup();
     act(() =>
       useTaskModalStore.getState().openEdit({
@@ -191,17 +247,18 @@ describe("CreateTaskModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
     });
 
-    expect(invoke).toHaveBeenCalledWith("update_task", {
-      input: {
-        path: "notes/tasks.md",
-        line_number: 3,
-        description: "Ship release v2",
-        priority: "high",
-        due: "2024-02-01",
-        recurrence: "every week",
-        tags: ["release"],
-        status: "done",
-      },
+    const line = view.state.doc.line(3);
+    const newText =
+      "- [x] Ship release v2 ⏫ 📅2024-02-01 🔁every week #release";
+    expect(view.dispatch).toHaveBeenCalledWith({
+      changes: { from: line.from, to: line.to, insert: newText },
+      selection: { anchor: line.from + newText.length },
+    });
+    // Edit mode never invokes update_task — only the read hydration.
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith("get_task_line", {
+      path: "notes/tasks.md",
+      lineNumber: 3,
     });
     expect(useTaskModalStore.getState().isOpen).toBe(false);
   });
@@ -216,3 +273,6 @@ describe("CreateTaskModal", () => {
     expect(useTaskModalStore.getState().isOpen).toBe(false);
   });
 });
+
+// Re-import for the type-only assertion below (avoids shadowing in body).
+import { findActiveMarkdownView } from "@workspace/editor";

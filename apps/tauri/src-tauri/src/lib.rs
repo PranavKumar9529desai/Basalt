@@ -32,7 +32,8 @@ pub fn process_uptime_ms() -> Option<u64> {
 }
 
 use commands::{
-    autocomplete_links, autocomplete_tags, boot, cleanup_assets, create_folder, create_note,
+    autocomplete_links, autocomplete_tags, boot, calendar_activity, cleanup_assets, create_folder,
+    create_note,
     create_task, create_untitled_canvas, create_untitled_drawing, create_untitled_note,
     delete_file, delete_paths, get_asset_audit, get_assets, get_backlinks, get_graph, get_settings,
     get_tag_counts, get_task_line, get_tasks, get_vault_tree, get_workspace, is_drawing_file,
@@ -105,6 +106,7 @@ pub fn run() {
             set_workspace_key,
             create_note,
             create_untitled_note,
+            calendar_activity,
             open_daily_note,
             list_templates,
             read_template,

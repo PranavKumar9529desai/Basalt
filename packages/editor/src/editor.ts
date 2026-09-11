@@ -300,6 +300,12 @@ export function readingExtensions(config: {
     codeSyntaxHighlightingExtension(),
     ...LIVE_PREVIEW_THEME,
     ...livePreviewPlugin,
+    // Task widgets render in reading mode + PDF export snapshots too
+    // (ADR-048 §17.1: the edit-mode-only gap). Checkbox clicks dispatch a
+    // doc change; in a print snapshot there are no clicks, so export is
+    // unaffected.
+    TASK_CHECKBOX_THEME,
+    taskListPlugin,
     // Block widgets — all render rich in read-only (no cursor to activate/deactivate).
     ...frontmatterBlockWidgetGroup({
       parseFrontmatter: config.parseFrontmatter,
@@ -337,6 +343,12 @@ export function readingModeExtras(config: {
   parseFrontmatter?: EditorConfig["parseFrontmatter"];
 }): Extension[] {
   return [
+    // Task chrome (checkbox widgets, priority badges, date/tag chips) must be
+    // present in reading mode too — ADR-048 §17.1 flagged it as edit-only.
+    // Checkbox clicks dispatch a doc change, which works on readOnly states
+    // (Obsidian parity: toggling in reading mode edits the note).
+    TASK_CHECKBOX_THEME,
+    taskListPlugin,
     ...frontmatterBlockWidgetGroup({
       parseFrontmatter: config.parseFrontmatter,
     }),

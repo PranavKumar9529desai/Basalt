@@ -139,11 +139,13 @@ export function splitInstructions(body: string): string[] {
 
 function parseStatusFilter(rest: string, state: ParserState): boolean {
   if (/^done$/.test(rest)) {
-    state.filters.push({ field: "status", op: "equals", value: "done" });
+    // `is_done()` semantics: done + cancelled + non_task (Obsidian parity).
+    state.filters.push({ field: "status", op: "done", value: "" });
     return true;
   }
   if (/^not\s+done$/.test(rest)) {
-    state.filters.push({ field: "status", op: "not_equals", value: "done" });
+    // `is_todo()` semantics: excludes done AND cancelled.
+    state.filters.push({ field: "status", op: "not_done", value: "" });
     return true;
   }
   const is = rest.match(/^status(?:\s+is|\s*\.type\s+is)\s+(\w[\w\s]*)$/i);

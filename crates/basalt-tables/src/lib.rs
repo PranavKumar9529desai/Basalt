@@ -3,16 +3,15 @@ pub mod expr;
 mod grouping;
 mod output;
 pub mod page_row;
-mod urgency;
 
 pub use engine::{execute_query, DqlError};
 
 // Re-export key types for convenience
 pub use basalt_types::{QueryColumn, QueryColumnType, QueryResult, TypedValue};
 
-// Task query entry point (ADR-048)
-pub use output::execute_task_query;
-
-// Re-export task query types for Tauri commands
-pub use output::{TaskFilter, TaskQuery, TaskSort};
-pub use urgency::calculate_urgency;
+// Task query entry point + wire types (ADR-048) — hosted in `basalt-task`,
+// re-exported here so the DQL `TASK` branch and the `get_tasks` IPC keep
+// their existing import paths.
+pub use basalt_task::{
+    calculate_urgency, execute_task_query, TaskFilter, TaskQuery, TaskSort,
+};

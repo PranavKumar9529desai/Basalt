@@ -109,6 +109,12 @@ export {
   TASK_STATUS_CYCLE,
   type TaskSignifiers,
 } from "./input/task-signifiers";
+export {
+  buildTaskLine,
+  priorityToEmoji,
+  type TaskLineParts,
+} from "./lib/task-line";
+export { findActiveMarkdownView } from "./lib/active-view";
 export { notifyViewOfSizeChange } from "./block-widgets/utils";
 export type { BlockWidgetSpec } from "./block-widgets/registry";
 export {

@@ -32,7 +32,6 @@ const CreateTaskModal = lazy(() =>
 
 interface TaskModalProps {
   getActivePath: () => string | null;
-  onTaskCreated: (path: string, line?: number) => void;
 }
 
 interface OverlaysProps {
@@ -122,10 +121,7 @@ export function Overlays({
         <SettingsModal />
         <ExportDialog previewDeps={previewDeps} />
         <TemplatePicker />
-        <CreateTaskModal
-          getActivePath={taskModal.getActivePath}
-          onTaskCreated={taskModal.onTaskCreated}
-        />
+        <CreateTaskModal getActivePath={taskModal.getActivePath} />
       </Suspense>
 
       <IndexingProgressToast />

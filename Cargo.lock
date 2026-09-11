@@ -315,6 +315,7 @@ version = "0.1.0"
 dependencies = [
  "basalt-graph",
  "basalt-parser",
+ "basalt-task",
  "basalt-types",
  "basalt-vault",
  "chrono",
@@ -329,7 +330,10 @@ name = "basalt-task"
 version = "0.1.0"
 dependencies = [
  "basalt-types",
+ "basalt-vault",
  "chrono",
+ "serde",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

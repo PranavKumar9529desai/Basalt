@@ -14,7 +14,8 @@ describe("parseTaskQuery — status", () => {
   it("parses done / not done", () => {
     expect(parseTaskQuery("done")).toMatchObject({
       query: {
-        filters: [{ field: "status", op: "equals", value: "done" }],
+        // Dedicated `done` op → engine is_done() (done + cancelled + non_task).
+        filters: [{ field: "status", op: "done", value: "" }],
         sorts: [],
         groups: [],
         limit: null,
@@ -23,8 +24,8 @@ describe("parseTaskQuery — status", () => {
     const open = parseTaskQuery("not done");
     expect(open.query.filters[0]).toEqual({
       field: "status",
-      op: "not_equals",
-      value: "done",
+      op: "not_done", // engine is_todo() — excludes done AND cancelled
+      value: "",
     });
   });
 

@@ -1,10 +1,18 @@
-//! Create/edit task modal (create mode: `create_task` appends a checkbox
-//! line then navigates; edit mode: hydrated from `get_task_line`, rewritten
-//! via `update_task`). Form state, validation, and submission live here;
-//! `fields.tsx` holds the presentational inputs and `options.ts` the menus.
+//! Create/edit task modal (ADR-048). Tasks ARE text: submit composes the
+//! canonical checkbox line (`buildTaskLine`) and dispatches it into the
+//! active editor at the caret (create) or in place of the target line
+//! (edit). The editor doc — not an IPC write — is the single file writer,
+//! so autosave persists the change and undo behaves naturally. The only IPC
+//! here is the read-only `get_task_line` hydration for edit mode.
+//! `fields.tsx` holds the shadcn inputs and `options.ts` the menus.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { EditorView } from "@codemirror/view";
+import {
+  buildTaskLine,
+  findActiveMarkdownView,
+} from "@workspace/editor";
 import { Button } from "@workspace/ui/components/ui/button";
 import {
   Dialog,
@@ -34,21 +42,33 @@ import {
 interface CreateTaskModalProps {
   /** Current note path (or null when no note is open) for create mode. */
   getActivePath: () => string | null;
-  /** Navigate to a task after creation (path + 1-based line). */
-  onTaskCreated: (path: string, line?: number) => void;
 }
 
-/** Normalize IPC input: empty string fields are omitted (Rust clears on ""). */
+/** Normalize form values: empty strings are omitted (no signifier emitted). */
 function nonEmpty(v: string | undefined): string | undefined {
   return v && v.trim() !== "" ? v.trim() : undefined;
 }
 
-export function CreateTaskModal({
-  getActivePath,
-  onTaskCreated,
-}: CreateTaskModalProps) {
+/**
+ * Insert a fresh task line at the caret. Inserts directly when the cursor
+ * sits at the document start or on an empty line; otherwise opens a new
+ * line (Obsidian Tasks behavior — the create modal writes text, never
+ * bytes to disk).
+ */
+function insertTaskLineAtCursor(view: EditorView, lineText: string): void {
+  const pos = view.state.selection.main.head;
+  const at = view.state.doc.lineAt(pos);
+  const prefix = pos === 0 || at.length === 0 ? "" : "\n";
+  const text = prefix + lineText;
+  view.dispatch({
+    changes: { from: pos, insert: text },
+    selection: { anchor: pos + text.length },
+  });
+}
+
+export function CreateTaskModal({ getActivePath }: CreateTaskModalProps) {
   const { isOpen, mode, editTarget, close } = useTaskModalStore();
-  const { createTask, updateTask, getTaskLine } = useTaskActions();
+  const { getTaskLine } = useTaskActions();
 
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("todo");
@@ -149,6 +169,24 @@ export function CreateTaskModal({
     [handleAddTag, tagInput, tags.length],
   );
 
+  /** Compose the canonical line from the current form values. */
+  const composeLine = useCallback(
+    (opts: { indent?: string; withStatus?: boolean }): string =>
+      buildTaskLine({
+        indent: opts.indent,
+        // Status is an edit-only field; create always starts as "todo".
+        status: opts.withStatus ? status : "todo",
+        description: description.trim(),
+        priority: nonEmpty(priority),
+        due: nonEmpty(due),
+        scheduled: nonEmpty(scheduled),
+        start: nonEmpty(start),
+        recurrence: nonEmpty(recurrence),
+        tags: tags.length > 0 ? tags : undefined,
+      }),
+    [status, description, priority, due, scheduled, start, recurrence, tags],
+  );
+
   const handleSubmit = useCallback(async () => {
     const validationError = validate();
     if (validationError) {
@@ -163,40 +201,31 @@ export function CreateTaskModal({
     setError(null);
     setIsSaving(true);
     try {
-      const input: {
-        description: string;
-        status?: string;
-        priority?: string;
-        due?: string;
-        scheduled?: string;
-        start?: string;
-        recurrence?: string;
-        tags?: string[];
-      } = { description: description.trim() };
-      if (mode === "edit") input.status = status;
-      const priorityV = nonEmpty(priority);
-      const dueV = nonEmpty(due);
-      const scheduledV = nonEmpty(scheduled);
-      const startV = nonEmpty(start);
-      const recurrenceV = nonEmpty(recurrence);
-      if (priorityV) input.priority = priorityV;
-      if (dueV) input.due = dueV;
-      if (scheduledV) input.scheduled = scheduledV;
-      if (startV) input.start = startV;
-      if (recurrenceV) input.recurrence = recurrenceV;
-      if (tags.length > 0) input.tags = tags;
-      if (mode === "create") {
-        const line = await createTask({ path, ...input });
-        close();
-        onTaskCreated(path, line);
-      } else if (editTarget) {
-        await updateTask({
-          path: editTarget.path,
-          line_number: editTarget.line,
-          ...input,
-        });
-        close();
+      const view = findActiveMarkdownView();
+      if (!view) {
+        setError(
+          mode === "edit"
+            ? "No editor is open to update the task."
+            : "No editor is open to add the task to.",
+        );
+        return;
       }
+      if (mode === "create") {
+        insertTaskLineAtCursor(view, composeLine({}));
+      } else if (editTarget) {
+        // Replace the targeted line in the OPEN DOC (clamped to its length) —
+        // preserving the line's indentation from the editor, not from disk.
+        const doc = view.state.doc;
+        const n = Math.min(Math.max(1, editTarget.line), doc.lines);
+        const line = doc.line(n);
+        const indent = line.text.match(/^[ \t]*/)?.[0] ?? "";
+        const lineText = composeLine({ indent, withStatus: true });
+        view.dispatch({
+          changes: { from: line.from, to: line.to, insert: lineText },
+          selection: { anchor: line.from + lineText.length },
+        });
+      }
+      close();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -205,20 +234,10 @@ export function CreateTaskModal({
   }, [
     validate,
     getActivePath,
-    description,
-    status,
-    priority,
-    due,
-    scheduled,
-    start,
-    recurrence,
-    tags,
     mode,
-    createTask,
-    updateTask,
     editTarget,
+    composeLine,
     close,
-    onTaskCreated,
   ]);
 
   return (
