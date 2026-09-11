@@ -75,4 +75,3 @@ mod frontmatter_serde {
         }
     }
 }
-

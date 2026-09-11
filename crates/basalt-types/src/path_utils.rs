@@ -78,7 +78,10 @@ mod tests {
 
     #[test]
     fn stem_of_extracts_filename_stem() {
-        assert_eq!(stem_of("/vault/notes/borrow-checker.md"), Some("borrow-checker"));
+        assert_eq!(
+            stem_of("/vault/notes/borrow-checker.md"),
+            Some("borrow-checker")
+        );
         assert_eq!(stem_of("file.canvas"), Some("file"));
         assert_eq!(stem_of("sketch.excalidraw.md"), Some("sketch"));
         assert_eq!(stem_of("/a/b/c.txt"), Some("c"));
@@ -87,7 +90,10 @@ mod tests {
 
     #[test]
     fn stem_lower_is_case_insensitive() {
-        assert_eq!(stem_lower("/vault/Notes/Borrow-Checker.md"), Some("borrow-checker".into()));
+        assert_eq!(
+            stem_lower("/vault/Notes/Borrow-Checker.md"),
+            Some("borrow-checker".into())
+        );
         assert_eq!(stem_lower("FILE.CANVAS"), Some("file".into()));
     }
 
