@@ -43,4 +43,5 @@ rayon = "1.11"
 ignore = "0.4.23"
 tempfile = "3"
 chrono = "0.4"
+tauri-plugin-clipboard-manager = "2.3.3"
 

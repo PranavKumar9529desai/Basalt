@@ -25,6 +25,7 @@ import type { BootResult } from "../features/vault";
 import { initSettings } from "../features/settings";
 import { useTabPersistence } from "../features/tabs";
 import { ttiMark, writeTtiReport } from "./tti";
+import { clipboardService } from "./clipboardService";
 import { Shell } from "../app-shell/Shell";
 
 interface BootProps {
@@ -35,6 +36,10 @@ export function Boot({ boot }: BootProps) {
   // Plain function call — reads boot.settings once and writes to the Zustand
   // settings store. Idempotent: calling again with same data is a no-op.
   initSettings(boot.settings);
+
+  // Session-only clipboard: stale cut-state (or canvas node snapshots) must
+  // never survive a restart. System clipboard (readText/writeText) is unaffected.
+  clipboardService.clearAllTyped();
 
   // Restores the previous session's tab layout from boot.workspace on mount,
   // then debounces saves back to Rust on structural mutations.

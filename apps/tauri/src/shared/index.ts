@@ -21,3 +21,5 @@ export {
   startEditorContextSync,
 } from "./activeEditor";
 export { useGestures, gestureService } from "./gestures";
+export { clipboardService, CLIPBOARD_KEYS } from "./clipboardService";
+export type { ClipboardService } from "./clipboardService";
