@@ -123,6 +123,18 @@ impl NoteRename {
         let old = self.old_stem.to_lowercase();
         norm == old || norm.ends_with(&format!("/{old}"))
     }
+
+    /// Replacement for a matching target, preserving the folder prefix when
+    /// the link used one (`folder/Note` → `folder/NewName`).
+    fn replacement(&self, target: &str) -> Option<String> {
+        if !self.matches(target) {
+            return None;
+        }
+        Some(match target.rfind('/') {
+            Some(idx) => format!("{}{}", &target[..=idx], self.new_stem),
+            None => self.new_stem.clone(),
+        })
+    }
 }
 
 /// Normalize a raw wikilink target the way the graph resolver does: strip
@@ -194,28 +206,7 @@ pub fn scan_wikilinks(text: &str) -> Vec<WikilinkSpec> {
 /// → `[[a/NewName]]`), and aliases/anchors are untouched. Returns the input
 /// unchanged when nothing matches.
 pub fn rewrite_wikilinks(text: &str, rename: &NoteRename) -> String {
-    let specs = scan_wikilinks(text);
-    let mut out = String::with_capacity(text.len() + 16);
-    let mut cursor = 0;
-    for spec in &specs {
-        let target = &text[spec.target_from..spec.target_to];
-        if !rename.matches(target) {
-            continue;
-        }
-        // Copy everything up to the replacement point untouched.
-        out.push_str(&text[cursor..spec.target_from]);
-        match target.rfind('/') {
-            Some(idx) => {
-                // Preserve the folder prefix: `folder/Note` → `folder/NewName`.
-                out.push_str(&target[..=idx]);
-                out.push_str(&rename.new_stem);
-            }
-            None => out.push_str(&rename.new_stem),
-        }
-        cursor = spec.target_to;
-    }
-    out.push_str(&text[cursor..]);
-    out
+    splice_wikilinks(text, |target| rename.replacement(target))
 }
 
 /// Rewrite every wikilink in `text` whose leading path points inside a
@@ -224,12 +215,22 @@ pub fn rewrite_wikilinks(text: &str, rename: &NoteRename) -> String {
 /// untouched, and bare-name links are ignored (they stay valid after a move).
 /// Returns the input unchanged when nothing matches.
 pub fn rewrite_wikilinks_path(text: &str, rename: &PathRename) -> String {
+    splice_wikilinks(text, |target| rename.rewrite(target))
+}
+
+/// Splice `[[...]]` targets in `text` with the replacements produced by
+/// `rewrite`: for each scanned target, copy the untouched text up to it, then
+/// the replacement. A `None` keeps the target as-is.
+///
+/// Single linear pass, splicing from the start so byte offsets stay valid
+/// (mirrors the extractor's zero-AST philosophy).
+fn splice_wikilinks(text: &str, rewrite: impl Fn(&str) -> Option<String>) -> String {
     let specs = scan_wikilinks(text);
-    let mut out = String::with_capacity(text.len() + 32);
+    let mut out = String::with_capacity(text.len() + 16);
     let mut cursor = 0;
     for spec in &specs {
         let target = &text[spec.target_from..spec.target_to];
-        let Some(replaced) = rename.rewrite(target) else {
+        let Some(replaced) = rewrite(target) else {
             continue;
         };
         out.push_str(&text[cursor..spec.target_from]);

@@ -21,7 +21,10 @@ const DQL_KEYWORDS: &[&str] = &[
 ];
 
 fn is_keyword(s: &str) -> bool {
-    DQL_KEYWORDS.contains(&s.to_ascii_lowercase().as_str())
+    DQL_KEYWORDS
+        .iter()
+        .copied()
+        .any(|kw| s.eq_ignore_ascii_case(kw))
 }
 
 /// An identifier: alphanumeric, underscore, hyphen. No dots — dots are field separators.

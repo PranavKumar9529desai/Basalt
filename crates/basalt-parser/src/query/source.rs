@@ -47,56 +47,38 @@ fn source_group(input: &str) -> IResult<&str, SourceFilter> {
     )(input)
 }
 
+/// Consume a case-insensitive `keyword` followed by whitespace, returning
+/// the input after both.
+fn keyword_with_ws<'a>(input: &'a str, kw: &'a str) -> IResult<&'a str, (&'a str, &'a str)> {
+    tuple((tag_no_case(kw), multispace1))(input)
+}
+
 fn source_not(input: &str) -> IResult<&str, SourceFilter> {
-    let trimmed = input.trim_start();
-    let offset = input.len() - trimmed.len();
-    if trimmed.len() >= 3 && trimmed[..3].eq_ignore_ascii_case("NOT") {
-        let rest = &trimmed[3..];
-        if rest.starts_with(char::is_whitespace) {
-            let (rest, _) = multispace1(rest)?;
-            let (rest, filter) = source_not(rest)?;
-            return Ok((rest, SourceFilter::Not(Box::new(filter))));
-        }
+    let input = input.trim_start();
+    // Nested NOTs chain: `NOT NOT #tag`.
+    if let Ok((rest, _)) = keyword_with_ws(input, "NOT") {
+        let (rest, filter) = source_not(rest)?;
+        return Ok((rest, SourceFilter::Not(Box::new(filter))));
     }
-    source_primary(&input[offset..])
+    source_primary(input)
 }
 
 fn source_and(input: &str) -> IResult<&str, SourceFilter> {
     let (mut rest, mut left) = source_not(input)?;
-    loop {
-        let trimmed = rest.trim_start();
-        let _offset = rest.len() - trimmed.len();
-        if trimmed.len() >= 3 && trimmed[..3].eq_ignore_ascii_case("AND") {
-            let after = &trimmed[3..];
-            if after.starts_with(char::is_whitespace) {
-                let (after, _) = multispace1(after)?;
-                let (after, right) = source_not(after)?;
-                left = SourceFilter::And(Box::new(left), Box::new(right));
-                rest = after;
-                continue;
-            }
-        }
-        break;
+    while let Ok((after, _)) = keyword_with_ws(rest.trim_start(), "AND") {
+        let (after, right) = source_not(after)?;
+        left = SourceFilter::And(Box::new(left), Box::new(right));
+        rest = after;
     }
     Ok((rest, left))
 }
 
 fn source_or(input: &str) -> IResult<&str, SourceFilter> {
     let (mut rest, mut left) = source_and(input)?;
-    loop {
-        let trimmed = rest.trim_start();
-        let _offset = rest.len() - trimmed.len();
-        if trimmed.len() >= 2 && trimmed[..2].eq_ignore_ascii_case("OR") {
-            let after = &trimmed[2..];
-            if after.starts_with(char::is_whitespace) {
-                let (after, _) = multispace1(after)?;
-                let (after, right) = source_and(after)?;
-                left = SourceFilter::Or(Box::new(left), Box::new(right));
-                rest = after;
-                continue;
-            }
-        }
-        break;
+    while let Ok((after, _)) = keyword_with_ws(rest.trim_start(), "OR") {
+        let (after, right) = source_and(after)?;
+        left = SourceFilter::Or(Box::new(left), Box::new(right));
+        rest = after;
     }
     Ok((rest, left))
 }
