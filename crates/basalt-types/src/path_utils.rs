@@ -11,11 +11,11 @@ use std::path::Path;
 ///
 /// `"/vault/notes/borrow-checker.md"` → `Some("borrow-checker")`
 /// `"/vault/canvases/board.canvas"` → `Some("board")`
-/// `"/vault/diagrams/arch.drawing.md"` → `Some("arch")`
+/// `"/vault/diagrams/arch.excalidraw.md"` → `Some("arch")`
 #[inline]
 pub fn stem_of(path: &str) -> Option<&str> {
     let stem = Path::new(path).file_stem()?.to_str()?;
-    if let Some(stripped) = stem.strip_suffix(".drawing").or_else(|| stem.strip_suffix(".excalidraw")) {
+    if let Some(stripped) = stem.strip_suffix(".excalidraw") {
         Some(stripped)
     } else {
         Some(stem)
@@ -54,12 +54,11 @@ pub fn is_canvas_path(path: &Path) -> bool {
     path.extension().and_then(|ext| ext.to_str()) == Some("canvas")
 }
 
-/// True when the path is a drawing document (`.drawing.md`, `.excalidraw.md`, or `.excalidraw`).
+/// True when the path is a drawing document (`.excalidraw.md` or `.excalidraw`).
 #[inline]
 pub fn is_drawing_path(path: &Path) -> bool {
     let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    name.ends_with(".drawing.md")
-        || name.ends_with(".excalidraw.md")
+    name.ends_with(".excalidraw.md")
         || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
 }
 
@@ -81,7 +80,6 @@ mod tests {
     fn stem_of_extracts_filename_stem() {
         assert_eq!(stem_of("/vault/notes/borrow-checker.md"), Some("borrow-checker"));
         assert_eq!(stem_of("file.canvas"), Some("file"));
-        assert_eq!(stem_of("diagram.drawing.md"), Some("diagram"));
         assert_eq!(stem_of("sketch.excalidraw.md"), Some("sketch"));
         assert_eq!(stem_of("/a/b/c.txt"), Some("c"));
         assert_eq!(stem_of(""), None);
@@ -102,10 +100,10 @@ mod tests {
         assert!(is_document_path(Path::new("note.md")));
         assert!(is_document_path(Path::new("board.canvas")));
         assert!(is_document_path(Path::new("sketch.excalidraw")));
-        assert!(is_document_path(Path::new("diagram.drawing.md")));
+        assert!(is_document_path(Path::new("diagram.excalidraw.md")));
         assert!(!is_document_path(Path::new("image.png")));
 
-        assert!(is_drawing_path(Path::new("diagram.drawing.md")));
+        assert!(is_drawing_path(Path::new("diagram.excalidraw.md")));
         assert!(is_drawing_path(Path::new("sketch.excalidraw.md")));
         assert!(is_drawing_path(Path::new("canvas.excalidraw")));
         assert!(!is_drawing_path(Path::new("note.md")));

@@ -106,6 +106,6 @@ leafRegistry.register({
   type: "drawing",
   name: "Drawing",
   icon: IconPencil,
-  extensions: [".drawing.md", ".excalidraw.md", ".excalidraw"],
+  extensions: [".excalidraw.md", ".excalidraw"],
   component: Drawing,
 });

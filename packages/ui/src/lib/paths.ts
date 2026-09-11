@@ -28,9 +28,6 @@ export function basename(path: string): string {
  */
 export function stemOf(path: string): string {
   const base = basename(path);
-  if (/\.drawing\.md$/i.test(base)) {
-    return base.slice(0, -".drawing.md".length);
-  }
   if (/\.excalidraw\.md$/i.test(base)) {
     return base.slice(0, -".excalidraw.md".length);
   }
@@ -59,11 +56,12 @@ export function isCanvasPath(path: string): boolean {
 }
 
 /**
- * Checks if a path or filename is a Drawing document (`.drawing.md`, `.excalidraw.md`, or `.excalidraw`). Case-insensitive.
+ * Checks if a path or filename is a Drawing document (`.excalidraw.md` or
+ * `.excalidraw`). Case-insensitive.
  */
 export function isDrawingPath(path: string): boolean {
   if (!path) return false;
-  return /\.(drawing|excalidraw)\.md$/i.test(path) || /\.excalidraw$/i.test(path);
+  return /\.excalidraw\.md$/i.test(path) || /\.excalidraw$/i.test(path);
 }
 
 /**

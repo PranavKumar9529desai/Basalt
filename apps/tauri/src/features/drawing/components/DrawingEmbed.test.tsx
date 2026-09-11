@@ -21,7 +21,7 @@ vi.mock("../lib/export", () => ({
 
 describe("DrawingEmbed component", () => {
   it("renders container with title and loading indicator", () => {
-    render(<DrawingEmbed path="test.drawing.md" />);
+    render(<DrawingEmbed path="test.excalidraw.md" />);
     expect(
       screen.getByTitle("Double click to open drawing"),
     ).toBeInTheDocument();

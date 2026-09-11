@@ -6,12 +6,9 @@
 //!   with a `## Drawing` scene block — plain `json` or LZString
 //!   `compressed-json`. Basalt always writes plain `json`.
 //! - **Raw Excalidraw JSON** (`.excalidraw`): direct JSON scene file.
-//! - **Legacy Basalt hybrid** (`.drawing.md`, read-only): frontmatter +
-//!   `%%#drawing-data`; never written, migrated to the shell on save.
 //!
 //! The crate is self-contained: no Tauri, no business state.
 
-mod basalt;
 pub mod obsidian;
 
 pub use obsidian::create_drawing_file;
@@ -123,8 +120,8 @@ fn parse_frontmatter(content: &str) -> (Option<String>, Option<String>, usize) {
     (created, updated, body_start)
 }
 
-/// Parse a drawing file's string content (either hybrid `.drawing.md`, an
-/// Obsidian Excalidraw plugin `.excalidraw.md`, or raw `.excalidraw` JSON).
+/// Parse a drawing file's string content (Obsidian Excalidraw plugin shell
+/// `.excalidraw.md`, or raw `.excalidraw` JSON).
 pub fn parse_drawing_content(content: &str) -> DrawingPayload {
     let trimmed_start = content.trim_start();
     if trimmed_start.starts_with('{') {
@@ -139,29 +136,7 @@ pub fn parse_drawing_content(content: &str) -> DrawingPayload {
         };
     }
 
-    let (created, updated, body_start) = parse_frontmatter(content);
-    let body = if body_start < content.len() {
-        &content[body_start..]
-    } else {
-        ""
-    };
-
-    // Basalt's native hybrid (`.drawing.md`): `%%#drawing-data` + `# Drawing Text & Elements`.
-    if basalt::is_basalt_hybrid(content) {
-        let parsed = basalt::parse_basalt_hybrid(content, body);
-        let text_elements = if parsed.text_elements.is_empty() {
-            extract_text_elements_from_json(&parsed.data_json)
-        } else {
-            parsed.text_elements
-        };
-        return DrawingPayload {
-            data_json: parsed.data_json,
-            text_elements,
-            raw_markdown: content.to_string(),
-            created,
-            updated,
-        };
-    }
+    let (created, updated, _) = parse_frontmatter(content);
 
     // Obsidian Excalidraw plugin hybrid (`.excalidraw.md`): `# Excalidraw Data` +
     // fenced `## Drawing` scene block (plain or LZString-compressed).
@@ -196,7 +171,6 @@ pub fn parse_drawing_content(content: &str) -> DrawingPayload {
 /// True when `content` is a drawing by any of the supported surfaces:
 /// - Obsidian Excalidraw plugin shell (marker, `# Excalidraw Data`, or a
 ///   compressed scene block)
-/// - legacy Basalt hybrid (`%%#drawing-data`)
 /// - raw Excalidraw JSON (`{...}`)
 ///
 /// This is the **classification authority** used by the command layer: the
@@ -208,7 +182,7 @@ pub fn is_drawing_content(content: &str) -> bool {
         return serde_json::from_str::<serde_json::Value>(trimmed).is_ok()
             && trimmed.contains("\"elements\"");
     }
-    obsidian::is_obsidian_excalidraw_format(content) || basalt::is_basalt_hybrid(content)
+    obsidian::is_obsidian_excalidraw_format(content)
 }
 
 /// Serialize a scene into the Obsidian Excalidraw shell, choosing the writer
@@ -216,24 +190,14 @@ pub fn is_drawing_content(content: &str) -> bool {
 /// - no existing file → a brand-new shell file ([`create_drawing_file`])
 /// - existing Obsidian-shell file → surgical in-place update
 ///   ([`serialize_obsidian_markdown`]: only the `## Drawing` block changes)
-/// - existing legacy Basalt hybrid (`.drawing.md`) → migrated to a clean
-///   shell, preserving the original `created` timestamp
 pub fn serialize_drawing_content(data_json: &str, existing_markdown: Option<&str>) -> String {
     match existing_markdown {
         None => obsidian::create_drawing_file(data_json),
         Some(existing) if obsidian::is_obsidian_excalidraw_format(existing) => {
             obsidian::serialize_obsidian_markdown(data_json, existing)
         }
-        Some(existing) => migrate_legacy_basalt(data_json, existing),
+        Some(_) => obsidian::create_drawing_file(data_json),
     }
-}
-
-/// Rebuild a legacy Basalt hybrid (`.drawing.md` / `%%#drawing-data`) as a
-/// clean Obsidian shell. Legacy sections are dropped wholesale; only the
-/// original `created` timestamp is carried over.
-fn migrate_legacy_basalt(data_json: &str, existing: &str) -> String {
-    let (created, _, _) = parse_frontmatter(existing);
-    obsidian::create_drawing_file_with_created(data_json, created)
 }
 
 /// Atomically write content to disk via a temporary file in the same directory,
@@ -301,24 +265,6 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_hybrid_migrates_to_shell() {
-        let legacy = "---\ntype: excalidraw\nversion: 2\ncreated: 2026-01-01T00:00:00Z\nupdated: 2026-01-02T00:00:00Z\n---\n# Drawing Text & Elements\n- [[Node]]\n\n%%#drawing-data\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[{\"type\":\"text\",\"text\":\"x\",\"isDeleted\":false}],\"appState\":{},\"files\":{}}\n%%\n";
-        let json = r##"{"type":"excalidraw","version":2,"elements":[{"type":"text","text":"migrated","isDeleted":false}],"appState":{},"files":{}}"##;
-
-        let out = serialize_drawing_content(&json, Some(legacy));
-
-        // Legacy sections are dropped in favour of a clean Obsidian shell.
-        assert!(!out.contains("# Drawing Text & Elements"));
-        assert!(!out.contains("%%#drawing-data"));
-        assert!(!out.contains("type: excalidraw"));
-        assert!(out.contains("excalidraw-plugin: parsed"));
-        assert!(out.contains("# Excalidraw Data"));
-        assert!(out.contains("## Drawing"));
-        // The original created timestamp survives the migration.
-        assert!(out.contains("created: 2026-01-01T00:00:00Z"));
-    }
-
-    #[test]
     fn test_missing_file_creates_fresh_shell() {
         let json = r##"{"type":"excalidraw","version":2,"elements":[],"appState":{},"files":{}}"##;
         let out = serialize_drawing_content(&json, None);
@@ -334,9 +280,6 @@ mod tests {
         // Plain markdown is not a drawing, even with a Drawing-ish heading.
         let note = "## Drawing\n```json\n{\"x\":1}\n```\n";
         assert!(!is_drawing_content(note));
-        // Legacy Basalt hybrid stays readable.
-        let legacy = "%%#drawing-data\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}\n%%\n";
-        assert!(is_drawing_content(legacy));
         // Raw Excalidraw JSON classifies via shape.
         assert!(is_drawing_content("{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}"));
         // An ordinary JSON blob is not an Excalidraw scene.
@@ -354,7 +297,7 @@ mod tests {
     #[test]
     fn test_atomic_write_file() {
         let dir = tempfile::tempdir().expect("tempdir failed");
-        let file_path = dir.path().join("test.drawing.md");
+        let file_path = dir.path().join("test.excalidraw.md");
         let content = "# Test Drawing\n";
 
         atomic_write_file(&file_path, content).expect("atomic write failed");

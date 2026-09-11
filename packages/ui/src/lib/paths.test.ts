@@ -41,10 +41,9 @@ describe("paths utility", () => {
       expect(stemOf("notes/untitled")).toBe("untitled");
     });
 
-    it("strips .drawing.md, .excalidraw.md, and .excalidraw extensions", () => {
-      expect(stemOf("diagrams/architecture.drawing.md")).toBe("architecture");
-      expect(stemOf("diagrams/architecture.DRAWING.MD")).toBe("architecture");
+    it("strips .excalidraw.md and .excalidraw extensions", () => {
       expect(stemOf("sketch.excalidraw.md")).toBe("sketch");
+      expect(stemOf("diagrams/architecture.EXCALIDRAW.MD")).toBe("architecture");
       expect(stemOf("whiteboard.excalidraw")).toBe("whiteboard");
     });
 
@@ -70,9 +69,8 @@ describe("paths utility", () => {
     });
 
     it("identifies drawing files case-insensitively", () => {
-      expect(isDrawingPath("diagram.drawing.md")).toBe(true);
-      expect(isDrawingPath("diagram.DRAWING.MD")).toBe(true);
-      expect(isDrawingPath("sketch.excalidraw.md")).toBe(true);
+      expect(isDrawingPath("diagram.excalidraw.md")).toBe(true);
+      expect(isDrawingPath("sketch.EXCALIDRAW.MD")).toBe(true);
       expect(isDrawingPath("scene.excalidraw")).toBe(true);
       expect(isDrawingPath("scene.EXCALIDRAW")).toBe(true);
       expect(isDrawingPath("note.md")).toBe(false);
@@ -83,7 +81,7 @@ describe("paths utility", () => {
     it("identifies document paths", () => {
       expect(isDocumentPath("note.md")).toBe(true);
       expect(isDocumentPath("board.canvas")).toBe(true);
-      expect(isDocumentPath("diagram.drawing.md")).toBe(true);
+      expect(isDocumentPath("diagram.excalidraw.md")).toBe(true);
       expect(isDocumentPath("scene.excalidraw")).toBe(true);
       expect(isDocumentPath("image.png")).toBe(false);
     });

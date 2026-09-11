@@ -144,7 +144,7 @@ fn extract_text_elements(content: &str) -> Vec<String> {
             }
         } else {
             // The plugin writes bare lines (`Load Balancer ^id`), not bullets;
-            // legacy Basalt hybrids used `- bullet` lines (handled above).
+            // older plugin exports / manual edits use `- bullet` lines (handled above).
             result.push(strip_block_ref(t).to_string());
         }
     }
@@ -176,10 +176,18 @@ fn strip_block_ref(s: &str) -> &str {
 /// fenced block is replaced, every other section is preserved byte-for-byte.
 /// The plugin reads uncompressed `json` fences, so no recompression is needed.
 /// When the file has no Drawing section, a fresh one is appended.
+///
+/// Normalizes toward the shell: a marker file missing the `# Excalidraw Data`
+/// hull or `## Text Elements` section (plugin `compressed-json` minimal
+/// exports predate the hull) gets the missing sections synthesized before the
+/// Drawing block, so every saved drawing is a canonical shell.
 pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
     let lines: Vec<&str> = existing.split('\n').collect();
     let mut out = String::with_capacity(existing.len() + data_json.len());
     let mut replaced = false;
+    let needs_hull = !existing.contains("# Excalidraw Data");
+    // True once the synthetic hull has been emitted (or wasn't needed).
+    let mut hull_emitted = !needs_hull;
 
     let mut i = 0;
     while i < lines.len() {
@@ -189,6 +197,11 @@ pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
             out.push('\n');
             i += 1;
             continue;
+        }
+
+        if !hull_emitted {
+            emit_shell_hull(&mut out, data_json);
+            hull_emitted = true;
         }
 
         // Scan ahead for the fenced scene block under this heading.
@@ -228,12 +241,29 @@ pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
     }
 
     if !replaced {
-        out.push_str("\n## Drawing\n```json\n");
+        if !hull_emitted {
+            emit_shell_hull(&mut out, data_json);
+        }
+        out.push_str("## Drawing\n```json\n");
         out.push_str(data_json.trim());
         out.push_str("\n```\n");
     }
 
     out
+}
+
+/// Emit the canonical `# Excalidraw Data` + `## Text Elements` hull with the
+/// scene's text mirror, terminated by the `%%` separator the plugin uses to
+/// hide the Drawing block from the markdown preview.
+fn emit_shell_hull(out: &mut String, data_json: &str) {
+    out.push_str("# Excalidraw Data\n");
+    out.push_str("## Text Elements\n");
+    let mirror = text_element_lines(data_json);
+    if !mirror.is_empty() {
+        out.push_str(&mirror);
+        out.push('\n');
+    }
+    out.push_str("\n%%\n");
 }
 
 /// Build a brand-new drawing file in the Obsidian Excalidraw shell: plugin
@@ -242,14 +272,8 @@ pub fn serialize_obsidian_markdown(data_json: &str, existing: &str) -> String {
 /// with the scene as a plain `json` fence. Always includes the fence — scene
 /// data is never hidden inside `%%` comments.
 pub fn create_drawing_file(data_json: &str) -> String {
-    create_drawing_file_with_created(data_json, None)
-}
-
-/// [`create_drawing_file`] with an explicit `created` timestamp (used when
-/// migrating legacy Basalt hybrids, whose creation date must be preserved).
-pub(crate) fn create_drawing_file_with_created(data_json: &str, created: Option<String>) -> String {
     let now_iso = Utc::now().to_rfc3339();
-    let created = created.unwrap_or_else(|| now_iso.clone());
+    let created = now_iso.clone();
 
     let mut out = String::new();
     out.push_str("---\n");
@@ -526,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_unfenced_json_scene() {
+    fn test_unfenced_json_scene() {
         let content = obsidian_doc(
             "{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}",
         );
@@ -628,8 +652,9 @@ mod tests {
     }
 
     #[test]
-    fn test_legacy_bullet_text_elements_still_parse() {
-        // Legacy Basalt hybrids wrote `- bullet` lines; those must keep parsing.
+    fn test_bullet_text_elements_still_parse() {
+        // Earlier plugin exports / manual edits wrote `- bullet` lines; those
+        // must keep parsing.
         let content = "---\nexcalidraw-plugin: parsed\n---\n# Excalidraw Data\n## Text Elements\n- routes ^Jzdcv7eT\n- First item ^abc\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[],\"appState\":{},\"files\":{}}\n```\n";
         let parsed = parse_obsidian_excalidraw(content);
         assert_eq!(parsed.text_elements, vec!["routes", "First item"]);

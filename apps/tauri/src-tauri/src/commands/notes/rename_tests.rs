@@ -209,14 +209,15 @@ fn rename_with_note_moves_attachments_and_rewrites_embeds() {
 #[test]
 fn rename_drawing_file_preserves_extension() {
     let (root, state) = temp_vault();
-    let draw_path = root.join("architecture.drawing.md");
-    std::fs::write(&draw_path, "```json:excalidraw\n{}\n```\n# Drawing Text & Elements\n## Text Elements\n- Microservice arch\n").unwrap();
-    state.vault.write().unwrap().add_document(&draw_path.to_string_lossy(), "```json:excalidraw\n{}\n```\n# Drawing Text & Elements\n## Text Elements\n- Microservice arch\n");
+    let draw_path = root.join("architecture.excalidraw.md");
+    let scene = "---\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n---\n# Excalidraw Data\n## Text Elements\n- Microservice arch\n\n%%\n## Drawing\n```json\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}\n```\n";
+    std::fs::write(&draw_path, scene).unwrap();
+    state.vault.write().unwrap().add_document(&draw_path.to_string_lossy(), scene);
 
     let res = rename_note_impl(&draw_path.to_string_lossy(), "system_design", &state, None).unwrap();
 
     assert_eq!(res.name, "system_design");
-    assert!(res.path.ends_with("system_design.drawing.md"));
-    assert!(root.join("system_design.drawing.md").exists(), "file renamed with .drawing.md preserved");
-    assert!(!root.join("architecture.drawing.md").exists(), "old drawing file removed");
+    assert!(res.path.ends_with("system_design.excalidraw.md"));
+    assert!(root.join("system_design.excalidraw.md").exists(), "file renamed with .excalidraw.md preserved");
+    assert!(!root.join("architecture.excalidraw.md").exists(), "old drawing file removed");
 }

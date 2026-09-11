@@ -11,7 +11,8 @@ export interface DrawingEmbedProps {
 }
 
 /**
- * Lightweight SVG preview for drawing embeds (![[Diagram.drawing.md]] or ![[Diagram.drawing.md#^frame=...]]).
+ * Lightweight SVG preview for drawing embeds (![[Diagram.excalidraw.md]] or
+ * ![[Diagram.excalidraw.md#^frame=...]]).
  * Renders static/responsive vector SVG without mounting the full Excalidraw editor instance (ADR-047 §7).
  */
 export const DrawingEmbed = memo(function DrawingEmbed({

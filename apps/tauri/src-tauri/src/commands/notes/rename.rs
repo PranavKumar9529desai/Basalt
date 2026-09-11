@@ -20,13 +20,7 @@ use basalt_parser::{rewrite_wikilinks, NoteRename};
 /// separators and empty/`.`/`..` names.
 fn sanitize_name(raw: &str) -> AppResult<String> {
     let mut name = raw.trim().to_string();
-    for ext in [
-        ".drawing.md",
-        ".excalidraw.md",
-        ".excalidraw",
-        ".md",
-        ".markdown",
-    ] {
+    for ext in [".excalidraw.md", ".excalidraw", ".md", ".markdown"] {
         if name.len() > ext.len() && name.to_ascii_lowercase().ends_with(ext) {
             let cut = name.len() - ext.len();
             name.truncate(cut);
@@ -87,9 +81,7 @@ fn rename_note_impl(
             .and_then(|s| s.to_str())
             .ok_or_else(|| AppError::Validation("invalid old file name".to_string()))?;
         let lower = file_name.to_ascii_lowercase();
-        if lower.ends_with(".drawing.md") {
-            (".drawing.md", file_name[..file_name.len() - 11].to_string())
-        } else if lower.ends_with(".excalidraw.md") {
+        if lower.ends_with(".excalidraw.md") {
             (".excalidraw.md", file_name[..file_name.len() - 14].to_string())
         } else if lower.ends_with(".excalidraw") {
             (".excalidraw", file_name[..file_name.len() - 11].to_string())

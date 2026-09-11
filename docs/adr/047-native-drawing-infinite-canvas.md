@@ -79,8 +79,9 @@ We adopt **`@excalidraw/excalidraw`** for the frontend canvas rendering and gest
 ## 4. File Format Specification: Obsidian Excalidraw Shell (adopted)
 
 > **Amended 2026-09-11.** The original three-tier `.drawing.md` backplane was
-> replaced after a real-vault compatibility audit (§9). It remains read-only
-> legacy — never written again.
+> replaced after a real-vault compatibility audit (§9). The legacy format was
+> **removed entirely** (2026-09-11) — the user's test files were deleted;
+> Basalt reads and writes only the shell.
 
 Basalt's single on-disk drawing format is the **Obsidian Excalidraw plugin
 shell**, with Basalt always writing plain `json` scene blocks:
@@ -186,7 +187,7 @@ apps/tauri/src-tauri/src/
     type: "drawing",
     name: "Drawing",
     icon: IconPencil,
-    extensions: [".excalidraw.md", ".excalidraw"],  // legacy ".drawing.md" read-only
+    extensions: [".excalidraw.md", ".excalidraw"],
     component: Drawing,
   });
   ```
@@ -271,8 +272,8 @@ drawings.
 - **Obsidian-authored files**: open read/editable; save is surgical — only the
   `## Drawing` block changes, all other sections byte-identical; compressed
   stays compressed until the scene changes.
-- **Legacy Basalt-hull / `.drawing.md` files**: read-only legacy; migrated to
-  the shell in place on first save.
+- **Legacy Basalt-hull / `.drawing.md` files**: removed. They were the user's
+  test files and have been deleted; no read or write fallback remains.
 - **New files**: created as `.excalidraw.md` with the full shell from creation
   (fence included).
 

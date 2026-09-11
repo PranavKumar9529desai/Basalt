@@ -22,9 +22,7 @@ pub struct CreateDrawingResult {
 /// still a drawing — so this gate alone is never enough.
 fn is_valid_drawing_extension(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    name.ends_with(".drawing.md") // legacy Basalt extension — read-only
-        || name.ends_with(".excalidraw.md")
-        || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
+    name.ends_with(".excalidraw.md") || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
 }
 
 fn resolve_drawing_path(path: &str, state: &AppState) -> AppResult<PathBuf> {
@@ -59,9 +57,9 @@ fn resolve_drawing_path(path: &str, state: &AppState) -> AppResult<PathBuf> {
 }
 
 /// Read a drawing file from disk and return its structured DrawingPayload.
-/// Parse drawing content (hybrid `.drawing.md`, Obsidian `.excalidraw.md`, or
-/// raw `.excalidraw` JSON) into a structured payload. Used by the view-mode
-/// toggle to rebuild the scene from raw markdown edits without a TS re-parse.
+/// Parse drawing content (`.excalidraw.md` plugin shell or raw `.excalidraw`
+/// JSON) into a structured payload. Used by the view-mode toggle to rebuild
+/// the scene from raw markdown edits without a TS re-parse.
 #[tauri::command]
 pub fn parse_drawing(content: String) -> DrawingPayload {
     parse_drawing_content(&content)
@@ -157,7 +155,7 @@ pub fn save_drawing(
     Ok(())
 }
 
-/// Create a new untitled `.drawing.md` file under the given parent directory.
+/// Create a new untitled `.excalidraw.md` file under the given parent directory.
 #[tauri::command]
 pub fn create_untitled_drawing(
     parent: Option<String>,
@@ -254,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_valid_drawing_extension() {
-        assert!(is_valid_drawing_extension(Path::new("test.drawing.md")));
+        assert!(is_valid_drawing_extension(Path::new("test.excalidraw.md")));
         assert!(is_valid_drawing_extension(Path::new("test.excalidraw.md")));
         assert!(is_valid_drawing_extension(Path::new("test.excalidraw")));
         assert!(!is_valid_drawing_extension(Path::new("test.md")));

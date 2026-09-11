@@ -16,11 +16,11 @@
 | Phase | Commit | What | Gate |
 |-------|---------|------|------|
 | 1 | `f05e96a` | ADR-047 doc — Obsidian shell spec, evidence table, capabilities | doc written |
-| 2 | `72b0303` | Rust core — `create_drawing_file` emitter, bare-line text elements, tighter marker, migration-safe read | 21 tests pass |
+| 2 | `72b0303` | Rust core — `create_drawing_file` emitter, bare-line text elements, tighter marker | 21 tests pass |
 | 3 | `36ef4b4` | Marker-authoritative classification in command layer (`is_drawing_content`, `read_drawing` gate) | 22 tests pass |
-| 4 | *(pending)* | TS surface — `resolveLeafType` + `is_drawing_file` IPC, `leafType` hint through tabs/openers, mocks + unit tests | tsc clean, 74 tests |
-| 5 | — | Migration on save + parse→serialize→parse round-trip harness (11 real fixtures) | all fixtures round-trip |
-| 6 | — | Docs: CURRENT_WORK update, `features/drawing/README.md` | |
+| 4 | `4468d95` | TS surface — `resolveLeafType` + `is_drawing_file` IPC, `leafType` hint through tabs/openers, mocks + unit tests | tsc clean, 74 tests |
+| 5 | *(pending)* | Legacy format removed per user (test files deleted) — `basalt.rs` deleted, `.drawing.md` purged from registry/paths/rename/classifiers, migration flow dropped, in-place writer normalizes malformed plugin files to canonical shell; round-trip harness over all 13 real fixtures | 19 + harness + 67 + 358 tests, tsc/oxlint clean |
+| 6 | — | Docs: `features/drawing/README.md` | |
 
 ### Remaining after Phase 6
 - Rust batched IPC (separate workstream)
