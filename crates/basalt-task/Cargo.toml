@@ -9,3 +9,10 @@ basalt-vault = { path = "../basalt-vault" }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
+
+[[bench]]
+name = "task_query"
+harness = false
+
+[dev-dependencies]
+criterion = { version = "0.5" }
