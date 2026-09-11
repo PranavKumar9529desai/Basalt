@@ -79,6 +79,7 @@
     "primaryDarkest": "color-mix(in srgb, var(--sat-accent-primary) 68%, #000000)",
     "primaryHover": "color-mix(in srgb, var(--sat-accent-primary) 88%, #ffffff)",
     "primaryLight": "color-mix(in srgb, var(--sat-accent-primary) 16%, var(--sat-surface-1))",
+    "primaryContrast": "color-mix(in srgb, var(--sat-accent-primary) 45%, var(--sat-text-primary))",
     "selectHighlight": "color-mix(in srgb, var(--sat-accent-primary) 40%, transparent)",
     "focusHighlight": "color-mix(in srgb, var(--sat-accent-primary) 35%, transparent)"
   },

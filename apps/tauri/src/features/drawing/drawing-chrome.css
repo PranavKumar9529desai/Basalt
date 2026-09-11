@@ -16,6 +16,14 @@
  * globals.css). Chrome echoes the active theme accent — orange on dark
  * themes, blue on light — without repeating colour values in feature code.
  *
+ * Gotcha: the selected toolbar button is NOT painted by --color-primary.
+ * It consumes --color-surface-primary-container (bg) and
+ * --color-on-primary-container (icon) — Excalidraw's "primary container"
+ * pair — which is why overriding just --color-primary visibly changes
+ * nothing there and the default purple (#403e6a dark / #e0dfff light chip)
+ * sticks. --color-selection (canvas element outline/selection rect) is the
+ * third purple leak, bridged too.
+ *
  * The canvas itself is transparent (lib/scene.ts); this file only tones the
  * floating chrome, never the drawing surface.
  */
@@ -27,8 +35,12 @@
   --color-primary-hover: var(--sat-excalidraw-primary-hover);
   --color-primary-light: var(--sat-excalidraw-primary-light);
   --color-primary-contrast-offset: var(--sat-excalidraw-primary-darker);
+  --color-surface-primary-container: var(--sat-excalidraw-primary-light);
+  --color-on-primary-container: var(--sat-excalidraw-primary-contrast);
   --color-brand-hover: var(--sat-excalidraw-primary-hover);
   --color-brand-active: var(--sat-excalidraw-primary-darker);
+  --color-selection: var(--sat-excalidraw-primary);
+  --color-slider-track: var(--sat-excalidraw-primary);
   --select-highlight-color: var(--sat-excalidraw-select-highlight);
   --focus-highlight-color: var(--sat-excalidraw-focus-highlight);
 }

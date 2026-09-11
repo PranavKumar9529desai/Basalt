@@ -168,6 +168,11 @@
     var(--sat-accent-primary) 16%,
     var(--sat-surface-1)
   );
+  --sat-excalidraw-primary-contrast: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 45%,
+    var(--sat-text-primary)
+  );
   --sat-excalidraw-select-highlight: color-mix(
     in srgb,
     var(--sat-accent-primary) 40%,
