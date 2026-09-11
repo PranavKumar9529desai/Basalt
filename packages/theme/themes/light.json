@@ -38,6 +38,10 @@
       "popoverActiveText": "#1d4ed8",
       "taskAccent": "#16a34a",
       "heading7": "#1f2937"
+    },
+    "excalidraw": {
+      "primaryDarkest": "color-mix(in srgb, var(--sat-accent-primary) 84%, #000000)",
+      "selectHighlight": "color-mix(in srgb, var(--sat-accent-primary) 48%, transparent)"
     }
   }
 }

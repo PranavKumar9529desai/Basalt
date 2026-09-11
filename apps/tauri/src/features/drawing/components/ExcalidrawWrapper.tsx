@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
+import "../drawing-chrome.css";
 import type {
   AppState,
   BinaryFiles,

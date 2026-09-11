@@ -147,6 +147,37 @@
   --sat-graph-hover-fill: #ff6a00;
   --sat-graph-hover-ring: #f2f4f8;
   --sat-graph-hover-edge: #ff6a00;
+  --sat-excalidraw-primary: #ff6a00;
+  --sat-excalidraw-primary-darker: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 82%,
+    #000000
+  );
+  --sat-excalidraw-primary-darkest: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 68%,
+    #000000
+  );
+  --sat-excalidraw-primary-hover: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 88%,
+    #ffffff
+  );
+  --sat-excalidraw-primary-light: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 16%,
+    var(--sat-surface-1)
+  );
+  --sat-excalidraw-select-highlight: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 40%,
+    transparent
+  );
+  --sat-excalidraw-focus-highlight: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 35%,
+    transparent
+  );
   --sat-syntax-keyword: #ff7315;
   --sat-syntax-string: #98c379;
   --sat-syntax-number: #fb923c;
@@ -302,6 +333,16 @@
   --sat-editor-popover-active-text: #1d4ed8;
   --sat-editor-task-accent: #16a34a;
   --sat-editor-heading7: #1f2937;
+  --sat-excalidraw-primary-darkest: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 84%,
+    #000000
+  );
+  --sat-excalidraw-select-highlight: color-mix(
+    in srgb,
+    var(--sat-accent-primary) 48%,
+    transparent
+  );
 }
 
 [data-theme="solarized-dark"] {
