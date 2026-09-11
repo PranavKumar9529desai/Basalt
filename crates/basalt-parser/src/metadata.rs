@@ -10,7 +10,7 @@
 //! (ADR-041); collapsing the tiers would push cursor bookkeeping into every
 //! token on the hot path.
 
-use crate::frontmatter::{fm_bounds, frontmatter_body_offset, walk_fm};
+use crate::frontmatter::{collect_frontmatter_refs, fm_bounds, frontmatter_body_offset};
 use crate::task_scan::{is_task_checkbox, scan_task_line, scan_task_line_unicode};
 use crate::utf16::SpanCursor;
 use basalt_types::FileMetadata;
@@ -47,7 +47,7 @@ fn consume_frontmatter(input: &str, meta: &mut FileMetadata) -> usize {
         let mut fm_links: Vec<String> = Vec::new();
         let mut fm_tags: Vec<String> = Vec::new();
         let mut fm_aliases: Vec<String> = Vec::new();
-        walk_fm(fm, &mut fm_links, &mut fm_tags, &mut fm_aliases);
+        collect_frontmatter_refs(fm, &mut fm_links, &mut fm_tags, &mut fm_aliases);
 
         meta.links.extend(fm_links);
         meta.tags.extend(fm_tags);

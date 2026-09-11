@@ -2,11 +2,10 @@ use serde_yaml_ng::Value;
 
 use crate::scan_wikilinks;
 
-/// Walk a parsed YAML frontmatter value, collecting wikilinks (into `links`),
-/// `tags:` (into `tags`) and `aliases:` (into `aliases`). Used to make
-/// frontmatter properties first-class for graph/backlinks/search (ADR-022
-/// rule 1) — closing the gap where FM links/tags were previously ignored.
-pub(crate) fn walk_fm(
+/// Collect wikilinks, `tags:`, and `aliases:` from a parsed frontmatter
+/// value into the given vectors. Makes frontmatter properties first-class
+/// for graph/backlinks/search (ADR-022 rule 1).
+pub(crate) fn collect_frontmatter_refs(
     v: &Value,
     links: &mut Vec<String>,
     tags: &mut Vec<String>,
@@ -16,7 +15,7 @@ pub(crate) fn walk_fm(
         Value::String(s) => collect_wikilinks(s, links),
         Value::Sequence(seq) => {
             for item in seq {
-                walk_fm(item, links, tags, aliases);
+                collect_frontmatter_refs(item, links, tags, aliases);
             }
         }
         Value::Mapping(map) => {
@@ -28,7 +27,7 @@ pub(crate) fn walk_fm(
                         _ => {}
                     }
                 }
-                walk_fm(val, links, tags, aliases);
+                collect_frontmatter_refs(val, links, tags, aliases);
             }
         }
         _ => {}

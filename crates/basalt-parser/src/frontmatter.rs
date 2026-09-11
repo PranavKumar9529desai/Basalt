@@ -1,3 +1,5 @@
+//! Frontmatter parsing: typed, span-annotated property model for CodeMirror.
+
 use std::collections::HashMap;
 
 use basalt_types::{
@@ -9,7 +11,7 @@ use serde_yaml_ng::Value;
 use crate::utf16::SpanCursor;
 mod walk;
 
-pub(crate) use walk::walk_fm;
+pub(crate) use walk::collect_frontmatter_refs;
 
 /// Parse a note's YAML frontmatter into a typed, span-annotated model.
 ///
@@ -151,7 +153,7 @@ pub fn parse_frontmatter(input: &str) -> FrontmatterModel {
 /// Returns `(open_end, close_start)` byte offsets for the frontmatter block,
 /// where `open_end` is the first byte of the first frontmatter line and
 /// `close_start` is the byte where the closing `---`/`...` begins.
-pub fn fm_bounds(input: &str) -> Option<(usize, usize)> {
+pub(crate) fn fm_bounds(input: &str) -> Option<(usize, usize)> {
     let open = if input.starts_with("---\n") {
         4
     } else if input.starts_with("---\r\n") {
@@ -179,7 +181,7 @@ pub fn fm_bounds(input: &str) -> Option<(usize, usize)> {
 
 /// Returns the byte offset in `input` where the markdown body begins after frontmatter,
 /// or 0 if there is no frontmatter block.
-pub fn frontmatter_body_offset(input: &str) -> usize {
+pub(crate) fn frontmatter_body_offset(input: &str) -> usize {
     let (_, close_start) = match fm_bounds(input) {
         Some(x) => x,
         None => return 0,
