@@ -193,6 +193,24 @@ pub fn parse_drawing_content(content: &str) -> DrawingPayload {
     }
 }
 
+/// True when `content` is a drawing by any of the supported surfaces:
+/// - Obsidian Excalidraw plugin shell (marker, `# Excalidraw Data`, or a
+///   compressed scene block)
+/// - legacy Basalt hybrid (`%%#drawing-data`)
+/// - raw Excalidraw JSON (`{...}`)
+///
+/// This is the **classification authority** used by the command layer: the
+/// extension remains a fast path, the marker is the judge (a drawing renamed
+/// to `carfleet.md` still carries `excalidraw-plugin: parsed` inside).
+pub fn is_drawing_content(content: &str) -> bool {
+    let trimmed = content.trim_start();
+    if trimmed.starts_with('{') {
+        return serde_json::from_str::<serde_json::Value>(trimmed).is_ok()
+            && trimmed.contains("\"elements\"");
+    }
+    obsidian::is_obsidian_excalidraw_format(content) || basalt::is_basalt_hybrid(content)
+}
+
 /// Serialize a scene into the Obsidian Excalidraw shell, choosing the writer
 /// by what exists on disk:
 /// - no existing file → a brand-new shell file ([`create_drawing_file`])
@@ -306,6 +324,23 @@ mod tests {
         let out = serialize_drawing_content(&json, None);
         assert!(out.starts_with("---\nexcalidraw-plugin: parsed\n"));
         assert!(out.contains("## Drawing\n```json\n"));
+    }
+
+    #[test]
+    fn test_is_drawing_content_classification() {
+        // Marker is the authority: renamed drawings classify as drawings.
+        let renamed = "---\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n---\n# Excalidraw Data\n## Drawing\n";
+        assert!(is_drawing_content(renamed));
+        // Plain markdown is not a drawing, even with a Drawing-ish heading.
+        let note = "## Drawing\n```json\n{\"x\":1}\n```\n";
+        assert!(!is_drawing_content(note));
+        // Legacy Basalt hybrid stays readable.
+        let legacy = "%%#drawing-data\n{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}\n%%\n";
+        assert!(is_drawing_content(legacy));
+        // Raw Excalidraw JSON classifies via shape.
+        assert!(is_drawing_content("{\"type\":\"excalidraw\",\"version\":2,\"elements\":[]}"));
+        // An ordinary JSON blob is not an Excalidraw scene.
+        assert!(!is_drawing_content("{\"a\":1}"));
     }
 
     #[test]

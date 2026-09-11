@@ -6,8 +6,8 @@ use tauri::State;
 use super::common::{ensure_inside_vault, index_upsert, register_self_writes};
 use crate::app_state::AppState;
 use crate::core::drawing::{
-    atomic_write_file, create_drawing_file, parse_drawing_content, serialize_drawing_content,
-    DrawingPayload, EMPTY_DRAWING_JSON,
+    atomic_write_file, create_drawing_file, is_drawing_content, parse_drawing_content,
+    serialize_drawing_content, DrawingPayload, EMPTY_DRAWING_JSON,
 };
 use crate::error::{AppError, AppResult};
 
@@ -17,21 +17,18 @@ pub struct CreateDrawingResult {
     pub name: String,
 }
 
+/// Fast-path extension check. The frontmatter marker ([`is_drawing_content`])
+/// is the authoritative classifier — a drawing renamed to `carfleet.md` is
+/// still a drawing — so this gate alone is never enough.
 fn is_valid_drawing_extension(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    name.ends_with(".drawing.md")
+    name.ends_with(".drawing.md") // legacy Basalt extension — read-only
         || name.ends_with(".excalidraw.md")
         || path.extension().and_then(|e| e.to_str()) == Some("excalidraw")
 }
 
 fn resolve_drawing_path(path: &str, state: &AppState) -> AppResult<PathBuf> {
     let p = Path::new(path);
-    if !is_valid_drawing_extension(p) {
-        return Err(AppError::Validation(
-            "only .drawing.md, .excalidraw.md, or .excalidraw files are supported".to_string(),
-        ));
-    }
-
     if p.is_absolute() && p.exists() {
         return p
             .canonicalize()
@@ -78,11 +75,19 @@ pub fn serialize_drawing(data_json: String, existing_markdown: Option<String>) -
 }
 
 /// Read a drawing file from disk and return its structured DrawingPayload.
+/// Classification is marker-authoritative: an `.md` renamed drawing
+/// (`carfleet.md`) opens here, while a plain note is rejected even when it
+/// wears a drawing-looking extension.
 #[tauri::command]
 pub fn read_drawing(path: String, state: State<AppState>) -> AppResult<DrawingPayload> {
     let abs = resolve_drawing_path(&path, &state)?;
     let content = std::fs::read_to_string(&abs)
         .map_err(|e| AppError::Io(format!("failed to read drawing: {e}")))?;
+    if !is_drawing_content(&content) {
+        return Err(AppError::Validation(
+            "not a drawing file (missing the Excalidraw plugin marker)".to_string(),
+        ));
+    }
     Ok(parse_drawing_content(&content))
 }
 
@@ -96,10 +101,20 @@ pub fn save_drawing(
 ) -> AppResult<()> {
     let abs = resolve_drawing_path(&path, &state)?;
 
+    // Never let a drawing scene overwrite a plain note: require the drawing
+    // extension fast path or an existing file that actually carries the marker.
+    let existing = std::fs::read_to_string(&abs).ok();
+    let allowed = is_valid_drawing_extension(&abs)
+        || existing.as_deref().map(is_drawing_content).unwrap_or(false);
+    if !allowed {
+        return Err(AppError::Validation(
+            "not a drawing file (missing the Excalidraw plugin marker)".to_string(),
+        ));
+    }
+
     let content = if let Some(raw) = raw_markdown {
         raw
     } else {
-        let existing = std::fs::read_to_string(&abs).ok();
         // Obsidian-shell files get a surgical in-place update (only the
         // `## Drawing` block changes); legacy Basalt hybrids are migrated to
         // the shell; missing files are created fresh with the full shell.
