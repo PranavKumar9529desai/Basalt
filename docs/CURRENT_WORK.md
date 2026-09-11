@@ -19,7 +19,7 @@
 | 2 | `72b0303` | Rust core — `create_drawing_file` emitter, bare-line text elements, tighter marker | 21 tests pass |
 | 3 | `36ef4b4` | Marker-authoritative classification in command layer (`is_drawing_content`, `read_drawing` gate) | 22 tests pass |
 | 4 | `4468d95` | TS surface — `resolveLeafType` + `is_drawing_file` IPC, `leafType` hint through tabs/openers, mocks + unit tests | tsc clean, 74 tests |
-| 5 | *(pending)* | Legacy format removed per user (test files deleted) — `basalt.rs` deleted, `.drawing.md` purged from registry/paths/rename/classifiers, migration flow dropped, in-place writer normalizes malformed plugin files to canonical shell; round-trip harness over all 13 real fixtures | 19 + harness + 67 + 358 tests, tsc/oxlint clean |
+| 5 | `e2f63b6` | Legacy format removed per user (test files deleted) — `basalt.rs` deleted, `.drawing.md` purged from registry/paths/rename/classifiers, migration flow dropped, in-place writer normalizes malformed plugin files to canonical shell; round-trip harness over all 13 real fixtures | 19 + harness + 67 + 358 tests, tsc/oxlint clean |
 | 6 | — | Docs: `features/drawing/README.md` | |
 
 ### Remaining after Phase 6
