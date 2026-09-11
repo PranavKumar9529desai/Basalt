@@ -17,7 +17,7 @@ decisions.
 | File                                                             | Load when…                                                               | Always loaded?      |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------- |
 | **`AGENTS.md`** (this file)                                      | Every session                                                            | ✅ yes — keep lean  |
-| [`CONVENTIONS.md`](./CONVENTIONS.md)                             | Writing/refactoring code (naming, state, comments)                       | ⚠️ on demand        |
+| [`CONVENTIONS.md`](./CONVENTIONS.md)                             | **Every session — pre-flight** (mandatory before planning/editing code)  | ✅ yes — mandatory  |
 | [`root README.md`](./README.md)                                  | Human orientation / quick start                                          | ⚠️ on demand        |
 | [`apps/tauri/AGENTS.md`](apps/tauri/AGENTS.md)                   | Working inside `apps/tauri/` (app-layer rules)                           | ⚠️ auto via nesting |
 | [`docs/CURRENT_WORK.md`](./docs/CURRENT_WORK.md)                 | Starting a session — the active workstream handoff                       | ✅ every session    |
@@ -34,6 +34,20 @@ Rules for keeping this lean:
   CURRENT_WORK wins — and this table must be updated.
 - **One concept, one word.** Vocabulary lives in CONVENTIONS §1.6; do not coin
   synonyms.
+
+### Pre-flight — mandatory read order (every task, no exceptions)
+
+Before planning OR editing any code, load in this order — skipping a file
+caused real misfires (hand-rolled UI where shadcn primitives existed):
+
+1. **`AGENTS.md`** (this file — architecture, status, commands)
+2. **`CONVENTIONS.md`** (naming, styling, shadcn/ADR-003 UI policy §5.3, state)
+3. **`docs/CURRENT_WORK.md`** (what's active right now)
+
+Then run `bun run lint` as a **baseline precondition** — the result tells you
+which of your edits will fail. Conventions are **machine-checked** by oxlint
+plugins (`oxlint-plugins/basalt-architecture.mjs`); a `bun run lint` failure is
+a hard stop, not a suggestion. Fix the violation, do not ship around it.
 
 ---
 

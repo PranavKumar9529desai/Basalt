@@ -6,6 +6,8 @@ import {
   IconPencil,
   IconCheck,
 } from "@tabler/icons-react";
+import { Button } from "@workspace/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
 import { CardHandles } from "./CardHandles";
@@ -119,32 +121,59 @@ function LinkNodeInner({ id, data, selected }: NodeProps<CanvasXYNode>) {
 
           <div className="flex items-center gap-1 shrink-0">
             {isEditing ? (
-              <button
-                type="button"
-                onClick={commitUrl}
-                className="p-1 rounded text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
-                title="Done"
-              >
-                <IconCheck size={13} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="sat-ghost"
+                      size="icon-xs"
+                      onClick={commitUrl}
+                      className="text-[var(--sat-accent-primary)] hover:text-[var(--sat-accent-primary)] hover:bg-[var(--sat-surface-3)]"
+                      aria-label="Done"
+                    >
+                      <IconCheck size={13} />
+                    </Button>
+                  }
+                />
+                <TooltipContent>Done</TooltipContent>
+              </Tooltip>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
-                  title="Edit URL"
-                >
-                  <IconPencil size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpen}
-                  className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
-                  title="Open in browser"
-                >
-                  <IconExternalLink size={13} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="sat-ghost"
+                        size="icon-xs"
+                        onClick={startEditing}
+                        className="hover:bg-[var(--sat-surface-3)]"
+                        aria-label="Edit URL"
+                      >
+                        <IconPencil size={13} />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Edit URL</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="sat-ghost"
+                        size="icon-xs"
+                        onClick={handleOpen}
+                        className="hover:bg-[var(--sat-surface-3)]"
+                        aria-label="Open in browser"
+                      >
+                        <IconExternalLink size={13} />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Open in browser</TooltipContent>
+                </Tooltip>
               </>
             )}
           </div>

@@ -100,6 +100,7 @@ export function SplitPane({
               {child}
             </div>
             {i < items.length - 1 && (
+              // eslint-disable-next-line basalt/no-raw-button-in-apps -- SplitPane resize sash (exempt: needs raw per-axis style)
               <button
                 type="button"
                 aria-label="Resize pane"

@@ -1,15 +1,14 @@
-import { IconChevronDown, IconX } from "@tabler/icons-react";
+import { IconCheck, IconChevronDown, IconX } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
-import { useCallback, useRef, useState } from "react";
+import { Checkbox } from "@workspace/ui/components/ui/checkbox";
+import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
+import { Select } from "@workspace/ui/components/ui/select";
+import { Slider } from "@workspace/ui/components/ui/slider";
+import { useCallback, useState } from "react";
 import { useExportStore } from "../store";
 import type { PageSize, PageOrientation } from "../types";
 import { renderAndPrint } from "../lib/pdf";
 import type { PreviewDeps } from "../../search/types";
-
-const selectWrapperClass =
-  "relative h-8 rounded-md border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)] focus-within:ring-1 focus-within:ring-[var(--sat-accent-primary)]";
-const selectInnerClass =
-  "h-full w-full appearance-none bg-transparent px-2 pr-7 text-xs text-[var(--sat-text-primary)] outline-none";
 
 interface ExportDialogProps {
   previewDeps: PreviewDeps;
@@ -33,12 +32,11 @@ function SmartCheckbox({
   if (!available) return null;
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="checkbox"
+      <Checkbox.Root
         id={id}
         checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="accent-[var(--sat-accent-primary)]"
+        onCheckedChange={onChange}
+        className="h-4 w-4"
       />
       <label htmlFor={id} className="text-xs text-[var(--sat-text-secondary)]">
         {label}
@@ -46,6 +44,16 @@ function SmartCheckbox({
     </div>
   );
 }
+
+const PAGE_SIZES: { label: string; value: PageSize }[] = [
+  { label: "A4", value: "A4" },
+  { label: "Letter", value: "Letter" },
+  { label: "Legal", value: "Legal" },
+];
+const ORIENTATIONS: { label: string; value: PageOrientation }[] = [
+  { label: "Portrait", value: "portrait" },
+  { label: "Landscape", value: "landscape" },
+];
 
 export function ExportDialog({ previewDeps }: ExportDialogProps) {
   const {
@@ -57,17 +65,7 @@ export function ExportDialog({ previewDeps }: ExportDialogProps) {
     options,
     contentFeatures,
   } = useExportStore();
-  const dialogRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        close();
-      }
-    },
-    [close],
-  );
 
   const handleExport = useCallback(async () => {
     if (!noteContent || !noteName) return;
@@ -81,24 +79,18 @@ export function ExportDialog({ previewDeps }: ExportDialogProps) {
     }
   }, [noteContent, noteName, options, previewDeps]);
 
-  if (!isOpen || !noteContent) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <button
-        type="button"
-        aria-hidden="true"
-        tabIndex={-1}
-        className="absolute inset-0 cursor-default"
-        onClick={handleBackdropClick}
-      />
-      <div
-        ref={dialogRef}
-        // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- Custom modal chrome; native <dialog> would change stacking/styling
-        role="dialog"
-        aria-modal="true"
+    <Dialog
+      open={isOpen && !!noteContent}
+      onOpenChange={(open: boolean) => {
+        if (!open) close();
+      }}
+    >
+      <DialogContent
+        overlayClassName="bg-black/50"
+        showCloseButton={false}
         aria-label="Export as PDF"
-        className="relative flex flex-col w-[480px] max-h-[80vh] overflow-hidden rounded-xl bg-[var(--sat-surface-1)] shadow-2xl"
+        className="flex w-full max-h-[80vh] flex-col overflow-hidden rounded-xl bg-[var(--sat-surface-1)] p-0 shadow-2xl sm:max-w-[480px]"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--sat-layout-border)]">
           <h2 className="text-sm font-semibold text-[var(--sat-text-primary)]">
@@ -126,58 +118,76 @@ export function ExportDialog({ previewDeps }: ExportDialogProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label
-                htmlFor="export-page-size"
-                className="text-xs font-medium text-[var(--sat-text-secondary)]"
-              >
+              <span className="text-xs font-medium text-[var(--sat-text-secondary)]">
                 Page Size
-              </label>
-              <div className={selectWrapperClass}>
-                <select
-                  id="export-page-size"
-                  value={options.pageSize}
-                  onChange={(e) =>
-                    setOptions({ pageSize: e.target.value as PageSize })
-                  }
-                  className={selectInnerClass}
-                >
-                  <option value="A4">A4</option>
-                  <option value="Letter">Letter</option>
-                  <option value="Legal">Legal</option>
-                </select>
-                <IconChevronDown
-                  size={12}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--sat-text-muted)]"
-                />
-              </div>
+              </span>
+              <Select.Root
+                value={options.pageSize}
+                onValueChange={(v) => {
+                  if (v !== null) setOptions({ pageSize: v as PageSize });
+                }}
+                items={PAGE_SIZES}
+              >
+                <Select.Trigger className="w-full">
+                  <Select.Value />
+                  <Select.Icon>
+                    <IconChevronDown size={12} />
+                  </Select.Icon>
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Positioner sideOffset={4} align="start">
+                    <Select.Popup className="z-[60] min-w-[140px]">
+                      <Select.List>
+                        {PAGE_SIZES.map((size) => (
+                          <Select.Item key={size.value} value={size.value}>
+                            <Select.ItemText>{size.label}</Select.ItemText>
+                            <Select.ItemIndicator>
+                              <IconCheck size={12} className="flex-shrink-0" />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                        ))}
+                      </Select.List>
+                    </Select.Popup>
+                  </Select.Positioner>
+                </Select.Portal>
+              </Select.Root>
             </div>
 
             <div className="space-y-1.5">
-              <label
-                htmlFor="export-orientation"
-                className="text-xs font-medium text-[var(--sat-text-secondary)]"
-              >
+              <span className="text-xs font-medium text-[var(--sat-text-secondary)]">
                 Orientation
-              </label>
-              <div className={selectWrapperClass}>
-                <select
-                  id="export-orientation"
-                  value={options.orientation}
-                  onChange={(e) =>
-                    setOptions({
-                      orientation: e.target.value as PageOrientation,
-                    })
-                  }
-                  className={selectInnerClass}
-                >
-                  <option value="portrait">Portrait</option>
-                  <option value="landscape">Landscape</option>
-                </select>
-                <IconChevronDown
-                  size={12}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--sat-text-muted)]"
-                />
-              </div>
+              </span>
+              <Select.Root
+                value={options.orientation}
+                onValueChange={(v) => {
+                  if (v !== null)
+                    setOptions({ orientation: v as PageOrientation });
+                }}
+                items={ORIENTATIONS}
+              >
+                <Select.Trigger className="w-full">
+                  <Select.Value />
+                  <Select.Icon>
+                    <IconChevronDown size={12} />
+                  </Select.Icon>
+                </Select.Trigger>
+                <Select.Portal>
+                  <Select.Positioner sideOffset={4} align="start">
+                    <Select.Popup className="z-[60] min-w-[140px]">
+                      <Select.List>
+                        {ORIENTATIONS.map((o) => (
+                          <Select.Item key={o.value} value={o.value}>
+                            <Select.ItemText>{o.label}</Select.ItemText>
+                            <Select.ItemIndicator>
+                              <IconCheck size={12} className="flex-shrink-0" />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                        ))}
+                      </Select.List>
+                    </Select.Popup>
+                  </Select.Positioner>
+                </Select.Portal>
+              </Select.Root>
             </div>
           </div>
 
@@ -189,17 +199,22 @@ export function ExportDialog({ previewDeps }: ExportDialogProps) {
               Font Size
             </label>
             <div className="flex items-center gap-3">
-              <input
+              <Slider.Root
                 id="export-font-size"
-                type="range"
+                value={options.fontSize}
+                onValueChange={(v) => setOptions({ fontSize: v })}
                 min={10}
                 max={20}
-                value={options.fontSize}
-                onChange={(e) =>
-                  setOptions({ fontSize: Number(e.target.value) })
-                }
-                className="flex-1 accent-[var(--sat-accent-primary)]"
-              />
+                step={1}
+                className="flex-1"
+              >
+                <Slider.Control>
+                  <Slider.Track>
+                    <Slider.Indicator />
+                  </Slider.Track>
+                  <Slider.Thumb />
+                </Slider.Control>
+              </Slider.Root>
               <span className="text-xs tabular-nums text-[var(--sat-text-muted)] w-8 text-right">
                 {options.fontSize}px
               </span>
@@ -263,7 +278,7 @@ export function ExportDialog({ previewDeps }: ExportDialogProps) {
             {isExporting ? "Exporting…" : "Export"}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

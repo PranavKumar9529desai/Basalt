@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 import type { TagEntry } from "../types";
+import { Button } from "@workspace/ui/components/ui/button";
 
 interface TagsSidebarProps {
   /** Click a tag — opens search with `tag:<tag>`. */
@@ -116,14 +117,13 @@ export const TagsSidebar: FC<TagsSidebarProps> = ({ onOpenTag }) => {
                     transform: `translateY(${vItem.start}px)`,
                   }}
                 >
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={() => onOpenTag(entry.tag)}
                     title={`Show notes tagged #${entry.tag}`}
-                    className="
-                      group flex items-center gap-2 w-full text-left
-                      px-3 py-0.5
-                    "
+                    className="w-full justify-start gap-2 px-3 py-0.5"
                   >
                     <span
                       className="
@@ -139,7 +139,7 @@ export const TagsSidebar: FC<TagsSidebarProps> = ({ onOpenTag }) => {
                     <span className="ml-auto text-xs text-[var(--sat-text-muted)] tabular-nums shrink-0">
                       {entry.count}
                     </span>
-                  </button>
+                  </Button>
                 </div>
               );
             })}

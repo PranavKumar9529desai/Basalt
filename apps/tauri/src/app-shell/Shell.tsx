@@ -20,6 +20,7 @@ import {
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from "@tabler/icons-react";
+import { Button } from "@workspace/ui/components/ui/button";
 import {
   useCallback,
   useEffect,
@@ -176,8 +177,10 @@ function WorkspaceShell({
             onCloseTab={handleTabClose}
             onPinToggle={handleTabPinToggle}
             rightSlot={
-              <button
+              <Button
                 type="button"
+                variant="sat-ghost"
+                size="icon"
                 onClick={() => setRightSidebarOpen((v) => !v)}
                 title={
                   rightSidebarOpen
@@ -186,14 +189,14 @@ function WorkspaceShell({
                 }
                 aria-label="Toggle right sidebar"
                 aria-pressed={rightSidebarOpen}
-                className="flex h-full w-8 items-center justify-center text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors"
+                className="h-full w-8"
               >
                 {rightSidebarOpen ? (
                   <IconLayoutSidebarRightCollapse size={16} stroke={1.5} />
                 ) : (
                   <IconLayoutSidebarRightExpand size={16} stroke={1.5} />
                 )}
-              </button>
+              </Button>
             }
           />
           <ViewHeader

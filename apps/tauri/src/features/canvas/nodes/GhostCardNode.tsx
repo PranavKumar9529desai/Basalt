@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Button } from "@workspace/ui/components/ui/button";
 import type { CanvasXYNode } from "../lib/mapper";
 
 function GhostCardNodeInner({ data }: NodeProps<CanvasXYNode>) {
@@ -21,9 +22,9 @@ function GhostCardNodeInner({ data }: NodeProps<CanvasXYNode>) {
         className="!w-3 !h-3 !rounded-full !border-2 !border-[var(--sat-accent-primary)] !bg-[var(--sat-surface-1)] opacity-80"
       />
 
-      <button
+      <Button
         type="button"
-        className="w-full h-full rounded-md border-2 border-dashed border-[var(--sat-accent-primary)] bg-[var(--sat-surface-1)]/70 text-[var(--sat-text-primary)] shadow-md flex flex-col items-center justify-center p-3 cursor-pointer hover:bg-[var(--sat-surface-2)]/90 transition-all hover:scale-[1.02] backdrop-blur-sm group outline-none"
+        className="w-full h-full border-2 border-dashed border-[var(--sat-accent-primary)] bg-[var(--sat-surface-1)]/70 text-[var(--sat-text-primary)] shadow-md flex flex-col items-center justify-center p-3 hover:bg-[var(--sat-surface-2)]/90 transition-all hover:scale-[1.02] backdrop-blur-sm group"
         onClick={() => onCommit?.()}
       >
         <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--sat-accent-primary)]">
@@ -47,7 +48,7 @@ function GhostCardNodeInner({ data }: NodeProps<CanvasXYNode>) {
         <span className="text-xs text-[var(--sat-text-muted)] mt-1">
           or click outside to cancel
         </span>
-      </button>
+      </Button>
     </div>
   );
 }

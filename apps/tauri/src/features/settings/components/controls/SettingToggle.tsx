@@ -1,4 +1,4 @@
-import { Switch } from "@base-ui/react/switch";
+import { Switch } from "@workspace/ui/components/ui/switch";
 import { cn } from "@workspace/ui/lib/utils";
 
 export interface SettingToggleProps {
@@ -23,12 +23,9 @@ export function SettingToggle({
       checked={checked}
       onCheckedChange={onCheckedChange}
       disabled={disabled}
-      className={cn(
-        "w-9 h-5 rounded-full bg-[var(--sat-surface-3)] transition-colors data-[checked]:bg-[var(--sat-accent-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0",
-        className,
-      )}
+      className={cn(className)}
     >
-      <Switch.Thumb className="block w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform data-[checked]:translate-x-[18px] translate-x-[3px]" />
+      <Switch.Thumb />
     </Switch.Root>
   );
 }

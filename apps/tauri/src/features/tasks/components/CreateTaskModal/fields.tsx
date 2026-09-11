@@ -6,6 +6,7 @@
 import { IconChevronDown, IconX } from "@tabler/icons-react";
 import type { KeyboardEvent, RefObject } from "react";
 import { Badge } from "@workspace/ui/components/ui/badge";
+import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
 import { Label } from "@workspace/ui/components/ui/label";
 import {
@@ -61,7 +62,7 @@ export function LabeledSelect({
         </SelectTrigger>
         <SelectPortal>
           <SelectPositioner sideOffset={4} align="start">
-            <SelectPopup>
+            <SelectPopup className="z-[60]">
               <SelectList>
                 {options.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
@@ -184,14 +185,16 @@ export function TagField({
           {tags.map((tag) => (
             <Badge key={tag}>
               #{tag}
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label={`Remove tag ${tag}`}
                 onClick={() => onRemove(tag)}
-                className="cursor-pointer text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+                className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
               >
                 <IconX size={11} />
-              </button>
+              </Button>
             </Badge>
           ))}
         </div>

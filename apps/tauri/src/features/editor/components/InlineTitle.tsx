@@ -202,6 +202,7 @@ export function InlineTitle({
 
   if (mode === "display") {
     return (
+      // eslint-disable-next-line basalt/no-raw-button-in-apps -- Editor-surface chrome (exempt: CM6 inline title must stay React-free)
       <button
         type="button"
         className="block w-full cursor-text select-text border-none bg-transparent p-0 text-left"

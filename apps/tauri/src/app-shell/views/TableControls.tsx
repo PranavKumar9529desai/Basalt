@@ -13,6 +13,12 @@ import {
 } from "@tabler/icons-react";
 import { useTableCursorStore } from "../../features/editor";
 import { resolveActiveController } from "../../shared/activeEditor";
+import { Button } from "@workspace/ui/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 import {
   tablePositionAtCursor,
   insertRowAbove,
@@ -88,14 +94,24 @@ interface BtnProps {
 
 function Btn({ icon, title, onClick, disabled }: BtnProps) {
   return (
-    <button
-      className="flex size-7 items-center justify-center rounded transition-colors hover:bg-[var(--sat-surface-2)] disabled:opacity-30"
-      title={title}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={title}
+            className="hover:bg-[var(--sat-surface-2)] disabled:opacity-30"
+          >
+            {icon}
+          </Button>
+        }
+      />
+      <TooltipContent>{title}</TooltipContent>
+    </Tooltip>
   );
 }
 

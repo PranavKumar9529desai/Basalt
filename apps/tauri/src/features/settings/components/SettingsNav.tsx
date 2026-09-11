@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { cn } from "@workspace/ui/lib/utils";
+import { Button } from "@workspace/ui/components/ui/button";
 import { CORE_SPECS, specMatches } from "../specs";
 import { useEnabledSections } from "../lib/registry";
 import { useSettingsModalStore } from "../store";
@@ -84,12 +85,14 @@ export function SettingsNav() {
                   const active = section.id === activeSection;
                   const count = hitCounts?.get(section.id) ?? 0;
                   return (
-                    <button
+                    <Button
                       key={section.id}
                       type="button"
+                      variant="sat-ghost"
+                      size="xs"
                       onClick={() => setActiveSection(section.id)}
                       className={cn(
-                        "group flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-1.5 text-xs transition-colors select-none",
+                        "w-full gap-2.5 rounded-md justify-start",
                         active
                           ? "bg-[var(--sat-accent-primary)]/12 font-medium text-[var(--sat-accent-primary)]"
                           : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]",
@@ -104,7 +107,7 @@ export function SettingsNav() {
                           {count}
                         </span>
                       )}
-                    </button>
+                    </Button>
                   );
                 })
               )}

@@ -1,4 +1,5 @@
 import { cn } from "@workspace/ui/lib/utils";
+import { Button } from "@workspace/ui/components/ui/button";
 
 export interface SettingColorOption {
   label: string;
@@ -35,15 +36,17 @@ export function SettingColor({
       {options.map((option) => {
         const active = option.value.toLowerCase() === value.toLowerCase();
         return (
-          <button
+          <Button
             key={option.value}
             type="button"
+            variant="ghost"
+            size="icon-xs"
             title={option.label}
             aria-label={`Accent color: ${option.label}`}
             aria-pressed={active}
             onClick={() => onValueChange(option.value)}
             className={cn(
-              "h-6 w-6 rounded-full transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)]",
+              "h-6 w-6 rounded-full transition-transform focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)]",
               active
                 ? "scale-110 ring-2 ring-[var(--sat-accent-primary)] ring-offset-2 ring-offset-[var(--sat-surface-1)]"
                 : "hover:scale-105",

@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useState, useEffect } from "react";
 import { BasaltMark, BasaltWordmark } from "@workspace/ui/components/brand";
+import { Button } from "@workspace/ui/components/ui/button";
 
 interface VaultSplashProps {
   isIndexing: boolean;
@@ -84,18 +85,13 @@ export const VaultSplash: FC<VaultSplashProps> = ({
       </div>
 
       {/* Action */}
-      <button
+      <Button
         type="button"
+        variant="sat-primary"
+        size="lg"
         onClick={onOpenVault}
         disabled={isIndexing}
-        className="
-          inline-flex items-center gap-2
-          px-6 py-3 rounded-lg
-          bg-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-strong)] active:bg-[var(--sat-accent-strong)]
-          text-[var(--sat-text-inverse)] font-semibold text-sm
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition-colors shadow-sm
-        "
+        className="gap-2 shadow-sm"
         style={{
           opacity: ready ? 1 : 0,
           transform: ready ? "translateY(0)" : "translateY(6px)",
@@ -127,7 +123,7 @@ export const VaultSplash: FC<VaultSplashProps> = ({
             Open a Vault
           </>
         )}
-      </button>
+      </Button>
 
       {/* Status / error */}
       {status && (

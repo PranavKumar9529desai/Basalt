@@ -5,6 +5,7 @@ import { IconAlertCircle, IconRotate, IconUnlink } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@workspace/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
 
 interface HotkeyRow {
   command: Command;
@@ -209,36 +210,48 @@ export function HotkeysSection() {
                       </Button>
                       {row.deviates && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            title="Reset to default keybinding"
-                            aria-label={`Reset ${row.command.name} keybinding`}
-                            onClick={() => {
-                              service.resetBinding(row.command.id);
-                              setVersion((v) => v + 1);
-                              setNotice(
-                                `Reset ${row.command.name} to its default.`,
-                              );
-                            }}
-                          >
-                            <IconRotate size={12} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            title="Unbind this command"
-                            aria-label={`Unbind ${row.command.name}`}
-                            onClick={() => {
-                              service.unbind(row.command.id);
-                              setVersion((v) => v + 1);
-                              setNotice(`Unbound ${row.command.name}.`);
-                            }}
-                          >
-                            <IconUnlink size={12} />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  aria-label={`Reset ${row.command.name} keybinding`}
+                                  onClick={() => {
+                                    service.resetBinding(row.command.id);
+                                    setVersion((v) => v + 1);
+                                    setNotice(
+                                      `Reset ${row.command.name} to its default.`,
+                                    );
+                                  }}
+                                >
+                                  <IconRotate size={12} />
+                                </Button>
+                              }
+                            />
+                            <TooltipContent>Reset to default keybinding</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  aria-label={`Unbind ${row.command.name}`}
+                                  onClick={() => {
+                                    service.unbind(row.command.id);
+                                    setVersion((v) => v + 1);
+                                    setNotice(`Unbound ${row.command.name}.`);
+                                  }}
+                                >
+                                  <IconUnlink size={12} />
+                                </Button>
+                              }
+                            />
+                            <TooltipContent>Unbind this command</TooltipContent>
+                          </Tooltip>
                         </>
                       )}
                     </>

@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState, type FC } from "react";
 import type { BacklinkEntry } from "../types";
+import { Button } from "@workspace/ui/components/ui/button";
 
 interface BacklinksSidebarProps {
   /** Notes that link to the active note, each with its mention lines. */
@@ -156,22 +157,19 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                 >
                   <div className="px-3 pb-1.5">
                     {/* Note heading — opens the note itself */}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="xs"
                       onClick={() => onOpenNote(entry.path)}
                       title={entry.path}
-                      className="
-                        group flex items-baseline gap-2 w-full text-left
-                        text-sm font-medium text-[var(--sat-text-primary)]
-                        hover:text-[var(--sat-accent-primary)]
-                        transition-colors py-0.5
-                      "
+                      className="w-full justify-start gap-2 py-0.5 text-sm text-[var(--sat-text-primary)] hover:text-[var(--sat-accent-primary)]"
                     >
                       <span className="truncate">{entry.name}</span>
                       <span className="text-[10px] font-normal text-[var(--sat-text-muted)] tabular-nums shrink-0">
                         {entry.mentions.length}
                       </span>
-                    </button>
+                    </Button>
 
                     {entry.mentions.length === 0 ? (
                       <p className="pl-1 text-[11px] italic text-[var(--sat-text-muted)] leading-5">
@@ -181,21 +179,16 @@ export const BacklinksSidebar: FC<BacklinksSidebarProps> = ({
                       <ul>
                         {entry.mentions.map((m) => (
                           <li key={m.line}>
-                            <button
-                              type="button"
-                              onClick={() => onOpenNote(entry.path, m.line)}
-                              title={`Line ${m.line}`}
-                              className="
-                                w-full text-left truncate
-                                text-xs leading-6
-                                text-[var(--sat-text-secondary)]
-                                hover:bg-[var(--sat-surface-3)]
-                                hover:text-[var(--sat-text-primary)]
-                                rounded px-1.5 transition-colors
-                              "
-                            >
-                              {m.excerpt}
-                            </button>
+<Button
+                                type="button"
+                                variant="sat-ghost"
+                                size="xs"
+                                onClick={() => onOpenNote(entry.path, m.line)}
+                                title={`Line ${m.line}`}
+                                className="w-full justify-start truncate leading-6 px-1.5"
+                              >
+                                {m.excerpt}
+                              </Button>
                           </li>
                         ))}
                       </ul>

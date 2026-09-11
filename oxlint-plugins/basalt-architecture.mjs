@@ -167,11 +167,82 @@ const packagesNoTauri = {
   },
 };
 
+/**
+ * Rule: no-base-ui-imports-in-apps
+ *
+ * apps/tauri/src must never import @base-ui/react/* directly — all
+ * headless primitives must flow through @workspace/ui/components/ui/*.
+ * This prevents styling drift (CONVENTIONS §5.3 / ADR-003).
+ */
+const SRC_APPS = "/apps/tauri/src/";
+const BASE_UI_IMPORT = /^@base-ui\/react/;
+
+const noBaseUiImportsInApps = {
+  meta: { type: "problem" },
+  create(context) {
+    const file = toPosix(context.filename);
+    if (!file.includes(SRC_APPS)) return {};
+
+    return {
+      ImportDeclaration(node) {
+        const source = node.source.value;
+        if (typeof source !== "string" || !BASE_UI_IMPORT.test(source)) return;
+        context.report({
+          node,
+          message:
+            `Direct @base-ui/react import in apps/. ` +
+            `Use the shadcn wrapper from @workspace/ui/components/ui/ instead ` +
+            `(CONVENTIONS §5.3). If the wrapper doesn't exist, add it to ` +
+            `packages/ui/src/components/ui/ first (Phase 1 of shadcn-migration-plan.md).`,
+        });
+      },
+    };
+  },
+};
+
+/**
+ * Rule: no-raw-button-in-apps
+ *
+ * Raw <button> elements in apps/tauri/src/ must use the shadcn Button
+ * primitive instead (CONVENTIONS §5.3 / ADR-003).
+ *
+ * Exempt (add inline eslint-disable-next-line for these):
+ *  - Modal backdrop buttons (aria-hidden="true", tabIndex={-1})
+ *  - SplitPane resize sash
+ *  - Editor-surface chrome (InlineTitle, ScrollContainer, StatusLine)
+ */
+const noRawButtonInApps = {
+  meta: { type: "problem" },
+  create(context) {
+    const file = toPosix(context.filename);
+    if (!file.includes(SRC_APPS)) return {};
+
+    return {
+      JSXElement(node) {
+        const name = node.openingElement?.name;
+        if (!name || name.type !== "JSXIdentifier" || name.name !== "button")
+          return;
+        context.report({
+          node: node.openingElement,
+          message:
+            `Raw <button> element in apps/. ` +
+            `Use the shadcn Button from @workspace/ui/components/ui/button ` +
+            `instead (CONVENTIONS §5.3). ` +
+            `For exempt sites (modal backdrops, SplitPane sash, editor chrome), ` +
+            `add an inline disable comment.`,
+        });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: "basalt" },
   rules: {
     "no-cross-feature-imports": noCrossFeatureImports,
     "no-upward-layer-imports": noUpwardLayerImports,
     "packages-no-tauri": packagesNoTauri,
+    "no-base-ui-imports-in-apps": noBaseUiImportsInApps,
+    "no-raw-button-in-apps": noRawButtonInApps,
   },
 };

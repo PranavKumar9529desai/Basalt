@@ -1,4 +1,4 @@
-import { Slider as SliderRoot } from "@base-ui/react/slider";
+import { Slider } from "@workspace/ui/components/ui/slider";
 import { cn } from "@workspace/ui/lib/utils";
 
 export interface SettingSliderProps {
@@ -27,8 +27,6 @@ export function SettingSlider({
   disabled,
   className,
 }: SettingSliderProps) {
-  const pct = ((value - min) / (max - min)) * 100;
-
   return (
     <div
       className={cn(
@@ -37,7 +35,7 @@ export function SettingSlider({
         className,
       )}
     >
-      <SliderRoot.Root
+      <Slider.Root
         value={value}
         onValueChange={onValueChange}
         min={min}
@@ -46,16 +44,13 @@ export function SettingSlider({
         disabled={disabled}
         className="flex-1"
       >
-        <SliderRoot.Control className="relative flex h-5 items-center w-full touch-none">
-          <SliderRoot.Track className="relative h-1.5 w-full rounded-full bg-[var(--sat-surface-3)] overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-[var(--sat-accent-primary)]"
-              style={{ width: `${pct}%` }}
-            />
-          </SliderRoot.Track>
-          <SliderRoot.Thumb className="absolute h-4 w-4 rounded-full bg-white shadow-sm border border-[var(--sat-layout-border)] block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sat-accent-primary)]" />
-        </SliderRoot.Control>
-      </SliderRoot.Root>
+        <Slider.Control>
+          <Slider.Track>
+            <Slider.Indicator />
+          </Slider.Track>
+          <Slider.Thumb />
+        </Slider.Control>
+      </Slider.Root>
       <span className="w-8 text-right text-xs font-mono text-[var(--sat-text-muted)] flex-shrink-0">
         {value}
         {unit}

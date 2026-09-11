@@ -336,6 +336,41 @@ import { Button } from "@workspace/ui/components/ui/button";
 <button className="px-4 py-2 ...">Save</button>
 ```
 
+**Migration mandate:** hand-rolled UI in `apps/tauri/` is a known debt —
+recorded inventory + phased checklist in
+[`docs/shadcn-migration-plan.md`](docs/shadcn-migration-plan.md). While it is
+open:
+
+- 🚫 NEVER reach directly into `@base-ui/react/*` from `apps/` — if an `ui/*`
+  wrapper doesn't exist for a primitive you need (e.g. `switch`, `slider`),
+  **add it to `packages/ui/src/components/ui/` first** (Phase 1 of the plan),
+  then consume the wrapper.
+- 🚫 NEVER hand-roll a dialog, modal, context menu, or dropdown where an
+  `ui/*` primitive exists — modal chrome means `Dialog`, context menus mean
+  `ContextMenu` (see `CanvasContextMenu` → migration Phase 3).
+- 🚫 No `title=` tooltips on interactive icon controls — use the `Tooltip`
+  primitive (`TooltipProvider` is already mounted in `routes/__root.tsx`).
+- ✅ Raw elements still allowed: modal backdrop buttons (`aria-hidden`,
+  `tabIndex={-1}`), the `SplitPane` resize sash, `<input type="date">`, and
+  editor-surface chrome (`InlineTitle`, `ScrollContainer`, `StatusLine`).
+- ✅ New primitives and new features use shadcn from day one; keep the plan's
+  inventory table current as migrations land (tick phases, delete rows).
+
+**Machine-checked, not just documented.** These three bullets are enforced by
+oxlint rules in `oxlint-plugins/basalt-architecture.mjs`, wired as errors in
+`.oxlintrc.json`, so a violation fails `bun run lint` and CI:
+
+| Bullet above                                   | Rule                                   | Exempt sites (inline `eslint-disable-next-line`) |
+| ---------------------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| direct `@base-ui/react` import from `apps/`    | `basalt/no-base-ui-imports-in-apps`     | — none (only via `@workspace/ui`)                |
+| hand-rolled dialog/menu/dropdown                | *(structural — the migration plan covers it)* | —                                          |
+| raw `<button>` instead of `Button`              | `basalt/no-raw-button-in-apps`          | modal backdrops, `SplitPane` sash, `InlineTitle` |
+
+Do **not** add disables for convenience — a disable comment names the exempt
+category (`-- Modal backdrop`, `-- SplitPane sash`, `-- Editor chrome`). A bare
+disable for a migratable site is itself a violation of the spirit; delete the
+site instead.
+
 ---
 
 ## 6. Code to Delete Immediately

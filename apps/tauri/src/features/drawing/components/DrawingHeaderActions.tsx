@@ -9,6 +9,19 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+} from "@workspace/ui/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/ui/tooltip";
 import type { DrawingViewMode } from "../types";
 
 export interface DrawingHeaderActionsProps {
@@ -24,7 +37,7 @@ const ICON_BTN =
 
 /**
  * Drawing pane settings strip — floats at the top-right of the pane, above
- * the Excalidraw surface, as a compact vertical button. The expanded panel
+ * the Excalidraw surface, as a compact vertical button. The dropdown panel
  * opens to the left of the strip so it never covers the canvas area directly
  * under the button.
  */
@@ -38,89 +51,83 @@ export const DrawingHeaderActions = memo(function DrawingHeaderActions({
   const [panelOpen, setPanelOpen] = useState(false);
 
   return (
-    <div
-      className="absolute top-[72px] right-3 z-30 flex flex-col items-center gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/90 backdrop-blur-md p-1 shadow-sm"
-      aria-label="Drawing actions"
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        className={ICON_BTN}
-        onClick={() => setPanelOpen((v) => !v)}
-        title="Drawing settings"
-        aria-expanded={panelOpen}
+    <DropdownMenu open={panelOpen} onOpenChange={setPanelOpen}>
+      <div
+        className="absolute top-[72px] right-3 z-30 flex flex-col items-center gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/90 backdrop-blur-md p-1 shadow-sm"
+        aria-label="Drawing actions"
       >
-        {panelOpen ? <IconX size={15} /> : <IconSettings size={15} />}
-      </Button>
-
-      {/* Dropdown panel — anchored left of the floating strip */}
-      {panelOpen && (
-        <div
-          className="absolute top-[72px] right-14 z-30 flex flex-col gap-1 rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/95 backdrop-blur-md p-2 shadow-md min-w-[160px]"
-          aria-label="Drawing action panel"
-        >
-          <p className="text-[10px] uppercase tracking-wide text-[var(--sat-text-muted)] px-1 pb-0.5 font-medium">
-            Drawing
-          </p>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
-            onClick={() => { onToggleViewMode(); setPanelOpen(false); }}
-            title={
-              viewMode === "canvas"
-                ? "Switch to Raw Markdown mode"
-                : "Switch to Visual Canvas mode"
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className={ICON_BTN}
+                onClick={() => setPanelOpen((v) => !v)}
+                aria-label="Drawing settings"
+                aria-expanded={panelOpen}
+              >
+                {panelOpen ? (
+                  <IconX size={15} />
+                ) : (
+                  <IconSettings size={15} />
+                )}
+              </Button>
             }
-          >
+          />
+          <TooltipContent>Drawing settings</TooltipContent>
+        </Tooltip>
+      </div>
+
+      <DropdownMenuPortal>
+        <DropdownMenuContent
+          side="left"
+          align="start"
+          sideOffset={0}
+          className="min-w-[160px] p-2"
+        >
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
+            Drawing
+          </DropdownMenuLabel>
+          <DropdownMenuItem onClick={onToggleViewMode}>
             {viewMode === "canvas" ? (
-              <><IconCode size={13} /><span>Raw Markdown</span></>
+              <>
+                <IconCode size={13} />
+                <span>Raw Markdown</span>
+              </>
             ) : (
-              <><IconPalette size={13} /><span>Canvas</span></>
+              <>
+                <IconPalette size={13} />
+                <span>Canvas</span>
+              </>
             )}
-          </Button>
+          </DropdownMenuItem>
 
           {viewMode === "canvas" && onZoomToFit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
-              onClick={() => { onZoomToFit(); setPanelOpen(false); }}
-              title="Zoom to fit"
-            >
-              <IconMaximize size={13} /><span>Zoom to fit</span>
-            </Button>
+            <DropdownMenuItem onClick={onZoomToFit}>
+              <IconMaximize size={13} />
+              <span>Zoom to fit</span>
+            </DropdownMenuItem>
           )}
 
           {viewMode === "canvas" && (
             <>
-              <div className="h-px bg-[var(--sat-layout-border)] my-0.5" />
-              <p className="text-[10px] uppercase tracking-wide text-[var(--sat-text-muted)] px-1 pb-0.5 font-medium">
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
                 Export
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
-                onClick={() => { onExportSvg(); setPanelOpen(false); }}
-                title="Export as SVG"
-              >
-                <IconDownload size={13} /><span>SVG</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-full justify-start gap-2 text-xs text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] px-2"
-                onClick={() => { onExportPng(); setPanelOpen(false); }}
-                title="Export as PNG"
-              >
-                <IconPhoto size={13} /><span>PNG</span>
-              </Button>
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={onExportSvg}>
+                <IconDownload size={13} />
+                <span>SVG</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExportPng}>
+                <IconPhoto size={13} />
+                <span>PNG</span>
+              </DropdownMenuItem>
             </>
           )}
-        </div>
-      )}
-    </div>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
   );
 });

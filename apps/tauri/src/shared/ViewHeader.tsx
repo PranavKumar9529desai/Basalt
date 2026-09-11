@@ -270,18 +270,20 @@ export function ViewHeader({
         )}
 
         <ContextMenu open={open} onOpenChange={setOpen}>
-          <button
+          <Button
             ref={buttonRef}
             type="button"
+            variant="ghost"
+            size="icon-xs"
             aria-label="View actions"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(true);
             }}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--sat-text-muted)] outline-none hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)] focus-visible:bg-[var(--sat-surface-3)]"
+            className="text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)] focus-visible:bg-[var(--sat-surface-3)]"
           >
             <IconDotsVertical size={14} />
-          </button>
+          </Button>
           {open && (
             <ContextMenuContent
               anchor={buttonRef.current ?? undefined}

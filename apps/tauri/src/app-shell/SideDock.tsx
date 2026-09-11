@@ -2,6 +2,7 @@ import { viewRegistry, type ViewSide } from "@workspace/views";
 import { cn } from "@workspace/ui/lib/utils";
 import { useState, useMemo } from "react";
 import { SidebarPanel, SidebarSection } from "@workspace/ui/components/sidebar";
+import { Button } from "@workspace/ui/components/ui/button";
 
 export interface SideDockProps {
   side: ViewSide;
@@ -92,22 +93,24 @@ export function SideDock({
             const isVisible = visibleSections.has(view.type);
             const Icon = view.icon;
             return (
-              <button
+              <Button
                 key={view.type}
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label={view.name}
                 title={isVisible ? `Hide ${view.name}` : `Show ${view.name}`}
                 aria-pressed={isVisible}
                 onClick={() => toggleSection(view.type)}
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded transition-colors outline-none",
+                  "rounded",
                   isVisible
                     ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
                     : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
                 )}
               >
                 <Icon size={18} stroke={1.5} />
-              </button>
+              </Button>
             );
           })}
 
@@ -147,22 +150,24 @@ export function SideDock({
               const isActive = view.type === active.type;
               const Icon = view.icon;
               return (
-                <button
+                <Button
                   key={view.type}
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={view.name}
                   title={view.name}
                   aria-pressed={isActive}
                   onClick={() => setActiveType(view.type)}
                   className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded transition-colors outline-none",
+                    "rounded",
                     isActive
                       ? "bg-[var(--sat-surface-3)] text-[var(--sat-text-primary)]"
                       : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)]",
                   )}
                 >
                   <Icon size={18} stroke={1.5} />
-                </button>
+                </Button>
               );
             })
           : null}

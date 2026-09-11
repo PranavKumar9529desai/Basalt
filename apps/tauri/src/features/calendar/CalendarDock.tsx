@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { DayButton } from "react-day-picker";
 import { Calendar, CalendarDayButton } from "@workspace/ui/components/ui/calendar";
 import { Button } from "@workspace/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/ui/tooltip";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -152,16 +153,22 @@ export function CalendarDock({
           {monthLabel}
         </span>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Go to today"
-            title="Today"
-            onClick={onGoToToday}
-            className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
-          >
-            <IconCalendar className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Go to today"
+                  onClick={onGoToToday}
+                  className="text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+                >
+                  <IconCalendar className="size-4" />
+                </Button>
+              }
+            />
+            <TooltipContent>Today</TooltipContent>
+          </Tooltip>
           <Button
             variant="ghost"
             size="icon-xs"

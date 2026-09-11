@@ -8,6 +8,8 @@ import {
   IconFileCode,
   IconX,
 } from "@tabler/icons-react";
+import { Button } from "@workspace/ui/components/ui/button";
+import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
 
 export interface AssetInfo {
   rel_path: string;
@@ -29,6 +31,8 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+const FILTER_TYPES = ["all", "image", "video", "audio", "document"] as const;
 
 export function AssetPickerModal({
   isOpen,
@@ -106,29 +110,24 @@ export function AssetPickerModal({
           onSelect(filteredAssets[selectedIndex]);
           onClose();
         }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
       }
     },
     [filteredAssets, selectedIndex, onSelect, onClose],
   );
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
-      {/* Backdrop */}
-      <button
-        type="button"
-        aria-label="Close modal"
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs cursor-default w-full h-full border-0 p-0"
-        onClick={onClose}
-      />
-
-      {/* Modal Dialog */}
-      <div className="relative z-10 w-full max-w-lg rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-        {/* Search header */}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open: boolean) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        overlayClassName="bg-black/50 backdrop-blur-xs"
+        showCloseButton={false}
+        aria-label="Pick asset"
+        className="flex w-full max-h-[70vh] flex-col overflow-hidden rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] p-0 shadow-2xl sm:max-w-lg"
+      >
         <div className="flex items-center px-4 py-3 border-b border-[var(--sat-layout-border)] gap-2">
           <IconSearch
             size={18}
@@ -146,40 +145,42 @@ export function AssetPickerModal({
             }}
             onKeyDown={handleKeyDown}
           />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-2)] transition-colors"
+            aria-label="Close"
           >
             <IconX size={16} />
-          </button>
+          </Button>
         </div>
 
-        {/* Filter Tabs */}
         <div className="flex items-center gap-1 px-4 py-1.5 border-b border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)]/40 text-xs select-none">
-          {["all", "image", "video", "audio", "document"].map((ft) => (
-            <button
+          {FILTER_TYPES.map((ft) => (
+            <Button
               key={ft}
               type="button"
+              variant={filterType === ft ? "sat-primary" : "ghost"}
+              size="sm"
               onClick={() => {
                 setFilterType(ft);
                 setSelectedIndex(0);
               }}
-              className={`px-2 py-0.5 rounded capitalize transition-colors ${
-                filterType === ft
-                  ? "bg-[var(--sat-accent-primary)] text-white font-medium"
-                  : "text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]"
+              aria-pressed={filterType === ft}
+              className={`h-6 px-2 py-0.5 rounded text-xs capitalize ${
+                filterType !== ft
+                  ? "text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)]"
+                  : ""
               }`}
             >
               {ft === "all" ? "All" : ft}
-            </button>
+            </Button>
           ))}
           <span className="ml-auto text-[11px] text-[var(--sat-text-muted)]">
             {filteredAssets.length} item{filteredAssets.length === 1 ? "" : "s"}
           </span>
         </div>
 
-        {/* Asset List */}
         <div className="flex-1 overflow-y-auto max-h-80 p-1 divide-y divide-[var(--sat-layout-border)]/30">
           {filteredAssets.length === 0 ? (
             <div className="p-6 text-center text-xs text-[var(--sat-text-muted)]">
@@ -189,15 +190,16 @@ export function AssetPickerModal({
             filteredAssets.map((asset, idx) => {
               const isSelected = idx === selectedIndex;
               return (
-                <button
+                <Button
                   key={asset.abs_path}
                   type="button"
+                  variant="ghost"
                   onClick={() => {
                     onSelect(asset);
                     onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded group ${
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded h-auto ${
                     isSelected
                       ? "bg-accent text-accent-foreground *:[svg]:text-accent-foreground"
                       : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-2)]"
@@ -239,12 +241,12 @@ export function AssetPickerModal({
                   >
                     {formatFileSize(asset.size_bytes)}
                   </span>
-                </button>
+                </Button>
               );
             })
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

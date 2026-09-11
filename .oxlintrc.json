@@ -20,6 +20,11 @@
     "basalt/no-cross-feature-imports": "error",
     "basalt/no-upward-layer-imports": "error",
     "basalt/packages-no-tauri": "error",
+    // UI policy enforcement (CONVENTIONS §5.3 / ADR-003).
+    // All headless primitives must flow through @workspace/ui wrappers;
+    // raw <button> must be replaced with shadcn Button.
+    "basalt/no-base-ui-imports-in-apps": "error",
+    "basalt/no-raw-button-in-apps": "error",
     // Cycle detection via multi-file analysis (project module graph).
     "import/no-cycle": [
       "error",

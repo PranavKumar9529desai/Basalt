@@ -1,9 +1,18 @@
 import type { FC } from "react";
-import { Switch } from "@base-ui/react/switch";
-import { Select } from "@base-ui/react/select";
+import { IconChevronDown, IconX } from "@tabler/icons-react";
 import { Button } from "@workspace/ui/components/ui/button";
 import { Input } from "@workspace/ui/components/ui/input";
+import { Select } from "@workspace/ui/components/ui/select";
+import { Slider } from "@workspace/ui/components/ui/slider";
+import { Switch } from "@workspace/ui/components/ui/switch";
 export type GraphColorMode = "single" | "tag" | "folder" | "cluster";
+
+const COLOR_MODES: { label: string; value: GraphColorMode }[] = [
+  { label: "Color: single", value: "single" },
+  { label: "Color: tag", value: "tag" },
+  { label: "Color: folder", value: "folder" },
+  { label: "Color: cluster", value: "cluster" },
+];
 
 function ToggleRow({
   checked,
@@ -15,48 +24,25 @@ function ToggleRow({
   onChange: () => void;
 }) {
   return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        color: "var(--sat-text-primary)",
-      }}
-    >
+    <label className="flex items-center gap-2 text-[var(--sat-text-primary)]">
       <Switch.Root
         checked={checked}
         onCheckedChange={onChange}
         aria-label={label}
-        style={{
-          display: "inline-flex",
-          alignItems: checked ? "center" : "flex-start",
-          justifyContent: "flex-start",
-          width: 30,
-          height: 18,
-          padding: 2,
-          border: "1px solid var(--sat-layout-border)",
-          borderRadius: "var(--sat-layout-radius-pill)",
-          background: checked
-            ? "var(--sat-accent-primary)"
-            : "var(--sat-surface-1)",
-          cursor: "pointer",
-        }}
+        className="h-[18px] w-[30px]"
       >
-        <Switch.Thumb
-          style={{
-            width: 12,
-            height: 12,
-            borderRadius: "var(--sat-radius-pill)",
-            background: checked
-              ? "var(--sat-text-inverse)"
-              : "var(--sat-text-muted)",
-            transform: checked ? "translateX(12px)" : "translateX(0)",
-            transition: "transform 120ms ease",
-          }}
-        />
+        <Switch.Thumb className="size-3 translate-x-[3px] bg-[var(--sat-text-muted)] transition-transform data-[checked]:translate-x-[15px] data-[checked]:bg-[var(--sat-text-inverse)]" />
       </Switch.Root>
       <span>{label}</span>
     </label>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[calc(var(--sat-editor-font-size)*0.875)] font-[var(--sat-editor-section-label-weight)] text-[var(--sat-editor-section-label-color)]">
+      {children}
+    </div>
   );
 }
 
@@ -98,42 +84,9 @@ export const GraphControls: FC<GraphControlsProps> = ({
   onClose,
 }) => {
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 12,
-        right: 12,
-        width: 260,
-        maxWidth: "calc(100% - 24px)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "stretch",
-        gap: 10,
-        padding: 12,
-        border: "1px solid var(--sat-layout-border)",
-        borderRadius: "var(--sat-layout-radius-md)",
-        background: "var(--sat-surface-2)",
-        boxShadow: "var(--sat-layout-shadow-md)",
-        fontFamily: "var(--sat-font-sans)",
-        fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-        lineHeight: "var(--sat-editor-line-height)",
-        zIndex: 10,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <strong
-          style={{
-            color: "var(--sat-text-primary)",
-            fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-            fontWeight: "var(--sat-editor-section-label-weight)",
-          }}
-        >
+    <div className="absolute top-3 right-3 z-10 flex w-[260px] max-w-[calc(100%-24px)] flex-col items-stretch gap-2.5 border border-[var(--sat-layout-border)] bg-[var(--sat-surface-2)] p-3 text-[calc(var(--sat-editor-font-size)*0.875)] leading-[var(--sat-editor-line-height)] shadow-[var(--sat-layout-shadow-md)]">
+      <div className="flex items-center justify-between">
+        <strong className="text-[calc(var(--sat-editor-font-size)*0.875)] font-[var(--sat-editor-section-label-weight)] text-[var(--sat-text-primary)]">
           Graph settings
         </strong>
         <Button
@@ -142,34 +95,18 @@ export const GraphControls: FC<GraphControlsProps> = ({
           aria-label="Hide graph settings"
           onClick={onClose}
         >
-          x
+          <IconX size={14} />
         </Button>
       </div>
-      <div
-        style={{
-          color: "var(--sat-editor-section-label-color)",
-          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-          fontWeight: "var(--sat-editor-section-label-weight)",
-        }}
-      >
-        Filter
-      </div>
+      <SectionLabel>Filter</SectionLabel>
       <Input
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         placeholder="Filter: tag:foo  path:docs  name  (space = AND)"
-        style={{ width: "100%" }}
+        className="w-full"
       />
-      <div
-        style={{
-          color: "var(--sat-editor-section-label-color)",
-          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-          fontWeight: "var(--sat-editor-section-label-weight)",
-        }}
-      >
-        Scope
-      </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <SectionLabel>Scope</SectionLabel>
+      <div className="flex items-center gap-1.5">
         <ToggleRow
           checked={local}
           label="Local graph"
@@ -183,35 +120,26 @@ export const GraphControls: FC<GraphControlsProps> = ({
         </Button>
       </div>
       {local && (
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            color: "var(--sat-text-primary)",
-            fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-          }}
-        >
+        <label className="flex items-center gap-1 text-[var(--sat-text-primary)]">
           Depth
-          <input
-            type="range"
+          <Slider.Root
+            value={localDepth}
+            onValueChange={onLocalDepthChange}
             min={1}
             max={5}
-            value={localDepth}
-            onChange={(e) => onLocalDepthChange(Number(e.target.value))}
-          />
+            className="w-24"
+          >
+            <Slider.Control>
+              <Slider.Track>
+                <Slider.Indicator />
+              </Slider.Track>
+              <Slider.Thumb />
+            </Slider.Control>
+          </Slider.Root>
           {localDepth}
         </label>
       )}
-      <div
-        style={{
-          color: "var(--sat-editor-section-label-color)",
-          fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-          fontWeight: "var(--sat-editor-section-label-weight)",
-        }}
-      >
-        Display
-      </div>
+      <SectionLabel>Display</SectionLabel>
       <ToggleRow
         checked={showOrphans}
         label="Show orphans"
@@ -225,77 +153,24 @@ export const GraphControls: FC<GraphControlsProps> = ({
       <Select.Root
         value={colorMode}
         onValueChange={(value) => onColorModeChange(value as GraphColorMode)}
+        items={COLOR_MODES}
       >
-        <Select.Trigger
-          aria-label="Graph color mode"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 8,
-            minWidth: 132,
-            height: 30,
-            padding: "0 8px",
-            border: "1px solid var(--sat-layout-border)",
-            borderRadius: "var(--sat-layout-radius-sm)",
-            background: "var(--sat-surface-2)",
-            color: "var(--sat-text-primary)",
-            fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-            cursor: "pointer",
-          }}
-        >
-          <Select.Value>
-            {colorMode === "single"
-              ? "Color: single"
-              : colorMode === "tag"
-                ? "Color: tag"
-                : colorMode === "folder"
-                  ? "Color: folder"
-                  : "Color: cluster"}
-          </Select.Value>
-          <Select.Icon style={{ color: "var(--sat-text-muted)" }}>
-            v
+        <Select.Trigger aria-label="Graph color mode" className="min-w-[132px]">
+          <Select.Value />
+          <Select.Icon>
+            <IconChevronDown size={12} />
           </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
-          <Select.Positioner sideOffset={4} style={{ zIndex: 50 }}>
-            <Select.Popup
-              style={{
-                minWidth: 132,
-                padding: 4,
-                border: "1px solid var(--sat-layout-border)",
-                borderRadius: "var(--sat-layout-radius-sm)",
-                background: "var(--sat-surface-2)",
-                color: "var(--sat-text-primary)",
-                boxShadow: "var(--sat-layout-shadow-md)",
-              }}
-            >
-              {(
-                [
-                  ["single", "Color: single"],
-                  ["tag", "Color: tag"],
-                  ["folder", "Color: folder"],
-                  ["cluster", "Color: cluster"],
-                ] as const
-              ).map(([value, label]) => (
-                <Select.Item
-                  key={value}
-                  value={value}
-                  className="data-[highlighted]:bg-[var(--sat-accent-primary)] data-[highlighted]:text-[var(--sat-text-inverse)]"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    minHeight: 28,
-                    padding: "0 8px",
-                    borderRadius: "var(--sat-layout-radius-sm)",
-                    color: "var(--sat-text-primary)",
-                    fontSize: "calc(var(--sat-editor-font-size) * 0.875)",
-                    cursor: "pointer",
-                  }}
-                >
-                  <Select.ItemText>{label}</Select.ItemText>
-                </Select.Item>
-              ))}
+          <Select.Positioner sideOffset={4} className="z-50">
+            <Select.Popup>
+              <Select.List>
+                {COLOR_MODES.map((mode) => (
+                  <Select.Item key={mode.value} value={mode.value}>
+                    <Select.ItemText>{mode.label}</Select.ItemText>
+                  </Select.Item>
+                ))}
+              </Select.List>
             </Select.Popup>
           </Select.Positioner>
         </Select.Portal>

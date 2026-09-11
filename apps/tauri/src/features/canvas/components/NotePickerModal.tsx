@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { IconSearch, IconFileText, IconX } from "@tabler/icons-react";
 import { segmentsOf } from "@workspace/ui";
+import { Button } from "@workspace/ui/components/ui/button";
+import { Dialog, DialogContent } from "@workspace/ui/components/ui/dialog";
 
 interface NoteSuggestion {
   name: string;
@@ -72,29 +74,24 @@ export function NotePickerModal({
           onSelect(notes[selectedIndex]);
           onClose();
         }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
       }
     },
     [notes, selectedIndex, onSelect, onClose],
   );
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24">
-      {/* Backdrop */}
-      <button
-        type="button"
-        aria-label="Close modal"
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs cursor-default w-full h-full border-0 p-0"
-        onClick={onClose}
-      />
-
-      {/* Modal Content */}
-      <div className="relative z-10 w-full max-w-lg rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] shadow-2xl overflow-hidden flex flex-col">
-        {/* Search header */}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open: boolean) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        overlayClassName="bg-black/50 backdrop-blur-xs"
+        showCloseButton={false}
+        aria-label="Pick note"
+        className="flex w-full flex-col overflow-hidden rounded-xl border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] p-0 shadow-2xl sm:max-w-lg"
+      >
         <div className="flex items-center px-4 py-3 border-b border-[var(--sat-layout-border)] gap-2">
           <IconSearch
             size={18}
@@ -109,16 +106,16 @@ export function NotePickerModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]"
+            aria-label="Close"
           >
             <IconX size={16} />
-          </button>
+          </Button>
         </div>
 
-        {/* Results list */}
         <div className="max-h-72 overflow-y-auto p-1.5 flex flex-col gap-0.5">
           {notes.length === 0 ? (
             <div className="py-6 text-center text-xs text-[var(--sat-text-muted)]">
@@ -128,10 +125,11 @@ export function NotePickerModal({
             notes.map((note, index) => {
               const isSelected = index === selectedIndex;
               return (
-                <button
+                <Button
                   key={note.path}
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors ${
+                  variant="ghost"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left text-sm transition-colors h-auto ${
                     isSelected
                       ? "bg-accent text-accent-foreground font-medium *:[svg]:text-accent-foreground"
                       : "text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-2)] hover:text-[var(--sat-text-primary)]"
@@ -152,12 +150,12 @@ export function NotePickerModal({
                   <span className="text-xs text-[var(--sat-text-muted)] truncate max-w-[140px]">
                     {segmentsOf(note.path).slice(-2).join("/")}
                   </span>
-                </button>
+                </Button>
               );
             })
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

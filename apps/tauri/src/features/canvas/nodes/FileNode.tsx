@@ -12,6 +12,12 @@ import {
 } from "@tabler/icons-react";
 import { classifyMediaExtension, extensionOf } from "@workspace/editor";
 import { useLeafServices } from "@workspace/views";
+import { Button } from "@workspace/ui/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 
 import type { CanvasXYNode } from "../lib/mapper";
 import { resolveCanvasColor } from "../lib/colors";
@@ -149,14 +155,23 @@ function FileNodeInner({ data, selected }: NodeProps<CanvasXYNode>) {
           </div>
 
           {isMarkdown && (
-            <button
-              type="button"
-              onClick={handleOpenNote}
-              className="p-1 rounded text-[var(--sat-text-muted)] hover:text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)] transition-colors shrink-0"
-              title="Open note in tab"
-            >
-              <IconExternalLink size={13} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="sat-ghost"
+                    size="icon-xs"
+                    onClick={handleOpenNote}
+                    className="hover:bg-[var(--sat-surface-3)]"
+                    aria-label="Open note in tab"
+                  >
+                    <IconExternalLink size={13} />
+                  </Button>
+                }
+              />
+              <TooltipContent>Open note in tab</TooltipContent>
+            </Tooltip>
           )}
         </div>
 

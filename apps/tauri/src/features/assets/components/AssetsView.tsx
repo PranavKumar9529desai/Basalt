@@ -1,6 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { Button } from "@workspace/ui/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@workspace/ui/components/ui/tooltip";
 import { useAssetsStore, useFilteredAssets, useAssetsActions } from "../store";
 import type { AssetFilter } from "../types";
 import { AssetRow } from "./AssetRow";
@@ -66,23 +72,43 @@ export function AssetsView() {
             </span>
           )}
           {auditReport.orphan_count > 0 || auditReport.duplicate_count > 0 ? (
-            <button
-              type="button"
-              onClick={runCleanup}
-              title="Delete orphaned assets and consolidate duplicates"
-              className="ml-auto rounded bg-[var(--sat-state-error,#ef4444)]/15 px-2 py-0.5 text-[10px] text-[var(--sat-state-error,#ef4444)] hover:bg-[var(--sat-state-error,#ef4444)]/25 transition-colors"
-            >
-              Clean up
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={runCleanup}
+                    aria-label="Delete orphaned assets and consolidate duplicates"
+                    className="ml-auto px-2 py-0.5 text-[10px] bg-[var(--sat-state-error,#ef4444)]/15 text-[var(--sat-state-error,#ef4444)] hover:bg-[var(--sat-state-error,#ef4444)]/25"
+                  >
+                    Clean up
+                  </Button>
+                }
+              />
+              <TooltipContent>
+                Delete orphaned assets and consolidate duplicates
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <button
-              type="button"
-              onClick={runReorganize}
-              title="Apply current organization/naming rules to every attachment"
-              className="ml-auto rounded bg-[var(--sat-accent-primary)]/15 px-2 py-0.5 text-[10px] text-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-primary)]/25 transition-colors"
-            >
-              Reorganize
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={runReorganize}
+                    aria-label="Apply current organization/naming rules to every attachment"
+                    className="ml-auto px-2 py-0.5 text-[10px] bg-[var(--sat-accent-primary)]/15 text-[var(--sat-accent-primary)] hover:bg-[var(--sat-accent-primary)]/25"
+                  >
+                    Reorganize
+                  </Button>
+                }
+              />
+              <TooltipContent>
+                Apply current organization/naming rules to every attachment
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       )}
@@ -90,18 +116,18 @@ export function AssetsView() {
       {/* Filter tabs */}
       <div className="flex gap-1 px-2 py-1.5 border-b border-[var(--sat-layout-border)] shrink-0">
         {FILTER_TABS.map((tab) => (
-          <button
+          <Button
             key={tab.key}
             type="button"
+            variant={filter === tab.key ? "sat-primary" : "ghost"}
             onClick={() => setFilter(tab.key)}
-            className={`rounded px-2 py-0.5 text-[10px] transition-colors ${
-              filter === tab.key
-                ? "bg-[var(--sat-accent-primary)] text-[var(--sat-text-on-accent)]"
-                : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
+            className={`px-2 py-0.5 text-[10px] ${
+              filter !== tab.key &&
+              "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
             }`}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -114,30 +140,46 @@ export function AssetsView() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded bg-[var(--sat-surface-2)] px-2 py-1 text-xs text-[var(--sat-text-primary)] placeholder:text-[var(--sat-text-muted)] outline-none focus:ring-1 focus:ring-[var(--sat-accent-primary)]"
         />
-        <button
-          type="button"
-          onClick={() => setShowOrphansOnly(!showOrphansOnly)}
-          className={`rounded px-1.5 py-0.5 text-[10px] ${
-            showOrphansOnly
-              ? "bg-[var(--sat-state-warning,#f59e0b)]/20 text-[var(--sat-state-warning,#f59e0b)]"
-              : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
-          }`}
-          title="Show only orphaned assets"
-        >
-          🏷
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
-          className={`rounded px-1.5 py-0.5 text-[10px] ${
-            showDuplicatesOnly
-              ? "bg-[var(--sat-state-error,#ef4444)]/20 text-[var(--sat-state-error,#ef4444)]"
-              : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
-          }`}
-          title="Show only duplicates"
-        >
-          ⧉
-        </button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowOrphansOnly(!showOrphansOnly)}
+                className={`px-1.5 py-0.5 text-[10px] ${
+                  showOrphansOnly
+                    ? "bg-[var(--sat-state-warning,#f59e0b)]/20 text-[var(--sat-state-warning,#f59e0b)]"
+                    : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
+                }`}
+                aria-label="Show only orphaned assets"
+              >
+                🏷
+              </Button>
+            }
+          />
+          <TooltipContent>Show only orphaned assets</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+                className={`px-1.5 py-0.5 text-[10px] ${
+                  showDuplicatesOnly
+                    ? "bg-[var(--sat-state-error,#ef4444)]/20 text-[var(--sat-state-error,#ef4444)]"
+                    : "text-[var(--sat-text-muted)] hover:bg-[var(--sat-surface-2)]"
+                }`}
+                aria-label="Show only duplicates"
+              >
+                ⧉
+              </Button>
+            }
+          />
+          <TooltipContent>Show only duplicates</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Virtualized list */}

@@ -9,6 +9,7 @@ import {
   IconBorderCornerRounded,
   IconFocus2,
 } from "@tabler/icons-react";
+import { Button } from "@workspace/ui/components/ui/button";
 
 export interface CanvasToolbarProps {
   onAddTextCard: () => void;
@@ -29,16 +30,17 @@ function ToolButton({
   onClick?: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-lg"
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center rounded-lg transition-all
-        text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)] hover:scale-105 active:scale-95"
+      className="text-[var(--sat-text-secondary)] hover:bg-[var(--sat-surface-3)] hover:text-[var(--sat-text-primary)] hover:scale-105 active:scale-95"
     >
       <Icon size={20} stroke={1.5} />
-    </button>
+    </Button>
   );
 }
 

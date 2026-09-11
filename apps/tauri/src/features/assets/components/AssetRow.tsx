@@ -1,3 +1,4 @@
+import { Button } from "@workspace/ui/components/ui/button";
 import type { AssetInfo } from "../types";
 
 function formatSize(bytes: number): string {
@@ -24,10 +25,11 @@ export function AssetRow({ asset, onOpen }: AssetRowProps) {
   const isOrphan = totalRefs === 0;
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => onOpen?.(asset.abs_path)}
-      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[var(--sat-surface-2)] group"
+      className="w-full items-center gap-2 px-3 py-1.5 text-left justify-start hover:bg-[var(--sat-surface-2)] group"
     >
       <span className="text-sm shrink-0" title={asset.file_type}>
         {TYPE_ICONS[asset.file_type] ?? "📎"}
@@ -55,6 +57,6 @@ export function AssetRow({ asset, onOpen }: AssetRowProps) {
           orphan
         </span>
       )}
-    </button>
+    </Button>
   );
 }

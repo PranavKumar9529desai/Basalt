@@ -1,7 +1,8 @@
 // CanvasContextMenu — right-click menu for canvas nodes, edges, and background.
-// Pure React UI; calls into controller callbacks.
+// Pure React UI; calls into controller callbacks. Anchored at click
+// coordinates via the ContextMenuContent `anchor` trick the editor uses.
 
-import { useEffect, useRef, useCallback } from "react";
+import { useMemo } from "react";
 import {
   IconLayoutGrid,
   IconNote,
@@ -11,6 +12,12 @@ import {
   IconBorderCornerRounded,
   IconCopy,
 } from "@tabler/icons-react";
+import {
+  ContextMenu as MenuRoot,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@workspace/ui/components/ui/context-menu";
 
 export type ContextTarget =
   | { kind: "background"; wx: number; wy: number }
@@ -27,41 +34,6 @@ export interface CanvasContextMenuProps {
   onEditEdgeLabel?: (edgeId: string) => void;
 }
 
-// ─── Menu item ──────────────────────────────────────────────────────────────
-
-function MenuItem({
-  icon: Icon,
-  label,
-  onClick,
-  danger,
-}: {
-  icon: React.ComponentType<{ size?: number; stroke?: number }>;
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors
-        ${
-          danger
-            ? "text-red-400 hover:bg-red-500/10"
-            : "text-[var(--sat-text-primary)] hover:bg-[var(--sat-surface-3)]"
-        }`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-    >
-      <Icon size={15} stroke={1.5} />
-      {label}
-    </button>
-  );
-}
-
-// ─── Main component ─────────────────────────────────────────────────────────
-
 export function CanvasContextMenu({
   target,
   anchor,
@@ -71,131 +43,133 @@ export function CanvasContextMenu({
   onGroupSelection,
   onEditEdgeLabel,
 }: CanvasContextMenuProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const handlePointerDown = useCallback(
-    (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (!anchor) return;
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [anchor, handlePointerDown]);
+  const menuAnchor = useMemo(() => {
+    if (!anchor) return null;
+    return {
+      getBoundingClientRect: () => new DOMRect(anchor.x, anchor.y, 0, 0),
+    };
+  }, [anchor]);
 
   if (!target || !anchor) return null;
 
   return (
-    <div
-      ref={ref}
-      className="fixed z-50 min-w-[180px] rounded-lg border border-[var(--sat-layout-border)] bg-[var(--sat-surface-1)] py-1 shadow-xl"
-      style={{ left: anchor.x, top: anchor.y }}
+    <MenuRoot
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      {target.kind === "background" && (
-        <>
-          <MenuItem
-            icon={IconLayoutGrid}
-            label="Add text card"
-            onClick={() => {
-              onAddTextCard(target.wx, target.wy);
-              onClose();
-            }}
-          />
-          <MenuItem
-            icon={IconNote}
-            label="Add note from vault"
-            onClick={() => {
-              // TODO: open note picker
-              onClose();
-            }}
-          />
-          <div className="mx-2 my-1 h-px bg-[var(--sat-layout-border)]" />
-          <MenuItem
-            icon={IconCopy}
-            label="Paste"
-            onClick={() => {
-              // TODO: paste from clipboard
-              onClose();
-            }}
-          />
-        </>
-      )}
+      <ContextMenuContent anchor={menuAnchor} className="min-w-[180px]">
+        {target.kind === "background" && (
+          <>
+            <ContextMenuItem
+              onClick={() => {
+                onAddTextCard(target.wx, target.wy);
+                onClose();
+              }}
+            >
+              <IconLayoutGrid size={15} stroke={1.5} />
+              Add text card
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => {
+                // TODO: open note picker
+                onClose();
+              }}
+            >
+              <IconNote size={15} stroke={1.5} />
+              Add note from vault
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => {
+                // TODO: paste from clipboard
+                onClose();
+              }}
+            >
+              <IconCopy size={15} stroke={1.5} />
+              Paste
+            </ContextMenuItem>
+          </>
+        )}
 
-      {target.kind === "node" && (
-        <>
-          <MenuItem
-            icon={IconEdit}
-            label="Edit"
-            onClick={() => {
-              // TODO: open inline editor
-              onClose();
-            }}
-          />
-          <MenuItem
-            icon={IconColorSwatch}
-            label="Change color"
-            onClick={() => {
-              // TODO: open color picker
-              onClose();
-            }}
-          />
-          <MenuItem
-            icon={IconCopy}
-            label="Duplicate"
-            onClick={() => {
-              // TODO: duplicate node
-              onClose();
-            }}
-          />
-          <MenuItem
-            icon={IconBorderCornerRounded}
-            label="Group"
-            onClick={() => {
-              onGroupSelection();
-              onClose();
-            }}
-          />
-          <div className="mx-2 my-1 h-px bg-[var(--sat-layout-border)]" />
-          <MenuItem
-            icon={IconTrash}
-            label="Delete"
-            danger
-            onClick={() => {
-              onDeleteSelection();
-              onClose();
-            }}
-          />
-        </>
-      )}
+        {target.kind === "node" && (
+          <>
+            <ContextMenuItem
+              onClick={() => {
+                // TODO: open inline editor
+                onClose();
+              }}
+            >
+              <IconEdit size={15} stroke={1.5} />
+              Edit
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => {
+                // TODO: open color picker
+                onClose();
+              }}
+            >
+              <IconColorSwatch size={15} stroke={1.5} />
+              Change color
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => {
+                // TODO: duplicate node
+                onClose();
+              }}
+            >
+              <IconCopy size={15} stroke={1.5} />
+              Duplicate
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => {
+                onGroupSelection();
+                onClose();
+              }}
+            >
+              <IconBorderCornerRounded size={15} stroke={1.5} />
+              Group
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => {
+                onDeleteSelection();
+                onClose();
+              }}
+            >
+              <IconTrash size={15} stroke={1.5} />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
 
-      {target.kind === "edge" && (
-        <>
-          <MenuItem
-            icon={IconEdit}
-            label="Add label"
-            onClick={() => {
-              onEditEdgeLabel?.(target.id);
-              onClose();
-            }}
-          />
-          <div className="mx-2 my-1 h-px bg-[var(--sat-layout-border)]" />
-          <MenuItem
-            icon={IconTrash}
-            label="Delete edge"
-            danger
-            onClick={() => {
-              onDeleteSelection();
-              onClose();
-            }}
-          />
-        </>
-      )}
-    </div>
+        {target.kind === "edge" && (
+          <>
+            <ContextMenuItem
+              onClick={() => {
+                onEditEdgeLabel?.(target.id);
+                onClose();
+              }}
+            >
+              <IconEdit size={15} stroke={1.5} />
+              Add label
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => {
+                onDeleteSelection();
+                onClose();
+              }}
+            >
+              <IconTrash size={15} stroke={1.5} />
+              Delete edge
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </MenuRoot>
   );
 }
